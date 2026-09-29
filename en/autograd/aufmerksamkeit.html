@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network blocks and transformer – attention, masks and positions – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite" href="matmul.html">Matrix product</a>
+<a class="unterseite" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite aktiv" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Network blocks and transformer – attention, masks and positions</span><a class="sprachwahl" href="../../de/autograd/aufmerksamkeit.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd.nn</div>
+  <h1>Network blocks and transformer – attention, masks and positions</h1>
+  <p class="unter">The computation behind <code>MultiHeadAttention</code> and <code>PositionalEncoding</code>: scaled dot product, splitting into heads by reshaping and permuting, additive masks for causal language models and padded positions, and the sinusoidal positional encoding – with a derivation of the scaling, pseudocode following the source, a worked example, the probes and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A sequence – phonemes, words, tokens – is to be processed so that every position can fetch information from other positions: whether a vowel is stressed depends on the start of the word; whether an intonation rises, on the last character; which word comes next, on the whole sentence so far. A fixed neighbourhood as in a filter is not enough, because the important positions are sometimes near and sometimes far.</p>
+<p>Attention solves this with a learned weighting: every position issues a query, every position offers a key, and the better query and key match, the more of that position's value flows in. Which positions match, the network learns by itself.</p>
+
+<h2 id="skalarprodukt">Scaled dot product</h2>
+<p>From the input <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>∈</mo><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>T</mi><mo>×</mo><mi>D</mi></mrow></msup></mrow><annotation encoding="application/x-tex">X \in \mathbb{R}^{T\times D}</annotation></semantics></math> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> positions, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi></mrow><annotation encoding="application/x-tex">D</annotation></semantics></math> features) three linear maps produce queries, keys and values:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Q</mi><mo>=</mo><mi>X</mi><msub><mrow><mi>W</mi></mrow><mrow><mi>q</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mi>K</mi><mo>=</mo><mi>X</mi><msub><mrow><mi>W</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mi>V</mi><mo>=</mo><mi>X</mi><msub><mrow><mi>W</mi></mrow><mrow><mi>v</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">Q = X W_q,\qquad K = X W_k,\qquad V = X W_v.</annotation></semantics></math></p>
+<p>The score of position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> for position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math> is the dot product of its query with the key, divided by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{D_h}</annotation></semantics></math>; softmax over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math> turns these into weights that sum to one per row:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>S</mi><mo>=</mo><mfrac><mrow><mi>Q</mi><msup><mrow><mi>K</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><mrow><msqrt><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub></msqrt></mrow></mfrac><mo>+</mo><mi>M</mi><mo>,</mo><mspace width="2em"/><mi>A</mi><mo>=</mo><mspace width="0.1667em"/><msub><mi>softmax</mi><mrow><mtext>row</mtext></mrow></msub><mo>⁡</mo><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mspace width="0.1667em"/><mi>ctx</mi><mo>⁡</mo><mspace width="0.1667em"/><mo>=</mo><mi>A</mi><mspace width="0.1667em"/><mi>V</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">S = \frac{Q K^T}{\sqrt{D_h}} + M, \qquad A = \mathrm{softmax}_{\text{row}}(S), \qquad \mathrm{ctx} = A\,V.</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> is an additive mask (section <a href="#masken">Masks</a>). <b>Why the scaling:</b> if the entries of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> have mean 0 and variance 1 and are independent, then</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Var</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>q</mi><mo>⋅</mo><mi>k</mi><mo stretchy="false">)</mo><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>d</mi><mo>=</mo><mn>1</mn></mrow><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub></mrow></munderover><mspace width="0.1667em"/><mi>Var</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>q</mi></mrow><mrow><mi>d</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><mspace width="0.1667em"/><mi>Var</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>k</mi></mrow><mrow><mi>d</mi></mrow></msub><mo stretchy="false">)</mo><mo>=</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\mathrm{Var}(q\cdot k) = \sum_{d=1}^{D_h} \mathrm{Var}(q_d)\,\mathrm{Var}(k_d) = D_h.</annotation></semantics></math></p>
+<p>Without scaling the spread of the scores would grow with the head width; softmax would saturate – one weight near one, all others near zero –, and the gradients <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo stretchy="false">(</mo><mi>g</mi><mo>−</mo><mo largeop="true" movablelimits="true">∑</mo><mi>g</mi><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y(g - \sum g\,y)</annotation></semantics></math> would become vanishingly small. Dividing by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{D_h}</annotation></semantics></math> brings the spread back to 1.</p>
+
+<h2 id="koepfe">Several heads</h2>
+<p>A single set of weights can only represent one kind of relation. Therefore the width <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi></mrow><annotation encoding="application/x-tex">D</annotation></semantics></math> is split into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math> heads of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>=</mo><mi>D</mi><mo>/</mo><mi>H</mi></mrow><annotation encoding="application/x-tex">D_h = D/H</annotation></semantics></math> each; every head computes its own attention, and the results are concatenated again and mixed by a fourth map <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>W</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow><annotation encoding="application/x-tex">W_o</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>MHA</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">[</mo><msub><mi>ctx</mi><mrow><mn>1</mn></mrow></msub><mo>⁡</mo><mo>,</mo><mo>…</mo><mo>,</mo><mspace width="0.1667em"/><msub><mi>ctx</mi><mrow><mi>H</mi></mrow></msub><mo>⁡</mo><mo stretchy="false">]</mo><mspace width="0.1667em"/><msub><mrow><mi>W</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>+</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\mathrm{MHA}(X) = \big[\mathrm{ctx}_1, \dots, \mathrm{ctx}_H\big]\, W_o + b_o.</annotation></semantics></math></p>
+<p>The split is implemented without a loop over heads: the projection <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>T</mi><mo>,</mo><mi>D</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[T, D]</annotation></semantics></math> is reshaped to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>T</mi><mo>,</mo><mi>H</mi><mo>,</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[T, H, D_h]</annotation></semantics></math> and permuted to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>H</mi><mo>,</mo><mi>T</mi><mo>,</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[H, T, D_h]</annotation></semantics></math>. The heads are then a batch axis, and the matrix product <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mrow><mi>K</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">QK^T</annotation></semantics></math> computes all heads in one call (form batch times batch, see <a href="matmul.html">Matrix product</a>). Afterwards it is permuted back to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>T</mi><mo>,</mo><mi>H</mi><mo>,</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[T, H, D_h]</annotation></semantics></math> and reshaped to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>T</mi><mo>,</mo><mi>D</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[T, D]</annotation></semantics></math>.</p>
+
+<h3>Pseudocode – <code>MultiHeadAttention.forward(x, mask, rnd, training)</code></h3>
+<pre class="pseudo"><b>check</b> x has shape [T, D]
+split(t) := permute(reshape(t, T, H, Dh), 1, 0, 2)      <i>[T,D] → [H,T,Dh]</i>
+q ← split(x·W_q);  k ← split(x·W_k);  v ← split(x·W_v)   <i>without bias</i>
+s ← (q · transposeLast(k)) · 1/sqrt(Dh)                 <i>[H,T,T]</i>
+<b>if</b> mask ≠ null: s ← s + mask                          <i>[T,T] stretched over H</i>
+a ← softmaxLastDim(s)
+<b>if</b> training <b>and</b> p &gt; 0: a ← dropout(a, p, rnd)
+ctx ← a · v                                             <i>[H,T,Dh]</i>
+<b>return</b> reshape(permute(ctx, 1, 0, 2), T, D) · W_o + b_o</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/nn/MultiHeadAttention.java</code>. The constructor throws if <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi></mrow><annotation encoding="application/x-tex">D</annotation></semantics></math> is not divisible by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>W</mi></mrow><mrow><mi>q</mi></mrow></msub></mrow><annotation encoding="application/x-tex">W_q</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>W</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">W_k</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>W</mi></mrow><mrow><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">W_v</annotation></semantics></math> are created without bias, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>W</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow><annotation encoding="application/x-tex">W_o</annotation></semantics></math> with.</p>
+
+<h2 id="masken">Masks</h2>
+<p>A mask is a matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>∈</mo><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>T</mi><mo>×</mo><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">M \in \mathbb{R}^{T\times T}</annotation></semantics></math> that is <b>added</b> to the scores before softmax: 0 means allowed, a strongly negative value means blocked. After softmax the weight of a blocked position is practically zero. The mask is stretched right-aligned over the head axis; no dedicated operation is needed for that.</p>
+<table>
+  <tr><th>Mask</th><th>Entry <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>M</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">M_{ij}</annotation></semantics></math></th><th>Purpose</th></tr>
+  <tr><td><code>causalMask(T)</code></td><td>0 for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>≤</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">j \le i</annotation></semantics></math>, else <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-10^9</annotation></semantics></math></td><td>language model: position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> sees only itself and earlier ones</td></tr>
+  <tr><td><code>paddingMask(valid)</code></td><td>0 if position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math> is valid, else <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-10^9</annotation></semantics></math></td><td>hide padded positions as keys</td></tr>
+  <tr><td><code>causalPaddingMask(valid)</code></td><td>0 for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>≤</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">j \le i</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math> valid, else <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-10^9</annotation></semantics></math></td><td>both at once – applied separately they would overwrite each other</td></tr>
+</table>
+<p>The causal mask is the precondition for any language model. During training the whole sequence is in memory; without the mask position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> would see token <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">i+1</annotation></semantics></math>, which it is supposed to predict. The model would appear to learn superbly and fail completely when generating – a fault that only shows at the very end.</p>
+
+<figure>
+<svg viewBox="0 0 620 230" width="620" font-family="sans-serif" font-size="13">
+  <defs><marker id="pfeil-mha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker></defs>
+  <text x="150" y="18" fill="#1f5f8b" text-anchor="middle">scores S + causal mask</text>
+  <text x="470" y="18" fill="#1f5f8b" text-anchor="middle">weights A = softmax(row)</text>
+  <text x="60" y="40" fill="#5b6475" text-anchor="middle" font-size="11">i \ j</text>
+  <text x="90" y="40" fill="#5b6475" text-anchor="middle" font-size="12">0</text>
+  <text x="150" y="40" fill="#5b6475" text-anchor="middle" font-size="12">1</text>
+  <text x="210" y="40" fill="#5b6475" text-anchor="middle" font-size="12">2</text>
+  <text x="50" y="72" fill="#5b6475" text-anchor="middle" font-size="12">0</text>
+  <text x="50" y="122" fill="#5b6475" text-anchor="middle" font-size="12">1</text>
+  <text x="50" y="172" fill="#5b6475" text-anchor="middle" font-size="12">2</text>
+  <rect x="60" y="48" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="120" y="48" width="60" height="44" fill="#ffffff" stroke="#9a6400"/>
+  <rect x="180" y="48" width="60" height="44" fill="#ffffff" stroke="#9a6400"/>
+  <rect x="60" y="98" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="120" y="98" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="180" y="98" width="60" height="44" fill="#ffffff" stroke="#9a6400"/>
+  <rect x="60" y="148" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="120" y="148" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="180" y="148" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="90" y="75" fill="#1f5f8b" text-anchor="middle">1</text>
+  <text x="150" y="75" fill="#9a6400" text-anchor="middle" font-size="12">2 − 10⁹</text>
+  <text x="210" y="75" fill="#9a6400" text-anchor="middle" font-size="12">3 − 10⁹</text>
+  <text x="90" y="125" fill="#1f5f8b" text-anchor="middle">0.5</text>
+  <text x="150" y="125" fill="#1f5f8b" text-anchor="middle">1</text>
+  <text x="210" y="125" fill="#9a6400" text-anchor="middle" font-size="12">0 − 10⁹</text>
+  <text x="90" y="175" fill="#1f5f8b" text-anchor="middle">2</text>
+  <text x="150" y="175" fill="#1f5f8b" text-anchor="middle">0</text>
+  <text x="210" y="175" fill="#1f5f8b" text-anchor="middle">1</text>
+  <line x1="262" y1="120" x2="352" y2="120" stroke="#1f5f8b" stroke-width="1.6" marker-end="url(#pfeil-mha)"/>
+  <text x="307" y="112" fill="#5b6475" text-anchor="middle" font-size="12">softmax</text>
+  <rect x="380" y="48" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="440" y="48" width="60" height="44" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="500" y="48" width="60" height="44" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="380" y="98" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="440" y="98" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="500" y="98" width="60" height="44" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="380" y="148" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="440" y="148" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="500" y="148" width="60" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="410" y="75" fill="#1f5f8b" text-anchor="middle">1</text>
+  <text x="470" y="75" fill="#5b6475" text-anchor="middle">0</text>
+  <text x="530" y="75" fill="#5b6475" text-anchor="middle">0</text>
+  <text x="410" y="125" fill="#1f5f8b" text-anchor="middle">0.378</text>
+  <text x="470" y="125" fill="#1f5f8b" text-anchor="middle">0.622</text>
+  <text x="530" y="125" fill="#5b6475" text-anchor="middle">0</text>
+  <text x="410" y="175" fill="#1f5f8b" text-anchor="middle">0.665</text>
+  <text x="470" y="175" fill="#1f5f8b" text-anchor="middle">0.090</text>
+  <text x="530" y="175" fill="#1f5f8b" text-anchor="middle">0.245</text>
+  <text x="310" y="218" fill="#5b6475" text-anchor="middle" font-size="12">amber: blocked (position j comes after position i) – each row on the right sums to 1</text>
+</svg>
+<figcaption>Causal mask for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">T = 3</annotation></semantics></math> with the scores <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>1</mn></mtd><mtd style="text-align:left"><mn>2</mn></mtd><mtd style="text-align:left"><mn>3</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0.5</mn></mtd><mtd style="text-align:left"><mn>1</mn></mtd><mtd style="text-align:left"><mn>0</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>2</mn></mtd><mtd style="text-align:left"><mn>0</mn></mtd><mtd style="text-align:left"><mn>1</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">S = \left(\begin{matrix}1 &amp; 2 &amp; 3\\ 0.5 &amp; 1 &amp; 0\\ 2 &amp; 0 &amp; 1\end{matrix}\right)</annotation></semantics></math>. Above the diagonal <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^9</annotation></semantics></math> is subtracted; after softmax the weight there is exactly 0. Position 0 can only see itself and receives the weight 1.</figcaption>
+</figure>
+
+<div class="hinweis"><b>Decision in the framework:</b> the blocking value is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-10^9</annotation></semantics></math> and not <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">-\infty</annotation></semantics></math>. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">-\infty</annotation></semantics></math> the backward path would produce <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∞</mi><mo>⋅</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\infty \cdot 0</annotation></semantics></math>, i.e. NaN, at blocked positions, and the whole run would be spoiled. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><mo>−</mo><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup></mrow></msup></mrow><annotation encoding="application/x-tex">e^{-10^9}</annotation></semantics></math> is exactly 0 in double precision – so the weight still vanishes completely. The padding mask blocks positions as <b>keys</b> (column <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math>); the rows of padded positions themselves are still computed and must be skipped in the loss (<code>ignoreIndex</code>).</div>
+
+<h2 id="positionen">Positional encoding</h2>
+<p>Attention on its own knows no order: swapping two positions in the input only swaps the corresponding rows in the output (permutation equivariance). "The compressor drives the turbine" and every rearrangement of the same words would look alike. Therefore a positional encoding is added to the embedding of every position, following Vaswani and colleagues with sine and cosine of different wavelengths:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>PE</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>p</mi><mo>,</mo><mn>2</mn><mi>i</mi><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mfrac><mrow><mi>p</mi></mrow><mrow><msup><mn>10000</mn><mrow><mn>2</mn><mi>i</mi><mo>/</mo><mi>d</mi></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="2em"/><mspace width="0.1667em"/><mi>PE</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>p</mi><mo>,</mo><mn>2</mn><mi>i</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mfrac><mrow><mi>p</mi></mrow><mrow><msup><mn>10000</mn><mrow><mn>2</mn><mi>i</mi><mo>/</mo><mi>d</mi></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo>.</mo></mrow><annotation encoding="application/x-tex">\mathrm{PE}(p, 2i) = \sin\!\left(\frac{p}{10000^{2i/d}}\right), \qquad \mathrm{PE}(p, 2i+1) = \cos\!\left(\frac{p}{10000^{2i/d}}\right).</annotation></semantics></math></p>
+<p>The wavelengths range geometrically from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">2\pi</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>10000</mn><mo>⋅</mo><mn>2</mn><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">10000\cdot 2\pi</annotation></semantics></math>. For every fixed distance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>PE</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>p</mi><mo>+</mo><mi>k</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{PE}(p+k)</annotation></semantics></math> is a linear function of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>PE</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>p</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{PE}(p)</annotation></semantics></math> (a rotation per pair), which makes relative positions easily accessible to the network.</p>
+<div class="hinweis"><b>Decision in the framework:</b> the encoding has <b>no learnable parameters</b>. It is defined for any length, even for sequences longer than anything seen in training; a learned table would be bound to the training length. The values are computed once up to <code>maxLen</code> and cached; <code>add(x)</code> adds the first <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> rows as a constant (without gradient) and throws if <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> exceeds <code>maxLen</code> or the width does not match.</div>
+
+<h2 id="beispiel">Worked example</h2>
+<p><b>Causal weights.</b> Row 1 of the figure: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>softmax</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0.5</mn><mo>,</mo><mspace width="0.3333em"/><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><mo>−</mo><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><msup><mrow><mi>e</mi></mrow><mrow><mn>0.5</mn></mrow></msup><mo>,</mo><msup><mrow><mi>e</mi></mrow><mrow><mn>1</mn></mrow></msup><mo>,</mo><mn>0</mn><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><msup><mrow><mi>e</mi></mrow><mrow><mn>0.5</mn></mrow></msup><mo>+</mo><msup><mrow><mi>e</mi></mrow><mrow><mn>1</mn></mrow></msup><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mn>0.377541</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.622459</mn><mo>,</mo><mspace width="0.3333em"/><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{softmax}(0.5,\ 1,\ -10^9) = (e^{0.5}, e^{1}, 0)/(e^{0.5} + e^{1}) = (0.377541,\ 0.622459,\ 0)</annotation></semantics></math>. Row 2: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>softmax</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2</mn><mo>,</mo><mspace width="0.3333em"/><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mn>1</mn><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mn>0.665241</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.090031</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.244728</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{softmax}(2,\ 0,\ 1) = (0.665241,\ 0.090031,\ 0.244728)</annotation></semantics></math>. That is what <code>softmaxLastDim(S + causalMask(3))</code> returns.</p>
+<p><b>Scaling.</b> With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>=</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">D_h = 32</annotation></semantics></math> and entries of variance 1 the unscaled dot product has the standard deviation <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mn>32</mn></msqrt><mo>=</mo><mn>5.66</mn></mrow><annotation encoding="application/x-tex">\sqrt{32} = 5.66</annotation></semantics></math>. Two scores that differ by two standard deviations would give a weight ratio of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><mn>11.3</mn></mrow></msup><mo>≈</mo><mn>8</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">e^{11.3} \approx 8\cdot 10^4</annotation></semantics></math> without scaling, and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>≈</mo><mn>7.4</mn></mrow><annotation encoding="application/x-tex">e^{2} \approx 7.4</annotation></semantics></math> with it.</p>
+<p><b>Positional encoding.</b> For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">d = 4</annotation></semantics></math>: position 0 is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0,\ 1,\ 0,\ 1)</annotation></semantics></math>, position 1 is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>sin</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>0.01</mn><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>0.01</mn><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mn>0.841471</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.540302</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.010000</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.999950</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(\sin 1,\ \cos 1,\ \sin 0.01,\ \cos 0.01) = (0.841471,\ 0.540302,\ 0.010000,\ 0.999950)</annotation></semantics></math>, position 2 is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0.909297</mn><mo>,</mo><mspace width="0.3333em"/><mo>−</mo><mn>0.416147</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.019999</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.999800</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0.909297,\ -0.416147,\ 0.019999,\ 0.999800)</annotation></semantics></math>. The first pair rotates quickly (wavelength <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">2\pi</annotation></semantics></math>), the second slowly (wavelength <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>100</mn><mo>⋅</mo><mn>2</mn><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">100\cdot 2\pi</annotation></semantics></math>).</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>EncoderTest</code></b>: gradients of attention against central differences; a position blocked as key does not influence the other outputs (deviation below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math>, only the valid rows are compared); <b>without</b> positional encoding the encoder is permutation-equivariant (deviation below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>, exactly 0 according to the module documentation), <b>with</b> it the order is distinguished (above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math>) – only both checks together show that the encoding has an effect; the attention weights sum to 1 per row (below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>); the positional encoding lies in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-1, 1]</annotation></semantics></math> and is deterministic.</li>
+  <li><b><code>LanguageModelTest</code></b>: the causal mask is lower triangular; a later token does not influence the output at earlier positions (below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>), while the last position does change (above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math>); without the mask the future leaks through (above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math>) – the counter-check that the first result is due to the mask; causal and padding blocking work together.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>Quadratic cost.</b> Scores and weights are <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo>×</mo><mi>T</mi><mo>×</mo><mi>T</mi></mrow><annotation encoding="application/x-tex">H\times T\times T</annotation></semantics></math>; computing time and memory grow with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>T</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">T^2</annotation></semantics></math>. That is why the tokeniser should keep sequences short (see <a href="bpe.html">Byte pair encoding</a>).</li>
+  <li><b>No batch axis.</b> Input and output are <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>T</mi><mo>,</mo><mi>D</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[T, D]</annotation></semantics></math>, one sequence per call. Batches are formed in the trainer by accumulating gradients (see <a href="sequenztraining.html">Sequence training</a>).</li>
+  <li><b>Fully blocked rows.</b> If all keys are blocked for a query (for example the first position when the first position is invalid in <code>causalPaddingMask</code>), all scores are shifted by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^9</annotation></semantics></math> and softmax distributes uniformly – over blocked positions. Such rows belong ignored in the loss.</li>
+  <li><b>Positions up to <code>maxLen</code>.</b> The encoding itself would be defined for any length, the cached table is not; longer sequences are rejected.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, Ł. Kaiser, I. Polosukhin: Attention Is All You Need. <i>NeurIPS</i> 2017.</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#nn">Network blocks and transformer</a> · Probes: <code>EncoderTest</code>, <code>LanguageModelTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

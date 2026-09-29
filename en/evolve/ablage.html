@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storage and evaluation cache – formats and LRU – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag aktiv" href="index.html">framework-evolve</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#geruest">Core: candidate, evaluation, archive, search run</a>
+<a class="unterseite" href="mapelites.html">MAP-Elites</a>
+<a class="unterseite" href="suchlauf.html">Search run</a>
+<a class="rubrik" href="index.html#zahlen">Operators for numeric genes</a>
+<a class="unterseite" href="cmaes-ersatz.html">CMA-ES and surrogate</a>
+<a class="unterseite" href="gauss-de.html">Gauss and DE</a>
+<a class="rubrik" href="index.html#struktur">Structural genes and sequences</a>
+<a class="unterseite" href="struktur.html">Structure and sequences</a>
+<a class="rubrik" href="index.html#mischung">Mixing operators</a>
+<a class="unterseite" href="mischung.html">Mixing</a>
+<a class="rubrik" href="index.html#ablage">Storage and evaluation cache</a>
+<a class="unterseite aktiv" href="ablage.html">Storage and cache</a>
+<a class="rubrik" href="index.html#anbindung">Discovery via ServiceLoader</a>
+<a class="rubrik" href="index.html#praeferenz">Preference model from pairwise judgements</a>
+<a class="unterseite" href="praeferenz.html">Preference model</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-evolve</a> › Storage and evaluation cache – formats and LRU</span><a class="sprachwahl" href="../../de/evolve/ablage.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-evolve · envisionz.evolve</div>
+  <h1>Storage and evaluation cache – formats and LRU</h1>
+  <p class="unter">What lies behind <code>GenomeIO</code>, <code>ArchiveIO</code> and <code>MemoizingEvaluator</code>: the text format of a genome, the structure of a saved archive, what happens when loading and continuing, and how the evaluation cache recognises repetitions and forgets them again – with pseudocode following the source, a real archive file, the checks and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A search run is useful only when its result arrives where it is needed: as a preset in an application's GUI. It is economical only if it can be continued tomorrow where it stood today, and if it does not compute the same expensive evaluation twice. Three small building blocks take care of this:</p>
+<ul>
+  <li><b><code>GenomeIO</code></b> – a genome as a text file, the exchange format between search and GUI;</li>
+  <li><b><code>ArchiveIO</code></b> – a whole archive as a directory, for continued learning across runs and sessions;</li>
+  <li><b><code>MemoizingEvaluator</code></b> – a "genome → evaluation" cache around a deterministic evaluator.</li>
+</ul>
+<p>All three make do with <code>java.base</code>; the module thus stays free of third-party libraries and fit for native image.</p>
+
+<h2 id="genomformat">The genome format</h2>
+<p>A genome is an ordered map name → string. The file holds it line by line, UTF-8:</p>
+<pre><code># any comment, multi-line allowed
+radius=2.5
+stufen=4
+modus=fein
+glatt=true</code></pre>
+<p><b>Reading</b> (<code>load</code>, <code>loadResource</code>): every line is stripped of whitespace at both ends. Empty lines and lines starting with <code>#</code> are skipped. The key is everything before the <b>first</b> equals sign, the value everything after it, both trimmed again. A line without an equals sign or with an empty key aborts with a message including the line number. The order of the file is preserved.</p>
+<p><b>Writing</b> (<code>save</code>): first the comment, each of its lines preceded by <code>#␣</code>, then one line <code>key=value</code> per gene in the order of the map.</p>
+<div class="hinweis"><b>Convention in the framework:</b> Deliberately <b>not</b> <code>java.util.Properties</code>: that would lose the order and escape special characters. The file is meant to read like the list of settings it is, in the order of the GUI. With <code>loadResource(class, name)</code> an application can ship presets in its own package.</div>
+
+<h2 id="archivformat">The archive format</h2>
+<p>An archive becomes a directory, preferably named after the evaluator's identifier. It contains an axes file and one file per elite, both in the genome format:</p>
+
+<figure>
+<svg viewBox="0 0 620 262" width="620" font-family="sans-serif" font-size="13">
+  <rect x="8" y="8" width="604" height="208" rx="6" fill="none" stroke="#c9d1dc" stroke-dasharray="5,4"/>
+  <text x="18" y="28" fill="#5b6475">lauf-01/</text>
+  <text x="24" y="52" fill="#1f5f8b">axes.properties</text>
+  <rect x="20" y="58" width="280" height="112" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="30" y="78" fill="#5b6475" font-family="monospace" font-size="12"># MAP-Elites-Archiv, Achsend…</text>
+  <text x="30" y="94" fill="#1f5f8b" font-family="monospace" font-size="12">count=1</text>
+  <text x="30" y="110" fill="#1f5f8b" font-family="monospace" font-size="12">0.name=x</text>
+  <text x="30" y="126" fill="#1f5f8b" font-family="monospace" font-size="12">0.min=-5.0</text>
+  <text x="30" y="142" fill="#1f5f8b" font-family="monospace" font-size="12">0.max=5.0</text>
+  <text x="30" y="158" fill="#1f5f8b" font-family="monospace" font-size="12">0.bins=8</text>
+  <text x="324" y="52" fill="#1f5f8b">elite-0000.properties</text>
+  <rect x="320" y="58" width="284" height="150" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="330" y="76" fill="#5b6475" font-family="monospace" font-size="12"># Archiv-Elite (auch als Preset…</text>
+  <text x="330" y="92" fill="#9a6400" font-family="monospace" font-size="12">_fitness=-0.0047</text>
+  <text x="330" y="107" fill="#9a6400" font-family="monospace" font-size="12">_descriptors=-0.0144</text>
+  <text x="330" y="122" fill="#9a6400" font-family="monospace" font-size="12">_id=3f2a91c0</text>
+  <text x="330" y="137" fill="#9a6400" font-family="monospace" font-size="12">_gen=12</text>
+  <text x="330" y="152" fill="#9a6400" font-family="monospace" font-size="12">_origin=MUTATION</text>
+  <text x="330" y="167" fill="#9a6400" font-family="monospace" font-size="12">_parent=b71e0d44</text>
+  <text x="330" y="184" fill="#1f5f8b" font-family="monospace" font-size="12">y=-0.0667</text>
+  <text x="330" y="199" fill="#1f5f8b" font-family="monospace" font-size="12">x=-0.0144</text>
+  <text x="520" y="130" fill="#9a6400">metadata</text>
+  <text x="520" y="192" fill="#1f5f8b">genome</text>
+  <text x="24" y="196" fill="#5b6475">elite-0001.properties …</text>
+  <text x="18" y="238" fill="#5b6475">An elite file is also a valid genome: a GUI loads it as a preset</text>
+  <text x="18" y="256" fill="#5b6475">and skips the keys with an underscore.</text>
+</svg>
+<figcaption>A saved archive with one axis and one elite, written by <code>ArchiveIO.save</code>. The keys with an underscore (amber) carry fitness, descriptors, identifier, generation, origin and parent; all other lines are the genome. The comment lines – written in German by the code – are shortened in the figure.</figcaption>
+</figure>
+
+<table>
+  <tr><th>File</th><th>Key</th><th>Content</th></tr>
+  <tr><td><code>axes.properties</code></td><td><code>count</code></td><td>number of axes</td></tr>
+  <tr><td></td><td><code>i.name</code>, <code>i.unit</code>, <code>i.min</code>, <code>i.max</code>, <code>i.bins</code></td><td>axis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math>, starting at 0; <code>unit</code> only if set</td></tr>
+  <tr><td><code>elite-NNNN.properties</code></td><td><code>_fitness</code></td><td>fitness</td></tr>
+  <tr><td></td><td><code>_descriptors</code></td><td>descriptors, comma-separated</td></tr>
+  <tr><td></td><td><code>_metric.name</code></td><td>one line per additional metric</td></tr>
+  <tr><td></td><td><code>_id</code>, <code>_gen</code>, <code>_origin</code>, <code>_parent</code></td><td>identifier, generation, origin, parent (only if present)</td></tr>
+  <tr><td></td><td>all without <code>_</code></td><td>the genome</td></tr>
+</table>
+<h3>Pseudocode – <code>ArchiveIO.save(archive, directory)</code> and <code>load(directory)</code></h3>
+<pre class="pseudo"><i>// save</i>
+create directory (including parents)
+write axes.properties: count, per axis name, unit (if set), min, max, bins
+delete all existing elite-*.properties                <i>the archive might have shrunk</i>
+n ← 0
+<b>for each</b> elite in archive.elites():                   <i>order of the table</i>
+    f ← _fitness, _descriptors, _metric.*, _id, _gen, _origin, [_parent], then the genes
+    write f to elite-%04d.properties with n;  n ← n + 1
+
+<i>// load</i>
+ax ← read axes.properties;  count ← ax.count (missing: 0)
+<b>if</b> count &lt; 1: <b>exception</b> "axes.properties without axes"
+archive ← new MapElitesArchive(axes 0 … count−1)
+<b>for each</b> file elite-*.properties, sorted by name:
+    f ← read file
+    genes ← all keys without "_";  metrics ← all _metric.*
+    d ← _descriptors split at commas, as numbers
+    candidate ← (_id or "geladen", genes, _parent, _origin or SEED, _gen or 0)
+    archive.insert(candidate, Evaluation.ok(_fitness or 0, d, metrics))
+<b>return</b> archive</pre>
+<p class="quelle">Source: <code>envisionz-framework-evolve/src/envisionz/evolve/ArchiveIO.java</code> and <code>GenomeIO.java</code>. In addition <code>exists(directory)</code> (is there an <code>axes.properties</code>?) and <code>describe(directory)</code> ("N Elites in …").</p>
+<div class="hinweis"><b>Convention in the framework:</b> When loading, every elite is added via <code>insert</code>, not written directly into the table. The niche is thus recomputed from descriptors and the <b>stored</b> axes, and the archive's counters run along: a loaded archive with seven elites reports seven insertion attempts. An archive directory belongs to one writer; there are no locks.</div>
+
+<h2 id="weiterlernen">Continuing on a loaded archive</h2>
+<p>The engine has a second constructor that takes a pre-filled archive. If it is not empty, the evaluator's seeds are not evaluated; the search picks up where the stored one stopped:</p>
+<pre><code>ArchiveIO.save(archive, Path.of("lauf-01"));
+MapElitesArchive more = ArchiveIO.load(Path.of("lauf-01"));
+new EvolveEngine(evaluator, operator, cfg, more).run(null);</code></pre>
+<p>Two things must be kept in mind. First, the loaded elites count towards the budget: measured, a run with budget 100 on an archive with seven elites adds only 96 new evaluations (see <a href="suchlauf.html#budget">Budget and termination</a>). Second, the archive brings its own axes. If the evaluator now delivers a different number of descriptors, the first insertion of a new child fails with an exception; if it delivers the same number with a different meaning, nobody notices.</p>
+<p>Learning operators start from scratch when continuing: CMA-ES begins with its initial distribution, the surrogate model reads only the examples of the first context. Whoever wants to give the surrogate model the whole archive feeds it in with <code>observe</code>.</p>
+
+<h2 id="speicher">The evaluation cache</h2>
+<p>Mutation operators produce duplicates: small steps that land on the same value after rounding to four decimal places, structural moves that switch back, moves to the same position. With evaluations taking seconds, every repetition is expensive. <code>MemoizingEvaluator</code> wraps itself around the evaluator as a decorator and remembers the evaluation for every genome.</p>
+<p>The <b>key</b> is the text form of the genome: all entries as <code>name=value</code> with a line break, in the order of the map. Two candidates with different identifiers but the same genes therefore hit the same entry – which is precisely the point, because in a search run identical genomes with new identifiers arise all the time.</p>
+<p><b>Eviction</b> is LRU (<i>least recently used</i>): the cache is a <code>LinkedHashMap</code> in access order; every hit moves the entry to the back, and if after an insertion there are more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> entries, the front one – the one unused for the longest time – drops out. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>16</mn><mo>,</mo><mtext>capacity</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">C = \max(16, \text{capacity})</annotation></semantics></math>, default 10 000.</p>
+<h3>Pseudocode – <code>MemoizingEvaluator.evaluate(candidate)</code></h3>
+<pre class="pseudo">k ← Σ over the genes in order: name + "=" + value + "\n"
+<b>locked</b>:
+    e ← cache.get(k)                              <i>moves the entry to the back</i>
+    <b>if</b> e ≠ none: hits ← hits + 1;  <b>return</b> e
+e ← delegate.evaluate(candidate)                 <i>without lock: may run in parallel</i>
+<b>locked</b>:
+    misses ← misses + 1
+    cache.put(k, e)                                <i>above C entries: drop the eldest</i>
+<b>return</b> e</pre>
+<p class="quelle">Source: <code>envisionz-framework-evolve/src/envisionz/evolve/MemoizingEvaluator.java</code>. Identifier, display name, axes, seeds and gene description are passed through unchanged by the decorator.</p>
+<div class="hinweis"><b>Convention in the framework:</b> Wrap only a <b>deterministic</b> evaluator. With an evaluator that scatters, the cache would freeze the first measurement and hide the scatter. Whoever wants to memoise only a part – an expensive preprocessing step that depends on few genes, say – builds that into the evaluator itself; only it knows the structure. The hit rate says something about the search itself: many hits mean that the same candidates are proposed again and again – the diversity of the proposals is waning.</div>
+
+<h2 id="pruefung">How it is checked</h2>
+<p><code>Evolveprobe</code>:</p>
+<ul>
+  <li><b>Genome file there and back:</b> three genes, among them a value with an inner space and an empty value, come back complete and with their values.</li>
+  <li><b>Archive there and back:</b> two elites with fitness 5 and 7 saved in a directory; <code>exists</code> finds it, loading returns as many niches, the best value is 7 (tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>), <code>describe</code> names something, and a non-existent directory does not count as an archive. The files are created in a temporary directory and deleted afterwards.</li>
+  <li><b>Evaluation cache against a counting evaluator:</b> three evaluations, two of them candidates with equal genes, reach the evaluator exactly twice; both yield the same fitness; one hit, two misses; identifier and axes are passed through.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>Values with edge whitespace, line breaks or a leading <code>#</code></b> do not survive the genome format: whitespace at the ends is cut off, a line break tears the line apart, a key starting with <code>#</code> becomes a comment line. Keys must not contain <code>=</code>; values may.</li>
+  <li><b>Incomplete elite files.</b> If <code>_fitness</code> is missing, the fitness becomes 0 – a plausible number, not an error message. If <code>_descriptors</code> is missing, loading aborts with a number format error.</li>
+  <li><b>Numbering not stable.</b> The elite files are numbered in the order of the archive table; the same elite may carry a different number after the next save. When saving, all old files are deleted first; if writing aborts after that, the directory is incomplete.</li>
+  <li><b>The cache key depends on order.</b> The same genes in a different order give a different key. Measured: two candidates with <code>a=1, b=2</code> and <code>b=2, a=1</code> reached the evaluator twice, without a hit. In the search run this does not occur because all operators take over the parent's order.</li>
+  <li><b>Errors are cached too.</b> An <code>ERROR</code> evaluation lands in the cache like any other; a transient fault of the evaluator then holds permanently for this genome. Measured: after a one-off error the second request returned the same <code>ERROR</code> without a new call.</li>
+  <li><b>Simultaneous requests</b> for the same new genome both compute; the cache locks only lookup and storage, not the evaluation.</li>
+  <li><b>Smallest capacity 16.</b> Smaller values are raised to 16.</li>
+</ul>
+
+<footer>
+envisionz-framework-evolve · Background to <a href="index.html#ablage">Storage and evaluation cache</a> · Probes: <code>Evolveprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Numeric genes – CMA-ES and surrogate model – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag aktiv" href="index.html">framework-evolve</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#geruest">Core: candidate, evaluation, archive, search run</a>
+<a class="unterseite" href="mapelites.html">MAP-Elites</a>
+<a class="unterseite" href="suchlauf.html">Search run</a>
+<a class="rubrik" href="index.html#zahlen">Operators for numeric genes</a>
+<a class="unterseite aktiv" href="cmaes-ersatz.html">CMA-ES and surrogate</a>
+<a class="unterseite" href="gauss-de.html">Gauss and DE</a>
+<a class="rubrik" href="index.html#struktur">Structural genes and sequences</a>
+<a class="unterseite" href="struktur.html">Structure and sequences</a>
+<a class="rubrik" href="index.html#mischung">Mixing operators</a>
+<a class="unterseite" href="mischung.html">Mixing</a>
+<a class="rubrik" href="index.html#ablage">Storage and evaluation cache</a>
+<a class="unterseite" href="ablage.html">Storage and cache</a>
+<a class="rubrik" href="index.html#anbindung">Discovery via ServiceLoader</a>
+<a class="rubrik" href="index.html#praeferenz">Preference model from pairwise judgements</a>
+<a class="unterseite" href="praeferenz.html">Preference model</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-evolve</a> › Numeric genes – CMA-ES and surrogate model</span><a class="sprachwahl" href="../../de/evolve/cmaes-ersatz.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-evolve · envisionz.evolve</div>
+  <h1>Numeric genes – CMA-ES and surrogate model</h1>
+  <p class="unter">The computation behind <code>CmaEsProposer</code> and <code>SurrogateProposer</code>, the two learning operators for numeric genes: the evolution strategy with covariance matrix adaptation with all constants as they stand in the code, and the surrogate model built from distance-weighted averaging with an uncertainty bonus – with pseudocode following the source, recomputed examples, the checks and the limits. The genome ↔ vector mapping, Gaussian mutation and differential evolution are on the page <a href="gauss-de.html">Gauss and DE</a>.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>Gaussian mutation and differential evolution are <b>stateless</b>: on every call they see only what is currently in the archive. Two situations call for more.</p>
+<ul>
+  <li><b>Coupled parameters.</b> If an improvement succeeds only when two parameters are changed together in a particular ratio – an oblique, narrow valley of the objective –, a mutation with independent genes rarely hits the valley. <b>CMA-ES</b> learns from the evaluations so far a covariance matrix whose principal axes align with such valleys, and a step size that regulates itself.</li>
+  <li><b>Expensive evaluations.</b> If an evaluation takes seconds to minutes, it pays to think before the next attempt. The <b>surrogate model</b> estimates the fitness from all previous evaluations in fractions of a second, is queried thousands of times and proposes where a high estimate and high uncertainty coincide.</li>
+</ul>
+<p>Both learn from the engine's feedback (<code>tell</code>) and therefore have a state that grows over the generations.</p>
+
+<h2 id="cmaes">CMA-ES: the distribution</h2>
+<p>CMA-ES maintains a multivariate normal distribution <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">N</mi><mo stretchy="false">(</mo><mi>m</mi><mo>,</mo><msup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>2</mn></mrow></msup><mi>C</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathcal{N}(m, \sigma^2 C)</annotation></semantics></math> with mean <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math>, step size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">\sigma</annotation></semantics></math> and covariance matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math>. With the eigendecomposition <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>=</mo><mi>B</mi><msup><mrow><mi>D</mi></mrow><mrow><mn>2</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">C = B D^2 B^{\mathsf T}</annotation></semantics></math> – <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> the eigenvectors as columns, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi></mrow><annotation encoding="application/x-tex">D</annotation></semantics></math> the square roots of the eigenvalues – a child is drawn as</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>=</mo><mi>m</mi><mo>+</mo><mi mathvariant="normal">σ</mi><mspace width="0.1667em"/><mi>B</mi><mi>D</mi><mi>z</mi><mo>,</mo><mspace width="2em"/><mi>z</mi><mo>∼</mo><mi mathvariant="normal">N</mi><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mi>I</mi><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">x = m + \sigma\, B D z, \qquad z \sim \mathcal{N}(0, I).</annotation></semantics></math></p>
+<p>Each generation produces <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> children. After evaluation they are sorted by descending fitness, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn><mo>:</mo><mi mathvariant="normal">λ</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_{1:\lambda}</annotation></semantics></math> being the best. The <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi><mo>=</mo><mo stretchy="false">⌊</mo><mi mathvariant="normal">λ</mi><mo>/</mo><mn>2</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\mu = \lfloor \lambda/2 \rfloor</annotation></semantics></math> best determine the new distribution with logarithmically decreasing weights:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><mi>ln</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi mathvariant="normal">μ</mi><mo>+</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">)</mo><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>i</mi></mrow><mrow><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></munderover><mrow><mo fence="true" stretchy="true">(</mo><mi>ln</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi mathvariant="normal">μ</mi><mo>+</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">)</mo><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>j</mi><mo fence="true" stretchy="true">)</mo></mrow></mrow></mfrac><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></munderover><msubsup><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow><mrow><mn>2</mn></mrow></msubsup></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>m</mi><mo>'</mo><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></munderover><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>:</mo><mi mathvariant="normal">λ</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">w_i = \frac{\ln(\mu + \tfrac12) - \ln i}{\sum_{j=1}^{\mu} \left(\ln(\mu + \tfrac12) - \ln j\right)}, \qquad \mu_{\mathrm{eff}} = \frac{1}{\sum_{i=1}^{\mu} w_i^2}, \qquad m' = \sum_{i=1}^{\mu} w_i\, x_{i:\lambda}.</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">\mu_{\mathrm{eff}}</annotation></semantics></math> is the "effective number" of parents: with equal weights it would be <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi></mrow><annotation encoding="application/x-tex">\mu</annotation></semantics></math>; with the decreasing weights it is smaller.</p>
+
+<h3>Evolution paths, covariance, step size</h3>
+<p>With the normalised step of the mean <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mo stretchy="false">(</mo><mi>m</mi><mo>'</mo><mo>−</mo><mi>m</mi><mo stretchy="false">)</mo><mo>/</mo><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">y = (m' - m)/\sigma</annotation></semantics></math>, two smoothed paths are updated. The <b>step-size path</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub></mrow><annotation encoding="application/x-tex">p_\sigma</annotation></semantics></math> measures the steps in the metric of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math>, i.e. as if the distribution were spherical:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo>←</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>p</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo>+</mo><msqrt><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo stretchy="false">(</mo><mn>2</mn><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub></msqrt><mspace width="0.2778em"/><msup><mrow><mi>C</mi></mrow><mrow><mo>−</mo><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msup><mi>y</mi><mo>,</mo><mspace width="2em"/><msup><mrow><mi>C</mi></mrow><mrow><mo>−</mo><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msup><mo>=</mo><mi>B</mi><msup><mrow><mi>D</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup><mo>.</mo></mrow><annotation encoding="application/x-tex">p_\sigma \leftarrow (1 - c_\sigma)\, p_\sigma + \sqrt{c_\sigma (2 - c_\sigma)\, \mu_{\mathrm{eff}}}\; C^{-1/2} y, \qquad C^{-1/2} = B D^{-1} B^{\mathsf T}.</annotation></semantics></math></p>
+<p>If <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">‖</mo><msub><mrow><mi>p</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo stretchy="false">‖</mo></mrow><annotation encoding="application/x-tex">\lVert p_\sigma \rVert</annotation></semantics></math> is larger than expected for random steps – the steps keep pointing in the same direction –, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">\sigma</annotation></semantics></math> is too small; if it is smaller – the steps cancel –, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">\sigma</annotation></semantics></math> is too large. The expected length of an <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math>-dimensional standard normal vector is approximated by</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">χ</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><msqrt><mi>n</mi></msqrt><mrow><mo fence="true" stretchy="true">(</mo><mn>1</mn><mo>−</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn><mi>n</mi></mrow></mfrac><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>21</mn><msup><mrow><mi>n</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">σ</mi><mo>←</mo><mi mathvariant="normal">σ</mi><mspace width="0.1667em"/><mi>exp</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mfrac><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub></mrow><mrow><msub><mrow><mi>d</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub></mrow></mfrac><mrow><mo fence="true" stretchy="true">(</mo><mfrac><mrow><mo stretchy="false">‖</mo><msub><mrow><mi>p</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo stretchy="false">‖</mo></mrow><mrow><msub><mrow><mi mathvariant="normal">χ</mi></mrow><mrow><mi>n</mi></mrow></msub></mrow></mfrac><mo>−</mo><mn>1</mn><mo fence="true" stretchy="true">)</mo></mrow><mo fence="true" stretchy="true">)</mo></mrow><mo>.</mo></mrow><annotation encoding="application/x-tex">\chi_n = \sqrt{n}\left(1 - \frac{1}{4n} + \frac{1}{21 n^2}\right), \qquad \sigma \leftarrow \sigma \exp\!\left(\frac{c_\sigma}{d_\sigma}\left(\frac{\lVert p_\sigma\rVert}{\chi_n} - 1\right)\right).</annotation></semantics></math></p>
+<p>The <b>covariance path</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">p_c</annotation></semantics></math> accumulates the steps unrotated; it carries the direction in which things went uphill repeatedly of late. As long as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">‖</mo><msub><mrow><mi>p</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo stretchy="false">‖</mo></mrow><annotation encoding="application/x-tex">\lVert p_\sigma\rVert</annotation></semantics></math> is not unusually large it is updated (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">h_\sigma = 1</annotation></semantics></math>), otherwise stalled (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">h_\sigma = 0</annotation></semantics></math>):</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo>=</mo><mrow><mo fence="true" stretchy="true">[</mo><mfrac><mrow><mo stretchy="false">‖</mo><msub><mrow><mi>p</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo stretchy="false">‖</mo></mrow><mrow><msqrt><mn>1</mn><mo>−</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn><mo stretchy="false">(</mo><mi>g</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup></msqrt><mspace width="0.2778em"/><msub><mrow><mi mathvariant="normal">χ</mi></mrow><mrow><mi>n</mi></mrow></msub></mrow></mfrac><mo>&lt;</mo><mn>1.4</mn><mo>+</mo><mfrac><mrow><mn>2</mn></mrow><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></mfrac><mo fence="true" stretchy="true">]</mo></mrow><mo>,</mo><mspace width="2em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>c</mi></mrow></msub><mo>←</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>c</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>c</mi></mrow></msub><mo>+</mo><msub><mrow><mi>h</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><msqrt><msub><mrow><mi>c</mi></mrow><mrow><mi>c</mi></mrow></msub><mo stretchy="false">(</mo><mn>2</mn><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>c</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub></msqrt><mspace width="0.2778em"/><mi>y</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">h_\sigma = \left[\frac{\lVert p_\sigma\rVert}{\sqrt{1 - (1 - c_\sigma)^{2(g+1)}}\; \chi_n} &lt; 1.4 + \frac{2}{n+1}\right], \qquad p_c \leftarrow (1 - c_c)\, p_c + h_\sigma \sqrt{c_c (2 - c_c)\, \mu_{\mathrm{eff}}}\; y.</annotation></semantics></math></p>
+<p>The covariance combines a <b>rank-one update</b> from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">p_c</annotation></semantics></math> with a <b>rank-<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi></mrow><annotation encoding="application/x-tex">\mu</annotation></semantics></math> update</b> from the selected steps <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>:</mo><mi mathvariant="normal">λ</mi></mrow></msub><mo>−</mo><mi>m</mi><mo stretchy="false">)</mo><mo>/</mo><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">y_i = (x_{i:\lambda} - m)/\sigma</annotation></semantics></math>, measured from the <b>old</b> mean:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>C</mi><mo>←</mo><mrow><mo fence="true" stretchy="true">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></msub><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>h</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><msub><mrow><mi>c</mi></mrow><mrow><mi>c</mi></mrow></msub><mo stretchy="false">(</mo><mn>2</mn><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>c</mi></mrow></msub><mo stretchy="false">)</mo><mo fence="true" stretchy="true">)</mo></mrow><mi>C</mi><mo>+</mo><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>c</mi></mrow></msub><msubsup><mrow><mi>p</mi></mrow><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msubsup><mo>+</mo><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></msub><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></munderover><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><msubsup><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msubsup><mo>.</mo></mrow><annotation encoding="application/x-tex">C \leftarrow \left(1 - c_1 - c_\mu + (1-h_\sigma)\, c_1 c_c (2 - c_c)\right) C + c_1\, p_c p_c^{\mathsf T} + c_\mu \sum_{i=1}^{\mu} w_i\, y_i y_i^{\mathsf T}.</annotation></semantics></math></p>
+
+<h3>The constants</h3>
+<p>All learning rates depend only on the dimension <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">\mu_{\mathrm{eff}}</annotation></semantics></math> – there is nothing to set except <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_0</annotation></semantics></math> and, if desired, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>4</mn><mo>+</mo><mo stretchy="false">⌊</mo><mn>3</mn><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>n</mi><mo stretchy="false">⌋</mo><mo>,</mo><mspace width="1em"/><msub><mrow><mi>c</mi></mrow><mrow><mi>c</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>4</mn><mo>+</mo><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub><mo>/</mo><mi>n</mi></mrow><mrow><mi>n</mi><mo>+</mo><mn>4</mn><mo>+</mo><mn>2</mn><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub><mo>/</mo><mi>n</mi></mrow></mfrac><mo>,</mo><mspace width="1em"/><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub><mo>+</mo><mn>2</mn></mrow><mrow><mi>n</mi><mo>+</mo><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub><mo>+</mo><mn>5</mn></mrow></mfrac><mo>,</mo><mspace width="1em"/><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mfrac><mrow><mn>2</mn></mrow><mrow><mo stretchy="false">(</mo><mi>n</mi><mo>+</mo><mn>1.3</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">\lambda = 4 + \lfloor 3 \ln n \rfloor, \quad c_c = \frac{4 + \mu_{\mathrm{eff}}/n}{n + 4 + 2\mu_{\mathrm{eff}}/n}, \quad c_\sigma = \frac{\mu_{\mathrm{eff}} + 2}{n + \mu_{\mathrm{eff}} + 5}, \quad c_1 = \frac{2}{(n+1.3)^2 + \mu_{\mathrm{eff}}},</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mspace width="0.2778em"/><mfrac><mrow><mn>2</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub><mo>−</mo><mn>2</mn><mo>+</mo><mn>1</mn><mo>/</mo><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub><mo stretchy="false">)</mo></mrow><mrow><mo stretchy="false">(</mo><mi>n</mi><mo>+</mo><mn>2</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="2em"/><msub><mrow><mi>d</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo>=</mo><mn>1</mn><mo>+</mo><mn>2</mn><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mn>0</mn><mo>,</mo><mspace width="0.2778em"/><msqrt><mfrac><mrow><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub><mo>−</mo><mn>1</mn></mrow><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></mfrac></msqrt><mo>−</mo><mn>1</mn><mo fence="true" stretchy="true">)</mo></mrow><mo>+</mo><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">c_\mu = \min\!\left(1 - c_1,\; \frac{2\,(\mu_{\mathrm{eff}} - 2 + 1/\mu_{\mathrm{eff}})}{(n+2)^2 + \mu_{\mathrm{eff}}}\right), \qquad d_\sigma = 1 + 2 \max\!\left(0,\; \sqrt{\frac{\mu_{\mathrm{eff}} - 1}{n+1}} - 1\right) + c_\sigma.</annotation></semantics></math></p>
+<table>
+  <tr><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi></mrow><annotation encoding="application/x-tex">\mu</annotation></semantics></math></th><th>Weights <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">w_i</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">μ</mi></mrow><mrow><mi>eff</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">\mu_{\mathrm{eff}}</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_c</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_\sigma</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">c_1</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_\mu</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>d</mi></mrow><mrow><mi mathvariant="normal">σ</mi></mrow></msub></mrow><annotation encoding="application/x-tex">d_\sigma</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">χ</mi></mrow><mrow><mi>n</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\chi_n</annotation></semantics></math></th></tr>
+  <tr><td>2</td><td>6</td><td>3</td><td>0.637 · 0.285 · 0.078</td><td>2.029</td><td>0.625</td><td>0.446</td><td>0.1548</td><td>0.0579</td><td>1.446</td><td>1.254</td></tr>
+  <tr><td>12</td><td>11</td><td>5</td><td>0.456 · 0.271 · 0.162 · 0.085 · 0.026</td><td>3.167</td><td>0.258</td><td>0.256</td><td>0.0111</td><td>0.0149</td><td>1.256</td><td>3.393</td></tr>
+  <tr><td>74</td><td>16</td><td>8</td><td>0.328 … 0.009</td><td>4.841</td><td>0.052</td><td>0.082</td><td>0.00035</td><td>0.00105</td><td>1.082</td><td>8.573</td></tr>
+</table>
+<p class="quelle">Recomputed with the formulas from <code>CmaEsProposer</code>. Twelve parameters correspond to the measured comparison of the module documentation, 74 to the full genome of a curve tracer.</p>
+<p>The table shows why CMA-ES needs a run-up with many parameters: at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>74</mn></mrow><annotation encoding="application/x-tex">n = 74</annotation></semantics></math> the covariance learns with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">μ</mi></mrow></msub><mo>≈</mo><mn>0.0014</mn></mrow><annotation encoding="application/x-tex">c_1 + c_\mu \approx 0.0014</annotation></semantics></math> per generation; hundreds of generations of 16 evaluations each pass before <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> reflects the landscape.</p>
+
+<h3>Pseudocode – <code>CmaEsProposer</code></h3>
+<pre class="pseudo"><i>// constructor</i>
+m ← start;  σ ← sigma0 · (mean span of the genes)
+C ← I;  B ← I;  D ← (1, …, 1);  p_c ← 0;  p_σ ← 0;  g ← 0
+λ ← lambda, <b>if</b> ≤ 0: 4 + ⌊3 ln max(2, n)⌋;   μ ← ⌊λ/2⌋;   weights and constants as above
+
+<i>// propose(parents, context, count)</i>
+<b>if</b> parents empty: <b>return</b> empty list
+base ← <b>on the first call</b>: genes of parents[0]          <i>non-numeric genes, fixed afterwards</i>
+<b>for</b> k ← 1 <b>to</b> count:
+    z ← standard normal vector
+    x ← clamp(m + σ · B · (D ⊙ z))
+    child ← parents[0].child(toGenome(x, base), MUTATION)
+    remember x under child.id in the waiting list
+
+<i>// tell(child, evaluation, accepted)</i>
+f ← evaluation.usable ? evaluation.fitness : −∞
+<b>if</b> child.id not in the waiting list: <b>done</b>
+fitness[child] ← f
+<b>if</b> number of fitness values ≥ λ: update()
+
+<i>// update()</i>
+sort the children with fitness, descending;  m_old ← m
+m ← Σ_{i≤μ} w_i · x_{i:λ}
+y ← (m − m_old) / σ
+p_σ ← (1 − c_σ) p_σ + √(c_σ(2 − c_σ) μ_eff) · B D⁻¹ Bᵀ y
+h_σ ← ‖p_σ‖ / √(1 − (1 − c_σ)^(2(g+1))) / χ_n &lt; 1.4 + 2/(n+1)
+p_c ← (1 − c_c) p_c + (h_σ ? √(c_c(2 − c_c) μ_eff) · y : 0)
+C ← (1 − c_1 − c_μ + (h_σ ? 0 : c_1 c_c(2 − c_c))) C + c_1 p_c p_cᵀ
+      + c_μ Σ_{i≤μ} w_i · ((x_{i:λ} − m_old)/σ)((x_{i:λ} − m_old)/σ)ᵀ
+σ ← σ · exp((c_σ/d_σ)(‖p_σ‖/χ_n − 1));   g ← g + 1
+<b>if</b> more than max(1, ⌊n/4⌋) updates since the last decomposition: (B, D) ← jacobi(C)
+clear waiting list and fitness values             <i>including reports still outstanding</i>
+
+<i>// jacobi(C): symmetric eigendecomposition</i>
+A ← (C + Cᵀ)/2;  V ← I
+<b>up to</b> 60 sweeps, <b>while</b> Σ_{i&lt;j} A_ij² ≥ 10⁻¹⁸:
+    <b>for</b> every pair p &lt; q with |A_pq| ≥ 10⁻¹⁵:
+        θ ← (A_qq − A_pp)/(2 A_pq);  t ← sign(θ)/(|θ| + √(θ² + 1))   <i>θ = 0: t ← 1</i>
+        c ← 1/√(t² + 1);  s ← t c
+        rotate columns p, q and rows p, q of A and columns p, q of V
+B ← V;  D_i ← √max(10⁻²⁰, A_ii)</pre>
+<p class="quelle">Source: <code>envisionz-framework-evolve/src/envisionz/evolve/CmaEsProposer.java</code>. The formulas follow the standard form after Hansen; the linear algebra is written in the operator itself, without a library.</p>
+
+<h3>Conventions</h3>
+<div class="hinweis"><b>Convention in the framework:</b> <b>One step size for all genes, in absolute units.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_0</annotation></semantics></math> is multiplied by the mean span of all genes. If the genes have very different spans – a radius in pixels next to a weight between 0 and 1 –, the distribution starts far too wide for one and far too narrow for the other; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> has to learn that first.</div>
+<div class="hinweis"><b>Convention in the framework:</b> <b>CMA-ES follows its own mean, not the archive.</b> The children are drawn around <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math>, not around the drawn parents. The parent only supplies the identifier for the lineage and – on the very first call, fixed afterwards – the non-numeric genes. The archive collects the results but does not steer the distribution.</div>
+<div class="hinweis"><b>Convention in the framework:</b> <b>Invalid children count as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">-\infty</annotation></semantics></math>.</b> They belong to the generation and end up at the bottom of the ranking. As long as at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>−</mo><mi mathvariant="normal">μ</mi></mrow><annotation encoding="application/x-tex">\lambda - \mu</annotation></semantics></math> children of a generation are invalid, they do not shape mean and covariance. If there are more, clipped or invalid points move into the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi></mrow><annotation encoding="application/x-tex">\mu</annotation></semantics></math> selected ones.</div>
+<div class="hinweis"><b>Convention in the framework:</b> <b>After <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> reports the distribution is updated and the waiting list is cleared.</b> If the engine delivers batches with more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> children – default 16; with twelve genes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>11</mn></mrow><annotation encoding="application/x-tex">\lambda = 11</annotation></semantics></math> –, the reports of the remaining five go nowhere. Batches smaller than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> accumulate over several generations. The <b>clipped</b> point is stored, so the update computes with what was actually evaluated.</div>
+
+<h3>Worked example: an oblique, narrow valley</h3>
+<p>Two genes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>,</mo><mi>y</mi><mo>∈</mo><mo stretchy="false">[</mo><mo>−</mo><mn>5</mn><mo>,</mo><mn>5</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">x, y \in [-5, 5]</annotation></semantics></math>, fitness <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mo>−</mo><mo stretchy="false">(</mo><mo stretchy="false">(</mo><mi>x</mi><mo>+</mo><mi>y</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mn>25</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mi>y</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f = -\big((x+y)^2 + 25\,(x-y)^2\big)</annotation></semantics></math>: a valley along the diagonal <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mi>y</mi></mrow><annotation encoding="application/x-tex">x = y</annotation></semantics></math>, five times narrower across than along. Start <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mo stretchy="false">(</mo><mn>3</mn><mo>,</mo><mn>3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">m = (3, 3)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>0.25</mn></mrow><annotation encoding="application/x-tex">\sigma_0 = 0.25</annotation></semantics></math>, hence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mn>0.25</mn><mo>⋅</mo><mn>10</mn><mo>=</mo><mn>2.5</mn></mrow><annotation encoding="application/x-tex">\sigma = 0.25 \cdot 10 = 2.5</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">\lambda = 6</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\mu = 3</annotation></semantics></math>. Six children per generation, all reported back:</p>
+<table>
+  <tr><th>Generation after the update</th><th>1</th><th>6</th><th>11</th><th>16</th><th>21</th><th>31</th><th>40</th></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">\sigma</annotation></semantics></math></td><td>2.238</td><td>1.268</td><td>0.672</td><td>0.318</td><td>0.149</td><td>0.0263</td><td>0.0082</td></tr>
+  <tr><td>best child of the generation</td><td>−84.98</td><td>−8.284</td><td>−0.2062</td><td>−0.0510</td><td>−2.2·10⁻⁴</td><td>−5.5·10⁻⁵</td><td>−2.3·10⁻⁶</td></tr>
+</table>
+<p class="quelle">Recomputed with a small Java program against <code>CmaEsProposer</code> (seed 7); the children are rounded to four decimal places via <code>toGenome</code> and then evaluated.</p>
+<p>Over 40 generations (240 evaluations) the step size falls by more than two orders of magnitude, while the fitness gets from the starting value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>36</mn></mrow><annotation encoding="application/x-tex">-36</annotation></semantics></math> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>3</mn><mo>,</mo><mn>3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(3,3)</annotation></semantics></math> to within <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math> of the maximum 0. The best child per generation is not monotonic because every generation draws afresh; in the archive the best value is of course kept.</p>
+
+<h2 id="ersatz">Surrogate model</h2>
+<p>The surrogate model learns the mapping "genome → fitness" from all pairs <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(x_i, f_i)</annotation></semantics></math> seen so far. It computes in normalised coordinates <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mspace width="0.1667em"/><mi>normalize</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>∈</mo><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><msup><mrow><mo stretchy="false">]</mo></mrow><mrow><mi>n</mi></mrow></msup></mrow><annotation encoding="application/x-tex">z = \mathrm{normalize}(x) \in [0,1]^n</annotation></semantics></math>, so that every gene counts equally, with the fixed bandwidth <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mn>0.25</mn></mrow><annotation encoding="application/x-tex">h = 0.25</annotation></semantics></math>.</p>
+<p><b>Estimate.</b> A distance-weighted mean of the known fitness values with Gaussian weights:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mover accent="true"><mrow><mi>f</mi></mrow><mo stretchy="true">^</mo></mover><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><msub><mrow><mi>f</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></mfrac><mo>,</mo><mspace width="2em"/><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>exp</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mo>−</mo><mfrac><mrow><mo stretchy="false">‖</mo><mi>z</mi><mo>−</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>i</mi></mrow></msub><msup><mrow><mo stretchy="false">‖</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><msup><mrow><mi>h</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo>.</mo></mrow><annotation encoding="application/x-tex">\hat f(x) = \frac{\sum_i w_i f_i}{\sum_i w_i}, \qquad w_i = \exp\!\left(-\frac{\lVert z - z_i \rVert^2}{h^2}\right).</annotation></semantics></math></p>
+<p>If <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>&lt;</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\sum w_i &lt; 10^{-12}</annotation></semantics></math> – the point lies far from everything –, the mean of all fitness values applies. The class comment calls the model "radial basis functions"; mathematically it is a kernel-weighted mean after Nadaraya and Watson. The difference matters: the estimate does <b>not</b> pass through the observed points, it smooths.</p>
+<p><b>Uncertainty.</b> The distance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>d</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">d_{\min}</annotation></semantics></math> to the nearest evaluated point, scaled by the spread <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><annotation encoding="application/x-tex">s_f</annotation></semantics></math> of the known fitness values (sample standard deviation, 1 with fewer than two values):</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>u</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>f</mi></mrow></msub><mrow><mo fence="true" stretchy="true">(</mo><mn>1</mn><mo>−</mo><mspace width="0.1667em"/><mi>exp</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mo>−</mo><mfrac><mrow><msubsup><mrow><mi>d</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow><mrow><mn>2</mn></mrow></msubsup></mrow><mrow><msup><mrow><mi>h</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo fence="true" stretchy="true">)</mo></mrow><mo>.</mo></mrow><annotation encoding="application/x-tex">u(x) = s_f \left(1 - \exp\!\left(-\frac{d_{\min}^2}{h^2}\right)\right).</annotation></semantics></math></p>
+<p>At an evaluated point <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">u = 0</annotation></semantics></math>; far away it approaches <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><annotation encoding="application/x-tex">s_f</annotation></semantics></math>.</p>
+<p><b>Selection.</b> What is proposed is not the point with the best estimate but the one with the largest <b>expected gain</b></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>a</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mover accent="true"><mrow><mi>f</mi></mrow><mo stretchy="true">^</mo></mover><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>+</mo><mi mathvariant="normal">β</mi><mspace width="0.1667em"/><mi>u</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">a(x) = \hat f(x) + \beta\, u(x).</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">β</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\beta = 0</annotation></semantics></math> is purely greedy and gets stuck in the known; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">β</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\beta = 1</annotation></semantics></math> explores strongly. The maximum is sought not analytically but among <code>probes</code> random points: every third one (index 0, 3, 6, …) is uniform in the whole box, the others scatter normally with 15 % of the span around the first parent.</p>
+
+<figure>
+<svg viewBox="0 0 600 272" width="600" font-family="sans-serif" font-size="13">
+  <line x1="60" y1="240" x2="580" y2="240" stroke="#5b6475"/>
+  <line x1="60" y1="20" x2="60" y2="240" stroke="#5b6475"/>
+  <line x1="60" y1="36.3" x2="580" y2="36.3" stroke="#c9d1dc"/>
+  <line x1="60" y1="77.0" x2="580" y2="77.0" stroke="#c9d1dc"/>
+  <line x1="60" y1="117.8" x2="580" y2="117.8" stroke="#c9d1dc"/>
+  <line x1="60" y1="158.5" x2="580" y2="158.5" stroke="#c9d1dc"/>
+  <line x1="60" y1="199.3" x2="580" y2="199.3" stroke="#c9d1dc"/>
+  <text x="52" y="40" fill="#5b6475" text-anchor="end">0</text>
+  <text x="52" y="81" fill="#5b6475" text-anchor="end">−10</text>
+  <text x="52" y="122" fill="#5b6475" text-anchor="end">−20</text>
+  <text x="52" y="163" fill="#5b6475" text-anchor="end">−30</text>
+  <text x="52" y="203" fill="#5b6475" text-anchor="end">−40</text>
+  <text x="60" y="256" fill="#5b6475" text-anchor="middle">0</text>
+  <text x="164" y="256" fill="#5b6475" text-anchor="middle">2</text>
+  <text x="268" y="256" fill="#5b6475" text-anchor="middle">4</text>
+  <text x="372" y="256" fill="#5b6475" text-anchor="middle">6</text>
+  <text x="476" y="256" fill="#5b6475" text-anchor="middle">8</text>
+  <text x="580" y="256" fill="#5b6475" text-anchor="middle">10</text>
+  <text x="320" y="270" fill="#5b6475" text-anchor="middle">x</text>
+  <line x1="357.8" y1="24" x2="357.8" y2="240" stroke="#9a6400" stroke-dasharray="4,3"/>
+  <polyline fill="none" stroke="#5b6475" stroke-width="1.5" stroke-dasharray="6,4" points="60.0,235.9 70.4,224.7 80.8,213.8 91.2,203.2 101.6,192.9 112.0,183.0 122.4,173.3 132.8,164.1 143.2,155.1 153.6,146.5 164.0,138.1 174.4,130.2 184.8,122.5 195.2,115.2 205.6,108.2 216.0,101.5 226.4,95.1 236.8,89.1 247.2,83.4 257.6,78.0 268.0,73.0 278.4,68.2 288.8,63.8 299.2,59.8 309.6,56.0 320.0,52.6 330.4,49.5 340.8,46.7 351.2,44.3 361.6,42.2 372.0,40.4 382.4,38.9 392.8,37.8 403.2,36.9 413.6,36.5 424.0,36.3 434.4,36.5 444.8,36.9 455.2,37.8 465.6,38.9 476.0,40.4 486.4,42.2 496.8,44.3 507.2,46.7 517.6,49.5 528.0,52.6 538.4,56.0 548.8,59.8 559.2,63.8 569.6,68.2 580.0,73.0"/>
+  <polyline fill="none" stroke="#1f5f8b" stroke-width="2" points="60.0,165.2 70.4,163.4 80.8,161.4 91.2,159.3 101.6,157.1 112.0,154.7 122.4,152.3 132.8,149.8 143.2,147.1 153.6,144.5 164.0,141.7 174.4,138.9 184.8,136.1 195.2,133.2 205.6,130.2 216.0,127.2 226.4,124.0 236.8,120.6 247.2,117.1 257.6,113.2 268.0,109.0 278.4,104.3 288.8,99.2 299.2,93.6 309.6,87.6 320.0,81.4 330.4,75.2 340.8,69.3 351.2,64.0 361.6,59.3 372.0,55.4 382.4,52.2 392.8,49.8 403.2,48.0 413.6,46.8 424.0,45.9 434.4,45.4 444.8,45.1 455.2,45.0 465.6,45.0 476.0,45.1 486.4,45.3 496.8,45.5 507.2,45.8 517.6,46.1 528.0,46.4 538.4,46.7 548.8,47.1 559.2,47.4 569.6,47.7 580.0,48.0"/>
+  <polyline fill="none" stroke="#9a6400" stroke-width="2" points="60.0,155.5 70.4,157.0 80.8,157.7 91.2,157.6 101.6,156.7 112.0,154.7 122.4,151.9 132.8,148.1 143.2,143.5 153.6,138.1 164.0,132.0 174.4,132.5 184.8,132.4 195.2,131.5 205.6,129.8 216.0,127.2 226.4,123.6 236.8,119.0 247.2,113.4 257.6,106.8 268.0,99.3 278.4,90.8 288.8,81.5 299.2,71.5 309.6,61.1 320.0,50.4 330.4,39.9 340.8,36.1 351.2,35.2 361.6,35.0 372.0,35.6 382.4,36.7 392.8,38.3 403.2,40.1 413.6,41.8 424.0,43.3 434.4,44.4 444.8,45.0 455.2,44.8 465.6,44.0 476.0,42.5 486.4,40.3 496.8,41.9 507.2,44.1 517.6,45.7 528.0,46.4 538.4,46.3 548.8,45.4 559.2,43.7 569.6,41.3 580.0,38.3"/>
+  <circle cx="112.0" cy="183.0" r="5" fill="#1f5f8b"/>
+  <circle cx="216.0" cy="101.5" r="5" fill="#1f5f8b"/>
+  <circle cx="450.0" cy="37.3" r="5" fill="#1f5f8b"/>
+  <circle cx="528.0" cy="52.6" r="5" fill="#1f5f8b"/>
+  <text x="352" y="20" fill="#9a6400" text-anchor="end">proposal x ≈ 5.7</text>
+  <line x1="130" y1="178" x2="156" y2="178" stroke="#5b6475" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="164" y="182" fill="#5b6475">true fitness −(x − 7)²</text>
+  <line x1="130" y1="194" x2="156" y2="194" stroke="#1f5f8b" stroke-width="2"/>
+  <text x="164" y="198" fill="#5b6475">estimate</text>
+  <line x1="130" y1="210" x2="156" y2="210" stroke="#9a6400" stroke-width="2"/>
+  <text x="164" y="214" fill="#5b6475">estimate + β·u, β = 1</text>
+  <circle cx="143" cy="226" r="5" fill="#1f5f8b"/>
+  <text x="164" y="230" fill="#5b6475">evaluated points</text>
+</svg>
+<figcaption>The surrogate model after four evaluations of the function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mn>7</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-(x-7)^2</annotation></semantics></math> on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>10</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 10]</annotation></semantics></math> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>1</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>7.5</mn><mo>,</mo><mn>9</mn></mrow><annotation encoding="application/x-tex">x = 1, 3, 7.5, 9</annotation></semantics></math>. The estimate (blue) smooths and stays below the measured value at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>7.5</mn></mrow><annotation encoding="application/x-tex">x = 7.5</annotation></semantics></math>; the uncertainty bonus (amber) lifts the gap between 3 and 7.5. There, at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>≈</mo><mn>5.7</mn></mrow><annotation encoding="application/x-tex">x \approx 5.7</annotation></semantics></math>, lies the maximum of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>f</mi></mrow><mo stretchy="true">^</mo></mover><mo>+</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">\hat f + u</annotation></semantics></math> – the next proposal explores the gap.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>SurrogateProposer</code></h3>
+<pre class="pseudo"><i>// propose(parents, context, count)</i>
+<b>if</b> parents empty: <b>return</b> empty list
+<b>if</b> no observation yet: observe all context.topExamples (genome, fitness)
+<b>if</b> fewer than 3 observations: <b>return</b> empty list
+p ← parents[0];  centre ← toVector(p.genes)
+<b>for</b> k ← 1 <b>to</b> count:
+    best ← none;  a* ← −∞
+    <b>for</b> s ← 0 <b>to</b> probes − 1:
+        <b>for</b> each gene i:
+            x_i ← (s mod 3 = 0) ? l_i + U(0,1)·span_i               <i>free in the box</i>
+                                : centre_i + N(0,1)·0.15·span_i        <i>near the parent</i>
+        x ← clamp(x)
+        a ← f̂(x) + β · u(x)
+        <b>if</b> a &gt; a*: a* ← a;  best ← x
+    child ← p.child(toGenome(best, p.genes), MUTATION);  remember best under child.id
+
+<i>// tell(child, evaluation, accepted)</i>
+<b>if</b> evaluation usable <b>and</b> fitness finite:
+    x ← remembered point for child.id, otherwise toVector(child.genes)
+    observe (x, fitness)
+<b>else</b>: forget child.id                                   <i>−∞ would poison the model</i>
+
+<i>// f̂(x): see formula; with Σw &lt; 10⁻¹² the mean of all fitness values</i>
+<i>// u(x) = s_f · (1 − exp(−d_min²/h²)),  h = 0.25 in normalised units</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-evolve/src/envisionz/evolve/SurrogateProposer.java</code> (<code>propose</code>, <code>tell</code>, <code>predict</code>, <code>uncertainty</code>). With <code>observe(genome, fitness)</code> external evaluations can also be fed in, for instance from a loaded archive.</p>
+
+<h3>Worked example</h3>
+<p>Eleven observations of the function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mo>−</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mn>7</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">f(x) = -(x-7)^2</annotation></semantics></math> on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>10</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 10]</annotation></semantics></math> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mn>10</mn></mrow><annotation encoding="application/x-tex">x = 0, 1, \dots, 10</annotation></semantics></math>, spread of the fitness values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>=</mo><mn>16.18</mn></mrow><annotation encoding="application/x-tex">s_f = 16.18</annotation></semantics></math>. Neighbouring points lie 0.1 apart in normalised units and still carry the weight <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><mo>−</mo><mo stretchy="false">(</mo><mn>0.1</mn><mo>/</mo><mn>0.25</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow></msup><mo>=</mo><mn>0.852</mn></mrow><annotation encoding="application/x-tex">e^{-(0.1/0.25)^2} = 0.852</annotation></semantics></math> – the estimate is therefore strongly smoothed:</p>
+<table>
+  <tr><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></th><th>0</th><th>2.5</th><th>5</th><th>7</th><th>8</th><th>10</th></tr>
+  <tr><td>true <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(x)</annotation></semantics></math></td><td>−49</td><td>−20.25</td><td>−4</td><td>0</td><td>−1</td><td>−9</td></tr>
+  <tr><td>estimate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>f</mi></mrow><mo stretchy="true">^</mo></mover><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\hat f(x)</annotation></semantics></math></td><td>−35.876</td><td>−21.321</td><td>−7.069</td><td>−2.774</td><td>−2.860</td><td>−4.832</td></tr>
+  <tr><td>uncertainty <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">u(x)</annotation></semantics></math></td><td>0</td><td>0.634</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+</table>
+<p class="quelle">Recomputed with <code>SurrogateProposer.predict</code> and <code>uncertainty</code>.</p>
+<p>The ranking is right – the maximum of the estimate lies between 7 and 8 –, the values are not: at the edge the smoothing pulls the estimate towards the middle, at the peak downwards. For choosing the next point the ranking suffices; as a substitute for an evaluation the estimate is no good.</p>
+
+<h2 id="wann">Which operator when</h2>
+<table>
+  <tr><th>Situation</th><th>Operator</th><th>Reason</th></tr>
+  <tr><td>numeric genes, evaluation cheap to medium</td><td>differential evolution</td><td>simple, stateless, ahead after 25 evaluations in the measured comparison</td></tr>
+  <tr><td>strongly coupled parameters, enough budget</td><td>CMA-ES</td><td>learns directions; needs one generation to get going</td></tr>
+  <tr><td>evaluation takes about a minute or longer</td><td>surrogate model</td><td>every evaluation saved counts; better than random only after a run-up</td></tr>
+  <tr><td>warm-up, baseline</td><td>Gaussian mutation</td><td>always delivers, needs no population</td></tr>
+</table>
+<p>In the measured comparison of the module documentation (twelve parameters, 200 evaluations), CMA-ES was still at the starting value after 25 evaluations, reached −0.8906 after 50 and stayed there; the surrogate model had −0.8593 already after 25 evaluations and did not improve afterwards; differential evolution reached −0.8462 (table on the page <a href="gauss-de.html#messung">Gauss and DE</a>).</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<p><code>Evolveprobe</code> checks both operators against their promises, not against a search result:</p>
+<ul>
+  <li><b>CMA-ES:</b> the generation starts at zero; without a parent an empty list comes back; with a parent <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>8</mn></mrow><annotation encoding="application/x-tex">\lambda = 8</annotation></semantics></math> children come, all within the bounds <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>10</mn><mo>,</mo><mn>10</mn><msup><mrow><mo stretchy="false">]</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">[-10, 10]^2</annotation></semantics></math>; after <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> reports with fitness <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mo stretchy="false">(</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msup><mrow><mi>y</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">-(x^2+y^2)</annotation></semantics></math> the generation advances – otherwise the method would learn nothing and be an expensive random search; the same seed gives the same children.</li>
+  <li><b>Surrogate model:</b> zero observations without observations; eleven observations of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mn>7</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-(x-7)^2</annotation></semantics></math> arrive; the prediction at 7 is better than at 0; the uncertainty at 7 is not larger than at the edge at 10 (tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>); all proposals lie within the bounds.</li>
+</ul>
+<p>Neither the convergence of CMA-ES nor the location of the maximum of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>f</mi></mrow><mo stretchy="true">^</mo></mover><mo>+</mo><mi mathvariant="normal">β</mi><mi>u</mi></mrow><annotation encoding="application/x-tex">\hat f + \beta u</annotation></semantics></math> is checked; the worked examples on this page are our own recomputations.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>CMA-ES without feedback</b> stands still: the distribution is never updated, and the operator is then a Gaussian cloud around the starting point. The engine reports back; a driver of one's own must do so itself.</li>
+  <li><b>Lost reports</b> with batches larger than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> (see conventions). Whoever runs CMA-ES alone sets <code>batchSize</code> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> or a multiple.</li>
+  <li><b>Jacobi eigendecomposition</b> costs <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><msup><mrow><mi>n</mi></mrow><mrow><mn>3</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(n^3)</annotation></semantics></math> per sweep and according to the comment suffices up to about <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>50</mn></mrow><annotation encoding="application/x-tex">n = 50</annotation></semantics></math>; for more genes the code makes no promise.</li>
+  <li><b>One step size for all genes</b> with very different spans – normalise beforehand or choose <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_0</annotation></semantics></math> small.</li>
+  <li><b>CMA-ES and MAP-Elites do not pull in the same direction.</b> CMA-ES converges on one optimum; diversity across the niches arises only incidentally.</li>
+  <li><b>Surrogate: smoothing instead of interpolation</b> – the estimate does not even hit evaluated points. The bandwidth is fixed at 0.25 and adapts neither to the dimension nor to the number of observations; in many dimensions the points lie far apart in normalised units; the estimate is then dominated by the respective nearest point and falls back to the mean of all fitness values as soon as the weight sum drops below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>.</li>
+  <li><b>Surrogate: cost</b> grows linearly with the number of observations per query, i.e. with observations × <code>probes</code> × children per generation. Old observations are never forgotten.</li>
+  <li><b>Surrogate: at least three observations.</b> Before that it delivers nothing; used alone, the same applies as for differential evolution (<a href="suchlauf.html#leer">Search run</a>).</li>
+  <li><b>Every learned model has blind spots</b>, and a search against it finds them. The uncertainty bonus counteracts this but does not replace an evaluation.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>N. Hansen, A. Ostermeier: <i>Completely Derandomized Self-Adaptation in Evolution Strategies.</i> Evolutionary Computation 9 (2), 159–195, 2001.</li>
+  <li>N. Hansen: <i>The CMA Evolution Strategy: A Tutorial.</i> arXiv:1604.00772, 2016.</li>
+  <li>E. A. Nadaraya: <i>On Estimating Regression.</i> Theory of Probability and its Applications 9, 141–142, 1964.</li>
+  <li>G. S. Watson: <i>Smooth Regression Analysis.</i> Sankhyā, Series A 26, 359–372, 1964.</li>
+</ul>
+
+<footer>
+envisionz-framework-evolve · Background to <a href="index.html#zahlen">Operators for numeric genes</a> · Probes: <code>Evolveprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

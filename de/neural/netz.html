@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Das Netz – Vorwärtslauf, Rückpropagation, Aktivierungen – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#core">Das Netz</a>
+<a class="unterseite aktiv" href="netz.html">Netz</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimierer</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Daten, Normierung, Metriken</a>
+<a class="unterseite" href="daten.html">Daten und Metriken</a>
+<a class="rubrik" href="index.html#model">Ersatzmodell, Ensemble, Ablage</a>
+<a class="unterseite" href="ersatzmodell.html">Ersatzmodell</a>
+<a class="rubrik" href="index.html#search">Modellsuche</a>
+<a class="unterseite" href="modellsuche.html">Modellsuche</a>
+<a class="rubrik" href="index.html#analysis">Sensitivitätsanalyse</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivität</a>
+<a class="rubrik" href="index.html#api">Schnittstelle für andere Anwendungen</a>
+<a class="rubrik" href="index.html#ocr">Zeichenerkennung ohne Tesseract</a>
+<a class="unterseite" href="ocr.html">Zeichenerkennung</a>
+<a class="rubrik" href="index.html#seq">Folgen ohne Ausrichtung: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Strahlsuche</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-neural</a> › Das Netz – Vorwärtslauf, Rückpropagation, Aktivierungen</span><a class="sprachwahl" href="../../en/neural/netz.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.core</div>
+  <h1>Das Netz – Vorwärtslauf, Rückpropagation, Aktivierungen</h1>
+  <p class="unter">Die Rechnung hinter <code>NeuralNet</code>, <code>DenseLayer</code>, <code>Activation</code> und <code>Init</code>: wie ein mehrschichtiges Netz aus Eingängen Ausgänge macht, wie der Gradient des Fehlers nach jedem Gewicht entsteht, welche Aktivierungen und Anfangswerte es gibt und wie Dropout eingreift – mit Pseudocode nach dem Quelltext, einem von Hand nachgerechneten Beispiel, den Prüfungen und den Grenzen. Wie aus dem Gradienten ein Trainingsschritt wird, steht auf den Seiten <a href="training.html">Training</a> und <a href="optimierer.html">Optimierer</a>.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Ein Verdichterkennfeld ordnet zwei Größen – etwa reduziertem Massenstrom und reduzierter Drehzahl – ein Druckverhältnis und einen Wirkungsgrad zu. Gemessen oder gerechnet liegt es als Punktwolke vor; gebraucht wird es als Funktion, die man an jeder Stelle schnell auswerten kann. Ein <b>mehrschichtiges Netz</b> (englisch <i>multilayer perceptron</i>, MLP) ist eine solche Funktion mit vielen einstellbaren Zahlen, den Gewichten. Training heißt: die Gewichte so einstellen, dass die Funktion die Punkte möglichst gut trifft.</p>
+<p>Das Netz ist aus <b>Schichten</b> aufgebaut. Jede Schicht bildet gewichtete Summen ihrer Eingänge, zählt einen Versatz (Bias) dazu und schickt das Ergebnis durch eine nichtlineare <b>Aktivierungsfunktion</b>. Ohne die Nichtlinearität wäre eine Kette von Schichten nur eine einzige lineare Abbildung; mit ihr kann schon eine verdeckte Schicht ausreichender Breite jede stetige Funktion auf einem beschränkten Bereich beliebig genau annähern.</p>
+<p>Die Bibliothek folgt im Aufbau dem Vorbild der C-Bibliothek FANN: keine Neuron-Objekte, sondern je Schicht ein flaches Feld aller Gewichte. Modern ist, was darauf gerechnet wird: frei wählbare Aktivierungen je Schicht, Anfangswerte nach He oder Xavier, aufsummierende Gradienten für Mini-Stapel und Dropout.</p>
+
+<h2 id="vorwaerts">Der Vorwärtslauf</h2>
+<p>Eine Schicht mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">n_\text{in}</annotation></semantics></math> Eingängen und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mtext>out</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">n_\text{out}</annotation></semantics></math> Ausgängen hat eine Gewichtsmatrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi></mrow><annotation encoding="application/x-tex">W</annotation></semantics></math> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mtext>out</mtext></mrow></msub><mo>×</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">n_\text{out} \times n_\text{in}</annotation></semantics></math>), einen Biasvektor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> und eine Aktivierung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math>. Aus dem Eingang <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> macht sie</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>=</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>+</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mrow><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>W</mi></mrow><mrow><mi>o</mi><mi>i</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>a</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>=</mo><mi>f</mi><mo stretchy="false">(</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>o</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>o</mi><mo>=</mo><mn>0</mn><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>out</mtext></mrow></msub><mo>−</mo><mn>1</mn><mo>.</mo></mrow><annotation encoding="application/x-tex">z_o = b_o + \sum_{i=0}^{n_\text{in}-1} W_{oi}\, x_i, \qquad a_o = f(z_o), \qquad o = 0,\dots,n_\text{out}-1.</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> heißt <b>Prä-Aktivierung</b>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> Aktivierung. Die Aktivierungen der Schicht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> sind der Eingang der Schicht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k+1</annotation></semantics></math>; der Ausgang der letzten Schicht ist der Ausgang des Netzes. Ein Netz <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>→</mo><mn>16</mn><mo>→</mo><mn>16</mn><mo>→</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">2 \to 16 \to 16 \to 3</annotation></semantics></math> hat drei Schichten und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mo>⋅</mo><mn>16</mn><mo>+</mo><mn>16</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mn>16</mn><mo>⋅</mo><mn>16</mn><mo>+</mo><mn>16</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mn>16</mn><mo>⋅</mo><mn>3</mn><mo>+</mo><mn>3</mn><mo stretchy="false">)</mo><mo>=</mo><mn>371</mn></mrow><annotation encoding="application/x-tex">(2\cdot16+16) + (16\cdot16+16) + (16\cdot3+3) = 371</annotation></semantics></math> Parameter – so zählt <code>parameterCount()</code>.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die Gewichte einer Schicht liegen zeilenweise in einem einzigen Feld, <code>w[o·in + i]</code> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>W</mi></mrow><mrow><mi>o</mi><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">W_{oi}</annotation></semantics></math>. Alle Puffer (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">δ</mi></mrow><annotation encoding="application/x-tex">\delta</annotation></semantics></math>, Gradienten) werden beim Bau angelegt; im Trainingslauf entsteht kein Speicherbedarf. <code>forward</code> liefert eine Referenz auf den internen Ausgangspuffer, <code>run</code> eine Kopie davon.</div>
+
+<figure>
+<svg viewBox="0 0 620 260" width="620" font-family="sans-serif" font-size="13">
+  <defs>
+    <marker id="pfeil-netz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker>
+    <marker id="pfeil-netz-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9a6400"/></marker>
+  </defs>
+  <line x1="96" y1="80" x2="274" y2="80" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="96" y1="80" x2="274" y2="180" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="96" y1="180" x2="274" y2="80" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="96" y1="180" x2="274" y2="180" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="326" y1="80" x2="484" y2="130" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="326" y1="180" x2="484" y2="130" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="70" cy="80" r="26" fill="#ffffff" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="70" cy="180" r="26" fill="#ffffff" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="300" cy="80" r="26" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="300" cy="180" r="26" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="510" cy="130" r="26" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="2"/>
+  <text x="70" y="85" fill="#1f5f8b" text-anchor="middle">x<tspan baseline-shift="sub" font-size="10">1</tspan></text>
+  <text x="70" y="185" fill="#1f5f8b" text-anchor="middle">x<tspan baseline-shift="sub" font-size="10">2</tspan></text>
+  <text x="300" y="85" fill="#1f5f8b" text-anchor="middle">tanh</text>
+  <text x="300" y="185" fill="#1f5f8b" text-anchor="middle">tanh</text>
+  <text x="510" y="135" fill="#1f5f8b" text-anchor="middle">linear</text>
+  <text x="70" y="42" fill="#5b6475" text-anchor="middle">1,0</text>
+  <text x="70" y="226" fill="#5b6475" text-anchor="middle">0,5</text>
+  <text x="300" y="42" fill="#5b6475" text-anchor="middle">z = 0,400 · a = 0,380</text>
+  <text x="300" y="226" fill="#5b6475" text-anchor="middle">z = 0,500 · a = 0,462</text>
+  <text x="300" y="120" fill="#9a6400" text-anchor="middle">δ = −0,241</text>
+  <text x="300" y="148" fill="#9a6400" text-anchor="middle">δ = +0,129</text>
+  <text x="510" y="92" fill="#5b6475" text-anchor="middle">y = 0,182 (Ziel 0,3)</text>
+  <text x="510" y="176" fill="#9a6400" text-anchor="middle">δ = −0,235</text>
+  <line x1="150" y1="250" x2="440" y2="250" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-netz)"/>
+  <text x="150" y="244" fill="#1f5f8b">vorwärts: z = Wx + b, a = f(z)</text>
+  <line x1="440" y1="8" x2="150" y2="8" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-netz-r)"/>
+  <text x="440" y="23" fill="#9a6400" text-anchor="end">rückwärts: δ = (Wᵀδ′) · f′(z)</text>
+</svg>
+<figcaption>Das Rechenbeispiel unten als Bild: ein Netz 2–2–1. Vorwärts (blau) laufen die Werte von links nach rechts, rückwärts (amber) das Fehlersignal δ von rechts nach links. Jedes Gewicht bekommt als Gradient das Produkt aus dem δ an seinem Ende und dem Wert an seinem Anfang.</figcaption>
+</figure>
+
+<h2 id="rueckwaerts">Rückpropagation</h2>
+<p>Training braucht die Ableitung des Fehlers <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> nach jedem Gewicht. Die Kettenregel liefert sie in einem einzigen Rückwärtslauf, dessen Aufwand dem des Vorwärtslaufs entspricht. Der Schlüssel ist das <b>Fehlersignal</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">δ</mi><mo>=</mo><mi>∂</mi><mi>L</mi><mo>/</mo><mi>∂</mi><mi>z</mi></mrow><annotation encoding="application/x-tex">\delta = \partial L / \partial z</annotation></semantics></math>, die Ableitung nach der Prä-Aktivierung. Für eine Schicht, deren Ausgang <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> den Gradienten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>L</mi><mo>/</mo><mi>∂</mi><mi>a</mi></mrow><annotation encoding="application/x-tex">\partial L / \partial a</annotation></semantics></math> bekommt, gilt</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>=</mo><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>a</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow></mfrac><mspace width="0.1667em"/><mi>f</mi><mo>'</mo><mo stretchy="false">(</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>o</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>W</mi></mrow><mrow><mi>o</mi><mi>i</mi></mrow></msub></mrow></mfrac><mo>=</mo><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mi>o</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>b</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow></mfrac><mo>=</mo><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></mfrac><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>o</mi></mrow></munder><msub><mrow><mi>W</mi></mrow><mrow><mi>o</mi><mi>i</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\delta_o = \frac{\partial L}{\partial a_o}\, f'(z_o), \qquad \frac{\partial L}{\partial W_{oi}} = \delta_o\, x_i, \qquad \frac{\partial L}{\partial b_o} = \delta_o, \qquad \frac{\partial L}{\partial x_i} = \sum_o W_{oi}\, \delta_o .</annotation></semantics></math></p>
+<p>Die letzte Größe ist der Gradient nach dem Eingang der Schicht – und damit nach dem Ausgang der Schicht davor. So wandert das Signal Schicht für Schicht nach vorn: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>L</mi><mo>/</mo><mi>∂</mi><msup><mrow><mi>a</mi></mrow><mrow><mo stretchy="false">(</mo><mi>k</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup><mo>=</mo><msup><mrow><mi>W</mi></mrow><mrow><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo><mi>T</mi></mrow></msup><msup><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">\partial L / \partial a^{(k-1)} = W^{(k)T} \delta^{(k)}</annotation></semantics></math>. Am Ausgang des Netzes beginnt die Kette mit dem Gradienten der Verlustfunktion, bei mittlerem quadratischem Fehler über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> Ausgänge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>L</mi><mo>/</mo><mi>∂</mi><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mn>2</mn><mo stretchy="false">(</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mi>t</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mo>/</mo><mi>m</mi></mrow><annotation encoding="application/x-tex">\partial L / \partial y_j = 2 (y_j - t_j)/m</annotation></semantics></math>.</p>
+<p>Warum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>'</mo></mrow><annotation encoding="application/x-tex">f'</annotation></semantics></math> an <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> und nicht an <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math>? Für Tangens hyperbolicus und Sigmoid lässt sich die Ableitung auch aus dem Funktionswert schreiben (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><msup><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1 - a^2</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>a</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">a(1-a)</annotation></semantics></math>); für SiLU nicht. Die einheitliche Wahl <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>'</mo><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f'(z)</annotation></semantics></math> passt für alle sechs Aktivierungen.</p>
+
+<h3>Pseudocode – <code>DenseLayer.forward(x)</code> und <code>DenseLayer.backward(dLdA, x, dLdX)</code></h3>
+<pre class="pseudo"><b>funktion</b> forward(x):
+    <b>für</b> o ← 0 <b>bis</b> out−1:
+        s ← b[o]
+        <b>für</b> i ← 0 <b>bis</b> in−1:  s ← s + w[o·in + i] · x[i]
+        z[o] ← s;   a[o] ← f(s)
+    <b>wenn</b> Dropout-Maske gesetzt:  a[o] ← a[o] · maske[o]  <b>für alle</b> o
+    <b>liefere</b> a                                  <i>Referenz auf den Puffer</i>
+
+<b>funktion</b> backward(dLdA, x, dLdX):
+    <b>für</b> o:  δ[o] ← dLdA[o] · (maske[o], falls gesetzt) · f′(z[o])
+    <b>für</b> o:                                    <i>Gradienten AUFSUMMIEREN (+=)</i>
+        gradB[o] ← gradB[o] + δ[o]
+        <b>für</b> i:  gradW[o·in + i] ← gradW[o·in + i] + δ[o] · x[i]
+    <b>wenn</b> dLdX ≠ nichts:                         <i>entfällt für die erste Schicht</i>
+        dLdX ← 0
+        <b>für</b> o, i:  dLdX[i] ← dLdX[i] + w[o·in + i] · δ[o]</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-neural/src/de/envisionz/neural/core/DenseLayer.java</code>. <code>dLdX</code> wird mit den Gewichten <b>vor</b> dem Optimiererschritt gerechnet; der Schritt kommt erst, wenn alle Muster eines Stapels durch sind.</p>
+
+<h3>Pseudocode – <code>NeuralNet.forward(x)</code> und <code>NeuralNet.backward(dLdOut)</code></h3>
+<pre class="pseudo"><b>funktion</b> forward(x):
+    <b>prüfe</b> Länge(x) = Eingänge                       <i>sonst Ausnahme</i>
+    letzterEingang ← Kopie von x
+    cur ← letzterEingang
+    <b>für</b> jede Schicht k:  cur ← schicht[k].forward(cur)
+    <b>liefere</b> cur
+
+<b>funktion</b> backward(dLdOut):
+    oben ← dLdOut
+    <b>für</b> k ← K−1 <b>abwärts bis</b> 0:
+        eingang ← (k = 0) ? letzterEingang : schicht[k−1].a
+        unten   ← (k = 0) ? nichts : puffer[k]
+        schicht[k].backward(oben, eingang, unten)
+        oben ← unten</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-neural/src/de/envisionz/neural/core/NeuralNet.java</code>. <code>backward</code> gehört immer zum zuletzt mit <code>forward</code> gerechneten Muster – die Schichten halten nur dessen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math>.</p>
+
+<div class="hinweis"><b>Festlegung im Framework:</b> Gradienten werden <b>aufsummiert</b>, nicht überschrieben. Ein Mini-Stapel ist damit nur eine Schleife: <code>zeroGrads()</code>, je Muster <code>forward</code> und <code>backward</code>, danach <code>scaleGrads(1/Stapelgröße)</code> und ein Optimiererschritt. Dieselbe Eigenschaft trägt das Folgentraining mit CTC, das je Zeitfenster einmal rückwärts rechnet (<a href="ctc.html#trainer">CTC</a>). Wer <code>zeroGrads()</code> vergisst, schleppt den Gradienten des vorigen Stapels mit.</div>
+
+<h2 id="aktivierungen">Aktivierungen</h2>
+<p>Sechs Aktivierungen stehen zur Wahl, je Schicht einzeln. Die Tabelle zeigt Funktion, Ableitung (so wie <code>df(z)</code> sie rechnet) und den Einsatz.</p>
+<table>
+  <tr><th>Name</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(z)</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>'</mo><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f'(z)</annotation></semantics></math></th><th>Wertebereich</th><th>typisch für</th></tr>
+  <tr><td><code>LINEAR</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">1</annotation></semantics></math></td><td>alle</td><td>Ausgang bei Regression; Logits bei Klassifikation</td></tr>
+  <tr><td><code>RELU</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>z</mi><mo>,</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(z, 0)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">1</annotation></semantics></math> für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">z &gt; 0</annotation></semantics></math>, sonst <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn></mrow><annotation encoding="application/x-tex">0</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mi>∞</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[0, \infty)</annotation></semantics></math></td><td>schnell; ein Neuron mit dauerhaft negativem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> bekommt keinen Gradienten mehr</td></tr>
+  <tr><td><code>LEAKY_RELU</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> bzw. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,01</mn><mspace width="0.1667em"/><mi>z</mi></mrow><annotation encoding="application/x-tex">0{,}01\,z</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">1</annotation></semantics></math> bzw. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,01</mn></mrow><annotation encoding="application/x-tex">0{,}01</annotation></semantics></math></td><td>alle</td><td>wie RELU, ohne das Verstummen</td></tr>
+  <tr><td><code>SILU</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mspace width="0.1667em"/><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z\,\sigma(z)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi>z</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\sigma(z)\,\bigl(1 + z\,(1-\sigma(z))\bigr)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>0,278</mn><mo>,</mo><mi>∞</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[-0{,}278, \infty)</annotation></semantics></math></td><td>glatte Regression; Vorgabe der Klassenbeschreibung für Ersatzmodelle</td></tr>
+  <tr><td><code>TANH</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>tanh</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>z</mi></mrow><annotation encoding="application/x-tex">\tanh z</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><mspace width="0.1667em"/><msup><mi>tanh</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mspace width="0.1667em"/><mi>z</mi></mrow><annotation encoding="application/x-tex">1 - \tanh^2 z</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(-1, 1)</annotation></semantics></math></td><td>glatte Zusammenhänge, Kennfelder</td></tr>
+  <tr><td><code>SIGMOID</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo>=</mo><mn>1</mn><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msup><mrow><mi>e</mi></mrow><mrow><mo>−</mo><mi>z</mi></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\sigma(z) = 1/(1+e^{-z})</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\sigma(z)\,(1-\sigma(z))</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0, 1)</annotation></semantics></math></td><td>Ausgang für Werte zwischen 0 und 1</td></tr>
+</table>
+<p>SiLU (auch Swish) lässt sich ableiten: mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>'</mo><mo>=</mo><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">σ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\sigma' = \sigma(1-\sigma)</annotation></semantics></math> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>z</mi><mi mathvariant="normal">σ</mi><mo stretchy="false">)</mo><mo>'</mo><mo>=</mo><mi mathvariant="normal">σ</mi><mo>+</mo><mi>z</mi><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">σ</mi><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi>z</mi><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">σ</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(z\sigma)' = \sigma + z\sigma(1-\sigma) = \sigma(1 + z(1-\sigma))</annotation></semantics></math> – genau die Zeile in <code>Activation.SILU.df</code>. Das Minimum von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mi mathvariant="normal">σ</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z\sigma(z)</annotation></semantics></math> liegt bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>≈</mo><mo>−</mo><mn>1,278</mn></mrow><annotation encoding="application/x-tex">z \approx -1{,}278</annotation></semantics></math> mit dem Wert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≈</mo><mo>−</mo><mn>0,278</mn></mrow><annotation encoding="application/x-tex">\approx -0{,}278</annotation></semantics></math>.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die Steigung des negativen Astes von <code>LEAKY_RELU</code> ist fest <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">α</mi><mo>=</mo><mn>0,01</mn></mrow><annotation encoding="application/x-tex">\alpha = 0{,}01</annotation></semantics></math>. Die Ableitung von RELU an der Stelle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">z = 0</annotation></semantics></math> ist 0 (der Code prüft <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">z &gt; 0</annotation></semantics></math>).</div>
+
+<h2 id="anfangswerte">Anfangswerte</h2>
+<p>Die Gewichte starten zufällig, normalverteilt mit Mittelwert 0; der Bias startet bei 0. Entscheidend ist die Streuung: Ist sie zu groß, sättigen TANH und SIGMOID, und der Gradient verschwindet; ist sie zu klein, schrumpft das Signal von Schicht zu Schicht. Beide Regeln wählen sie so, dass die Varianz der Aktivierungen über die Schichten etwa gleich bleibt:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>He:</mtext><mspace width="1em"/><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>W</mi></mrow></msub><mo>=</mo><msqrt><mfrac><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub></mrow></mfrac></msqrt><mo>,</mo><mspace width="2em"/><mspace width="2em"/><mtext>Xavier (Glorot):</mtext><mspace width="1em"/><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>W</mi></mrow></msub><mo>=</mo><msqrt><mfrac><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub><mo>+</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>out</mtext></mrow></msub></mrow></mfrac></msqrt><mo>.</mo></mrow><annotation encoding="application/x-tex">\text{He:}\quad \sigma_W = \sqrt{\frac{2}{n_\text{in}}}, \qquad\qquad \text{Xavier (Glorot):}\quad \sigma_W = \sqrt{\frac{2}{n_\text{in} + n_\text{out}}}.</annotation></semantics></math></p>
+<p>He berücksichtigt, dass RELU die Hälfte der Werte auf null setzt und damit die Varianz halbiert; die Regel gilt als Faustregel für die RELU-Familie und SILU. Xavier ist für die symmetrischen, um null linearen TANH und SIGMOID gedacht. Für das Netz <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>→</mo><mn>16</mn><mo>→</mo><mn>16</mn><mo>→</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">2\to16\to16\to3</annotation></semantics></math> mit Xavier ergeben sich <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mn>0,333</mn></mrow><annotation encoding="application/x-tex">\sigma = 0{,}333</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,250</mn></mrow><annotation encoding="application/x-tex">0{,}250</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,324</mn></mrow><annotation encoding="application/x-tex">0{,}324</annotation></semantics></math>; mit He wäre die erste Schicht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mn>1,0</mn></mrow><annotation encoding="application/x-tex">\sigma = 1{,}0</annotation></semantics></math>.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Vorgabe ist <code>Init.HE</code>. Alle Schichten ziehen der Reihe nach aus <b>einer</b> Zufallsquelle mit der Saat aus <code>seed(s)</code>. Ohne <code>seed</code> nimmt der Baumeister <code>System.nanoTime()</code> – dann ist der Lauf nicht wiederholbar. <code>ModelSearch</code> wählt die Regel selbst: Xavier für TANH und SIGMOID, sonst He.</div>
+
+<h2 id="dropout">Dropout</h2>
+<p>Dropout schaltet während des Trainings jedes Neuron einer verdeckten Schicht mit der Wahrscheinlichkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> ab. Das Netz kann sich nicht auf einzelne Neuronen verlassen und verteilt das Gelernte breiter – eine Regularisierung gegen Auswendiglernen verrauschter Daten. Umgesetzt ist die <b>invertierte</b> Form: Die überlebenden Neuronen werden gleich beim Training mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">1/(1-p)</annotation></semantics></math> verstärkt,</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>m</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>=</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><mn>0</mn></mtd><mtd style="text-align:left"><mtext>mit Wahrscheinlichkeit </mtext><mi>p</mi></mtd></mtr><mtr><mtd style="text-align:left"><mstyle displaystyle="true"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>1</mn><mo>−</mo><mi>p</mi></mrow></mfrac></mstyle></mtd><mtd style="text-align:left"><mtext>sonst</mtext></mtd></mtr></mtable></mrow><mo>,</mo><mspace width="2em"/><msub><mrow><mi>a</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>=</mo><msub><mrow><mi>m</mi></mrow><mrow><mi>o</mi></mrow></msub><mspace width="0.1667em"/><mi>f</mi><mo stretchy="false">(</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>o</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>=</mo><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>a</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow></mfrac><mspace width="0.1667em"/><msub><mrow><mi>m</mi></mrow><mrow><mi>o</mi></mrow></msub><mspace width="0.1667em"/><mi>f</mi><mo>'</mo><mo stretchy="false">(</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>o</mi></mrow></msub><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">m_o = \begin{cases} 0 &amp; \text{mit Wahrscheinlichkeit } p \\ \dfrac{1}{1-p} &amp; \text{sonst} \end{cases}, \qquad a_o = m_o\, f(z_o), \qquad \delta_o = \frac{\partial L}{\partial a_o}\, m_o\, f'(z_o).</annotation></semantics></math></p>
+<p>Der Erwartungswert von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow><annotation encoding="application/x-tex">a_o</annotation></semantics></math> ist damit im Training derselbe wie ohne Maske, und bei der Auswertung wird nichts umgerechnet: Die Maske wird einfach entfernt.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> liegt in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[0, 1)</annotation></semantics></math>, die Ausgangsschicht hat nie Dropout. Der <code>Trainer</code> zieht vor <b>jedem Muster</b> neue Masken aus einer eigenen Zufallsquelle mit der Saat <code>shuffleSeed ^ 0x64726f70</code> (die Bytes von „drop“) und entfernt sie vor der Bewertung und am Ende. Läufe ohne Dropout ziehen keine einzige Zufallszahl zusätzlich und bleiben bitgleich zu Läufen, die das Merkmal nicht kennen. Die Rate wird in der <code>.ennet</code>-Datei mitgespeichert.</div>
+
+<h2 id="zustand">Schnappschuss, Kopie, Nebenläufigkeit</h2>
+<p><code>snapshot()</code> kopiert alle Gewichte und Biaswerte in ein Feld <code>[Schicht][0 = Gewichte, 1 = Bias][…]</code>, <code>restore(snap)</code> schreibt sie zurück und prüft dabei die Abmessungen. Der frühe Abbruch des Trainings kehrt so zum besten Stand zurück. <code>copy()</code> baut ein Netz gleicher Topologie (mit Saat 0) und stellt darin den Schnappschuss wieder her – eine tiefe Kopie mit eigenen Puffern.</p>
+<p>Weil jede Schicht ihre Puffer für genau ein Muster hält, darf ein Netz nicht von zwei Threads zugleich ausgewertet werden. Die Regel lautet: je Thread eine Kopie. So macht es die Modellsuche (je Kandidat eigene Netze) und die Sensitivitätsanalyse in app-neural.</p>
+
+<h2 id="beispiel">Rechenbeispiel</h2>
+<p>Das Netz aus dem Bild: zwei Eingänge, zwei TANH-Neuronen, ein linearer Ausgang, mittlerer quadratischer Fehler. Gewichte und Eingang sind von Hand gesetzt:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mrow><mi>W</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>0,5</mn></mtd><mtd style="text-align:left"><mo>−</mo><mn>0,4</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0,3</mn></mtd><mtd style="text-align:left"><mn>0,8</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="1em"/><msup><mrow><mi>b</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>0,1</mn></mtd></mtr><mtr><mtd style="text-align:left"><mo>−</mo><mn>0,2</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="1em"/><msup><mrow><mi>W</mi></mrow><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow></msup><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>1,2</mn></mtd><mtd style="text-align:left"><mo>−</mo><mn>0,7</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="1em"/><msup><mrow><mi>b</mi></mrow><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow></msup><mo>=</mo><mn>0,05</mn><mo>,</mo><mspace width="1em"/><mi>x</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>1</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0,5</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="1em"/><mi>t</mi><mo>=</mo><mn>0,3</mn><mo>.</mo></mrow><annotation encoding="application/x-tex">W^{(1)} = \left(\begin{matrix} 0{,}5 &amp; -0{,}4 \\ 0{,}3 &amp; 0{,}8 \end{matrix}\right), \quad b^{(1)} = \left(\begin{matrix} 0{,}1 \\ -0{,}2 \end{matrix}\right), \quad W^{(2)} = \left(\begin{matrix} 1{,}2 &amp; -0{,}7 \end{matrix}\right), \quad b^{(2)} = 0{,}05, \quad x = \left(\begin{matrix} 1 \\ 0{,}5 \end{matrix}\right), \quad t = 0{,}3.</annotation></semantics></math></p>
+<table>
+  <tr><th>Schritt</th><th>Rechnung</th><th>Wert</th></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>z</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">z^{(1)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,5</mn><mo>−</mo><mn>0,2</mn><mo>+</mo><mn>0,1</mn></mrow><annotation encoding="application/x-tex">0{,}5 - 0{,}2 + 0{,}1</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,3</mn><mo>+</mo><mn>0,4</mn><mo>−</mo><mn>0,2</mn></mrow><annotation encoding="application/x-tex">0{,}3 + 0{,}4 - 0{,}2</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,4</mn></mrow><annotation encoding="application/x-tex">0{,}4</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,5</mn></mrow><annotation encoding="application/x-tex">0{,}5</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>a</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">a^{(1)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>tanh</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>0,4</mn></mrow><annotation encoding="application/x-tex">\tanh 0{,}4</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>tanh</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>0,5</mn></mrow><annotation encoding="application/x-tex">\tanh 0{,}5</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,379949</mn></mrow><annotation encoding="application/x-tex">0{,}379949</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,462117</mn></mrow><annotation encoding="application/x-tex">0{,}462117</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1,2</mn><mo>⋅</mo><mn>0,379949</mn><mo>−</mo><mn>0,7</mn><mo>⋅</mo><mn>0,462117</mn><mo>+</mo><mn>0,05</mn></mrow><annotation encoding="application/x-tex">1{,}2 \cdot 0{,}379949 - 0{,}7 \cdot 0{,}462117 + 0{,}05</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,182457</mn></mrow><annotation encoding="application/x-tex">0{,}182457</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0,182457</mn><mo>−</mo><mn>0,3</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">(0{,}182457 - 0{,}3)^2</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,013816</mn></mrow><annotation encoding="application/x-tex">0{,}013816</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">\delta^{(2)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>y</mi><mo>−</mo><mi>t</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">2\,(y - t)</annotation></semantics></math>, linearer Ausgang: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>'</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">f' = 1</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0,235087</mn></mrow><annotation encoding="application/x-tex">-0{,}235087</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>L</mi><mo>/</mo><mi>∂</mi><msup><mrow><mi>W</mi></mrow><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">\partial L/\partial W^{(2)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow></msup><msup><mrow><mi>a</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">\delta^{(2)} a^{(1)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0,089321</mn></mrow><annotation encoding="application/x-tex">-0{,}089321</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0,108638</mn></mrow><annotation encoding="application/x-tex">-0{,}108638</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>L</mi><mo>/</mo><mi>∂</mi><msup><mrow><mi>a</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">\partial L/\partial a^{(1)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>W</mi></mrow><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo><mi>T</mi></mrow></msup><msup><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">W^{(2)T} \delta^{(2)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0,282104</mn></mrow><annotation encoding="application/x-tex">-0{,}282104</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>+</mo><mn>0,164561</mn></mrow><annotation encoding="application/x-tex">+0{,}164561</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">\delta^{(1)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>⋅</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mspace width="0.1667em"/><msup><mi>tanh</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mspace width="0.1667em"/><mi>z</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\cdot\,(1 - \tanh^2 z)</annotation></semantics></math>: Faktoren <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,855639</mn></mrow><annotation encoding="application/x-tex">0{,}855639</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,786448</mn></mrow><annotation encoding="application/x-tex">0{,}786448</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0,241379</mn></mrow><annotation encoding="application/x-tex">-0{,}241379</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>+</mo><mn>0,129418</mn></mrow><annotation encoding="application/x-tex">+0{,}129418</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>L</mi><mo>/</mo><mi>∂</mi><msup><mrow><mi>W</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">\partial L/\partial W^{(1)}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup><msup><mrow><mi>x</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\delta^{(1)} x^T</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mo>−</mo><mn>0,241379</mn></mtd><mtd style="text-align:left"><mo>−</mo><mn>0,120689</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0,129418</mn></mtd><mtd style="text-align:left"><mn>0,064709</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">\left(\begin{matrix} -0{,}241379 &amp; -0{,}120689 \\ 0{,}129418 &amp; 0{,}064709 \end{matrix}\right)</annotation></semantics></math></td></tr>
+</table>
+<p>Nachgerechnet mit einem kleinen Programm gegen <code>NeuralNet</code> und <code>MseLoss</code> (Gewichte über <code>layer(k).weights()</code> gesetzt, dann <code>forward</code>, <code>gradient</code>, <code>backward</code>): Alle Werte der Tabelle stimmen auf die angegebenen Stellen. Der zentrale Differenzenquotient mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">h = 10^{-6}</annotation></semantics></math> für das erste Gewicht ergibt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0,2413789640</mn></mrow><annotation encoding="application/x-tex">-0{,}2413789640</annotation></semantics></math>, der Rückwärtslauf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0,2413789640</mn></mrow><annotation encoding="application/x-tex">-0{,}2413789640</annotation></semantics></math>.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b>Gradientenprobe</b> (<code>GradientCheck</code>, Teil von <code>TestMain</code>): Für <b>jeden</b> Parameter wird der Rückwärtslauf mit dem zentralen Differenzenquotienten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo stretchy="false">(</mo><mi>p</mi><mo>+</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo><mo>−</mo><mi>L</mi><mo stretchy="false">(</mo><mi>p</mi><mo>−</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mn>2</mn><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(L(p+\varepsilon) - L(p-\varepsilon))/(2\varepsilon)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ε</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\varepsilon = 10^{-6}</annotation></semantics></math>, verglichen; verlangt wird ein größter relativer Fehler unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>. Netz 3–5–4–2 mit vier Kombinationen (SILU/LINEAR, TANH/SIGMOID, LEAKY_RELU/LINEAR, RELU/TANH), dazu Softmax-Kreuzentropie auf linearen Logits und ein Netz mit eingefrorener Dropout-Maske. Ein Lauf ergab größte relative Fehler zwischen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>7,3</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">7{,}3 \cdot 10^{-9}</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>5,3</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">5{,}3 \cdot 10^{-8}</annotation></semantics></math>.</li>
+  <li><b>XOR</b> (<code>TestMain</code> [2]): Netz 2–8–1 (TANH, SIGMOID), SGD mit Lernrate 0,5 und Moment 0,9, 3000 Epochen; alle vier Ausgänge müssen näher als 0,1 am Soll liegen. Der klassische Nachweis, dass die verdeckte Schicht wirkt – XOR ist nicht linear trennbar.</li>
+  <li><b>Dropout</b> (<code>TestMain</code> [13]): Training mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0,2</mn></mrow><annotation encoding="application/x-tex">p = 0{,}2</annotation></semantics></math> auf verrauschten Daten muss <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>&gt;</mo><mn>0,9</mn></mrow><annotation encoding="application/x-tex">R^2 &gt; 0{,}9</annotation></semantics></math> erreichen; danach sind zwei Auswertungen bitgleich, und nach Speichern und Laden stimmen Raten und Ausgänge bitgenau.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Nur vollständig verbundene Schichten. Keine Faltungs-, keine rekurrenten Schichten, keine Normalisierungsschichten; für Folgen wird das Netz je Zeitfenster eingesetzt (<a href="ctc.html">CTC</a>).</li>
+  <li>Gerechnet wird skalar in <code>double</code>. Für die typischen Ersatzmodelle reicht das: Die Moduldokumentation misst rund 1,9 Millionen Vorhersagen je Sekunde für ein Netz 2–16–16–3; eine Vektorisierung brächte erst ab etwa 256 Neuronen je Schicht rund den Faktor 2.</li>
+  <li>Nicht threadsicher (siehe oben). <code>copy()</code> je Thread.</li>
+  <li>RELU-Neuronen können dauerhaft verstummen; bei kleinen Netzen fällt ein verstummtes Neuron ins Gewicht. LEAKY_RELU oder SILU vermeiden das.</li>
+  <li>Das nackte Netz erwartet normierte Eingänge. Auf physikalischen Rohwerten arbeitet erst das <a href="ersatzmodell.html">Ersatzmodell</a>.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>D. E. Rumelhart, G. E. Hinton, R. J. Williams: Learning representations by back-propagating errors. Nature 323 (1986).</li>
+  <li>X. Glorot, Y. Bengio: Understanding the difficulty of training deep feedforward neural networks. AISTATS 2010.</li>
+  <li>K. He, X. Zhang, S. Ren, J. Sun: Delving Deep into Rectifiers. ICCV 2015.</li>
+  <li>N. Srivastava, G. Hinton, A. Krizhevsky, I. Sutskever, R. Salakhutdinov: Dropout: A Simple Way to Prevent Neural Networks from Overfitting. JMLR 15 (2014).</li>
+  <li>I. Goodfellow, Y. Bengio, A. Courville: Deep Learning. MIT Press, 2016.</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Hintergrund zu <a href="index.html#core">Das Netz</a> · Proben: <code>GradientCheck</code>, <code>TestMain</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

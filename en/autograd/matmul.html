@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matrix product – three forms, backward path and distribution over the cores – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite aktiv" href="matmul.html">Matrix product</a>
+<a class="unterseite" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Matrix product – three forms, backward path and distribution over the cores</span><a class="sprachwahl" href="../../de/autograd/matmul.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd</div>
+  <h1>Matrix product – three forms, backward path and distribution over the cores</h1>
+  <p class="unter">The computation behind <code>Ops.matmul</code>: definition for single matrices, batches with a shared matrix and batch times batch, the gradients with respect to both factors, the loop order, the distribution over all cores without races and with the same summation order as the serial run, and the optional forward step in single precision – with pseudocode following the source, figures for the thresholds, the probes and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>In a transformer almost all of the computing time goes into the matrix product: every linear layer is one, attention consists of two more per head, and the backward pass needs another two for each product. How the loops are arranged, whether memory is read contiguously and whether several cores take part decides between hours and days of training.</p>
+<p>At the same time the matrix product is where parallelisation most easily goes wrong: on the way back many rows write into the same row of a gradient. A race there does not crash – it only occasionally corrupts a gradient, and the model learns a little worse.</p>
+
+<h2 id="formen">Definition and the three forms</h2>
+<p><code>Ops.matmul(a, b)</code> multiplies over the last two axes. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> has the shape <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>…</mo><mo>,</mo><mi>M</mi><mo>,</mo><mi>K</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[\dots, M, K]</annotation></semantics></math>; all axes before that together form a batch of size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi></mrow><annotation encoding="application/x-tex">S</annotation></semantics></math>. Two cases are allowed for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math>:</p>
+<table>
+  <tr><th>Shape of a</th><th>Shape of b</th><th>Result</th><th>Use</th></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>M</mi><mo>,</mo><mi>K</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[M, K]</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>K</mi><mo>,</mo><mi>N</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[K, N]</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>M</mi><mo>,</mo><mi>N</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[M, N]</annotation></semantics></math></td><td>a vector or a sequence through a layer</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>…</mo><mo>,</mo><mi>M</mi><mo>,</mo><mi>K</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[\dots, M, K]</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>K</mi><mo>,</mo><mi>N</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[K, N]</annotation></semantics></math> – <b>shared</b></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>…</mo><mo>,</mo><mi>M</mi><mo>,</mo><mi>N</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[\dots, M, N]</annotation></semantics></math></td><td>the same weight matrix for all batch entries</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>…</mo><mo>,</mo><mi>M</mi><mo>,</mo><mi>K</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[\dots, M, K]</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>…</mo><mo>,</mo><mi>K</mi><mo>,</mo><mi>N</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[\dots, K, N]</annotation></semantics></math>, equal batch axes</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>…</mo><mo>,</mo><mi>M</mi><mo>,</mo><mi>N</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[\dots, M, N]</annotation></semantics></math></td><td>attention: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mrow><mi>K</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">QK^T</annotation></semantics></math> and weights times <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi></mrow><annotation encoding="application/x-tex">V</annotation></semantics></math> per head</td></tr>
+</table>
+<p>With the batch index <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> the product is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>C</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>n</mi></mrow></msub><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>K</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>A</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>k</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>,</mo><mi>k</mi><mo>,</mo><mi>n</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">C_{s,m,n} = \sum_{k=0}^{K-1} A_{s,m,k}\, B_{(s),k,n},</annotation></semantics></math></p>
+<p>where <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo></mrow></msub></mrow><annotation encoding="application/x-tex">B_{(s)}</annotation></semantics></math> is the same for all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> in the shared case. If the inner axes, the rank or a batch axis do not match, the operation throws.</p>
+
+<h2 id="gradient">The gradients with respect to both factors</h2>
+<p>With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><mo>=</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>C</mi></mrow></msub><mo>=</mo><mi>∂</mi><mi>L</mi><mo>/</mo><mi>∂</mi><mi>C</mi></mrow><annotation encoding="application/x-tex">G = g_C = \partial L/\partial C</annotation></semantics></math>, the chain rule gives for every entry of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math>, which enters all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> entries of its result row:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>A</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>k</mi></mrow></msub></mrow></mfrac><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>n</mi></mrow></munder><msub><mrow><mi>G</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>n</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>,</mo><mi>k</mi><mo>,</mo><mi>n</mi></mrow></msub><mspace width="2em"/><mtext>in short</mtext><mspace width="2em"/><msub><mrow><mi>g</mi></mrow><mrow><mi>A</mi></mrow></msub><mo>=</mo><mi>G</mi><mspace width="0.1667em"/><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup><mo>.</mo></mrow><annotation encoding="application/x-tex">\frac{\partial L}{\partial A_{s,m,k}} = \sum_{n} G_{s,m,n}\, B_{(s),k,n} \qquad\text{in short}\qquad g_A = G\,B^T.</annotation></semantics></math></p>
+<p>An entry of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> enters all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> rows – and with a shared matrix additionally all batch entries:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>B</mi></mrow><mrow><mi>k</mi><mo>,</mo><mi>n</mi></mrow></msub></mrow></mfrac><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>s</mi></mrow></munder><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>m</mi></mrow></munder><msub><mrow><mi>A</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>k</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>G</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>n</mi></mrow></msub><mspace width="1em"/><mtext>(shared)</mtext><mo>,</mo><mspace width="2em"/><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>B</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>k</mi><mo>,</mo><mi>n</mi></mrow></msub></mrow></mfrac><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>m</mi></mrow></munder><msub><mrow><mi>A</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>k</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>G</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>n</mi></mrow></msub><mspace width="1em"/><mtext>(per batch)</mtext><mo>,</mo></mrow><annotation encoding="application/x-tex">\frac{\partial L}{\partial B_{k,n}} = \sum_{s}\sum_{m} A_{s,m,k}\, G_{s,m,n} \quad\text{(shared)}, \qquad \frac{\partial L}{\partial B_{s,k,n}} = \sum_{m} A_{s,m,k}\, G_{s,m,n} \quad\text{(per batch)},</annotation></semantics></math></p>
+<p>in short <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>B</mi></mrow></msub><mo>=</mo><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>G</mi></mrow><annotation encoding="application/x-tex">g_B = A^T G</annotation></semantics></math>, summed over the batch for a shared matrix. Exactly this sum over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> is the critical point of parallelisation.</p>
+
+<h2 id="schleifen">Loop order</h2>
+<p>Forwards, the outer loop runs over the result rows <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>s</mi><mo>,</mo><mi>m</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(s, m)</annotation></semantics></math>, inside that over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>, innermost over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>C</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mo>⋅</mo></mrow></msub><mo>+</mo><mo>=</mo><msub><mrow><mi>A</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>k</mi></mrow></msub><mspace width="0.2778em"/><msub><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>,</mo><mi>k</mi><mo>,</mo><mo>⋅</mo></mrow></msub><mspace width="2em"/><mtext>for </mtext><mi>k</mi><mo>=</mo><mn>0</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>K</mi><mo>−</mo><mn>1</mn><mo>.</mo></mrow><annotation encoding="application/x-tex">C_{s,m,\cdot} += A_{s,m,k}\; B_{(s),k,\cdot} \qquad \text{for } k = 0,\dots,K-1.</annotation></semantics></math></p>
+<p>In the innermost loop one row of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> and one row of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> are read and written contiguously, and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>A</mi></mrow><mrow><mi>s</mi><mo>,</mo><mi>m</mi><mo>,</mo><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">A_{s,m,k}</annotation></semantics></math> is a constant. If it is zero, the whole inner loop is skipped – a noticeable saving for masks, ReLU activations and the selection matrix of the spectral fit. The usual order <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>,</mo><mi>n</mi><mo>,</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">m, n, k</annotation></semantics></math> would jump by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> entries through <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> in the innermost loop.</p>
+
+<h2 id="parallel">Distribution over the cores</h2>
+<p>Above a threshold the product runs in parallel. The axis distributed is always one whose work items write into <b>separate</b> memory regions:</p>
+<ul>
+  <li><b>Forward</b> and <b>gradient with respect to A</b>: over the result rows <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>s</mi><mo>,</mo><mi>m</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(s, m)</annotation></semantics></math>. Each row of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> or <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>A</mi></mrow></msub></mrow><annotation encoding="application/x-tex">g_A</annotation></semantics></math> belongs to exactly one work item.</li>
+  <li><b>Gradient with respect to B</b>: over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> (shared matrix) or over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>s</mi><mo>,</mo><mi>k</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(s, k)</annotation></semantics></math> (per batch). The obvious distribution over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> would be a race: all rows <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> – and with a shared matrix all batch entries – write into the same row <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>B</mi><mo>,</mo><mi>k</mi><mo>,</mo><mo>⋅</mo></mrow></msub></mrow><annotation encoding="application/x-tex">g_{B,k,\cdot}</annotation></semantics></math>.</li>
+</ul>
+
+<figure>
+<svg viewBox="0 0 620 230" width="620" font-family="sans-serif" font-size="13">
+  <text x="100" y="20" fill="#1f5f8b" text-anchor="middle">C = A·B</text>
+  <text x="310" y="20" fill="#1f5f8b" text-anchor="middle">g<tspan baseline-shift="sub" font-size="10">A</tspan> = G·Bᵀ</text>
+  <text x="520" y="20" fill="#1f5f8b" text-anchor="middle">g<tspan baseline-shift="sub" font-size="10">B</tspan> = Aᵀ·G</text>
+  <rect x="40" y="34" width="120" height="120" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="40" y="34" width="120" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="40" y="94" width="120" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="100" y="54" fill="#5b6475" text-anchor="middle" font-size="12">item (s,m)=0</text>
+  <text x="100" y="84" fill="#5b6475" text-anchor="middle" font-size="12">item 1</text>
+  <text x="100" y="114" fill="#5b6475" text-anchor="middle" font-size="12">item 2</text>
+  <text x="100" y="144" fill="#5b6475" text-anchor="middle" font-size="12">item 3</text>
+  <rect x="250" y="34" width="120" height="120" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="250" y="34" width="120" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="250" y="94" width="120" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="310" y="54" fill="#5b6475" text-anchor="middle" font-size="12">item (s,m)=0</text>
+  <text x="310" y="84" fill="#5b6475" text-anchor="middle" font-size="12">item 1</text>
+  <text x="310" y="114" fill="#5b6475" text-anchor="middle" font-size="12">item 2</text>
+  <text x="310" y="144" fill="#5b6475" text-anchor="middle" font-size="12">item 3</text>
+  <rect x="460" y="34" width="120" height="120" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="460" y="34" width="120" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="460" y="94" width="120" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="520" y="54" fill="#5b6475" text-anchor="middle" font-size="12">item k=0</text>
+  <text x="520" y="84" fill="#5b6475" text-anchor="middle" font-size="12">item k=1</text>
+  <text x="520" y="114" fill="#5b6475" text-anchor="middle" font-size="12">item k=2</text>
+  <text x="520" y="144" fill="#5b6475" text-anchor="middle" font-size="12">item k=3</text>
+  <text x="100" y="172" fill="#5b6475" text-anchor="middle" font-size="12">rows [S·M, N]</text>
+  <text x="310" y="172" fill="#5b6475" text-anchor="middle" font-size="12">rows [S·M, K]</text>
+  <text x="520" y="172" fill="#5b6475" text-anchor="middle" font-size="12">rows [K, N]</text>
+  <text x="520" y="192" fill="#9a6400" text-anchor="middle" font-size="12">do not split over m:</text>
+  <text x="520" y="208" fill="#9a6400" text-anchor="middle" font-size="12">all m write into row k</text>
+  <text x="205" y="208" fill="#5b6475" text-anchor="middle" font-size="12">each row belongs to exactly one item</text>
+</svg>
+<figcaption>Which axis is distributed. Forwards and for the gradient with respect to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> it is the result rows <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>s</mi><mo>,</mo><mi>m</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(s, m)</annotation></semantics></math>; for the gradient with respect to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> it is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>, because all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> – and with a shared matrix all batch entries – sum into one row <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>B</mi><mo>,</mo><mi>k</mi><mo>,</mo><mo>⋅</mo></mrow></msub></mrow><annotation encoding="application/x-tex">g_{B,k,\cdot}</annotation></semantics></math>. No work item writes into a foreign row, and each row is formed in the same order as in the serial run.</figcaption>
+</figure>
+
+<p>The choice has a second effect: every work item sums its row in <b>the same order</b> as the serial run. The result is therefore bit-identical, not merely "almost equal". If it deviated even in the last digit, there would be either a race or a changed summation order – both would be a finding.</p>
+<p>According to the module documentation, making <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> the outer loop of the gradient with respect to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> also nearly halved the serial case (training part of acceptance M2 from 57.1 s to 31.7 s on one core): the row <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>B</mi><mo>,</mo><mi>k</mi><mo>,</mo><mo>⋅</mo></mrow></msub></mrow><annotation encoding="application/x-tex">g_{B,k,\cdot}</annotation></semantics></math> stays in cache across all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> instead of changing constantly in the innermost loop.</p>
+<p>Distribution uses <code>IntStream.range(0, count).parallel()</code>, i.e. the common fork-join pool with work stealing. A hand-made even split would make every step wait for the slowest cores on a processor with fast and efficient cores; with work stealing the fast cores simply take more items.</p>
+
+<h3>Pseudocode – <code>Ops.matmul(a, b)</code></h3>
+<pre class="pseudo">M, K ← last axes of a;  K2, N ← last axes of b
+<b>check</b> K = K2, rank ≥ 2;  shared ← (rank(b) = 2)
+<b>if not</b> shared: <b>check</b> equal batch axes
+S ← product of batch axes of a;  work ← S·M·K·N
+
+<i>// forward</i>
+<b>if</b> schnellesMatmul <b>and</b> work ≥ schnellesMatmulAb:
+    schnellVorwaerts(…)                          <i>float kernel, see below</i>
+<b>else</b>:
+    <b>for each</b> row (s, m) — parallel if work ≥ threshold:
+        <b>for</b> k ← 0 <b>to</b> K−1:
+            av ← A[s,m,k];  <b>if</b> av = 0: <b>continue</b>
+            <b>for</b> n ← 0 <b>to</b> N−1:  C[s,m,n] += av · B[(s),k,n]
+
+<b>backward</b> (G = C.grad):
+    <b>if</b> A.grad ≠ null:
+        <b>for each</b> row (s, m) — parallel:
+            <b>for</b> k:  A.grad[s,m,k] += Σ_n G[s,m,n] · B[(s),k,n]
+    <b>if</b> B.grad ≠ null <b>and</b> shared:
+        <b>for each</b> k — parallel:                  <i>own row B.grad[k,·]</i>
+            <b>for</b> s, <b>for</b> m:
+                av ← A[s,m,k];  <b>if</b> av = 0: <b>continue</b>
+                <b>for</b> n:  B.grad[k,n] += av · G[s,m,n]
+    <b>if</b> B.grad ≠ null <b>and not</b> shared:
+        <b>for each</b> (s, k) — parallel:  <b>for</b> m, n:  B.grad[s,k,n] += A[s,m,k] · G[s,m,n]
+
+<i>// "parallel" means: work ≥ parallelMatmulThreshold and more than one item</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/Ops.java</code>, methods <code>matmul</code>, <code>rows</code> and <code>schnellVorwaerts</code>.</p>
+
+<div class="hinweis"><b>Decision in the framework:</b> the threshold <code>Ops.parallelMatmulThreshold</code> is <b>250,000</b> multiplications (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>⋅</mo><mi>M</mi><mo>⋅</mo><mi>K</mi><mo>⋅</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">S\cdot M\cdot K\cdot N</annotation></semantics></math>) and is mutable – the acceptance test uses it to compare the parallel with the serial path, and it can be re-measured on the target machine. Without a threshold it would not work: in the build environment the parallel path was 2.4 times <b>slower</b> than the serial one at 13,824 multiplications (module documentation). The small products of attention would only become more expensive when distributed.</div>
+
+<h2 id="schnell">The optional forward step in single precision</h2>
+<p>With <code>Ops.schnellesMatmul = true</code> the forward step of large products runs through the selected kernel from <code>envisionz.autograd.fast</code> (see <a href="matrixkerne.html">Matrix kernels</a>). Both factors are converted to <code>float</code> once, the kernel is called per batch entry, and the result is written back as <code>double</code>.</p>
+<pre class="pseudo">kernel ← Kernels.kernel()
+af ← toFloat(A);  bf ← toFloat(B)
+<b>for</b> s ← 0 <b>to</b> S−1:
+    cf ← zeros[M·N]
+    as ← slice s of af;  bs ← shared ? bf : slice s of bf
+    kernel.matmul(as, bs, cf, M, K, N)        <i>kernels add into cf</i>
+    C[s] ← cf                                 <i>set, not added</i></pre>
+<div class="hinweis"><b>Decision in the framework:</b> the switch is <b>off</b> by default, and the threshold <code>Ops.schnellesMatmulAb</code> is <b>1,000,000</b> multiplications – below that, converting there and back costs more than the kernel saves. Only the <b>forward step</b> is connected; the backward path always computes in <code>double</code> with the factors' <code>double</code> values. Gradient checking and bit-exact comparisons thus remain possible even with the switch on.</div>
+
+<h2 id="beispiel">Worked example: which products run in parallel</h2>
+<p>An encoder of the size the module documentation names for stage 1 of the voice: width <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">d = 128</annotation></semantics></math>, four heads of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>=</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">D_h = 32</annotation></semantics></math>, sequence length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>100</mn></mrow><annotation encoding="application/x-tex">T = 100</annotation></semantics></math>.</p>
+<table>
+  <tr><th>Product</th><th>Shapes</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>⋅</mo><mi>M</mi><mo>⋅</mo><mi>K</mi><mo>⋅</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">S\cdot M\cdot K\cdot N</annotation></semantics></math></th><th>parallel (≥ 250,000)</th><th>float path if on (≥ 10<sup>6</sup>)</th></tr>
+  <tr><td>projection <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mspace width="0.1667em"/><msub><mrow><mi>W</mi></mrow><mrow><mi>q</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x\,W_q</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>100</mn><mo>,</mo><mn>128</mn><mo stretchy="false">]</mo><mo>⋅</mo><mo stretchy="false">[</mo><mn>128</mn><mo>,</mo><mn>128</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[100,128]\cdot[128,128]</annotation></semantics></math></td><td>1,638,400</td><td>yes</td><td>yes</td></tr>
+  <tr><td>scores <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mrow><mi>K</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">QK^T</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>4</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>32</mn><mo stretchy="false">]</mo><mo>⋅</mo><mo stretchy="false">[</mo><mn>4</mn><mo>,</mo><mn>32</mn><mo>,</mo><mn>100</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[4,100,32]\cdot[4,32,100]</annotation></semantics></math></td><td>1,280,000</td><td>yes</td><td>yes</td></tr>
+  <tr><td>weights times <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi></mrow><annotation encoding="application/x-tex">V</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>4</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>100</mn><mo stretchy="false">]</mo><mo>⋅</mo><mo stretchy="false">[</mo><mn>4</mn><mo>,</mo><mn>100</mn><mo>,</mo><mn>32</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[4,100,100]\cdot[4,100,32]</annotation></semantics></math></td><td>1,280,000</td><td>yes</td><td>yes</td></tr>
+  <tr><td>the same at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>25</mn></mrow><annotation encoding="application/x-tex">T = 25</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">D_h = 64</annotation></semantics></math>, one head</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>25</mn><mo>,</mo><mn>64</mn><mo stretchy="false">]</mo><mo>⋅</mo><mo stretchy="false">[</mo><mn>64</mn><mo>,</mo><mn>25</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[25,64]\cdot[64,25]</annotation></semantics></math></td><td>40,000</td><td>no</td><td>no</td></tr>
+</table>
+<p>The same count applies on the way back, since both gradients cost one product of the same size each. According to the module documentation, the measured training step at this size (528,898 parameters, four layers) took 124 ms.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>AutogradTest</code></b>, part 1: all three forms against central differences (tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>).</li>
+  <li><b><code>AutogradTest</code></b>, part 3: parallel against serial path, forward value and <b>both</b> gradients, compared via bit patterns (<code>doubleToRawLongBits</code>). Three cases – <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>×</mo><mn>64</mn><mo>×</mo><mn>96</mn><mo>×</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">1\times 64\times 96\times 128</annotation></semantics></math> (2D), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6</mn><mo>×</mo><mn>40</mn><mo>×</mo><mn>64</mn><mo>×</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">6\times 40\times 64\times 64</annotation></semantics></math> with a shared matrix and the same size batch times batch –, <b>25 repetitions</b> each, because a race does not show up in every run. Plus the chained computation <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mrow><mi>K</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">QK^T</annotation></semantics></math> as it occurs in the encoder. Switching is done via the threshold: <code>Long.MAX_VALUE</code> for serial, 0 for parallel.</li>
+  <li><b><code>Gradientenprobe</code></b>: gradient with respect to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> against the hand-derived formulas <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">G B^T</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>G</mi></mrow><annotation encoding="application/x-tex">A^T G</annotation></semantics></math>.</li>
+  <li><b><code>Schnellpfadprobe</code></b> (26 checks): the switch defaults to off; below the threshold the computation is bit-identical; above it, fast and slow path agree to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-5}</annotation></semantics></math> and explicitly <b>not</b> bit-identically (it is <code>float</code>); the gradient with the switch on matches the closed formula <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mo largeop="true" movablelimits="true">∑</mo><mi>C</mi><mo>/</mo><mi>∂</mi><msub><mrow><mi>A</mi></mrow><mrow><mi>m</mi><mo>,</mo><mi>k</mi></mrow></msub><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>n</mi></mrow></munder><msub><mrow><mi>B</mi></mrow><mrow><mi>k</mi><mo>,</mo><mi>n</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\partial\sum C/\partial A_{m,k} = \sum_n B_{k,n}</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math> – a guard against someone connecting the backward path to the float kernel as well.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Indexing uses <code>int</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>⋅</mo><mi>M</mi><mo>⋅</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">S\cdot M\cdot N</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>⋅</mo><mi>M</mi><mo>⋅</mo><mi>K</mi></mrow><annotation encoding="application/x-tex">S\cdot M\cdot K</annotation></semantics></math> must stay below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{31}</annotation></semantics></math>.</li>
+  <li>No stretching of batch axes: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> is either a matrix or has exactly the batch axes of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math>.</li>
+  <li><code>transposeLast</code> is a real permutation with a copy; a product with a transposed factor therefore costs an extra copy. The form <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">A B^T</annotation></semantics></math> without a copy exists only in the float kernel (<code>matmulNT</code>).</li>
+  <li>Skipping zeros makes the run time data-dependent; measurements with sparse inputs do not carry over to dense ones.</li>
+  <li>Parallel means: the common fork-join pool. If the application computes other things on this pool at the same time, both share the cores.</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#kern">Tensor, operations, gradient check</a> · Probes: <code>AutogradTest</code>, <code>Gradientenprobe</code>, <code>Schnellpfadprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

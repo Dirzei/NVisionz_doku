@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Single-precision matrix kernels and Vector API – blocking, kernel selection and vector loops – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite" href="matmul.html">Matrix product</a>
+<a class="unterseite" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite aktiv" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Single-precision matrix kernels and Vector API – blocking, kernel selection and vector loops</span><a class="sprachwahl" href="../../de/autograd/matrixkerne.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd.fast · envisionz-framework-autograd-vector</div>
+  <h1>Single-precision matrix kernels and Vector API – blocking, kernel selection and vector loops</h1>
+  <p class="unter">The computation behind <code>FloatKernels</code>, <code>Kernels</code> and <code>VectorKernel</code>: why the loop order i, k, j makes the result independent of blocking and vector width, how the kernel is selected, how the vector loops handle the tail, and why the four-column version without <code>fma</code> stays bit-identical – with pseudocode following the source, measurements, the probes and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>The autograd core computes in <code>double</code>. The gradient check needs that (see <a href="gradcheck.html">Gradient check</a>), and so do the bit-exact comparisons between serial and parallel computation (see <a href="matmul.html">Matrix product</a>). For a training run, however, double precision is ballast: <code>double</code> moves twice as many bytes as <code>float</code>, and for matrix products of this size memory is often the bottleneck.</p>
+<p>The package <code>envisionz.autograd.fast</code> therefore offers a second computational path in <code>float</code>. It is connected at exactly one place: the forward step of <code>Ops.matmul</code>, when the switch <code>Ops.schnellesMatmul</code> is set (default off) and the amount of work <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>batch</mtext><mo>⋅</mo><mi>M</mi><mo>⋅</mo><mi>K</mi><mo>⋅</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">\text{batch}\cdot M\cdot K\cdot N</annotation></semantics></math> is at least <code>Ops.schnellesMatmulAb</code> = 1,000,000. The backward pass always stays in <code>double</code>.</p>
+
+<h2 id="genauigkeit">Precision of <code>float</code></h2>
+<p><code>float</code> has a 24-bit mantissa; the unit roundoff is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mn>24</mn></mrow></msup><mo>≈</mo><mn>6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">u = 2^{-24} \approx 6\cdot 10^{-8}</annotation></semantics></math> – about seven decimal digits instead of sixteen. A sum of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> products accumulates rounding errors; with random signs the error typically grows like <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi>K</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{K}</annotation></semantics></math>, in the worst case like <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math>. The probe <code>KernelTest</code> therefore measures the largest distance to the <code>double</code> computation, relative to the typical size of the result values (their root mean square), and requires</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><msub><mi>max</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo>|</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mover accent="true"><mrow><mi>c</mi></mrow><mo stretchy="true">˜</mo></mover></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>|</mo></mrow><mrow><mi>rms</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow></mfrac><mo>&lt;</mo><mn>6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup><mo>⋅</mo><msqrt><mi>K</mi></msqrt><mo>⋅</mo><mn>40</mn><mo>.</mo></mrow><annotation encoding="application/x-tex">\frac{\max_{ij} |c_{ij} - \tilde{c}_{ij}|}{\operatorname{rms}(c)} &lt; 6\cdot 10^{-8}\cdot\sqrt{K}\cdot 40.</annotation></semantics></math></p>
+<p>The factor 40 is headroom. Measured was about <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.1</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.1\cdot 10^{-6}</annotation></semantics></math> at 100×128×512 (bound <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.7</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.7\cdot 10^{-5}</annotation></semantics></math>).</p>
+<p>Why relative to the size of the <b>result</b> and not to each entry: a product of normally distributed numbers has entries close to zero. There the denominator of a per-entry error is tiny, and what comes out as relative error is cancellation at a single entry. According to the module documentation such a comparison once gave 1.7·10<sup>−4</sup> per entry – but 5·10<sup>−8</sup> relative to the size of the result, i.e. within <code>float</code>.</p>
+
+<h2 id="blockierung">Blocking and loop order</h2>
+<p>For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>←</mo><mi>C</mi><mo>+</mo><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">C \leftarrow C + A B</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>∈</mo><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>M</mi><mo>×</mo><mi>K</mi></mrow></msup></mrow><annotation encoding="application/x-tex">A \in \mathbb{R}^{M\times K}</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>∈</mo><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>K</mi><mo>×</mo><mi>N</mi></mrow></msup></mrow><annotation encoding="application/x-tex">B \in \mathbb{R}^{K\times N}</annotation></semantics></math>, all stored row by row, <code>FloatKernels.matmul</code> runs in the order i, k, j with j innermost. Only then are <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> both contiguous in the innermost pass while <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mi>i</mi><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">a_{ik}</annotation></semantics></math> stays fixed. The usual order i, j, k would have a stride of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> elements through <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> innermost.</p>
+<p>Above that lie three block loops with the adjustable block sizes <code>blockM</code> = 64, <code>blockK</code> = 128 and <code>blockN</code> = 256. A block of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> thus covers <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>128</mn><mo>⋅</mo><mn>256</mn><mo>⋅</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">128 \cdot 256 \cdot 4</annotation></semantics></math> bytes = 128 KiB, a block of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> 32 KiB and one of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> 64 KiB. The aim is to use a section of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> once loaded for several rows of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> before it is evicted from the cache.</p>
+
+<h3>Pseudocode – <code>FloatKernels.matmul(a, b, c, M, K, N)</code></h3>
+<pre class="pseudo"><b>for</b> i0 = 0, 64, … &lt; M:
+    <b>for</b> k0 = 0, 128, … &lt; K:
+        <b>for</b> j0 = 0, 256, … &lt; N:
+            <b>for</b> i = i0 … min(i0+64, M) − 1:
+                <b>for</b> k = k0 … min(k0+128, K) − 1:
+                    av ← a[i, k];  <b>if</b> av = 0:  <b>continue</b>
+                    <b>for</b> j = j0 … min(j0+256, N) − 1:
+                        c[i, j] ← c[i, j] + av · b[k, j]</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/fast/FloatKernels.java</code>. The kernels add to <code>c</code> and do not overwrite it.</p>
+<p>One consequence of this order matters for testing: every entry <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_{ij}</annotation></semantics></math> receives its terms <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mi>i</mi><mi>k</mi></mrow></msub><msub><mrow><mi>b</mi></mrow><mrow><mi>k</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">a_{ik} b_{kj}</annotation></semantics></math> in <b>ascending</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>, however the blocks are cut. Since Java does not contract multiplication and addition into an <code>fma</code> on its own, the naive, the blocked and the vectorised kernel are bit-identical for <code>matmul</code>. The <code>Schnellpfadprobe</code> measures that: blocked against naive 0.0 for five shapes, among them 65×129×257.</p>
+<p>For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>←</mo><mi>C</mi><mo>+</mo><mi>A</mi><msup><mrow><mi>B</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">C \leftarrow C + A B^{\mathsf T}</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>B</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">B^{\mathsf T}</annotation></semantics></math> stored as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>N</mi><mo>,</mo><mi>K</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[N, K]</annotation></semantics></math> – the shape of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mrow><mi>K</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">Q K^{\mathsf T}</annotation></semantics></math> in attention – <code>matmulNT</code> computes per entry a dot product of two contiguous rows and adds it. The transpose is avoided.</p>
+
+<h2 id="auswahl">Kernel selection</h2>
+<p>The interface <code>MatmulKernel</code> has <code>name()</code>, <code>priority()</code>, <code>isAvailable()</code> (default true), <code>matmul</code> and <code>matmulNT</code>. The built-in <code>BlockedKernel</code> calls <code>FloatKernels</code> and has priority 0 so that any extension overtakes it.</p>
+<h3>Pseudocode – <code>Kernels.waehle()</code></h3>
+<pre class="pseudo">all ← [BlockedKernel]
+<b>try</b>:
+    <b>for each</b> implementation k found by the ServiceLoader:
+        <b>if</b> k is not a BlockedKernel:  all ← all + [k]
+<b>catch</b> Throwable:  print a note                      <i>core stays usable</i>
+best ← all[0]
+<b>for each</b> k in all:
+    avail ← k.isAvailable()  <i>(a Throwable counts as unavailable)</i>
+    <b>if</b> avail <b>and</b> k.priority() &gt; best.priority():  best ← k
+<b>return</b> best</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/fast/Kernels.java</code>. The choice is made on the first call of <code>kernel()</code>; <code>setKernel(k)</code> overrides it, <code>setKernel(null)</code> restores the automatic choice.</p>
+
+<div class="hinweis"><b>Decision in the framework:</b> the Vector API is an incubator module in OpenJDK and requires <code>--add-modules jdk.incubator.vector</code> at compile time and at start-up. The core is not to carry that dependency. The vector kernel therefore lives in the separate project <code>envisionz-framework-autograd-vector</code> and is registered via <code>META-INF/services</code>. If the project or the module is missing, the <code>ServiceLoader</code> finds nothing and the built-in kernel runs. The fast path stays off until someone switches it on: a switch that turns itself on would make the gradient check and the bit-exact comparisons useless.</div>
+
+<h2 id="vektor">The vector kernel</h2>
+<p><code>VectorKernel</code> takes the machine's preferred vector width (<code>FloatVector.SPECIES_PREFERRED</code>): 16 floats with 512-bit registers, 8 with 256 bits. It reports priority 100 and is available when the width is greater than 1. Its name states the width, for example "Vector API (8 float)", because a speed-up factor cannot be placed without the width.</p>
+
+<h3><code>matmul</code>: vector over j, scalar tail</h3>
+<p>The order is i, k, j as in the built-in kernel, but without blocking. The innermost loop runs in steps of the vector width <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi></mrow><annotation encoding="application/x-tex">W</annotation></semantics></math> up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>N</mi><mo>/</mo><mi>W</mi><mo stretchy="false">⌋</mo><mo>⋅</mo><mi>W</mi></mrow><annotation encoding="application/x-tex">\lfloor N/W \rfloor \cdot W</annotation></semantics></math> (<code>loopBound</code>), the at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">W-1</annotation></semantics></math> remaining columns as scalars.</p>
+
+<figure>
+<svg viewBox="0 0 620 205" width="620" font-family="sans-serif" font-size="13">
+  <title>Inner loop of VectorKernel.matmul for one row with N = 20</title>
+  <defs>
+    <marker id="ag-mk-pfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker>
+    <marker id="ag-mk-pfeil2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9a6400"/></marker>
+  </defs>
+  <text x="206" y="40" fill="#1f5f8b" text-anchor="middle">vector 1 · 8 float</text>
+  <text x="398" y="40" fill="#1f5f8b" text-anchor="middle">vector 2 · 8 float</text>
+  <text x="542" y="40" fill="#9a6400" text-anchor="middle">scalar tail</text>
+  <text x="100" y="70" fill="#5b6475" text-anchor="end">row k of B</text>
+  <text x="100" y="140" fill="#5b6475" text-anchor="end">row i of C</text>
+  <text x="100" y="104" fill="#5b6475" text-anchor="end" font-size="11">× a[i,k]</text>
+  <rect x="110" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="134" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="158" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="182" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="206" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="230" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="254" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="278" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="302" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="326" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="350" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="374" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="398" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="422" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="446" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="470" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="494" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="518" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="542" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="566" y="50" width="24" height="30" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <rect x="110" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="134" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="158" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="182" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="206" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="230" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="254" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="278" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="302" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="326" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="350" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="374" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="398" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="422" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="446" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="470" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="494" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="518" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="542" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="566" y="120" width="24" height="30" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="110" y="48" width="192" height="34" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+  <rect x="302" y="48" width="192" height="34" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+  <rect x="494" y="48" width="96" height="34" fill="none" stroke="#9a6400" stroke-width="2"/>
+  <rect x="110" y="118" width="192" height="34" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+  <rect x="302" y="118" width="192" height="34" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+  <rect x="494" y="118" width="96" height="34" fill="none" stroke="#9a6400" stroke-width="2"/>
+  <line x1="206" y1="84" x2="206" y2="115" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#ag-mk-pfeil)"/>
+  <line x1="398" y1="84" x2="398" y2="115" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#ag-mk-pfeil)"/>
+  <line x1="518" y1="84" x2="518" y2="115" stroke="#9a6400" stroke-width="1" marker-end="url(#ag-mk-pfeil2)"/>
+  <line x1="542" y1="84" x2="542" y2="115" stroke="#9a6400" stroke-width="1" marker-end="url(#ag-mk-pfeil2)"/>
+  <line x1="566" y1="84" x2="566" y2="115" stroke="#9a6400" stroke-width="1" marker-end="url(#ag-mk-pfeil2)"/>
+  <text x="110" y="168" fill="#5b6475" font-size="11">j = 0</text>
+  <text x="302" y="168" fill="#5b6475" font-size="11" text-anchor="middle">8</text>
+  <text x="494" y="168" fill="#5b6475" font-size="11" text-anchor="middle">16</text>
+  <text x="590" y="168" fill="#5b6475" font-size="11" text-anchor="middle">20</text>
+  <text x="110" y="192" fill="#1f5f8b">loopBound(20) = 16: two full vectors, then 4 values one by one</text>
+</svg>
+<figcaption>One step of the innermost loop at a vector width of 8 floats and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">N = 20</annotation></semantics></math> columns: row <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> is loaded in vectors of 8 values, multiplied by the fixed value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mi>i</mi><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">a_{ik}</annotation></semantics></math> and added to row <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math>. The last <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>20</mn><mo>−</mo><mn>16</mn><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">20 - 16 = 4</annotation></semantics></math> values run as scalars. Every entry of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> receives the same arithmetic steps in the same order as in the built-in kernel.</figcaption>
+</figure>
+
+<p>A masked tail instead of the scalar loop was measured and not adopted: it gained 6 to 16 % for shapes with a tail, but also 1 to 7 % at 256×256×256, where there is no tail and both paths do the same computation. The gain was thus within what the order of measurement alone accounts for.</p>
+
+<h3><code>matmulNT</code>: four output columns at once</h3>
+<p>In the dot product a vector loaded from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> is used for four rows of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>B</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">B^{\mathsf T}</annotation></semantics></math> instead of one. Each of the four columns has its own vector accumulator:</p>
+<pre class="pseudo">W ← vector width;  G ← ⌊K / W⌋ · W
+<b>for</b> i = 0 … M−1:
+    j ← 0
+    <b>while</b> j + 3 &lt; N:                                       <i>four columns</i>
+        s0, s1, s2, s3 ← zero vectors
+        <b>for</b> k = 0, W, … &lt; G:
+            va ← a[i, k … k+W)
+            s<i>q</i> ← s<i>q</i> + va · bT[j+<i>q</i>, k … k+W)    <b>for</b> <i>q</i> = 0 … 3     <i>mul, then add</i>
+        r<i>q</i> ← sum of the lanes of s<i>q</i>
+        <b>for</b> k = G … K−1:  r<i>q</i> ← r<i>q</i> + a[i, k] · bT[j+<i>q</i>, k]
+        c[i, j+<i>q</i>] ← c[i, j+<i>q</i>] + r<i>q</i>;  j ← j + 4
+    <b>for</b> the remaining up to three columns:  the same computation with one accumulator</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd-vector/src/envisionz/autograd/fast/vector/VectorKernel.java</code>.</p>
+<p>Every column sums in <b>the same order</b> as in the single-column version: vector part, lane reduction, scalar tail. The result is therefore bit-identical to the single-column version. An <code>fma</code> rounds only once after multiplication and addition instead of twice; it would have broken this bit identity, and on the target machine it gave 0.76 to 1.01 times the speed on its own, i.e. no gain. Implemented are four columns without <code>fma</code>. Compared with <code>FloatKernels.matmulNT</code>, however, the result is not bit-identical: there the values are added one after another, here first per lane.</p>
+
+<h2 id="messung">Measurements</h2>
+<p>All factors are single-threaded and depend on the machine; without the vector width they cannot be placed. According to the module documentation, measured in the build environment with 512-bit registers (16 floats), against the <code>double</code> path:</p>
+<table>
+  <tr><th>Shape M×K×N</th><th><code>double</code></th><th>blocked <code>float</code></th><th>Vector API</th></tr>
+  <tr><td>256×256×256</td><td>11.07 ms</td><td>1.13×</td><td>5.17×</td></tr>
+  <tr><td>512×512×512</td><td>87.51 ms</td><td>1.06×</td><td>4.19×</td></tr>
+  <tr><td>100×128×512</td><td>4.52 ms</td><td>1.09×</td><td>5.02×</td></tr>
+</table>
+<p>Blocking alone buys almost nothing; the gain comes from explicit vectorisation. 128×128×128 is too short at about 1.6 ms for a reliable measurement and swung between 0.5× and 6.3×. A new run of <code>KernelTest</code> in the build environment for this page gave 7.3×, 5.5× and 5.9× for the Vector API and 1.9×, 1.4× and 1.5× for the blocked kernel – the same order of magnitude, but clearly different individual values.</p>
+<p>On the target machine with 256-bit registers (8 floats) the vector width is half as large; the module documentation expects a factor of 2 to 3 there instead of 4 to 5. What was measured there is the four-column version of <code>matmulNT</code>: per shape alternating in 41 pairs after warm-up, median, two runs, for shapes from 128×64×128 to 512×512×512. Four columns alone gave 1.44 to 1.79 times the speed of the single-column version.</p>
+
+<h2 id="beispiel">Worked examples</h2>
+<p><b>Vector loop.</b> With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">N = 20</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo>=</mo><mn>8</mn></mrow><annotation encoding="application/x-tex">W = 8</annotation></semantics></math>, <code>loopBound</code> is 16: two full vectors, then four values one by one (figure). With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo>=</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">W = 16</annotation></semantics></math> it is also 16: one vector, then four values. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">N = 7</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo>=</mo><mn>8</mn></mrow><annotation encoding="application/x-tex">W = 8</annotation></semantics></math> everything runs as scalars.</p>
+<p><b>Threshold.</b> The product <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><msup><mrow><mi>K</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">Q K^{\mathsf T}</annotation></semantics></math> of one head with 25 positions and head width 64 has <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>25</mn><mo>⋅</mo><mn>64</mn><mo>⋅</mo><mn>25</mn><mo>=</mo><mn>40,000</mn></mrow><annotation encoding="application/x-tex">25 \cdot 64 \cdot 25 = 40{,}000</annotation></semantics></math> multiplications and stays far below the threshold of 1,000,000. A weight matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>256</mn><mo>,</mo><mn>1024</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[256, 1024]</annotation></semantics></math> applied to a batch <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>8</mn><mo>,</mo><mn>128</mn><mo>,</mo><mn>256</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[8, 128, 256]</annotation></semantics></math> comes to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>⋅</mo><mn>128</mn><mo>⋅</mo><mn>256</mn><mo>⋅</mo><mn>1024</mn><mo>≈</mo><mn>2.7</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">8 \cdot 128 \cdot 256 \cdot 1024 \approx 2.7\cdot 10^{8}</annotation></semantics></math> and takes the fast path if it is switched on. The threshold is higher than the parallel threshold of 250,000 because all three matrices are additionally converted to <code>float</code> and back.</p>
+<p><b>Error bound.</b> With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">K = 128</annotation></semantics></math> the bound of <code>KernelTest</code> is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup><mo>⋅</mo><msqrt><mn>128</mn></msqrt><mo>⋅</mo><mn>40</mn><mo>≈</mo><mn>2.7</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">6\cdot 10^{-8}\cdot\sqrt{128}\cdot 40 \approx 2.7\cdot 10^{-5}</annotation></semantics></math>. The <code>Schnellpfadprobe</code> measured 2.3·10<sup>−7</sup> to 2.6·10<sup>−7</sup> between the fast and the slow path of <code>Ops.matmul</code> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mn>40</mn></mrow><annotation encoding="application/x-tex">K = 40</annotation></semantics></math> and 70.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>KernelTest</code></b> (in the source tree): every available kernel against a <code>double</code> reference at 1×1×1, 3×5×7, 64×64×64, 100×128×512 and 257×33×129, <code>matmulNT</code> at 64×96×48, and that the kernel adds to <code>c</code>. Without the vector project 7 checks, with it 13. Plus a measuring part without verdict.</li>
+  <li><b><code>Schnellpfadprobe</code></b>, 29 checks: selection (priority, <code>setKernel</code>, reset), accumulation, blocked against naive, <code>matmulNT</code> against <code>matmul</code> with a hand-transposed <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math>, every kernel against the built-in one, 16 edge shapes with no full vector, exactly one and one plus tail, the fast against the slow path of <code>Ops.matmul</code> for three shapes (tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-5}</annotation></semantics></math>, and explicitly <b>not</b> bit-identical), a bit-identical <code>double</code> result below the threshold, and the backward pass against a closed formula at <code>double</code> precision. Comparisons of two <code>float</code> paths use the tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2\cdot 10^{-5}</annotation></semantics></math>, relative to the size of the result.</li>
+  <li><b><code>Kernprobe</code></b> in the vector project, 44 checks: design (name states the width, priority 100 against 0, width a power of two, available exactly when more than one float), 10 shapes of <code>matmul</code> and 6 shapes of <code>matmulNT</code> against the built-in kernel, accumulation and zero matrices, and the four-column version bit-identical to the single-column one at 1, 2, 3, 4, 5, 7, 8, 9 and 31 columns. According to the module documentation six deliberately planted faults are caught, among them <code>fma</code> instead of <code>mul</code>+<code>add</code>, the wrong row of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>B</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">B^{\mathsf T}</annotation></semantics></math> and <code>=</code> instead of <code>+=</code>.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Only the forward step of <code>Ops.matmul</code> is connected. <code>matmulNT</code> is not used by production code; attention still transposes.</li>
+  <li>The fast path makes one kernel call per batch entry on one thread. The <code>double</code> path, by contrast, spreads the rows over all cores above the parallel threshold. On a machine with many cores the gain from vectorisation can therefore be partly eaten up; this has not been measured.</li>
+  <li>For every call <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> are copied completely to <code>float</code> and the result back to <code>double</code>.</li>
+  <li>The Vector API remains an incubator module; <code>--add-modules jdk.incubator.vector</code> is needed at compile time and at start-up. Whether the vector path takes effect in a native image, and which switches it needs, is according to the module documentation still to be checked on the target machine.</li>
+  <li><code>float</code> is not suitable for the gradient check or for bit-exact comparisons; both stay on the <code>double</code> path.</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#vector">Single-precision matrix kernels and Vector API</a> · Probes: <code>KernelTest</code>, <code>Schnellpfadprobe</code>, <code>Kernprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

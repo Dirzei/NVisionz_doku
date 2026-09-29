@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprachkorpus laden und vorab prüfen – WAV-Blöcke, Metadaten und Lautabdeckung – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#kern">Tensor, Operationen, Gradientenprüfung</a>
+<a class="unterseite" href="ableitungen.html">Ableitungen</a>
+<a class="unterseite" href="gradcheck.html">Gradientenprüfung</a>
+<a class="unterseite" href="matmul.html">Matrixprodukt</a>
+<a class="unterseite" href="rueckwaerts.html">Rückwärtsmodus</a>
+<a class="rubrik" href="index.html#nn">Netzbausteine und Transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Aufmerksamkeit</a>
+<a class="unterseite" href="bausteine.html">Bausteine und Anfangswerte</a>
+<a class="unterseite" href="encoder.html">Encoder und Sprachkopf</a>
+<a class="rubrik" href="index.html#optim">Optimierer und Gewichtsablage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Gewichtsdatei</a>
+<a class="rubrik" href="index.html#lm">Sequenztraining und Stichprobe</a>
+<a class="unterseite" href="sequenztraining.html">Sequenztraining</a>
+<a class="unterseite" href="stichprobe.html">Stichprobe</a>
+<a class="rubrik" href="index.html#text">Text, Tokenisierer, Sprachmodell</a>
+<a class="unterseite" href="absichten.html">Befehlsbeispiele</a>
+<a class="unterseite" href="bpe.html">Byte-Paar-Kodierung</a>
+<a class="unterseite" href="sprachmodell.html">Sprachmodell</a>
+<a class="rubrik" href="index.html#dsp">Ableitbares Spektralmodell der Formantstimme</a>
+<a class="unterseite" href="anpassung.html">Spektralanpassung</a>
+<a class="unterseite" href="formantspektrum.html">Filter und Quelle</a>
+<a class="unterseite" href="rahmenfolge.html">Rahmenfolge</a>
+<a class="rubrik" href="index.html#corpus">Sprachkorpus laden und vorab prüfen</a>
+<a class="unterseite aktiv" href="korpus.html">Korpus</a>
+<a class="rubrik" href="index.html#vector">Matrixkerne in einfacher Genauigkeit und Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrixkerne</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-autograd</a> › Sprachkorpus laden und vorab prüfen – WAV-Blöcke, Metadaten und Lautabdeckung</span><a class="sprachwahl" href="../../en/autograd/korpus.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd.corpus</div>
+  <h1>Sprachkorpus laden und vorab prüfen – WAV-Blöcke, Metadaten und Lautabdeckung</h1>
+  <p class="unter">Die Rechnung hinter <code>CorpusLoader</code> und <code>G2pCoverage</code>: der Aufbau einer WAV-Datei als Folge von Blöcken, die Umrechnung der Abtastwerte je Bittiefe, die hochgerechnete Korpusdauer aus einer Stichprobe und die Kennzahl „Laute je Zeichen“ – mit Pseudocode nach dem Quelltext, nachgerechneten Beispielen, den Proben und den Grenzen.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Ein Sprachkorpus besteht aus Textzeilen und den zugehörigen Aufnahmen. Aus ihm sollen später Lernziele entstehen – etwa die Formantverläufe der zweiten Stufe (siehe <a href="rahmenfolge.html">Rahmenfolgen</a>) oder Lautfolgen für eine Sprachausgabe. Ein Trainingslauf darauf dauert Stunden. Fehler im Korpus – eine fehlende Datei, eine unerwartete Abtastrate, Zeichen, die der Laut-Umsetzer nicht kennt – fallen im Training nicht zwingend auf, denn ein Modell lernt auch aus falschen Zielwerten etwas.</p>
+<p>Das Paket klärt deshalb <b>vorher</b> drei Fragen: Sind alle Stücke da und lesbar? Wie groß ist der Korpus, und hat er eine brauchbare Abtastrate? Trägt die Laut-Umsetzung den Text?</p>
+
+<h2 id="aufbau">Aufbau des Korpusverzeichnisses</h2>
+<p>Gelesen wird das HUI-Layout: ein Verzeichnis mit einer Datei <code>metadata.csv</code> und einem Unterverzeichnis <code>wavs/</code>. Jede Zeile der Metadaten hat die Form</p>
+<pre class="pseudo"><i>Kennung</i>|<i>Rohtext</i>|<i>normalisierter Text</i></pre>
+<p>Das Trennzeichen ist der senkrechte Strich, nicht das Komma – trotz der Endung <code>.csv</code>. Ein Komma-Leser bekäme eine einzige Spalte. Zur Kennung gehört die Datei <code>wavs/</code><i>Kennung</i><code>.wav</code>.</p>
+<p>Die dritte Spalte ist der normalisierte Text: Zahlen ausgeschrieben, Abkürzungen aufgelöst. Genau ihn braucht ein Graphem-zu-Phonem-Umsetzer. <code>Entry.text()</code> liefert deshalb die dritte Spalte und nur dann die zweite, wenn die dritte fehlt oder leer ist.</p>
+<p>Zeilen, deren Audiodatei fehlt, werden <b>übersprungen und gezählt</b>; die Zahl wird ausgegeben. Ein fehlendes Stück fiele sonst erst mitten im Trainingslauf auf. Der Lader nimmt nur die Verweise auf die Dateien mit, nicht die Audiodaten selbst: 22 Stunden bei 44,1 kHz sind rund 3,5 Milliarden Abtastwerte, als <code>float</code> also rund 14 GB. Die Audiodaten werden Datei für Datei mit <code>readWav</code> gelesen.</p>
+
+<h2 id="wav">Die WAV-Datei als Folge von Blöcken</h2>
+<p>Eine WAV-Datei ist eine RIFF-Datei: nach einem Kopf von 12 Byte (<code>RIFF</code>, Gesamtlänge, <code>WAVE</code>) folgen Blöcke. Jeder Block beginnt mit einer Kennung aus vier Zeichen und einer Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ℓ</mi></mrow><annotation encoding="application/x-tex">\ell</annotation></semantics></math> als 32-Bit-Zahl in Little-Endian, danach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ℓ</mi></mrow><annotation encoding="application/x-tex">\ell</annotation></semantics></math> Byte Inhalt. Blöcke beginnen auf geraden Positionen; bei ungerader Länge folgt ein Füllbyte. Der nächste Block beginnt also bei</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>p</mi><mo>'</mo><mo>=</mo><mi>p</mi><mo>+</mo><mn>8</mn><mo>+</mo><mi mathvariant="normal">ℓ</mi><mo>+</mo><mo stretchy="false">(</mo><mi mathvariant="normal">ℓ</mi><mo>mod</mo><mn>2</mn><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">p' = p + 8 + \ell + (\ell \bmod 2).</annotation></semantics></math></p>
+<p>Gebraucht werden zwei Blöcke: <code>fmt </code> mit Formatkennung, Kanalzahl, Abtastrate und Bittiefe (an den Versätzen 0, 2, 4 und 14 des Inhalts), und <code>data</code> mit den Abtastwerten. Viele Dateien haben genau diese zwei Blöcke, dann beginnen die Werte immer bei Byte 44. Manche Werkzeuge schieben aber weitere Blöcke ein, etwa <code>LIST</code> mit Aufnahmeangaben. Ein Leser mit festem Versatz 44 liest dann Metadaten als Abtastwerte. <code>readWav</code> läuft deshalb die Blöcke ab.</p>
+
+<figure>
+<svg viewBox="0 0 620 220" width="620" font-family="sans-serif" font-size="13">
+  <title>Blockfolge einer WAV-Datei mit eingeschobenem LIST-Block</title>
+  <defs>
+    <marker id="ag-korpus-pfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker>
+    <marker id="ag-korpus-pfeil2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9a6400"/></marker>
+  </defs>
+  <text x="20" y="18" fill="#1f5f8b">Blöcke ablaufen: p ← p + 8 + Länge + Füllbyte</text>
+  <path d="M122,48 Q190,24 258,48" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#ag-korpus-pfeil)"/>
+  <path d="M262,48 Q342,22 422,48" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#ag-korpus-pfeil)"/>
+  <rect x="20" y="50" width="100" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="70" y="71" fill="#1f5f8b" text-anchor="middle">RIFF-Kopf</text>
+  <text x="70" y="89" fill="#5b6475" text-anchor="middle" font-size="11">RIFF n WAVE</text>
+  <rect x="120" y="50" width="140" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="190" y="71" fill="#1f5f8b" text-anchor="middle">fmt-Block</text>
+  <text x="190" y="89" fill="#5b6475" text-anchor="middle" font-size="11">Format · Rate · Bits</text>
+  <rect x="260" y="50" width="150" height="50" fill="#ffffff" stroke="#9a6400"/>
+  <text x="335" y="71" fill="#9a6400" text-anchor="middle">LIST-Block</text>
+  <text x="335" y="89" fill="#5b6475" text-anchor="middle" font-size="11">21 Byte, ungerade</text>
+  <rect x="410" y="50" width="14" height="50" fill="#c9d1dc" stroke="#1f5f8b"/>
+  <rect x="424" y="50" width="60" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="454" y="71" fill="#1f5f8b" text-anchor="middle">data</text>
+  <text x="454" y="89" fill="#5b6475" text-anchor="middle" font-size="11">8820</text>
+  <rect x="484" y="50" width="116" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="542" y="71" fill="#1f5f8b" text-anchor="middle">Abtastwerte</text>
+  <text x="542" y="89" fill="#5b6475" text-anchor="middle" font-size="11">4410 × 16 Bit</text>
+  <text x="20" y="116" fill="#5b6475" font-size="11">0</text>
+  <text x="120" y="116" fill="#5b6475" font-size="11">12</text>
+  <text x="260" y="116" fill="#5b6475" font-size="11">36</text>
+  <text x="424" y="116" fill="#5b6475" font-size="11">66</text>
+  <text x="484" y="116" fill="#5b6475" font-size="11">74</text>
+  <text x="600" y="116" fill="#5b6475" font-size="11" text-anchor="end">8894</text>
+  <line x1="417" y1="100" x2="417" y2="128" stroke="#5b6475"/>
+  <text x="417" y="142" fill="#5b6475" font-size="11" text-anchor="middle">Füllbyte</text>
+  <line x1="301" y1="172" x2="301" y2="104" stroke="#9a6400" stroke-width="1.5" marker-end="url(#ag-korpus-pfeil2)"/>
+  <text x="301" y="188" fill="#9a6400" text-anchor="middle">Leser mit festem Versatz 44</text>
+  <text x="301" y="206" fill="#9a6400" text-anchor="middle">liest den LIST-Block als Abtastwerte</text>
+</svg>
+<figcaption>Die Datei aus der Probe mit eingeschobenem Block: 4410 Werte in 16 Bit, einkanalig, 44 100 Hz. Die Versätze sind in Byte angegeben, die Breiten nicht maßstäblich. <code>readWav</code> springt von Block zu Block und rechnet das Füllbyte nach dem ungeraden <code>LIST</code>-Block ein; ein Leser, der die Werte ab Byte 44 erwartet, landet mitten in den Aufnahmeangaben.</figcaption>
+</figure>
+
+<h3>Umrechnung der Abtastwerte</h3>
+<p>Die Werte werden auf das Intervall <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[-1, 1)</annotation></semantics></math> gebracht. Mit dem gelesenen Rohwert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> gilt je Bittiefe:</p>
+<table>
+  <tr><th>Bittiefe</th><th>Rohwert</th><th>Abtastwert</th></tr>
+  <tr><td>8 Bit</td><td>ohne Vorzeichen, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi>b</mi><mo>≤</mo><mn>255</mn></mrow><annotation encoding="application/x-tex">0 \le b \le 255</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>b</mi><mo>−</mo><mn>128</mn><mo stretchy="false">)</mo><mo>/</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">(b - 128)/128</annotation></semantics></math></td></tr>
+  <tr><td>16 Bit</td><td>mit Vorzeichen</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{15}</annotation></semantics></math></td></tr>
+  <tr><td>24 Bit</td><td>mit Vorzeichen, höchstes Byte vorzeichenerweitert</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>23</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{23}</annotation></semantics></math></td></tr>
+  <tr><td>32 Bit, Formatkennung 3</td><td>IEEE-754 <code>float</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> unverändert</td></tr>
+  <tr><td>32 Bit, sonst</td><td>mit Vorzeichen</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{31}</annotation></semantics></math></td></tr>
+</table>
+<p>8 Bit ist als einzige Tiefe vorzeichenlos – die Mitte liegt bei 128. Mehrkanalige Dateien bleiben verschränkt (links, rechts, links, …); die Dauer ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>⋅</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">n / (f_s \cdot c)</annotation></semantics></math> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Werten, Abtastrate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_s</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> Kanälen.</p>
+
+<h3>Pseudocode – <code>CorpusLoader.readWav(file)</code></h3>
+<pre class="pseudo">d ← alle Bytes der Datei
+<b>prüfe</b> |d| ≥ 44, d[0..4) = "RIFF", d[8..12) = "WAVE"
+rate ← 0;  kanäle ← 1;  bits ← 16;  format ← 1;  datenVon ← −1
+p ← 12
+<b>solange</b> p + 8 ≤ |d|:
+    kennung ← d[p..p+4);  ℓ ← le32(d, p+4);  inhalt ← p + 8
+    <b>wenn</b> ℓ &lt; 0 <b>oder</b> inhalt + ℓ &gt; |d|:  ℓ ← |d| − inhalt       <i>abgeschnittene Datei</i>
+    <b>wenn</b> kennung = "fmt " <b>und</b> ℓ ≥ 16:
+        format ← le16(inhalt);  kanäle ← max(1, le16(inhalt+2))
+        rate ← le32(inhalt+4);  bits ← le16(inhalt+14)
+    <b>sonst wenn</b> kennung = "data":  datenVon ← inhalt;  datenLänge ← ℓ
+    p ← inhalt + ℓ + (ℓ mod 2)                                <i>Füllbyte</i>
+<b>prüfe</b> datenVon ≥ 0
+w ← max(1, bits / 8);  n ← ⌊datenLänge / w⌋
+<b>für</b> i = 0 … n−1:  s[i] ← Umrechnung nach Tabelle, andere Tiefen 0
+<b>gib zurück</b> (s, rate, kanäle)</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-autograd/src/envisionz/autograd/corpus/CorpusLoader.java</code>, Methode <code>readWav</code>.</p>
+
+<div class="hinweis"><b>Festlegung im Framework:</b> ein eigener WAV-Leser statt <code>javax.sound.sampled</code>. Das JDK-Paket ist im Native Image aufwendig einzubinden und bringt für unkomprimierte PCM-Dateien nichts hinzu. Unterstützt sind 8, 16, 24 und 32 Bit ganzzahlig sowie 32 Bit Gleitkomma. Der Lader hält nur Verweise; Audiodaten werden je Datei auf Anforderung gelesen.</div>
+
+<h2 id="bericht">Kurzbericht über den Korpus</h2>
+<p><code>summary(eintraege, stichprobe)</code> zählt die Einträge und die Zeichen der Texte und liest dann <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mtext>stichprobe</mtext><mo>,</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>E</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">m = \min(\text{stichprobe}, n_E)</annotation></semantics></math> Audiodateien. Die Stichprobe ist gleichmäßig über den Korpus verteilt – Eintrag <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>i</mi><mspace width="0.1667em"/><msub><mrow><mi>n</mi></mrow><mrow><mi>E</mi></mrow></msub><mo>/</mo><mi>m</mi><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor i\, n_E / m \rfloor</annotation></semantics></math> für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>=</mo><mn>0</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>m</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">i = 0, \dots, m-1</annotation></semantics></math> –, nicht die ersten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math>: Korpora sind oft nach Kapiteln geordnet, und die ersten Stücke sind nicht repräsentativ. Aus der mittleren Dauer <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow></mrow><annotation encoding="application/x-tex">\bar{t}</annotation></semantics></math> der gelesenen Stücke folgt die hochgerechnete Gesamtdauer</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>T</mi><mo>≈</mo><mfrac><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow><mo>⋅</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>E</mi></mrow></msub></mrow><mrow><mn>3600</mn></mrow></mfrac><mspace width="0.3333em"/><mtext>h</mtext><mo>.</mo></mrow><annotation encoding="application/x-tex">T \approx \frac{\bar{t} \cdot n_E}{3600}\ \text{h}.</annotation></semantics></math></p>
+<p>Der Bericht listet alle vorkommenden Abtastraten und warnt in zwei Fällen: wenn mehr als eine Rate vorkommt und wenn eine Rate unter 22 050 Hz liegt. Der Grund für die zweite Schwelle: die Nyquist-Frequenz ist die halbe Abtastrate. Ein Korpus mit 16 kHz reicht nur bis 8 kHz, und der Schwerpunkt des /s/ liegt bei 6 bis 8 kHz – genau am Rand. Unlesbare Dateien in der Stichprobe werden übergangen, damit eine einzelne kaputte Datei den Bericht nicht verhindert.</p>
+
+<h2 id="abdeckung">Lautabdeckung vor dem Training</h2>
+<p>Ein Graphem-zu-Phonem-Umsetzer, der an kurzen Dialogzeilen entwickelt wurde, trifft in einem Hörbuch auf Eigennamen, französische und lateinische Einsprengsel, alte Rechtschreibung und typografische Zeichen. Ein unbekanntes Zeichen wird stillschweigend übergangen, das Wort also falsch ausgesprochen. <code>G2pCoverage.check(texte, bekannt, conv)</code> prüft drei Dinge:</p>
+<ol>
+  <li><b>Zeichenabdeckung:</b> jedes Zeichen des kleingeschriebenen Texts, das kein Leerraum ist und nicht in <code>bekannt</code> steht, wird mit seiner Häufigkeit gezählt.</li>
+  <li><b>Ausbeute:</b> das Verhältnis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mi>L</mi><mo>/</mo><mi>Z</mi></mrow><annotation encoding="application/x-tex">a = L / Z</annotation></semantics></math> aus der Zahl <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> der erzeugten Laute und der Zahl <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math> der Zeichen.</li>
+  <li><b>Leere Umsetzungen:</b> Zeilen, aus denen der Umsetzer keinen einzigen Laut macht. Im Training wären sie stumme Zielwerte.</li>
+</ol>
+<p>Gezählt werden im Nenner alle Zeichen des kleingeschriebenen Texts einschließlich Leerzeichen und Satzzeichen. Nach der Klassenbeschreibung liegt deutscher Text bei 0,8 bis 1,0 Lauten je Zeichen. Unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>0,6</mn></mrow><annotation encoding="application/x-tex">a = 0{,}6</annotation></semantics></math> mahnt der Bericht: vermutlich wird Text verschluckt. <code>ok()</code> ist wahr, wenn weder unbekannte Zeichen noch leere Umsetzungen vorkamen; die Ausbeute geht in <code>ok()</code> nicht ein.</p>
+
+<h3>Pseudocode – <code>G2pCoverage.check(texte, bekannt, conv)</code></h3>
+<pre class="pseudo">unbekannt ← leere Zählung;  leer ← [];  Z ← 0;  L ← 0
+<b>für jede</b> Zeile t in texte:
+    <b>wenn</b> t leer:  <b>weiter</b>
+    k ← kleinschreibung(t);  Z ← Z + |k|
+    <b>für jedes</b> Zeichen c in k:
+        <b>wenn</b> c kein Leerraum <b>und</b> c ∉ bekannt:  unbekannt[c] += 1
+    n ← conv.countPhonemes(t);  L ← L + n
+    <b>wenn</b> n = 0:  leer ← leer + [t]
+<b>gib zurück</b> Bericht(|texte|, Z, L, unbekannt, leer, L / Z  <i>(0 bei Z = 0)</i>)</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-autograd/src/envisionz/autograd/corpus/G2pCoverage.java</code>.</p>
+
+<div class="hinweis"><b>Festlegung im Framework:</b> der Umsetzer wird als Funktionsschnittstelle <code>Converter</code> übergeben (<code>countPhonemes(text)</code>), damit das Paket nicht von der Sprachausgabe abhängt. Der mitgelieferte Grundvorrat <code>GERMAN_BASE</code> umfasst die Kleinbuchstaben a–z mit ä, ö, ü, ß, die Ziffern, gängige Satzzeichen einschließlich der typografischen Anführungszeichen „ “ ” ‘ ’ und der Striche – —, dazu é, è, ê, à, ç, ñ, á, í, ó, ú. Die typografischen Formen sind bewusst dabei: sie kommen in Buchtext ständig vor, und ein Vorrat nur mit Schreibmaschinenformen meldete sie reihenweise als unbekannt.</div>
+
+<h2 id="beispiel">Rechenbeispiele</h2>
+<p><b>Dateigröße.</b> Die Datei der Abbildung hat 4410 Werte zu 2 Byte, also 8820 Byte Daten. Mit 12 Byte RIFF-Kopf, 8 + 16 Byte <code>fmt</code>, 8 + 21 + 1 Byte <code>LIST</code> und 8 Byte Kopf des <code>data</code>-Blocks ergibt das <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>12</mn><mo>+</mo><mn>24</mn><mo>+</mo><mn>30</mn><mo>+</mo><mn>8</mn><mo>+</mo><mn>8820</mn><mo>=</mo><mn>8894</mn></mrow><annotation encoding="application/x-tex">12 + 24 + 30 + 8 + 8820 = 8894</annotation></semantics></math> Byte; die Werte beginnen bei Byte 74, nicht bei 44.</p>
+<p><b>Hochrechnung.</b> In der Probe hat jedes Stück 22 050 Werte bei 44 100 Hz, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow><mo>=</mo><mn>0,5</mn></mrow><annotation encoding="application/x-tex">\bar{t} = 0{,}5</annotation></semantics></math> s. Bei vier Einträgen ergibt das <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,5</mn><mo>⋅</mo><mn>4</mn><mo>/</mo><mn>3600</mn><mo>≈</mo><mn>0,0006</mn></mrow><annotation encoding="application/x-tex">0{,}5 \cdot 4 / 3600 \approx 0{,}0006</annotation></semantics></math> h; der Bericht zeigt „im Mittel 0,5 s, hochgerechnet 0,0 h“.</p>
+<p><b>Ausbeute.</b> Der Proben-Umsetzer zählt einfach die Buchstaben. „Der Verdichter läuft rund.“ hat 26 Zeichen und 22 Buchstaben, „Die Turbine erreicht ihre Drehzahl.“ 35 Zeichen und 30 Buchstaben. Zusammen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>52</mn><mo>/</mo><mn>61</mn><mo>≈</mo><mn>0,85</mn></mrow><annotation encoding="application/x-tex">a = 52/61 \approx 0{,}85</annotation></semantics></math> – im erwarteten Bereich. Ein Umsetzer, der nichts liefert, ergibt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a = 0</annotation></semantics></math>, zwei leere Umsetzungen und die Mahnung im Bericht.</p>
+<p><b>Buchtypische Zeichen.</b> In „»Das ist ein Zitat«, sagte er — nachdenklich…“ und „Der Coup d'État war ein Fiasko.“ findet die Prüfung drei unbekannte Zeichen: die beiden Guillemets und die Auslassungspunkte als ein Zeichen. Das É wird durch die Kleinschreibung zu é und ist bekannt.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b><code>CorpusTest</code></b> baut einen Korpus im Speicher nach – Metadaten und WAV-Dateien werden selbst erzeugt –, damit das Sollergebnis bekannt ist. 18 Prüfungen:
+    <ul>
+      <li>WAV-Rundlauf eines 440-Hz-Sinus in 8, 16, 24 und 32 Bit mit Toleranzen 0,02 / 0,001 / 10<sup>−5</sup> / 10<sup>−5</sup>; gemessen wurden als größte Abweichung 1,17·10<sup>−2</sup>, 4,57·10<sup>−5</sup>, 1,49·10<sup>−7</sup> und 0;</li>
+      <li>ein eingeschobener <code>LIST</code>-Block ungerader Länge mit Füllbyte wird übersprungen; eine Datei ohne RIFF-Kennung wird abgewiesen;</li>
+      <li>von fünf Metadatenzeilen mit vier vorhandenen Dateien werden vier gelesen; Trennzeichen und Vorrang des normalisierten Texts; der Bericht nennt die Abtastrate und rechnet die Dauer hoch; fehlende <code>metadata.csv</code> führt zu einer Ausnahme;</li>
+      <li>Abdeckung: sauberer Text ohne unbekannte Zeichen, plausible Ausbeute, buchtypische Zeichen fallen auf, leere Umsetzungen werden gemeldet, zu niedrige Ausbeute wird angemahnt, <code>ok()</code> unterscheidet richtig.</li>
+    </ul></li>
+  <li>Mit einem Verzeichnis als Argument vermisst die Probe zusätzlich einen echten Korpus (Zahl der Einträge, mittlere Dauer, Abtastraten).</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Die Formatkennung wird nur für die Unterscheidung „32 Bit Gleitkomma oder ganzzahlig“ ausgewertet. Eine Datei im erweiterten Format (Kennung 0xFFFE) mit Gleitkommawerten wird wie ganzzahlige Werte gelesen – eine Probe mit den Werten 0,5 / −0,25 / 0,1 ergab 0,49 / −0,51 / 0,48. Komprimierte Formate werden nicht abgewiesen.</li>
+  <li>Andere Bittiefen als 8, 16, 24 und 32 (etwa 20 Bit) ergeben ohne Meldung lauter Nullen.</li>
+  <li>Die ganze Datei wird auf einmal in den Speicher gelesen; für einzelne Korpusstücke ist das unkritisch, für stundenlange Aufnahmen nicht.</li>
+  <li>Kanäle werden nicht getrennt; wer einkanalige Werte braucht, muss selbst entschachteln.</li>
+  <li>Metadatenzeilen mit weniger als zwei Feldern werden ohne Zählung übergangen; nur fehlende Audiodateien werden gemeldet.</li>
+  <li>Die Ausbeute ist ein grober Anhaltspunkt: sie sagt, ob Text verschluckt wird, nicht, ob die Laute richtig sind.</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Hintergrund zu <a href="index.html#corpus">Sprachkorpus laden und vorab prüfen</a> · Proben: <code>CorpusTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

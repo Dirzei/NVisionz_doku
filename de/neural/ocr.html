@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeichenerkennung – Zeilenzerlegung, Rasterung, Klassifikation – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#core">Das Netz</a>
+<a class="unterseite" href="netz.html">Netz</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimierer</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Daten, Normierung, Metriken</a>
+<a class="unterseite" href="daten.html">Daten und Metriken</a>
+<a class="rubrik" href="index.html#model">Ersatzmodell, Ensemble, Ablage</a>
+<a class="unterseite" href="ersatzmodell.html">Ersatzmodell</a>
+<a class="rubrik" href="index.html#search">Modellsuche</a>
+<a class="unterseite" href="modellsuche.html">Modellsuche</a>
+<a class="rubrik" href="index.html#analysis">Sensitivitätsanalyse</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivität</a>
+<a class="rubrik" href="index.html#api">Schnittstelle für andere Anwendungen</a>
+<a class="rubrik" href="index.html#ocr">Zeichenerkennung ohne Tesseract</a>
+<a class="unterseite aktiv" href="ocr.html">Zeichenerkennung</a>
+<a class="rubrik" href="index.html#seq">Folgen ohne Ausrichtung: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Strahlsuche</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-neural</a> › Zeichenerkennung – Zeilenzerlegung, Rasterung, Klassifikation</span><a class="sprachwahl" href="../../en/neural/ocr.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.ocr</div>
+  <h1>Zeichenerkennung – Zeilenzerlegung, Rasterung, Klassifikation</h1>
+  <p class="unter">Die Rechnung hinter <code>LineSegmenter</code>, <code>GlyphRaster</code>, <code>GlyphDataGen</code>, <code>TrainGlyphOcr</code>, <code>NeuralGlyphOcr</code> und <code>TemplateGlyphOcr</code>: wie eine Textzeile über die Tintenprojektion in Zeichen zerfällt, wie berührende Zeichen getrennt werden, wie jedes Zeichen auf ein festes Raster kommt und von einem Netz oder per Vorlagenvergleich erkannt wird – mit Pseudocode nach dem Quelltext, Zahlen aus den Proben und den Grenzen.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Ein gescanntes Kennfeld trägt seine Achsbeschriftung als Bild: „1060.38“, „0,85“, „(NRT1 = 1060.38)“. Um die Kurven in Zahlen zu übersetzen, muss der Digitalisierer diese Beschriftungen lesen. Dafür gibt es große Texterkennungsprogramme mit nativen Bibliotheken; für Achsbeschriftungen und Tabellenzellen – kurze Zeilen, wenige verschiedene Zeichen, eine Schrift je Dokument – genügt weniger. Das Paket <code>ocr</code> ist eine reine Java-Kette ohne native Bibliothek:</p>
+<ol>
+  <li>die Zeile in einzelne Zeichen zerlegen (<code>LineSegmenter</code>),</li>
+  <li>jedes Zeichen auf ein festes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>×</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">N \times N</annotation></semantics></math>-Graubild bringen (<code>GlyphRaster</code>),</li>
+  <li>das Graubild einer Klasse des Zeichensatzes zuordnen – mit einem trainierten Netz (<code>NeuralGlyphOcr</code>) oder durch Vergleich mit Vorlagen (<code>TemplateGlyphOcr</code>).</li>
+</ol>
+<p>Trainingsdaten für das Netz entstehen synthetisch aus Systemschriften (<code>GlyphDataGen</code>) oder werden aus dem Dokument selbst gesammelt (in app-pdfdigitizer). Zwei Zeichensätze sind vorgegeben: <code>standard()</code> mit 73 Klassen (Ziffern, Groß- und Kleinbuchstaben, <code>.,:;=+-()%/</code>) und <code>digits()</code> mit 17 Klassen (<code>0123456789.,+-()=</code>). Der Ziffernsatz enthält bewusst keine Buchstaben – die Verwechslungen 0/O und 1/l können dort gar nicht vorkommen.</p>
+
+<h2 id="tinte">Was als Tinte gilt</h2>
+<p>Aus Rot, Grün und Blau wird die Helligkeit nach der üblichen Gewichtung</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Y</mi><mo>=</mo><mn>0,299</mn><mspace width="0.1667em"/><mi>R</mi><mo>+</mo><mn>0,587</mn><mspace width="0.1667em"/><mi>G</mi><mo>+</mo><mn>0,114</mn><mspace width="0.1667em"/><mi>B</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">Y = 0{,}299\,R + 0{,}587\,G + 0{,}114\,B .</annotation></semantics></math></p>
+<p>Durchsichtige Punkte (Alpha unter 128) sind Hintergrund. Die Zerlegung arbeitet mit einer harten Schwelle: Tinte ist, was dunkler als 160 ist. Die Rasterung arbeitet weich, damit Kantenglättung erhalten bleibt:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>t</mi><mo stretchy="false">(</mo><mi>Y</mi><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mfrac><mrow><mn>235</mn><mo>−</mo><mi>Y</mi></mrow><mrow><mn>235</mn><mo>−</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>234</mn><mo>,</mo><mi>s</mi><mo stretchy="false">)</mo></mrow></mfrac><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>s</mi><mo>=</mo><mn>160</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">t(Y) = \min\Bigl(1,\ \max\Bigl(0,\ \frac{235 - Y}{235 - \min(234, s)}\Bigr)\Bigr), \qquad s = 160 ,</annotation></semantics></math></p>
+<p>also 0 ab Helligkeit 235, linear ansteigend und ab der Schwelle 160 voll 1.</p>
+
+<h2 id="zerlegung">Zerlegung einer Zeile</h2>
+<p>Die Idee ist die <b>senkrechte Projektion</b>: Man zählt je Pixelspalte die Tintenpunkte. Spalten mit Tinte gehören zu einem Zeichen, eine Folge leerer Spalten trennt zwei Zeichen, eine breite Lücke ist ein Wortabstand. Damit das auf Scans funktioniert, kommen drei Maßnahmen dazu: Staubkörner werden vorher entfernt, alle Schwellen sind relativ zur Zeilenhöhe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi></mrow><annotation encoding="application/x-tex">h</annotation></semantics></math>, und zu breite Stücke werden als berührende Zeichen geteilt.</p>
+<ol>
+  <li><b>Staub entfernen:</b> Zusammenhängende Tintengebiete (Achter-Nachbarschaft, Breitensuche) mit weniger als 4 Punkten werden verworfen. Punkt und Komma liegen bei üblichen Schriftgrößen deutlich darüber.</li>
+  <li><b>Projektion:</b> Eine Spalte zählt als Tinte, wenn sie mindestens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mo stretchy="false">⌊</mo><mi>h</mi><mo>/</mo><mn>20</mn><mo stretchy="false">⌋</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(1, \lfloor h/20 \rfloor)</annotation></semantics></math> Tintenpunkte hat.</li>
+  <li><b>Stücke:</b> Eine Lücke von mindestens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0,06</mn><mspace width="0.1667em"/><mi>h</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">g = \max(1, \operatorname{round}(0{,}06\,h))</annotation></semantics></math> leeren Spalten schließt ein Stück ab. War die Lücke vor einem Stück mindestens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>g</mi><mo>+</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0,45</mn><mspace width="0.1667em"/><mi>h</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(g+1, \operatorname{round}(0{,}45\,h))</annotation></semantics></math> breit, steht davor ein Leerzeichen.</li>
+  <li><b>Berührende Zeichen teilen:</b> Ist ein Stück mindestens 1,6-mal so breit wie der Median aller Stückbreiten, gilt es als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mtext>Breite</mtext><mo>/</mo><mtext>Median</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">k = \operatorname{round}(\text{Breite}/\text{Median})</annotation></semantics></math> Zeichen. Geschnitten wird <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k-1</annotation></semantics></math>-mal, jeweils an der Spalte mit der wenigsten Tinte in einem Fenster von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>±</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mo stretchy="false">⌊</mo><mtext>Median</mtext><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\pm\max(1, \lfloor\text{Median}/4\rfloor)</annotation></semantics></math> um den gleichmäßigen Teilungspunkt.</li>
+  <li><b>Ausschneiden:</b> Stücke mit weniger als 4 Tintenpunkten fallen weg; von den übrigen wird der senkrechte Tintenbereich bestimmt und das Teilbild ausgeschnitten.</li>
+</ol>
+
+<figure>
+<svg viewBox="0 0 560 270" width="560" font-family="sans-serif" font-size="13">
+  <rect x="40" y="22" width="448" height="72" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="68" y="30" width="84" height="56" fill="#1f5f8b" stroke="#ffffff" stroke-width="0.5"/>
+  <rect x="180" y="30" width="84" height="56" fill="#1f5f8b" stroke="#ffffff" stroke-width="0.5"/>
+  <rect x="264" y="30" width="84" height="56" fill="#1f5f8b" stroke="#ffffff" stroke-width="0.5"/>
+  <rect x="376" y="30" width="84" height="56" fill="#1f5f8b" stroke="#ffffff" stroke-width="0.5"/>
+  <text x="496" y="62" fill="#5b6475">Bild</text>
+  <line x1="40" y1="170" x2="488" y2="170" stroke="#c9d1dc"/>
+  <rect x="68" y="114" width="84" height="56" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="180" y="114" width="168" height="56" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="376" y="114" width="84" height="56" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="496" y="146" fill="#5b6475">Spalten-</text>
+  <text x="496" y="162" fill="#5b6475">tinte</text>
+  <text x="64" y="118" fill="#5b6475" text-anchor="end">28</text>
+  <rect x="69" y="186" width="82" height="20" fill="#ffffff" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="110.0" y="201" fill="#9a6400" text-anchor="middle">12</text>
+  <rect x="181" y="186" width="68" height="20" fill="#ffffff" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="215.0" y="201" fill="#9a6400" text-anchor="middle">10</text>
+  <rect x="251" y="186" width="96" height="20" fill="#ffffff" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="299.0" y="201" fill="#9a6400" text-anchor="middle">14</text>
+  <rect x="377" y="186" width="82" height="20" fill="#ffffff" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="418.0" y="201" fill="#9a6400" text-anchor="middle">12</text>
+  <line x1="264" y1="108" x2="264" y2="212" stroke="#5b6475" stroke-dasharray="3,3"/>
+  <line x1="250" y1="108" x2="250" y2="212" stroke="#9a6400" stroke-width="2"/>
+  <line x1="243" y1="103" x2="292" y2="103" stroke="#9a6400" stroke-width="2"/><line x1="243" y1="98" x2="243" y2="108" stroke="#9a6400" stroke-width="2"/><line x1="292" y1="98" x2="292" y2="108" stroke="#9a6400" stroke-width="2"/>
+  <text x="40" y="14" fill="#5b6475">Suchfenster ±3 um die gleichmäßige Teilung (gestrichelt)</text>
+  <text x="40" y="232" fill="#5b6475">Median 12 px, Stück 24 px → zwei Zeichen, Schnitt an der ersten</text>
+  <text x="40" y="250" fill="#5b6475">Spalte kleinster Tinte im Fenster (amber): 10 + 14 statt 12 + 12</text>
+</svg>
+<figcaption>Die schriftfreie Prüfvorlage aus <code>OcrSelfTest</code>: vier Balken zu 12 Pixeln, die mittleren beiden berühren sich. Die Projektion zeigt drei Stücke (12, 24, 12). Das mittlere ist doppelt so breit wie der Median und wird geteilt – bei flacher Tintenverteilung an der linken Fenstergrenze, also in 10 und 14 statt 12 und 12. Gezählt wird richtig: vier Zeichen.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>LineSegmenter.segment(zeile)</code></h3>
+<pre class="pseudo">g ← max(absMinGap, round(h · 0,06));   gLeer ← max(g + 1, round(h · 0,45))
+roh ← Tintenmaske (Helligkeit &lt; 160, Alpha ≥ 128)
+maske ← roh ohne Achter-Komponenten mit weniger als minGlyphInk (4) Punkten
+tinte[x] ← Zahl der Maskenpunkte in Spalte x
+istTinte[x] ← tinte[x] ≥ max(1, h/20)
+
+<i>// Stücke über die Projektion</i>
+<b>für</b> x ← 0 <b>bis</b> w (x = w gilt als leer):
+    <b>wenn</b> istTinte[x]:  anfang ← anfang oder x;  lücke ← 0
+    <b>sonst wenn</b> ein Stück offen ist:
+        lücke ← lücke + 1
+        <b>wenn</b> lücke ≥ g <b>oder</b> x = w:
+            speichere Stück [anfang, x − lücke], Leerzeichen davor ← (vorigeLücke ≥ gLeer)
+            vorigeLücke ← lücke;  Stück schließen
+    <b>sonst</b>:  vorigeLücke ← vorigeLücke + 1
+
+<i>// berührende Zeichen</i>
+<b>wenn</b> teilen <b>und</b> Stücke vorhanden:
+    m ← Median der Stückbreiten
+    <b>für</b> jedes Stück mit Breite b, k ← round(b / m):
+        <b>wenn</b> k ≥ 2 <b>und</b> b ≥ 1,6 · m:
+            <b>für</b> j ← 1 <b>bis</b> k−1:
+                ziel ← anfang + round(b · j / k);   f ← max(1, m/4)
+                schnitt ← erste Spalte mit kleinstem tinte[x] in [ziel − f, ziel + f]
+            ersetze das Stück durch die Teilstücke   <i>nur das erste erbt „Leerzeichen davor“</i>
+
+<i>// ausschneiden</i>
+<b>für</b> jedes Stück:  <b>wenn</b> Σ tinte ≥ minGlyphInk:  Teilbild von oberster bis unterster Maskenzeile</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-neural/src/de/envisionz/neural/ocr/LineSegmenter.java</code>. Voreinstellung: Schwelle 160, Lücke 0,06 · h, Wortlücke 0,45 · h (mindestens das Doppelte der Lücke), absolute Mindestlücke 1 Pixel, Teilen an, Staubgrenze 4 Punkte.</p>
+
+<h2 id="raster">Rasterung</h2>
+<p>Das ausgeschnittene Zeichen kann 8 oder 80 Pixel hoch sein. Das Netz braucht eine feste Eingangszahl, und es soll ein „8“ gleich sehen, egal wie groß es gedruckt ist. <code>GlyphRaster</code> bestimmt deshalb den Rahmen der Tinte, skaliert ihn unter Erhalt des Seitenverhältnisses in ein Feld von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo><mo>×</mo><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(N-2) \times (N-2)</annotation></semantics></math> Punkten, setzt ihn mittig in das <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>×</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">N \times N</annotation></semantics></math>-Raster (ein Punkt Rand) und gibt die Tintenstärken zeilenweise als Vektor der Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>N</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">N^2</annotation></semantics></math> aus:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mfrac><mrow><mi>N</mi><mo>−</mo><mn>2</mn></mrow><mrow><msub><mrow><mi>b</mi></mrow><mrow><mi>w</mi></mrow></msub></mrow></mfrac><mo>,</mo><mfrac><mrow><mi>N</mi><mo>−</mo><mn>2</mn></mrow><mrow><msub><mrow><mi>b</mi></mrow><mrow><mi>h</mi></mrow></msub></mrow></mfrac><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi>d</mi></mrow><mrow><mi>w</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>w</mi></mrow></msub><mi mathvariant="normal">σ</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="1em"/><msub><mrow><mi>d</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>h</mi></mrow></msub><mi mathvariant="normal">σ</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mtext>Versatz</mtext><mo>=</mo><mo stretchy="false">⌊</mo><mfrac><mrow><mi>N</mi><mo>−</mo><mi>d</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mo stretchy="false">⌋</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\sigma = \min\Bigl(\frac{N-2}{b_w}, \frac{N-2}{b_h}\Bigr), \qquad d_w = \max\bigl(1, \operatorname{round}(b_w \sigma)\bigr), \quad d_h = \max\bigl(1, \operatorname{round}(b_h \sigma)\bigr), \qquad \text{Versatz} = \Bigl\lfloor \frac{N - d}{2} \Bigr\rfloor .</annotation></semantics></math></p>
+<p>Skaliert wird bilinear auf weißem Grund; durchsichtige Bereiche würden sonst schwarz und damit zu Tinte. Ein leeres Bild ergibt den Nullvektor.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Dieselbe Rasterung dient dem Training und der Erkennung – sie muss bitgleich sein, sonst sähe das Netz bei der Erkennung eine andere Verteilung als beim Lernen. Die Rastergröße wird deshalb mit dem Modell gespeichert (<code>raster_n</code>, Vorgabe 20). Die Rasterung verwirft das Seitenverhältnis nicht, aber die absolute Größe: Ein Punkt und ein Komma werden auf dieselbe Höhe gestreckt wie eine Ziffer, und nur noch ihre Form unterscheidet sie.</div>
+
+<h2 id="netz">Erkennung mit dem Netz</h2>
+<p><code>TrainGlyphOcr</code> baut ein Klassifikationsnetz aus den Bausteinen des Moduls: Eingang <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>N</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">N^2</annotation></semantics></math>, zwei verdeckte Schichten mit 256 und 128 RELU-Neuronen, je mit Dropout 0,1, Ausgang <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> lineare Logits, Anfangswerte nach He. Trainiert wird mit Softmax-Kreuzentropie und Adam (Lernrate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math>), Stapel 64, exponentiellem Lernratenplan mit Faktor 0,98 je Epoche und frühem Abbruch nach 8 Epochen ohne Verbesserung um <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-4}</annotation></semantics></math>; 85 % der Muster zum Training, 15 % zur Bewertung. Bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">N = 20</annotation></semantics></math> und den 17 Ziffernklassen hat das Netz <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>400</mn><mo>⋅</mo><mn>256</mn><mo>+</mo><mn>256</mn><mo>+</mo><mn>256</mn><mo>⋅</mo><mn>128</mn><mo>+</mo><mn>128</mn><mo>+</mo><mn>128</mn><mo>⋅</mo><mn>17</mn><mo>+</mo><mn>17</mn><mo>=</mo><mn>137</mn><mspace width="0.1667em"/><mn>745</mn></mrow><annotation encoding="application/x-tex">400\cdot256+256 + 256\cdot128+128 + 128\cdot17+17 = 137\,745</annotation></semantics></math> Parameter.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Das Klassifikationsmodell hat weder Eingangs- noch Zielnormierer – die Rasterwerte liegen schon in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math>. In den Metadaten stehen <code>task</code> = glyph-ocr, <code>charset</code>, <code>raster_n</code>, <code>classes</code> und <code>val_accuracy</code>. Der Aufruf von der Befehlszeile trainiert mit 120 Mustern je Zeichen, höchstens 40 Epochen, Raster 20, vollem Zeichensatz und Saat 1234, sofern nichts anderes angegeben ist.</div>
+<p>Erkannt wird je Zeichen mit <code>argmax</code> der Logits. Ist eine Mindestsicherheit gesetzt und liegt die größte Softmax-Wahrscheinlichkeit darunter, erscheint „?“ statt eines Zeichens.</p>
+<h3>Pseudocode – <code>NeuralGlyphOcr.recognize(zeile)</code></h3>
+<pre class="pseudo"><b>wenn</b> zeile = nichts:  <b>liefere</b> ""
+text ← ""
+<b>für</b> jedes Zeichenbild z aus segmenter.segment(zeile):
+    <b>wenn</b> z.leerzeichenDavor:  text ← text + " "
+    v ← raster.toVector(z)
+    <b>wenn</b> das Modell einen Eingangsnormierer hat:  v ← normiere(v)
+    logits ← netz.run(v);   k ← argmax(logits)
+    <b>wenn</b> minSicherheit &gt; 0 <b>und</b> softmax(logits)[k] &lt; minSicherheit:
+        text ← text + "?";  <b>weiter</b>
+    text ← text + zeichensatz[k]
+<b>liefere</b> text</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-neural/src/de/envisionz/neural/ocr/NeuralGlyphOcr.java</code>. <code>load(pfad)</code> liest Zeichensatz und Rastergröße aus den Metadaten (Vorgaben: Standardsatz, 20) und setzt die Mindestsicherheit auf 0.</p>
+
+<h2 id="vorlagen">Erkennung per Vorlagenvergleich</h2>
+<p><code>TemplateGlyphOcr</code> braucht kein Training. Für jedes Zeichen des Satzes wird einmal ein Rastervektor aus einer Schrift erzeugt und um seinen Mittelwert bereinigt. Ein unbekanntes Zeichen wird ebenso gerastert und zentriert und der Vorlage mit der größten normierten Korrelation zugeordnet:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mfrac><mrow><mo stretchy="false">(</mo><mi>v</mi><mo>−</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>v</mi></mrow><mo stretchy="false">)</mo><mo>⋅</mo><mo stretchy="false">(</mo><msub><mrow><mi>t</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo></mrow><mrow><mo>‖</mo><mi>v</mi><mo>−</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>v</mi></mrow><mo>‖</mo><mspace width="0.2778em"/><mo>‖</mo><msub><mrow><mi>t</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow></mrow><mrow><mi>k</mi></mrow></msub><mo>‖</mo></mrow></mfrac><mo>,</mo><mspace width="2em"/><mover accent="true"><mrow><mi>k</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mspace width="0.1667em"/><mi>arg</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace width="0.1667em"/><msub><mi>max</mi><mrow><mi>k</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">r_k = \frac{(v - \bar v)\cdot(t_k - \bar t_k)}{\|v - \bar v\|\;\|t_k - \bar t_k\|}, \qquad \hat k = \arg\max_k r_k .</annotation></semantics></math></p>
+<p>Das ist schnell und kommt ohne Daten aus, hängt aber an der einen Schrift der Vorlagen. Es dient als Vergleichsbasis zum Netz. Die Vorlagen entstehen mit <code>GlyphDataGen.generate(1, 12345)</code> – je Zeichen ein Muster mit derselben zufälligen Abwandlung wie Trainingsdaten, also mit Größen- und Lagestreuung und Rauschen.</p>
+
+<h2 id="trainingsdaten">Synthetische Trainingsdaten</h2>
+<p><code>GlyphDataGen.generate(jeZeichen, saat)</code> zeichnet jedes Zeichen des Satzes <code>jeZeichen</code>-mal schwarz auf weiß in ein Feld von 48 × 48 Pixeln, jedes Mal mit zufälliger Abwandlung, rastert es mit derselben <code>GlyphRaster</code> wie die Erkennung und legt ein One-Hot-Ziel an. Die Abwandlungen je Muster:</p>
+<table>
+  <tr><th>Größe</th><th>Bereich</th></tr>
+  <tr><td>Schriftfamilie</td><td>gleichverteilt aus der Liste; Vorgabe: die logischen Schriften SansSerif, Serif, Monospaced</td></tr>
+  <tr><td>Schnitt</td><td>normal oder fett</td></tr>
+  <tr><td>Schriftgröße</td><td>20 bis 35 Punkt, dazu Streckung 0,9 bis 1,1</td></tr>
+  <tr><td>Kantenglättung</td><td>an oder aus</td></tr>
+  <tr><td>Versatz</td><td>±2 Pixel waagerecht und senkrecht</td></tr>
+  <tr><td>Rauschen</td><td>je Rasterpunkt gleichverteilt bis zu ±6 %, dann auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math> begrenzt</td></tr>
+</table>
+<p>Die Muster liegen blockweise je Zeichen vor; das Mischen besorgt der Trainer. Bei gleicher Saat und denselben installierten Schriften entstehen dieselben Muster.</p>
+
+<h2 id="beispiel">Rechenbeispiel</h2>
+<p>Die Balkenvorlage aus dem Bild hat 64 × 36 Pixel. Mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mn>36</mn></mrow><annotation encoding="application/x-tex">h = 36</annotation></semantics></math> ist die Trennlücke <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2,16</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">g = \max(1, \operatorname{round}(2{,}16)) = 2</annotation></semantics></math> Spalten, die Wortlücke <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>3</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>16,2</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>=</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">\max(3, \operatorname{round}(16{,}2)) = 16</annotation></semantics></math> Spalten, die Spaltenschwelle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>36</mn><mo>/</mo><mn>20</mn><mo stretchy="false">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\max(1, 36/20) = 1</annotation></semantics></math> Punkt. Die Lücken zwischen den Balken sind 4 Spalten breit – sie trennen, sind aber kein Wortabstand. Das mittlere Stück ist 24 breit, der Median 12, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k = 2</annotation></semantics></math>; der gleichmäßige Schnitt läge bei Spalte 32, das Suchfenster reicht von 29 bis 35, alle Spalten haben 28 Tintenpunkte, gewählt wird die erste: 29.</p>
+<p>Ein Balken von 12 × 28 Pixeln im Raster <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">N = 20</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>18</mn><mo>/</mo><mn>12</mn><mo>,</mo><mspace width="0.3333em"/><mn>18</mn><mo>/</mo><mn>28</mn><mo stretchy="false">)</mo><mo>=</mo><mn>0,643</mn></mrow><annotation encoding="application/x-tex">\sigma = \min(18/12,\ 18/28) = 0{,}643</annotation></semantics></math>, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>×</mo><mn>18</mn></mrow><annotation encoding="application/x-tex">8 \times 18</annotation></semantics></math> Punkte, Versatz 6 waagerecht und 1 senkrecht, 144 Rasterpunkte mit Tinte.</p>
+<p>Gemessene Genauigkeiten aus der Moduldokumentation: Das Ziffernmodell erreicht 100 % auf der Bewertungsmenge und liest Legendenzahlen wie „1060.38“ und „2533.14“ genau; der volle Satz liegt bei etwa 98 %. An einem gescannten Dokument zeigte sich, was diese Zahlen nicht sagen: Der Vorlagenvergleich las dort jede 6 als 8, ein Netz mit 1,0000 auf Systemschriften verwechselte 9 und 3, und erst ein Netz, das mit Zeichen aus demselben Druck trainiert war, las alles richtig. Die Bewertungsgenauigkeit war richtig gemessen – an der falschen Verteilung.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b>Rasterung</b> (<code>OcrSelfTest</code>): Ein leeres Bild gibt den Nullvektor, die Vektorlänge ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>N</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><mn>400</mn></mrow><annotation encoding="application/x-tex">N^2 = 400</annotation></semantics></math>.</li>
+  <li><b>Zerlegung</b>: „12.5“ ergibt genau vier Zeichen ohne falsche Wortlücke. Die Balkenvorlage ergibt ohne Teilen weniger Stücke als mit, mit Teilen genau vier. Die Vorlage ist bewusst ohne Schrift gezeichnet: Mit einer logischen Schrift hing es vom Rechner ab, ob sich zwei Buchstaben überhaupt berühren.</li>
+  <li><b>Erkennung</b>: Ein Ziffernmodell (120 Muster je Zeichen, 25 Epochen, Saat 7) muss auf der Bewertungsmenge mindestens 0,98 erreichen und „1060.38“, „42.7“ und „2533.14“ genau lesen. Der Vorlagenvergleich muss ein nicht leeres Ergebnis liefern.</li>
+  <li><b>Trainingsdaten</b> (<code>Glyphdatenprobe</code>, 11 Prüfungen): Anzahl gleich Zeichen mal Muster, Rasterlänge, One-Hot-Ziele blockweise, alle Werte in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math>, gleiche Saat gibt gleiche Muster, andere Saat andere, die Vorgabeschriften sind SansSerif, Serif, Monospaced in dieser Reihenfolge. Geprüft wird nur, was nicht an den installierten Schriften hängt.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Eine Zeile je Aufruf; das Finden der Zeilen und Zellen ist Sache der Anwendung.</li>
+  <li>Berührende Zeichen bleiben die schwache Stelle der Projektion. Das Teilen setzt voraus, dass die meisten Zeichen gleich breit sind, und schneidet bei gleichmäßiger Tinte an der linken Fenstergrenze statt in der Mitte (Bild oben). Kursivschrift und überhängende Buchstaben lassen sich senkrecht gar nicht trennen.</li>
+  <li>Kein Sprachmodell, kein Wörterbuch: Jedes Zeichen wird für sich entschieden.</li>
+  <li>Synthetische Daten aus Systemschriften decken die Schrift eines bestimmten Drucks nicht zuverlässig ab (siehe Beispiel). Die logischen Schriftnamen werden auf jedem Betriebssystem anders aufgelöst; Modelle aus synthetischen Daten sind deshalb nicht rechnerübergreifend gleich.</li>
+  <li>Die Rasterung streckt jedes Zeichen auf volle Höhe; Punkt, Komma und Bindestrich unterscheiden sich danach nur noch durch ihre Form, nicht durch ihre Größe oder Lage in der Zeile.</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Hintergrund zu <a href="index.html#ocr">Zeichenerkennung ohne Tesseract</a> · Proben: <code>OcrSelfTest</code>, <code>Glyphdatenprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

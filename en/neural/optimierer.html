@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimisers – SGD with momentum, Adam and AdamW, L-BFGS – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#core">The network</a>
+<a class="unterseite" href="netz.html">Network</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite aktiv" href="optimierer.html">Optimisers</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Data, normalisation, metrics</a>
+<a class="unterseite" href="daten.html">Data and metrics</a>
+<a class="rubrik" href="index.html#model">Surrogate model, ensemble, storage</a>
+<a class="unterseite" href="ersatzmodell.html">Surrogate model</a>
+<a class="rubrik" href="index.html#search">Model search</a>
+<a class="unterseite" href="modellsuche.html">Model search</a>
+<a class="rubrik" href="index.html#analysis">Sensitivity analysis</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivity</a>
+<a class="rubrik" href="index.html#api">Interface for other applications</a>
+<a class="rubrik" href="index.html#ocr">Character recognition without Tesseract</a>
+<a class="unterseite" href="ocr.html">Glyph recognition</a>
+<a class="rubrik" href="index.html#seq">Sequences without alignment: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Beam search</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-neural</a> › Optimisers – SGD with momentum, Adam and AdamW, L-BFGS</span><a class="sprachwahl" href="../../de/neural/optimierer.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.train</div>
+  <h1>Optimisers – SGD with momentum, Adam and AdamW, L-BFGS</h1>
+  <p class="unter">The computation behind <code>SgdOptimizer</code>, <code>AdamOptimizer</code> and <code>LbfgsOptimizer</code>: how the gradient averaged over a batch becomes a step of the weights, what momentum, moment estimates and curvature pairs achieve, how weight decay is decoupled – with pseudocode following the source, a recomputed comparison of the trajectories, checks and limits. The course of an epoch and the learning-rate schedules are described on the page <a href="training.html">Training</a>.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>After every batch each layer holds the mean gradient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><msub><mrow><mi>∇</mi></mrow><mrow><mi mathvariant="normal">θ</mi></mrow></msub><mi>J</mi></mrow><annotation encoding="application/x-tex">g = \nabla_\theta J</annotation></semantics></math>. The optimiser decides how far and in which direction the parameters <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi></mrow><annotation encoding="application/x-tex">\theta</annotation></semantics></math> move in response. The simplest rule is the step against the gradient, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi><mo>←</mo><mi mathvariant="normal">θ</mi><mo>−</mo><mi mathvariant="normal">η</mi><mi>g</mi></mrow><annotation encoding="application/x-tex">\theta \leftarrow \theta - \eta g</annotation></semantics></math> with the learning rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi></mrow><annotation encoding="application/x-tex">\eta</annotation></semantics></math>. It has two weaknesses: in an elongated valley the gradient points almost across the valley floor, so the steps oscillate instead of making progress; and the suitable learning rate depends on the scale of each individual direction. The three methods answer differently – with inertia (momentum), with a scaling per parameter (Adam) or with an approximation of the curvature (L-BFGS).</p>
+<p>All three implement the same interface: <code>init(net)</code> allocates the state buffers, <code>step(net, lrScale)</code> applies the accumulated and already averaged gradients. <code>lrScale</code> is the factor of the learning-rate schedule; the optimiser itself knows nothing about epochs.</p>
+
+<h2 id="sgd">Gradient descent with momentum</h2>
+<p>Classical momentum ("heavy ball") carries a velocity <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> fed by the past gradients:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>v</mi><mo>←</mo><mi mathvariant="normal">μ</mi><mspace width="0.1667em"/><mi>v</mi><mo>−</mo><mi mathvariant="normal">η</mi><mspace width="0.1667em"/><mi>g</mi><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">θ</mi><mo>←</mo><mi mathvariant="normal">θ</mi><mo>+</mo><mi>v</mi><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">μ</mi><mo>∈</mo><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">v \leftarrow \mu\, v - \eta\, g, \qquad \theta \leftarrow \theta + v, \qquad \mu \in [0, 1).</annotation></semantics></math></p>
+<p>In a direction with a constant gradient the velocity grows up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi><mi>g</mi><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">μ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\eta g/(1-\mu)</annotation></semantics></math> – with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\mu = 0.9</annotation></semantics></math> ten times a plain step. In a direction where the gradient changes sign, the contributions cancel. The oscillation across the valley is damped and the travel along it accelerated. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\mu = 0</annotation></semantics></math> plain gradient descent remains.</p>
+<p>On a quadratic objective with largest curvature <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mi>max</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">\lambda_\max</annotation></semantics></math>, plain descent is stable only for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi><mo>&lt;</mo><mn>2</mn><mo>/</mo><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">\eta &lt; 2/\lambda_\max</annotation></semantics></math>; the slowest direction with curvature <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">\lambda_\min</annotation></semantics></math> shrinks per step by the factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><msub><mi>ηλ</mi><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">1 - \eta\lambda_\min</annotation></semantics></math>. The ratio <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mi>max</mi><mo>⁡</mo></mrow></msub><mo>/</mo><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">\lambda_\max/\lambda_\min</annotation></semantics></math>, the condition number, thus determines how many steps are needed.</p>
+
+<h3>Pseudocode – <code>SgdOptimizer.step(net, lrScale)</code></h3>
+<pre class="pseudo">η ← learningRate · lrScale
+<b>for</b> each layer k:
+    update(W_k, gradW_k, v_W,k, η, decay)
+    update(b_k, gradB_k, v_b,k, η, 0)                  <i>never decay on the bias</i>
+
+<b>function</b> update(θ, g, v, η, λ):
+    <b>for</b> each i:
+        v[i] ← μ · v[i] − η · g[i]
+        θ[i] ← θ[i] + v[i]
+        <b>if</b> λ &gt; 0:  θ[i] ← θ[i] − η · λ · θ[i]        <i>decoupled weight decay</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/train/SgdOptimizer.java</code>. The constructor requires <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\eta &gt; 0</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi><mo>∈</mo><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mu \in [0, 1)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\lambda \ge 0</annotation></semantics></math>.</p>
+
+<h2 id="adam">Adam and AdamW</h2>
+<p>Adam keeps two moving averages per parameter: the first moment <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> (mean of the gradients, a kind of momentum) and the second moment <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> (mean of the squared gradients, a measure of their size). The step is the first divided by the root of the second:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>m</mi><mo>←</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>1</mn></mrow></msub><mi>m</mi><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>g</mi><mo>,</mo><mspace width="2em"/><mi>v</mi><mo>←</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msub><mi>v</mi><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msup><mrow><mi>g</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">m \leftarrow \beta_1 m + (1-\beta_1)\, g, \qquad v \leftarrow \beta_2 v + (1-\beta_2)\, g^2,</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mover accent="true"><mrow><mi>m</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mfrac><mrow><mi>m</mi></mrow><mrow><mn>1</mn><mo>−</mo><msubsup><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>1</mn></mrow><mrow><mspace width="0.1667em"/><mi>t</mi></mrow></msubsup></mrow></mfrac><mo>,</mo><mspace width="2em"/><mover accent="true"><mrow><mi>v</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mfrac><mrow><mi>v</mi></mrow><mrow><mn>1</mn><mo>−</mo><msubsup><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow><mrow><mspace width="0.1667em"/><mi>t</mi></mrow></msubsup></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">θ</mi><mo>←</mo><mi mathvariant="normal">θ</mi><mo>−</mo><mi mathvariant="normal">η</mi><mspace width="0.1667em"/><mfrac><mrow><mover accent="true"><mrow><mi>m</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><msqrt><mover accent="true"><mrow><mi>v</mi></mrow><mo stretchy="true">^</mo></mover></msqrt><mo>+</mo><mi mathvariant="normal">ε</mi></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">\hat m = \frac{m}{1-\beta_1^{\,t}}, \qquad \hat v = \frac{v}{1-\beta_2^{\,t}}, \qquad \theta \leftarrow \theta - \eta\, \frac{\hat m}{\sqrt{\hat v} + \varepsilon}.</annotation></semantics></math></p>
+<p>Dividing by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mover accent="true"><mrow><mi>v</mi></mrow><mo stretchy="true">^</mo></mover></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{\hat v}</annotation></semantics></math> makes the step scale-free per parameter: a parameter with consistently large gradients takes no larger steps than one with small ones – both move by roughly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi></mrow><annotation encoding="application/x-tex">\eta</annotation></semantics></math>. That explains why Adam with a learning rate around <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math> is usable on very different problems. The <b>bias correction</b> compensates for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> starting at zero: after the first step <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">m = (1-\beta_1) g</annotation></semantics></math>, divided by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">1 - \beta_1</annotation></semantics></math> it is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi></mrow><annotation encoding="application/x-tex">g</annotation></semantics></math> again. Without the correction the first steps would be far too small (for the second moment with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0.999</mn></mrow><annotation encoding="application/x-tex">\beta_2 = 0.999</annotation></semantics></math> distorted by a factor of 1000).</p>
+<p><b>AdamW</b> separates weight decay from the gradient. With the classical L2 penalty <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo>‖</mo><mi mathvariant="normal">θ</mi><msup><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\tfrac{\lambda}{2}\|\theta\|^2</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λθ</mi></mrow><annotation encoding="application/x-tex">\lambda\theta</annotation></semantics></math> would enter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi></mrow><annotation encoding="application/x-tex">g</annotation></semantics></math> and be rescaled by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mover accent="true"><mrow><mi>v</mi></mrow><mo stretchy="true">^</mo></mover></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{\hat v}</annotation></semantics></math> – parameters with large gradients would hardly be shrunk. Decoupled, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi><mo>←</mo><mi mathvariant="normal">θ</mi><mo>−</mo><mi>ηλθ</mi></mrow><annotation encoding="application/x-tex">\theta \leftarrow \theta - \eta\lambda\theta</annotation></semantics></math> is applied directly after the Adam step; every parameter shrinks by the same fraction.</p>
+
+<h3>Pseudocode – <code>AdamOptimizer.step(net, lrScale)</code></h3>
+<pre class="pseudo">t ← t + 1
+η ← learningRate · lrScale
+k1 ← 1 − β1^t;   k2 ← 1 − β2^t                        <i>once per step</i>
+<b>for</b> each layer:
+    update(W, gradW, m_W, v_W, λ)
+    update(b, gradB, m_b, v_b, 0)                      <i>never decay on the bias</i>
+
+<b>function</b> update(θ, g, m, v, λ):
+    <b>for</b> each i:
+        m[i] ← β1 · m[i] + (1 − β1) · g[i]
+        v[i] ← β2 · v[i] + (1 − β2) · g[i]²
+        θ[i] ← θ[i] − η · (m[i]/k1) / (√(v[i]/k2) + ε)
+        <b>if</b> λ &gt; 0:  θ[i] ← θ[i] − η · λ · θ[i]</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/train/AdamOptimizer.java</code>. The decay acts on the value already moved.</p>
+<div class="hinweis"><b>Framework convention:</b> <code>adam(η)</code> and <code>adamW(η, λ)</code> set <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\beta_1 = 0.9</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0.999</mn></mrow><annotation encoding="application/x-tex">\beta_2 = 0.999</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ε</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\varepsilon = 10^{-8}</annotation></semantics></math>. The step counter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> and the moments are reset in <code>init</code> – every <code>Trainer.train</code> call starts fresh. Weight decay acts decoupled for SGD and Adam alike and <b>only on weights</b>, never on the bias: a shrunk bias would shift the curve, not smooth it. Model search always uses <code>adamW</code>.</div>
+
+<h2 id="lbfgs">L-BFGS</h2>
+<p>Newton's method jumps to the minimum of a quadratic function in one step: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi><mo>←</mo><mi mathvariant="normal">θ</mi><mo>−</mo><msup><mrow><mi>H</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>g</mi></mrow><annotation encoding="application/x-tex">\theta \leftarrow \theta - H^{-1} g</annotation></semantics></math> with the Hessian <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math>. With a thousand parameters, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math> would have a million entries. Quasi-Newton methods build an approximation of the <b>inverse</b> Hessian from what is available anyway: pairs of position change and gradient change</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi mathvariant="normal">θ</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mrow><mi mathvariant="normal">θ</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><msubsup><mrow><mi>s</mi></mrow><mrow><mi>k</mi></mrow><mrow><mi>T</mi></mrow></msubsup><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">s_k = \theta_{k+1} - \theta_k, \qquad y_k = g_{k+1} - g_k, \qquad \rho_k = \frac{1}{s_k^T y_k}.</annotation></semantics></math></p>
+<p>For a quadratic function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mi>H</mi><msub><mrow><mi>s</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">y_k = H s_k</annotation></semantics></math> – the pairs carry the curvature in the directions already travelled. L-BFGS ("limited memory") keeps only the last <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> pairs and computes the product <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>H</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>g</mi></mrow><annotation encoding="application/x-tex">H^{-1} g</annotation></semantics></math> with the <b>two-loop recursion</b>, without ever forming a matrix:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>q</mi><mo>←</mo><mi>g</mi><mo>;</mo><mspace width="1em"/><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>i</mi></mrow></msub><mspace width="0.1667em"/><msubsup><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow><mrow><mi>T</mi></mrow></msubsup><mi>q</mi><mo>,</mo><mspace width="0.3333em"/><mspace width="0.3333em"/><mi>q</mi><mo>←</mo><mi>q</mi><mo>−</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>i</mi></mrow></msub><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><mspace width="0.3333em"/><mspace width="0.3333em"/><mo stretchy="false">(</mo><mi>i</mi><mo>=</mo><mtext>newest</mtext><mo>…</mo><mtext>oldest</mtext><mo stretchy="false">)</mo><mo>;</mo><mspace width="1em"/><mi>z</mi><mo>←</mo><mi mathvariant="normal">γ</mi><mi>q</mi><mo>,</mo><mspace width="0.3333em"/><mspace width="0.3333em"/><mi mathvariant="normal">γ</mi><mo>=</mo><mfrac><mrow><msup><mrow><mi>s</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>y</mi></mrow><mrow><msup><mrow><mi>y</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>y</mi></mrow></mfrac><msub><mrow><mo>|</mo></mrow><mrow><mtext>newest</mtext></mrow></msub><mo>;</mo></mrow><annotation encoding="application/x-tex">q \leftarrow g;\quad \alpha_i = \rho_i\, s_i^T q,\ \ q \leftarrow q - \alpha_i y_i \ \ (i = \text{newest} \dots \text{oldest});\quad z \leftarrow \gamma q,\ \ \gamma = \frac{s^T y}{y^T y}\Big|_\text{newest};</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>i</mi></mrow></msub><mspace width="0.1667em"/><msubsup><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow><mrow><mi>T</mi></mrow></msubsup><mi>z</mi><mo>,</mo><mspace width="0.3333em"/><mspace width="0.3333em"/><mi>z</mi><mo>←</mo><mi>z</mi><mo>+</mo><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>−</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub><mspace width="0.3333em"/><mspace width="0.3333em"/><mo stretchy="false">(</mo><mi>i</mi><mo>=</mo><mtext>oldest</mtext><mo>…</mo><mtext>newest</mtext><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\beta_i = \rho_i\, y_i^T z,\ \ z \leftarrow z + (\alpha_i - \beta_i)\, s_i \ \ (i = \text{oldest} \dots \text{newest}).</annotation></semantics></math></p>
+<p>The result <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> is the L-BFGS direction; the step is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi><mo>←</mo><mi mathvariant="normal">θ</mi><mo>−</mo><mi mathvariant="normal">ℓ</mi><mspace width="0.1667em"/><mi>z</mi></mrow><annotation encoding="application/x-tex">\theta \leftarrow \theta - \ell\, z</annotation></semantics></math>. The factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">γ</mi></mrow><annotation encoding="application/x-tex">\gamma</annotation></semantics></math> estimates the scale of the inverse Hessian from the most recent pair – so even with few pairs the step has roughly the right length.</p>
+
+<h3>Pseudocode – <code>LbfgsOptimizer.step(net, lrScale)</code></h3>
+<pre class="pseudo">x ← all weights and biases as one vector
+g ← all gradients as one vector
+<b>if</b> previousX ≠ none:
+    s ← x − previousX;   y ← g − previousG
+    <b>if</b> s·y &gt; 10⁻¹⁰:                               <i>curvature condition</i>
+        append (s, y, 1/(s·y));  drop oldest pairs beyond M
+previousX ← x;  previousG ← g                         <i>same point, BEFORE the step</i>
+z ← twoLoop(g)
+ℓ ← learningRate · lrScale · (no pairs ? 0.1 : 1)      <i>first step damped</i>
+x ← x − ℓ · z
+write x back into the network</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/train/LbfgsOptimizer.java</code>. Without pairs the two-loop recursion returns <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">z = g</annotation></semantics></math> (with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">γ</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\gamma = 1</annotation></semantics></math>); the first step is therefore exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.1</mn><mspace width="0.1667em"/><mi mathvariant="normal">ℓ</mi><mspace width="0.1667em"/><mi>g</mi></mrow><annotation encoding="application/x-tex">0.1\,\ell\, g</annotation></semantics></math>.</p>
+<div class="hinweis"><b>Framework convention:</b> <code>LbfgsOptimizer.standard()</code> has step length 1.0 and memory <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>10</mn></mrow><annotation encoding="application/x-tex">M = 10</annotation></semantics></math>. There is <b>no line search</b>: a fixed step along the direction is taken. Pairs with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>s</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>y</mi><mo>≤</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">s^T y \le 10^{-10}</annotation></semantics></math> are skipped because they would not keep the approximation positive definite. L-BFGS presupposes consistent gradients: in <code>TrainConfig</code>, <code>batchSize</code> must be at least the number of samples, so that exactly one step with the gradient over all data falls in each epoch. An L-BFGS with Wolfe line search and bounds for general optimisation problems is in <a href="../math/index.html#optimierung">framework-math</a>.</div>
+
+<h2 id="vergleich">The three compared</h2>
+<p>A small problem whose trajectories can be drawn: a linear network 2→1 without a hidden layer, eight data points (four points and their mirror images, so the bias stays at zero), target <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>−</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">t = x_1 - x_2</annotation></semantics></math>. The loss is then a quadratic function of the two weights with minimum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1, -1)</annotation></semantics></math> and Hessian</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>H</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>1.005</mn></mtd><mtd style="text-align:left"><mn>0.70</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0.70</mn></mtd><mtd style="text-align:left"><mn>0.63</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mn>1.542</mn><mo>,</mo><mspace width="1em"/><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mn>0.0928</mn><mo>,</mo><mspace width="1em"/><mi mathvariant="normal">κ</mi><mo>=</mo><mn>16.6</mn><mo>.</mo></mrow><annotation encoding="application/x-tex">H = \left(\begin{matrix} 1.005 &amp; 0.70 \\ 0.70 &amp; 0.63 \end{matrix}\right), \qquad \lambda_\max = 1.542, \quad \lambda_\min = 0.0928, \quad \kappa = 16.6 .</annotation></semantics></math></p>
+<p>An oblique, elongated valley. The start is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>1.5</mn><mo>,</mo><mspace width="0.3333em"/><mn>1.2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(-1.5,\ 1.2)</annotation></semantics></math>, 40 epochs are computed with the whole data set as one batch, using the module's classes through <code>Trainer</code>; the weights were read in the listener after each epoch.</p>
+<figure>
+<svg viewBox="0 0 560 330" width="560" font-family="sans-serif" font-size="13">
+  <rect x="50" y="15" width="490" height="265" fill="none" stroke="#c9d1dc"/>
+  <line x1="50" y1="280" x2="50" y2="286" stroke="#c9d1dc"/><text x="50" y="299" fill="#5b6475" text-anchor="middle">−2</text>
+  <line x1="186.1" y1="280" x2="186.1" y2="286" stroke="#c9d1dc"/><text x="186.1" y="299" fill="#5b6475" text-anchor="middle">−1</text>
+  <line x1="322.2" y1="280" x2="322.2" y2="286" stroke="#c9d1dc"/><text x="322.2" y="299" fill="#5b6475" text-anchor="middle">0</text>
+  <line x1="458.3" y1="280" x2="458.3" y2="286" stroke="#c9d1dc"/><text x="458.3" y="299" fill="#5b6475" text-anchor="middle">1</text>
+  <line x1="44" y1="235.8" x2="50" y2="235.8" stroke="#c9d1dc"/><text x="40" y="239.8" fill="#5b6475" text-anchor="end">−1</text>
+  <line x1="44" y1="162.2" x2="50" y2="162.2" stroke="#c9d1dc"/><text x="40" y="166.2" fill="#5b6475" text-anchor="end">0</text>
+  <line x1="44" y1="88.6" x2="50" y2="88.6" stroke="#c9d1dc"/><text x="40" y="92.6" fill="#5b6475" text-anchor="end">1</text>
+  <line x1="44" y1="15" x2="50" y2="15" stroke="#c9d1dc"/><text x="40" y="19" fill="#5b6475" text-anchor="end">2</text>
+  <text x="540" y="299" fill="#5b6475" text-anchor="end">w<tspan baseline-shift="sub" font-size="10">1</tspan></text>
+  <text x="14" y="140" fill="#5b6475">w<tspan baseline-shift="sub" font-size="10">2</tspan></text>
+<polyline points="538.7,168.6 532.4,164.4 526.2,160.3 519.9,156.2 513.7,152.0 507.4,148.0 501.0,143.9 494.7,139.9 488.4,135.9 482.0,131.9 475.7,128.0 469.3,124.1 463.0,120.2 456.6,116.4 450.2,112.6 443.9,108.8 437.5,105.1 431.2,101.4 424.8,97.8 418.5,94.2 412.2,90.7 405.9,87.1 399.6,83.7 393.3,80.3 387.1,76.9 380.9,73.6 374.6,70.3 368.5,67.1 362.3,63.9 356.2,60.8 350.1,57.7 344.0,54.7 338.0,51.8 332.0,48.9 326.1,46.0 320.2,43.2 314.3,40.5 308.5,37.8 302.7,35.2 297.0,32.7 291.3,30.2 285.7,27.8 280.1,25.4 274.6,23.1 269.1,20.9 263.7,18.8 258.3,16.7" fill="none" stroke="#1f5f8b" stroke-width="1.2" stroke-dasharray="3,3"/>
+<polyline points="93.8,15.3 93.8,17.3 93.9,19.5 94.1,21.6 94.4,23.9 94.8,26.2 95.3,28.6 96.0,31.0 96.7,33.5 97.6,36.1 98.5,38.7 99.6,41.4 100.8,44.1 102.1,46.9 103.5,49.8 105.0,52.7 106.7,55.7 108.4,58.7 110.2,61.8 112.2,64.9 114.2,68.1 116.4,71.4 118.6,74.6 121.0,78.0 123.4,81.4 126.0,84.8 128.7,88.3 131.4,91.8 134.3,95.4 137.3,99.0 140.3,102.6 143.5,106.3 146.7,110.1 150.1,113.8 153.5,117.6 157.1,121.5 160.7,125.4 164.4,129.3 168.2,133.2 172.1,137.2 176.1,141.2 180.2,145.2 184.3,149.3 188.6,153.4 192.9,157.5 197.3,161.6 201.8,165.8 206.3,170.0 211.0,174.2 215.7,178.4 220.5,182.6 225.3,186.9 230.3,191.1 235.3,195.4 240.3,199.7 245.5,204.0 250.6,208.3 255.9,212.7 261.2,217.0 266.6,221.3 272.1,225.7 277.6,230.0 283.1,234.4 288.7,238.7 294.4,243.1 300.1,247.4 305.8,251.7 311.6,256.1 317.5,260.4 323.4,264.7 329.3,269.0 335.3,273.3 341.3,277.6" fill="none" stroke="#1f5f8b" stroke-width="1.2" stroke-dasharray="3,3"/>
+<polyline points="536.1,203.6 531.8,200.6 527.6,197.6 523.3,194.6 518.9,191.7 514.6,188.7 510.3,185.8 505.9,182.9 501.5,180.0 497.1,177.1 492.7,174.3 488.3,171.4 483.8,168.6 479.4,165.8 474.9,163.0 470.5,160.3 466.0,157.6 461.6,154.8 457.1,152.2 452.7,149.5 448.2,146.9 443.8,144.3 439.3,141.7 434.9,139.1 430.4,136.6 426.0,134.1 421.6,131.7 417.2,129.2 412.8,126.8 408.4,124.5 404.1,122.2 399.7,119.9 395.4,117.6 391.1,115.4 386.8,113.2 382.5,111.1 378.3,109.0 374.0,106.9 369.8,104.8 365.7,102.9 361.5,100.9 357.4,99.0 353.4,97.1 349.3,95.3 345.3,93.5 341.3,91.8 337.4,90.1 333.5,88.4 329.6,86.8 325.8,85.3 322.0,83.8 318.2,82.3 314.5,80.9 310.9,79.5 307.2,78.2 303.7,76.9 300.1,75.7 296.7,74.5 293.2,73.3 289.9,72.3 286.5,71.2 283.3,70.2 280.1,69.3 276.9,68.4 273.8,67.6 270.7,66.8 267.7,66.1 264.8,65.4 261.9,64.8 259.1,64.2 256.3,63.7 253.6,63.2 251.0,62.8 248.4,62.4 245.9,62.1 243.5,61.9 241.1,61.7 238.8,61.5 236.6,61.4 234.4,61.4 232.3,61.4 230.2,61.5 228.3,61.6 226.4,61.7 224.5,62.0 222.8,62.2 221.1,62.6 219.5,62.9 217.9,63.4 216.5,63.9 215.1,64.4 213.7,65.0 212.5,65.6 211.3,66.3 210.2,67.1 209.2,67.9 208.3,68.7 207.4,69.6 206.6,70.6 205.9,71.6 205.3,72.6 204.7,73.7 204.2,74.9 203.8,76.0 203.5,77.3 203.2,78.6 203.1,79.9 203.0,81.3 202.9,82.8 203.0,84.2 203.1,85.8 203.4,87.3 203.6,89.0 204.0,90.6 204.5,92.3 205.0,94.1 205.6,95.9 206.3,97.7 207.0,99.6 207.9,101.5 208.8,103.5 209.8,105.5 210.8,107.5 212.0,109.6 213.2,111.8 214.5,113.9 215.8,116.1 217.2,118.3 218.8,120.6 220.3,122.9 222.0,125.2 223.7,127.6 225.5,130.0 227.4,132.5 229.3,134.9 231.3,137.4 233.4,140.0 235.5,142.5 237.8,145.1 240.0,147.7 242.4,150.4 244.8,153.0 247.3,155.7 249.8,158.4 252.4,161.2 255.1,163.9 257.8,166.7 260.6,169.5 263.5,172.4 266.4,175.2 269.3,178.1 272.4,180.9 275.5,183.8 278.6,186.8 281.8,189.7 285.0,192.6 288.3,195.6 291.7,198.6 295.1,201.5 298.5,204.5 302.0,207.5 305.6,210.5 309.2,213.6 312.8,216.6 316.5,219.6 320.2,222.6 324.0,225.7 327.8,228.7 331.7,231.8 335.6,234.8 339.5,237.8 343.5,240.9 347.5,243.9 351.5,247.0 355.6,250.0 359.7,253.0 363.8,256.1 367.9,259.1 372.1,262.1 376.3,265.1 380.6,268.1 384.8,271.1 389.1,274.1 393.4,277.0 397.7,280.0" fill="none" stroke="#c9d1dc" stroke-width="1.2" stroke-dasharray="3,3"/>
+<polyline points="506.0,216.1 503.4,214.2 500.7,212.4 498.1,210.6 495.5,208.8 492.8,207.0 490.1,205.2 487.4,203.4 484.8,201.6 482.1,199.9 479.4,198.1 476.7,196.4 473.9,194.7 471.2,193.0 468.5,191.3 465.8,189.6 463.1,187.9 460.3,186.2 457.6,184.6 454.9,183.0 452.1,181.4 449.4,179.8 446.7,178.2 444.0,176.6 441.3,175.1 438.5,173.6 435.8,172.0 433.1,170.6 430.4,169.1 427.8,167.6 425.1,166.2 422.4,164.8 419.8,163.4 417.1,162.1 414.5,160.7 411.9,159.4 409.3,158.1 406.7,156.9 404.1,155.6 401.6,154.4 399.1,153.2 396.5,152.0 394.0,150.9 391.6,149.8 389.1,148.7 386.7,147.6 384.3,146.6 381.9,145.6 379.5,144.6 377.1,143.6 374.8,142.7 372.5,141.8 370.3,140.9 368.0,140.1 365.8,139.3 363.6,138.5 361.5,137.7 359.3,137.0 357.2,136.3 355.2,135.7 353.1,135.0 351.1,134.4 349.2,133.9 347.2,133.3 345.3,132.8 343.4,132.3 341.6,131.9 339.8,131.5 338.1,131.1 336.3,130.7 334.6,130.4 333.0,130.1 331.4,129.9 329.8,129.7 328.3,129.5 326.8,129.3 325.3,129.2 323.9,129.1 322.5,129.0 321.2,129.0 319.9,129.0 318.6,129.0 317.4,129.1 316.3,129.2 315.2,129.4 314.1,129.5 313.0,129.7 312.1,130.0 311.1,130.2 310.2,130.5 309.4,130.8 308.6,131.2 307.8,131.6 307.1,132.0 306.4,132.5 305.8,133.0 305.2,133.5 304.7,134.0 304.2,134.6 303.7,135.2 303.4,135.9 303.0,136.5 302.7,137.3 302.5,138.0 302.3,138.7 302.1,139.5 302.0,140.4 301.9,141.2 301.9,142.1 302.0,143.0 302.1,143.9 302.2,144.9 302.4,145.9 302.6,146.9 302.9,148.0 303.2,149.0 303.6,150.1 304.0,151.3 304.4,152.4 305.0,153.6 305.5,154.8 306.1,156.0 306.8,157.3 307.5,158.6 308.2,159.8 309.0,161.2 309.8,162.5 310.7,163.9 311.6,165.3 312.6,166.7 313.6,168.1 314.7,169.6 315.8,171.0 316.9,172.5 318.1,174.0 319.3,175.6 320.6,177.1 321.9,178.7 323.3,180.3 324.7,181.9 326.1,183.5 327.6,185.1 329.1,186.8 330.6,188.4 332.2,190.1 333.9,191.8 335.5,193.5 337.3,195.2 339.0,197.0 340.8,198.7 342.6,200.5 344.5,202.2 346.3,204.0 348.3,205.8 350.2,207.6 352.2,209.4 354.2,211.2 356.3,213.0 358.4,214.8 360.5,216.7 362.6,218.5 364.8,220.3 367.0,222.2 369.2,224.0 371.5,225.9 373.8,227.8 376.1,229.6 378.4,231.5 380.8,233.3 383.2,235.2 385.6,237.1 388.0,238.9 390.4,240.8 392.9,242.7 395.4,244.5 397.9,246.4 400.4,248.2 403.0,250.1 405.5,251.9 408.1,253.8 410.7,255.6 413.3,257.4 415.9,259.3 418.6,261.1 421.2,262.9 423.9,264.7 426.5,266.5 429.2,268.2 431.9,270.0 434.6,271.8 437.3,273.5 440.0,275.3 442.7,277.0 445.4,278.7" fill="none" stroke="#c9d1dc" stroke-width="1.2" stroke-dasharray="3,3"/>
+<polyline points="538.2,240.2 535.9,238.3 533.5,236.5 531.1,234.6 528.7,232.7 526.2,230.9 523.8,229.0 521.3,227.2 518.8,225.3 516.2,223.4 513.7,221.6 511.1,219.7 508.6,217.9 506.0,216.1" fill="none" stroke="#c9d1dc" stroke-width="1.2" stroke-dasharray="3,3"/>
+<polyline points="479.6,227.0 478.5,226.2 477.3,225.4 476.1,224.5 474.9,223.7 473.7,222.9 472.6,222.1 471.4,221.3 470.2,220.5 468.9,219.8 467.7,219.0 466.5,218.2 465.3,217.4 464.1,216.7 462.9,215.9 461.7,215.1 460.4,214.4 459.2,213.7 458.0,212.9 456.8,212.2 455.6,211.5 454.3,210.8 453.1,210.0 451.9,209.4 450.7,208.7 449.5,208.0 448.3,207.3 447.1,206.6 445.9,206.0 444.7,205.3 443.5,204.7 442.3,204.1 441.1,203.5 439.9,202.8 438.7,202.3 437.6,201.7 436.4,201.1 435.2,200.5 434.1,200.0 433.0,199.4 431.8,198.9 430.7,198.4 429.6,197.8 428.5,197.3 427.4,196.9 426.3,196.4 425.2,195.9 424.1,195.5 423.1,195.0 422.0,194.6 421.0,194.2 420.0,193.8 418.9,193.4 417.9,193.0 417.0,192.7 416.0,192.3 415.0,192.0 414.1,191.6 413.1,191.3 412.2,191.0 411.3,190.8 410.4,190.5 409.5,190.2 408.6,190.0 407.8,189.8 407.0,189.5 406.1,189.3 405.3,189.2 404.5,189.0 403.8,188.8 403.0,188.7 402.3,188.6 401.6,188.4 400.9,188.3 400.2,188.3 399.5,188.2 398.8,188.1 398.2,188.1 397.6,188.1 397.0,188.1 396.4,188.1 395.9,188.1 395.3,188.1 394.8,188.2 394.3,188.2 393.8,188.3 393.4,188.4 392.9,188.5 392.5,188.6 392.1,188.7 391.7,188.9 391.4,189.0 391.0,189.2 390.7,189.4 390.4,189.6 390.1,189.8 389.9,190.1 389.6,190.3 389.4,190.6 389.2,190.8 389.0,191.1 388.9,191.4 388.7,191.7 388.6,192.1 388.5,192.4 388.5,192.8 388.4,193.1 388.4,193.5 388.4,193.9 388.4,194.3 388.4,194.7 388.5,195.2 388.6,195.6 388.7,196.1 388.8,196.5 389.0,197.0 389.1,197.5 389.3,198.0 389.5,198.5 389.7,199.1 390.0,199.6 390.3,200.1 390.5,200.7 390.9,201.3 391.2,201.9 391.5,202.4 391.9,203.0 392.3,203.7 392.7,204.3 393.2,204.9 393.6,205.5 394.1,206.2 394.6,206.9 395.1,207.5 395.6,208.2 396.2,208.9 396.7,209.6 397.3,210.3 397.9,211.0 398.6,211.7 399.2,212.4 399.9,213.2 400.5,213.9 401.2,214.6 401.9,215.4 402.7,216.1 403.4,216.9 404.2,217.7 405.0,218.4 405.8,219.2 406.6,220.0 407.4,220.8 408.3,221.6 409.1,222.4 410.0,223.2 410.9,224.0 411.8,224.8 412.7,225.6 413.6,226.4 414.6,227.3 415.5,228.1 416.5,228.9 417.5,229.7 418.5,230.6 419.5,231.4 420.5,232.2 421.6,233.1 422.6,233.9 423.6,234.7 424.7,235.6 425.8,236.4 426.9,237.2 428.0,238.1 429.1,238.9 430.2,239.7 431.3,240.5 432.4,241.4 433.6,242.2 434.7,243.0 435.9,243.9 437.0,244.7 438.2,245.5 439.4,246.3 440.6,247.1 441.7,247.9 442.9,248.7 444.1,249.5 445.3,250.3 446.5,251.1 447.7,251.9 448.9,252.7 450.1,253.5 451.4,254.2 452.6,255.0 453.8,255.8 455.0,256.5 456.2,257.3 457.4,258.0 458.7,258.7 459.9,259.5 461.1,260.2 462.3,260.9 463.5,261.6 464.8,262.3 466.0,263.0 467.2,263.7 468.4,264.4 469.6,265.0 470.8,265.7 472.0,266.3 473.2,267.0 474.4,267.6 475.6,268.2 476.8,268.8 477.9,269.4 479.1,270.0 480.3,270.6 481.4,271.1 482.6,271.7 483.7,272.2 484.8,272.8 486.0,273.3 487.1,273.8 488.2,274.3 489.3,274.8 490.4,275.3 491.5,275.7 492.5,276.2 493.6,276.6 494.6,277.1 495.7,277.5 496.7,277.9 497.7,278.3 498.7,278.6 499.7,279.0 500.7,279.4 501.7,279.7" fill="none" stroke="#c9d1dc" stroke-width="1.2" stroke-dasharray="3,3"/>
+<polyline points="527.9,279.9 528.0,279.6 528.1,279.3 528.2,278.9 528.2,278.5 528.3,278.1 528.3,277.8 528.3,277.3 528.2,276.9 528.2,276.5 528.1,276.1 528.0,275.6 527.9,275.1 527.7,274.6 527.5,274.2 527.4,273.7 527.2,273.1 526.9,272.6 526.7,272.1 526.4,271.5 526.1,271.0 525.8,270.4 525.5,269.8 525.1,269.2 524.8,268.6 524.4,268.0 523.9,267.4 523.5,266.8 523.1,266.1 522.6,265.5 522.1,264.8 521.6,264.1 521.1,263.5 520.5,262.8 519.9,262.1 519.3,261.4 518.7,260.7 518.1,260.0 517.5,259.2 516.8,258.5 516.1,257.8 515.4,257.0 514.7,256.3 514.0,255.5 513.2,254.8 512.5,254.0 511.7,253.2 510.9,252.4 510.1,251.7 509.3,250.9 508.4,250.1 507.6,249.3 506.7,248.5 505.8,247.7 504.9,246.9 504.0,246.0 503.0,245.2 502.1,244.4 501.1,243.6 500.2,242.8 499.2,241.9 498.2,241.1 497.2,240.3 496.1,239.4 495.1,238.6 494.1,237.8 493.0,236.9 492.0,236.1 490.9,235.3 489.8,234.4 488.7,233.6 487.6,232.8 486.5,232.0 485.4,231.1 484.2,230.3 483.1,229.5 481.9,228.6 480.8,227.8 479.6,227.0" fill="none" stroke="#c9d1dc" stroke-width="1.2" stroke-dasharray="3,3"/>
+<polyline points="118.1,73.9 164.4,64.5 190.2,63.3 206.4,65.8 218.0,69.9 227.4,74.7 235.6,79.6 243.2,84.5 250.3,89.4 257.1,94.1 263.7,98.7 270.1,103.2 276.2,107.5 282.1,111.6 287.8,115.7 293.4,119.6 298.7,123.3 303.9,127.0 308.9,130.5 313.8,134.0 318.5,137.3 323.0,140.5 327.4,143.6 331.7,146.6 335.8,149.5 339.8,152.3 343.6,155.0 347.3,157.6 351.0,160.2 354.4,162.6 357.8,165.0 361.1,167.3 364.2,169.5 367.3,171.7 370.3,173.8 373.1,175.8 375.9,177.7 378.6,179.6 381.2,181.4 383.7,183.2 386.1,184.9" fill="none" stroke="#5b6475" stroke-width="2" stroke-dasharray="4,3"/>
+<circle cx="118.1" cy="73.9" r="2.5" fill="#5b6475"/>
+<circle cx="164.4" cy="64.5" r="2.5" fill="#5b6475"/>
+<circle cx="190.2" cy="63.3" r="2.5" fill="#5b6475"/>
+<circle cx="206.4" cy="65.8" r="2.5" fill="#5b6475"/>
+<circle cx="218.0" cy="69.9" r="2.5" fill="#5b6475"/>
+<circle cx="227.4" cy="74.7" r="2.5" fill="#5b6475"/>
+<circle cx="235.6" cy="79.6" r="2.5" fill="#5b6475"/>
+<circle cx="243.2" cy="84.5" r="2.5" fill="#5b6475"/>
+<polyline points="118.1,73.9 138.5,62.8 158.5,52.7 177.7,45.3 195.4,42.6 211.2,44.1 224.9,48.4 236.3,54.6 245.7,62.0 253.5,70.2 259.9,78.9 265.4,88.0 270.6,97.2 275.7,106.4 281.2,115.4 287.3,124.1 294.2,132.3 302.1,139.9 310.9,146.9 320.6,153.3 330.9,159.1 341.8,164.4 352.8,169.3 364.0,173.9 374.8,178.3 385.3,182.6 395.0,186.9 403.9,191.4 411.8,195.9 418.8,200.6 424.8,205.4 429.9,210.2 434.3,215.0 438.1,219.7 441.6,224.1 444.8,228.2 448.0,232.0 451.3,235.2 454.6,238.0 458.1,240.4 461.7,242.2" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+<circle cx="118.1" cy="73.9" r="2.5" fill="#1f5f8b"/>
+<circle cx="138.5" cy="62.8" r="2.5" fill="#1f5f8b"/>
+<circle cx="158.5" cy="52.7" r="2.5" fill="#1f5f8b"/>
+<circle cx="177.7" cy="45.3" r="2.5" fill="#1f5f8b"/>
+<circle cx="195.4" cy="42.6" r="2.5" fill="#1f5f8b"/>
+<circle cx="211.2" cy="44.1" r="2.5" fill="#1f5f8b"/>
+<circle cx="224.9" cy="48.4" r="2.5" fill="#1f5f8b"/>
+<circle cx="236.3" cy="54.6" r="2.5" fill="#1f5f8b"/>
+<polyline points="118.1,73.9 131.3,71.2 227.6,66.9 253.0,78.9 428.7,193.7 459.2,234.6 458.6,236.0 458.4,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8 458.3,235.8" fill="none" stroke="#9a6400" stroke-width="2"/>
+<circle cx="118.1" cy="73.9" r="2.5" fill="#9a6400"/>
+<circle cx="131.3" cy="71.2" r="2.5" fill="#9a6400"/>
+<circle cx="227.6" cy="66.9" r="2.5" fill="#9a6400"/>
+<circle cx="253.0" cy="78.9" r="2.5" fill="#9a6400"/>
+<circle cx="428.7" cy="193.7" r="2.5" fill="#9a6400"/>
+<circle cx="459.2" cy="234.6" r="2.5" fill="#9a6400"/>
+<circle cx="458.6" cy="236.0" r="2.5" fill="#9a6400"/>
+<circle cx="458.4" cy="235.8" r="2.5" fill="#9a6400"/>
+  <circle cx="118.1" cy="73.9" r="4" fill="#ffffff" stroke="#5b6475" stroke-width="1.5"/>
+  <text x="112" y="62" fill="#5b6475" text-anchor="end">start</text>
+  <circle cx="458.3" cy="235.8" r="5" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="448" y="264" fill="#9a6400" text-anchor="end">minimum (1, −1)</text>
+  <line x1="60" y1="318" x2="90" y2="318" stroke="#5b6475" stroke-width="2" stroke-dasharray="4,3"/><text x="96" y="322" fill="#5b6475">SGD</text>
+  <line x1="160" y1="318" x2="190" y2="318" stroke="#1f5f8b" stroke-width="2"/><text x="196" y="322" fill="#1f5f8b">Adam</text>
+  <line x1="260" y1="318" x2="290" y2="318" stroke="#9a6400" stroke-width="2"/><text x="296" y="322" fill="#9a6400">L-BFGS</text>
+  <line x1="370" y1="318" x2="400" y2="318" stroke="#c9d1dc" stroke-width="1.2" stroke-dasharray="3,3"/><text x="406" y="322" fill="#5b6475">contours</text>
+</svg>
+<figcaption>Weight trajectories over 40 epochs on a quadratic valley, computed with <code>SgdOptimizer</code> (η = 0.35), <code>AdamOptimizer.adam(0.15)</code> and <code>LbfgsOptimizer.standard()</code>; dots mark the first seven steps. SGD first heads across into the valley and then crawls along the flat floor, Adam cuts the corner with almost equally long steps and overshoots slightly, L-BFGS reaches the minimum after six steps.</figcaption>
+</figure>
+<table>
+  <tr><th>Method</th><th>Setting</th><th>Loss at the start of epoch 40</th><th>Weights after 40 epochs</th></tr>
+  <tr><td>SGD</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi><mo>=</mo><mn>0.35</mn></mrow><annotation encoding="application/x-tex">\eta = 0.35</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\mu = 0</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3.8</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3.8 \cdot 10^{-2}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0.469</mn><mo>,</mo><mspace width="0.3333em"/><mo>−</mo><mn>0.308</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0.469,\ -0.308)</annotation></semantics></math></td></tr>
+  <tr><td>SGD with momentum</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">\eta = 0.1</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi><mo>=</mo><mn>0.8</mn></mrow><annotation encoding="application/x-tex">\mu = 0.8</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>7.9</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">7.9 \cdot 10^{-3}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0.771</mn><mo>,</mo><mspace width="0.3333em"/><mo>−</mo><mn>0.690</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0.771,\ -0.690)</annotation></semantics></math></td></tr>
+  <tr><td>Adam</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi><mo>=</mo><mn>0.15</mn></mrow><annotation encoding="application/x-tex">\eta = 0.15</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.3</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.3 \cdot 10^{-3}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1.024</mn><mo>,</mo><mspace width="0.3333em"/><mo>−</mo><mn>1.087</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1.024,\ -1.087)</annotation></semantics></math></td></tr>
+  <tr><td>L-BFGS</td><td>step 1.0, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>10</mn></mrow><annotation encoding="application/x-tex">M = 10</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn></mrow><annotation encoding="application/x-tex">0</annotation></semantics></math> (from epoch 20; already <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.4</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>17</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.4 \cdot 10^{-17}</annotation></semantics></math> in epoch 10)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1.0000</mn><mo>,</mo><mspace width="0.3333em"/><mo>−</mo><mn>1.0000</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1.0000,\ -1.0000)</annotation></semantics></math></td></tr>
+</table>
+<p>The figures follow from the theory. With SGD the slow direction shrinks per step by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><mn>0.35</mn><mo>⋅</mo><mn>0.0928</mn><mo>=</mo><mn>0.968</mn></mrow><annotation encoding="application/x-tex">1 - 0.35 \cdot 0.0928 = 0.968</annotation></semantics></math> – after 40 steps a good quarter of the distance along the valley floor is still left (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>0.968</mn><mrow><mn>40</mn></mrow></msup><mo>≈</mo><mn>0.27</mn></mrow><annotation encoding="application/x-tex">0.968^{40} \approx 0.27</annotation></semantics></math>). A larger learning rate is ruled out by the steep direction: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>/</mo><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mn>1.30</mn></mrow><annotation encoding="application/x-tex">2/\lambda_\max = 1.30</annotation></semantics></math>. Momentum amplifies the slow direction and gets further. L-BFGS needs two pairs to know both curvatures; after that a quadratic problem is solved in one step. Incidentally, the first L-BFGS point <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>1.4028</mn><mo>,</mo><mspace width="0.3333em"/><mn>1.2364</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(-1.4028,\ 1.2364)</annotation></semantics></math> is identical to the first point of the momentum method – both first go <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.1</mn><mspace width="0.1667em"/><mi>g</mi></mrow><annotation encoding="application/x-tex">0.1\,g</annotation></semantics></math>.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>L-BFGS, first step</b> (<code>Optimiererprobe</code>): on a linear least-squares problem with known solution (weights 2 and −3, intercept 0.5) the first step must be exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>−</mo><mn>0.1</mn><mspace width="0.1667em"/><mi>g</mi></mrow><annotation encoding="application/x-tex">x - 0.1\,g</annotation></semantics></math>, to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-15}</annotation></semantics></math>.</li>
+  <li><b>L-BFGS, convergence</b>: in full batch 2, −3 and 0.5 are hit to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>, the residual loss is below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>; after only 15 epochs it must be below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>25</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-25}</annotation></semantics></math> – this checks that the curvature pairs act, since a sign error in the two-loop recursion still converges after 200 epochs, but not after 15.</li>
+  <li><b>SGD versus Adam</b> (<code>TestMain</code> [3] and [4]): the same map function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>sin</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>3</mn><mi>x</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2</mn><mi>y</mi><mo stretchy="false">)</mo><mo>+</mo><mn>0.5</mn><mi>x</mi></mrow><annotation encoding="application/x-tex">\sin(3x)\cos(2y) + 0.5x</annotation></semantics></math> with 600 points, network 2–32–32–1 (SILU). SGD with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi><mo>=</mo><mn>0.02</mn></mrow><annotation encoding="application/x-tex">\eta = 0.02</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">μ</mi><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\mu = 0.9</annotation></semantics></math> needs 2000 epochs for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>&gt;</mo><mn>0.99</mn></mrow><annotation encoding="application/x-tex">R^2 &gt; 0.99</annotation></semantics></math> (reaches 0.99975), Adam with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">η</mi><mo>=</mo><mn>2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\eta = 2\cdot10^{-3}</annotation></semantics></math> manages it in 300 (0.99948).</li>
+  <li><b>AdamW</b> (<code>TestMain</code> [5]): with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>0.01</mn></mrow><annotation encoding="application/x-tex">\lambda = 0.01</annotation></semantics></math> the norm of the weights must be smaller than with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\lambda = 0</annotation></semantics></math>, without <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">R^2</annotation></semantics></math> falling below 0.98. Measured: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>‖</mo><mi>W</mi><mo>‖</mo><mo>=</mo><mn>12.331</mn></mrow><annotation encoding="application/x-tex">\|W\| = 12.331</annotation></semantics></math> versus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>11.540</mn></mrow><annotation encoding="application/x-tex">11.540</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><mn>0.99948</mn></mrow><annotation encoding="application/x-tex">R^2 = 0.99948</annotation></semantics></math> versus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.99951</mn></mrow><annotation encoding="application/x-tex">0.99951</annotation></semantics></math>.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>L-BFGS without line search can diverge with too large a step length or on strongly nonconvex loss surfaces. It is meant for small, smooth problems with few data; with mini-batches the curvature pairs are noise.</li>
+  <li>Adam's step is almost independent of the size of the gradient. That has a flip side: in the comparison above the bias gradient initially consisted of rounding errors only (below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>), yet the bias wandered to about 0.05. The quotient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>m</mi></mrow><mo stretchy="true">^</mo></mover><mo>/</mo><mo stretchy="false">(</mo><msqrt><mover accent="true"><mrow><mi>v</mi></mrow><mo stretchy="true">^</mo></mover></msqrt><mo>+</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\hat m/(\sqrt{\hat v} + \varepsilon)</annotation></semantics></math> does not shrink with the gradient as long as the latter is well above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ε</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\varepsilon = 10^{-8}</annotation></semantics></math>, and even a gradient of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4 \cdot 10^{-10}</annotation></semantics></math> still yields a step of 4 % of the learning rate.</li>
+  <li>SGD is sensitive to the learning rate and the scale of the data; without normalised inputs a suitable learning rate is hard to find.</li>
+  <li>No Nesterov momentum, no RMSprop, no AdaGrad; no gradient clipping.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>D. P. Kingma, J. Ba: Adam: A Method for Stochastic Optimization. ICLR 2015.</li>
+  <li>I. Loshchilov, F. Hutter: Decoupled Weight Decay Regularization. ICLR 2019.</li>
+  <li>D. C. Liu, J. Nocedal: On the limited memory BFGS method for large scale optimization. Mathematical Programming 45 (1989).</li>
+  <li>J. Nocedal, S. J. Wright: Numerical Optimization. 2nd edition, Springer, 2006 (chapter 7).</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Background to <a href="index.html#train">Training</a> · Checks: <code>Optimiererprobe</code>, <code>TestMain</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

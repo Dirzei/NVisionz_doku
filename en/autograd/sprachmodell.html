@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text, tokeniser, language model – from text corpus to trained model – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite" href="matmul.html">Matrix product</a>
+<a class="unterseite" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite aktiv" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Text, tokeniser, language model – from text corpus to trained model</span><a class="sprachwahl" href="../../de/autograd/sprachmodell.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd.text</div>
+  <h1>Text, tokeniser, language model – from text corpus to trained model</h1>
+  <p class="unter">The computation behind <code>TextKorpus</code>, <code>SprachmodellTrainer</code> and <code>text.Sampler.erzeuge</code>: block-wise reading with cuts at word boundaries, token pairs shifted by exactly one, the assembly of the model with a tied head, the start check against <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi></mrow><annotation encoding="application/x-tex">\ln V</annotation></semantics></math>, perplexity and continuing text – with pseudocode following the source, figures, the probes and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A language model learns to predict the next token in a text. For that it needs three things: a stream of training examples from a text file that may be too large to keep in memory as a whole; a model of embedding, positional encoding, encoder with causal mask and output head; and a loop that notices early when a run is worthless.</p>
+<p>The most dangerous faults on this path produce the <b>right number</b> of examples with the <b>wrong content</b>. During training that goes unnoticed – the model only gets somewhat worse, or it learns a trivial task and looks excellent doing so.</p>
+
+<h2 id="paare">Pairs shifted by one</h2>
+<p>A sequence of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">L+1</annotation></semantics></math> tokens yields two sequences of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>before</mtext><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>L</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mtext>after</mtext><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>L</mi></mrow></msub><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\text{before} = (x_0, \dots, x_{L-1}), \qquad \text{after} = (x_1, \dots, x_L).</annotation></semantics></math></p>
+<p>At every position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> the model learns to guess token <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_{i+1}</annotation></semantics></math> from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>…</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_0 \dots x_i</annotation></semantics></math>; the causal mask prevents it from looking ahead. The shift by <b>exactly one</b> is the most important point: were it zero, the model would learn to repeat the current token. The loss would fall to almost zero because the task is trivial – and only when generating text would one notice that nothing was learned.</p>
+
+<h2 id="korpus">Reading block-wise, cutting at word boundaries</h2>
+<p>Reading and tokenising a corpus of several hundred megabytes as a whole needs a multiple of that in memory. <code>TextKorpus</code> therefore reads in blocks of a fixed number of characters, tokenises each block and buffers the tokens until a sequence is full. Two traps lie at the block boundary, and both produce the right number of pairs with the wrong content:</p>
+<ul>
+  <li><b>The tokeniser works word by word.</b> "Verdichter" gives different tokens than "Verdich" plus "ter". Buffering tokens across the boundary is not enough – the tokenisation itself must end at a word boundary. The cut-off remainder is kept as <b>text</b> and prepended to the next block.</li>
+  <li><b>Cut before the separator.</b> The tokeniser attaches the leading space to the following word (see <a href="bpe.html#vorzerlegung">Byte pair encoding</a>); " Druck" and "Druck" are different symbols. The cut therefore lies immediately <b>before</b> the last whitespace character, not after it.</li>
+</ul>
+<p>A UTF-8 character cannot be cut at the block boundary: reading is character-wise via a <code>BufferedReader</code>, not byte-wise.</p>
+
+<figure>
+<svg viewBox="0 0 600 270" width="600" font-family="sans-serif" font-size="13">
+  <text x="300" y="18" fill="#5b6475" text-anchor="middle" font-size="12">block boundary</text>
+  <rect x="80" y="26" width="220" height="32" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="300" y="26" width="220" height="32" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="88" y="47" fill="#1f5f8b" font-family="monospace">… treibt den Verdich</text>
+  <text x="308" y="47" fill="#1f5f8b" font-family="monospace">ter an. Die …</text>
+  <line x1="300" y1="22" x2="300" y2="62" stroke="#5b6475" stroke-dasharray="3,3"/>
+  <line x1="182" y1="22" x2="182" y2="66" stroke="#9a6400" stroke-width="2"/>
+  <text x="80" y="84" fill="#9a6400" font-size="12">cut before the space; " Verdich" moves on as text into the next block</text>
+  <rect x="80" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="100" y="128" fill="#5b6475" text-anchor="middle">x₀</text>
+  <rect x="124" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="144" y="128" fill="#5b6475" text-anchor="middle">x₁</text>
+  <rect x="168" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="188" y="128" fill="#5b6475" text-anchor="middle">x₂</text>
+  <rect x="212" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="232" y="128" fill="#5b6475" text-anchor="middle">x₃</text>
+  <rect x="256" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="276" y="128" fill="#5b6475" text-anchor="middle">x₄</text>
+  <rect x="300" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="320" y="128" fill="#5b6475" text-anchor="middle">x₅</text>
+  <rect x="344" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="364" y="128" fill="#5b6475" text-anchor="middle">x₆</text>
+  <rect x="388" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="408" y="128" fill="#5b6475" text-anchor="middle">x₇</text>
+  <rect x="432" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="452" y="128" fill="#5b6475" text-anchor="middle">x₈</text>
+  <rect x="476" y="110" width="40" height="26" fill="#ffffff" stroke="#5b6475"/><text x="496" y="128" fill="#5b6475" text-anchor="middle">x₉</text>
+  <text x="70" y="128" fill="#5b6475" text-anchor="end" font-size="12">tokens</text>
+  <line x1="80" y1="152" x2="252" y2="152" stroke="#1f5f8b" stroke-width="3"/>
+  <line x1="124" y1="166" x2="296" y2="166" stroke="#9a6400" stroke-width="3"/>
+  <line x1="256" y1="152" x2="428" y2="152" stroke="#1f5f8b" stroke-width="3"/>
+  <line x1="300" y1="166" x2="472" y2="166" stroke="#9a6400" stroke-width="3"/>
+  <text x="188" y="188" fill="#5b6475" text-anchor="middle" font-size="12">pair 1</text>
+  <text x="364" y="188" fill="#5b6475" text-anchor="middle" font-size="12">pair 2</text>
+  <text x="496" y="160" fill="#5b6475" text-anchor="middle" font-size="12">rest</text>
+  <line x1="80" y1="214" x2="110" y2="214" stroke="#1f5f8b" stroke-width="3"/>
+  <text x="116" y="218" fill="#5b6475" font-size="12">before (input)</text>
+  <line x1="280" y1="214" x2="310" y2="214" stroke="#9a6400" stroke-width="3"/>
+  <text x="316" y="218" fill="#5b6475" font-size="12">after (target, shifted by one)</text>
+  <text x="300" y="250" fill="#5b6475" text-anchor="middle" font-size="11">L = 4: each pair consumes L tokens; x₄ is the target of pair 1 and the input of pair 2</text>
+</svg>
+<figcaption>Top: the block ends in the middle of a word; the cut is made before the last space, and the remainder " Verdich" is prepended to the next block and tokenised there as " Verdichter". Bottom: pairs of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> are formed from the token buffer, with the target shifted by one; consecutive pairs join seamlessly.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>TextKorpus.Leser.vorruecken()</code></h3>
+<pre class="pseudo"><b>while</b> |buffer| &lt; L + 1 <b>and not</b> atEnd:
+    block ← read up to blockChars characters
+    <b>if</b> end of file:
+        atEnd ← true;  <b>if</b> textRest ≠ "": buffer += encode(textRest)
+        <b>break</b>
+    text ← textRest + block
+    s ← last position i &gt; 0 with whitespace at text[i]   <i>before the separator</i>
+    <b>if</b> s ≤ 0:  textRest ← text;  <b>continue</b>              <i>no separator: read on</i>
+    textRest ← text[s …];   buffer += encode(text[0 … s))
+<b>if</b> |buffer| &lt; L + 1:  next ← none;  <b>return</b>          <i>truncated end discarded</i>
+next ← Pair(buffer[0 … L), buffer[1 … L+1))
+remove the first L tokens from buffer                    <i>x_L stays: seamless join</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/text/TextKorpus.java</code>. Defaults: sequence length 256, blocks of 8192 characters; <code>paareGeschaetzt()</code> assumes four bytes per token and is meant only for a progress display.</p>
+
+<h2 id="modell">The model and the loop</h2>
+<p><code>SprachmodellTrainer</code> assembles: embedding <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>×</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">V\times d</annotation></semantics></math>, sinusoidal positional encoding up to the sequence length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>, a <code>TransformerEncoder</code> of the classic variant, and a language head that shares the embedding matrix and has its own bias (see <a href="encoder.html#sprachkopf">Language head</a>). The shared matrix appears exactly once in the parameter list. Training uses Adam with norm clipping, one sequence per step, against the causal mask <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>×</mo><mi>L</mi></mrow><annotation encoding="application/x-tex">L\times L</annotation></semantics></math> and the cross-entropy over all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> positions.</p>
+<p><b>Start check against <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi></mrow><annotation encoding="application/x-tex">\ln V</annotation></semantics></math>.</b> An untrained model guesses uniformly over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi></mrow><annotation encoding="application/x-tex">V</annotation></semantics></math> entries. The cross-entropy of a uniform distribution is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">ℓ</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><mn>1</mn></mrow><mrow><mi>V</mi></mrow></mfrac><mo>=</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">\ell_0 = -\ln\frac1V = \ln V.</annotation></semantics></math></p>
+<p>If the first loss deviates <b>downwards</b> by more than 1, the trainer stops: the model then already knows its target, and the shift in the data is probably wrong. A deviation of more than 1 upwards is only reported (hint at a wrong vocabulary size). A loss that is not finite aborts at once, with a pointer to learning rate and norm clipping – otherwise the run would go on for hours with NaN weights.</p>
+<p><b>Perplexity.</b> More intuitive than the loss is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>PP</mi><mo>⁡</mo><mspace width="0.1667em"/><mo>=</mo><msup><mrow><mi>e</mi></mrow><mrow><mi mathvariant="normal">ℓ</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\mathrm{PP} = e^{\ell}</annotation></semantics></math>: the number of equally likely candidates between which the model still wavers on average. At the start it is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi></mrow><annotation encoding="application/x-tex">V</annotation></semantics></math>; a perfect model would have 1.</p>
+<h3>Pseudocode – <code>SprachmodellTrainer.trainiere(corpus)</code></h3>
+<pre class="pseudo">opt ← Adam(parameters, learningRate);  opt.maxGradNorm ← maxGradNorm
+mask ← causalMask(L);  rnd ← Random(seed + 1);  expected ← ln V
+<b>for each</b> pair (before, after) <b>in</b> corpus:
+    ℓ ← crossEntropy(forward(before, mask, rnd, training = true), after)
+    <b>if</b> ℓ not finite: <b>return</b> abort "lower the learning rate …"
+    <b>if</b> first step:
+        <b>if</b> ℓ &lt; expected − 1: <b>return</b> abort "model sees its target"
+        <b>if</b> |ℓ − expected| &gt; 1: warning "check vocabulary size"
+    opt.zeroGrad();  ℓ.backward();  opt.step();  step += 1
+    every reportEvery steps: print mean, perplexity, gradient norm, sequences per second
+    every saveEvery steps: WeightIO.save(output, parameters)
+    <b>if</b> maxSteps reached: <b>break</b>
+<b>if</b> saveEvery &gt; 0 <b>and</b> step &gt; 0: WeightIO.save(output, parameters)</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/text/SprachmodellTrainer.java</code>. <code>trainiere</code> takes an <code>Iterable&lt;Paar&gt;</code>, so that the trainer can also be tested with generated pairs without a file.</p>
+<div class="hinweis"><b>Decision in the framework:</b> defaults of the <code>Einstellungen</code>: 2 layers, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">d = 128</annotation></semantics></math>, 4 heads, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>d</mi></mrow><mrow><mi>FF</mi><mo>⁡</mo></mrow></msub><mo>=</mo><mn>512</mn></mrow><annotation encoding="application/x-tex">d_{\mathrm{FF}} = 512</annotation></semantics></math>, dropout 0.1, sequence length 128, learning rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3\cdot 10^{-4}</annotation></semantics></math>, norm bound 1.0, report every 100 steps, save every 5000, seed 1234. Deliberately without batches, without warm-up and without a learning-rate schedule: that pays off only once it is established that the chain learns at all. For resumable runs with schedule and checkpoints there is <a href="sequenztraining.html">SequenceTrainer</a>.</div>
+
+<h2 id="erzeugen">Continuing text</h2>
+<p><code>text.Sampler.erzeuge(model, start, count, T, k)</code> appends token by token: for the sequence so far a forward pass without dropout is computed with the causal mask, a token is drawn from the logits of the last position with temperature and top-k (see <a href="stichprobe.html">Sampling</a>), and the drawn token is appended.</p>
+
+<h2 id="beispiel">Worked examples</h2>
+<ul>
+  <li><b>Starting loss.</b> For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mn>8000</mn></mrow><annotation encoding="application/x-tex">V = 8000</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi><mo>=</mo><mn>8.987</mn></mrow><annotation encoding="application/x-tex">\ln V = 8.987</annotation></semantics></math>; a first loss below 7.987 stops the run. For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mn>268</mn></mrow><annotation encoding="application/x-tex">V = 268</annotation></semantics></math> (twelve merges on top of the bytes, as in the example of <a href="bpe.html#beispiel">Byte pair encoding</a>) <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi></mrow><annotation encoding="application/x-tex">\ln V</annotation></semantics></math> would be 5.591.</li>
+  <li><b>Measured.</b> According to the module documentation the loss in <code>SprachmodellTrainerTest</code> fell from 5.6266 to 3.1510; that corresponds to a perplexity of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><mn>3.151</mn></mrow></msup><mo>=</mo><mn>23.4</mn></mrow><annotation encoding="application/x-tex">e^{3.151} = 23.4</annotation></semantics></math>. At <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">d = 64</annotation></semantics></math> about 90 sequences per second were processed.</li>
+  <li><b>Lengths must match.</b> With the defaults – <code>TextKorpus</code> 256, <code>SprachmodellTrainer</code> 128 – the first step aborts with "Sequenzlaenge 256 ueberschreitet maxLen 128" (recomputed); the corpus sequence length must be set explicitly to that of the model, for example <code>new TextKorpus(file, bpe, e.sequenzLaenge, 8192)</code>.</li>
+  <li><b>Cutting.</b> With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">L = 6</annotation></semantics></math> on a small corpus, <code>TextKorpus</code> yields as first pair [261, 290, 290, 288, 298, 289] → [290, 290, 288, 298, 289, 292], as second [292, 287, …]: the last target of the first pair is the first input of the second.</li>
+</ul>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>TextKorpusTest</code></b> (11 checks): at least one pair; both sequences of equal length; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>after</mtext><mo stretchy="false">[</mo><mi>i</mi><mo stretchy="false">]</mo><mo>=</mo><mtext>before</mtext><mo stretchy="false">[</mo><mi>i</mi><mo>+</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">\text{after}[i] = \text{before}[i+1]</annotation></semantics></math> – the most important check; the sequences are not identical; small blocks (32 characters) give as many pairs <b>and</b> the same content as large ones (65,536) – according to the module documentation this check found both block-boundary faults; the sequences join seamlessly; a too short corpus gives no pairs instead of failing; umlauts survive odd block sizes.</li>
+  <li><b><code>SprachmodellTrainerTest</code></b> (11 checks): the model can be built; the shared matrix appears exactly once, the head is tied; a width not divisible by the number of heads is rejected; the starting loss is within 0.5 of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi></mrow><annotation encoding="application/x-tex">\ln V</annotation></semantics></math>, without abort; after 400 steps the loss has fallen below 60 % of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi></mrow><annotation encoding="application/x-tex">\ln V</annotation></semantics></math>, the perplexity is below the vocabulary size and finite; a fresh model also starts at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi></mrow><annotation encoding="application/x-tex">\ln V</annotation></semantics></math> on deliberately wrongly shifted pairs.</li>
+  <li><b><code>SamplerTest</code></b> checks the drawing (see <a href="stichprobe.html#pruefung">Sampling</a>).</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>The start check only takes effect with pre-trained weights.</b> A freshly initialised model does not know even a trivial task yet; its first loss lies at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>V</mi></mrow><annotation encoding="application/x-tex">\ln V</annotation></semantics></math> even if input and target are equal. The probe records this explicitly. A wrong shift therefore shows only in the course of training – as a loss that falls towards zero unusually fast.</li>
+  <li><b>Sequence length.</b> Corpus and model must have the same sequence length (see above), and the model processes at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> tokens. <code>erzeuge</code> therefore throws as soon as start sequence plus generated tokens exceed <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>; there is no sliding window.</li>
+  <li><b>No batches, no schedule, no resuming.</b> One sequence per step, fixed learning rate; the saved weights carry no provenance and no optimiser state.</li>
+  <li><b>Output to the console</b> and a fixed weight file (<code>modell.ennet</code> by default); a listener as in the sequence trainer is missing.</li>
+  <li>The truncated end of a file that is not enough for a full pair is discarded.</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#text">Text, tokeniser, language model</a> · Probes: <code>TextKorpusTest</code>, <code>SprachmodellTrainerTest</code>, <code>SamplerTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

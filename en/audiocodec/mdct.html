@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MDCT and filter bank – the transform and its aliasing – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag aktiv" href="index.html">framework-audiocodec</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kodierer">Encoder and decoder</a>
+<a class="unterseite" href="rahmen.html">Frames and subframes</a>
+<a class="rubrik" href="index.html#strom">Stream format EVAS</a>
+<a class="unterseite" href="evas.html">Layout and checksums</a>
+<a class="rubrik" href="index.html#praediktion">Prediction and stereo</a>
+<a class="unterseite" href="fest.html">Fixed predictors</a>
+<a class="unterseite" href="lpc.html">LPC</a>
+<a class="unterseite" href="stereo.html">Stereo decomposition</a>
+<a class="rubrik" href="index.html#entropie">Entropy coding</a>
+<a class="unterseite" href="bereich.html">Range coder</a>
+<a class="unterseite" href="rice.html">Golomb-Rice</a>
+<a class="rubrik" href="index.html#stapel">Batch run</a>
+<a class="unterseite" href="bilanz.html">Overall balance</a>
+<a class="rubrik" href="index.html#mdct">MDCT and filter bank</a>
+<a class="unterseite" href="fensterbank.html">Windows and block switching</a>
+<a class="unterseite aktiv" href="mdct.html">MDCT and TDAC</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-audiocodec</a> › MDCT and filter bank – the transform and its aliasing</span><a class="sprachwahl" href="../../de/audiocodec/mdct.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-audiocodec · envisionz.audiocodec</div>
+  <h1>MDCT and filter bank – the transform and its aliasing</h1>
+  <p class="unter">The computation behind <code>Mdct</code>: definition of the modified discrete cosine transform, why its inverse alone does not return the signal, how the time-domain aliasing cancels on overlap-add (TDAC), and the fast path via folding, DCT-IV and a complex FFT of half length. With derivation, pseudocode following the source, measurements from the probe and limits. Windows and block switching are on the <a href="fensterbank.html">filter bank page</a>.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>The lossless encoder predicts values in the time domain. A lossy codec works differently: it splits the signal into frequency components, because hearing resolves frequencies with varying precision and misses quiet components next to loud ones. There, in the frequency domain, coarse quantisation will later take place. The transform for this has to do four things: it must concentrate the energy in few coefficients, it must not produce more coefficients than samples come in, it must not create edges at the block boundaries, and without quantisation the way back must return the signal exactly.</p>
+<p>The <b>MDCT</b> does this. Each block covers <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>M</mi></mrow><annotation encoding="application/x-tex">2M</annotation></semantics></math> samples and advances by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math>; the blocks thus overlap by half, and still only <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> coefficients are produced per block. The transform is <b>critically sampled</b>. That is only possible because it loses information in every single block – in a form that the neighbouring block exactly compensates.</p>
+
+<h2 id="definition">Definition</h2>
+<p>From <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>M</mi></mrow><annotation encoding="application/x-tex">2M</annotation></semantics></math> time samples <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn><mi>M</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_0, \dots, x_{2M-1}</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> coefficients are formed:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>n</mi><mo>=</mo><mn>0</mn></mrow><mrow><mn>2</mn><mi>M</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi></mrow></msub><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">[</mo><mfrac><mrow><mi mathvariant="normal">π</mi></mrow><mrow><mi>M</mi></mrow></mfrac><mrow><mo fence="true" stretchy="true">(</mo><mi>n</mi><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo>+</mo><mfrac><mrow><mi>M</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mrow><mo fence="true" stretchy="true">(</mo><mi>k</mi><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo fence="true" stretchy="true">]</mo></mrow><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>=</mo><mn>0</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>M</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">X_k = \sum_{n=0}^{2M-1} x_n \cos\!\left[\frac{\pi}{M}\left(n + \frac12 + \frac{M}{2}\right)\left(k + \frac12\right)\right], \qquad k = 0, \dots, M-1</annotation></semantics></math></p>
+<p>The inverse has the same kernel and the factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mi>M</mi></mrow><annotation encoding="application/x-tex">1/M</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>M</mi></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>X</mi></mrow><mrow><mi>k</mi></mrow></msub><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">[</mo><mfrac><mrow><mi mathvariant="normal">π</mi></mrow><mrow><mi>M</mi></mrow></mfrac><mrow><mo fence="true" stretchy="true">(</mo><mi>n</mi><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo>+</mo><mfrac><mrow><mi>M</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mrow><mo fence="true" stretchy="true">(</mo><mi>k</mi><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo fence="true" stretchy="true">]</mo></mrow><mo>,</mo><mspace width="2em"/><mi>n</mi><mo>=</mo><mn>0</mn><mo>,</mo><mo>…</mo><mo>,</mo><mn>2</mn><mi>M</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">y_n = \frac{1}{M} \sum_{k=0}^{M-1} X_k \cos\!\left[\frac{\pi}{M}\left(n + \frac12 + \frac{M}{2}\right)\left(k + \frac12\right)\right], \qquad n = 0, \dots, 2M-1</annotation></semantics></math></p>
+<p>The shifts by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">\tfrac12</annotation></semantics></math> in time and frequency make the basis functions symmetric or antisymmetric at both block ends; the additional shift by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">M/2</annotation></semantics></math> in time places the points of symmetry exactly on the quarter boundaries of the block. The coefficient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_k</annotation></semantics></math> belongs to the frequency <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>k</mi><mo>+</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(k + \tfrac12)</annotation></semantics></math> times half the sample rate divided by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math>.</p>
+
+<h2 id="aliasing">The time-domain aliasing</h2>
+<p>Dividing the block into four quarters <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(a, b, c, d)</annotation></semantics></math> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">M/2</annotation></semantics></math> values each and writing <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>'</mo></mrow><annotation encoding="application/x-tex">'</annotation></semantics></math> for reversal of the order, the inverse of a single block does not give <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(a, b, c, d)</annotation></semantics></math> but</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>y</mi><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>a</mi><mo>−</mo><mi>b</mi><mo>'</mo><mo>,</mo><mspace width="0.2778em"/><mi>b</mi><mo>−</mo><mi>a</mi><mo>'</mo><mo>,</mo><mspace width="0.2778em"/><mi>c</mi><mo>+</mo><mi>d</mi><mo>'</mo><mo>,</mo><mspace width="0.2778em"/><mi>d</mi><mo>+</mo><mi>c</mi><mo>'</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y = \frac12\,\big(a - b',\; b - a',\; c + d',\; d + c'\big)</annotation></semantics></math></p>
+<p>The first half contains the signal minus its mirror image, the second half the signal plus its mirror image. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> for the second half <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>c</mi><mo>,</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(c, d)</annotation></semantics></math> as a sequence of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> values and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>s</mi></mrow><mo stretchy="true">˜</mo></mover></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\tilde{s}_j = s_{M-1-j}</annotation></semantics></math> for its mirror image: the second half of the inverse is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">(</mo><mi>s</mi><mo>+</mo><mover accent="true"><mrow><mi>s</mi></mrow><mo stretchy="true">˜</mo></mover><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\tfrac12(s + \tilde{s})</annotation></semantics></math>, and the first half of the inverse of a block over the same values would be <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">(</mo><mi>s</mi><mo>−</mo><mover accent="true"><mrow><mi>s</mi></mrow><mo stretchy="true">˜</mo></mover><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\tfrac12(s - \tilde{s})</annotation></semantics></math>. That is the <b>time-domain aliasing</b>; the <code>Mdctprobe</code> checks exactly this form.</p>
+
+<h2 id="tdac">How it cancels</h2>
+<p>Two consecutive blocks cover <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> common values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">s_j</annotation></semantics></math>: for block <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> they are the second half, for block <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">t+1</annotation></semantics></math> the first. Both blocks are multiplied by a window before the transform and once more after the inverse. With the falling slope <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_j</annotation></semantics></math> of block <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> and the rising slope <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">g_j</annotation></semantics></math> of block <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">t+1</annotation></semantics></math>, the overlap-add gives</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>j</mi></mrow></msub><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>j</mi></mrow></msub><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>+</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>s</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></mfrac><mo>+</mo><mfrac><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow></msub><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow></msub><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>s</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></mfrac></mrow><annotation encoding="application/x-tex">z_j = \frac{f_j\,(f_j s_j + f_{M-1-j}\,s_{M-1-j})}{2} + \frac{g_j\,(g_j s_j - g_{M-1-j}\,s_{M-1-j})}{2}</annotation></semantics></math></p>
+<p>Ordered by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">s_j</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">s_{M-1-j}</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mfrac><mrow><msubsup><mrow><mi>f</mi></mrow><mrow><mi>j</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>+</mo><msubsup><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow><mrow><mn>2</mn></mrow></msubsup></mrow><mrow><mn>2</mn></mrow></mfrac><mspace width="0.1667em"/><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>+</mo><mfrac><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>j</mi></mrow></msub><msub><mrow><mi>f</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow></msub><msub><mrow><mi>g</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub></mrow><mrow><mn>2</mn></mrow></mfrac><mspace width="0.1667em"/><msub><mrow><mi>s</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">z_j = \frac{f_j^2 + g_j^2}{2}\, s_j + \frac{f_j f_{M-1-j} - g_j g_{M-1-j}}{2}\, s_{M-1-j}</annotation></semantics></math></p>
+<p>If the falling slope is the mirror image of the rising one, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_j = g_{M-1-j}</annotation></semantics></math>, the second fraction vanishes – the aliasing cancels. If in addition the <b>Princen-Bradley condition</b></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msubsup><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>+</mo><msubsup><mrow><mi>g</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>=</mo><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">g_j^2 + g_{M-1-j}^2 = 1,</annotation></semantics></math></p>
+<p>holds, then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>f</mi></mrow><mrow><mi>j</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>+</mo><msubsup><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">f_j^2 + g_j^2 = 1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">z_j = s_j / 2</annotation></semantics></math>. This cancellation is called TDAC (<i>time domain aliasing cancellation</i>). What remains is the factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">\tfrac12</annotation></semantics></math>.</p>
+
+<figure>
+<svg viewBox="0 0 640 240" width="640" font-family="sans-serif" font-size="13">
+  <line x1="40.0" y1="12" x2="40.0" y2="218" stroke="#c9d1dc" stroke-dasharray="3,3"/>
+  <line x1="185.0" y1="12" x2="185.0" y2="218" stroke="#c9d1dc" stroke-dasharray="3,3"/>
+  <line x1="330.0" y1="12" x2="330.0" y2="218" stroke="#c9d1dc" stroke-dasharray="3,3"/>
+  <line x1="475.0" y1="12" x2="475.0" y2="218" stroke="#c9d1dc" stroke-dasharray="3,3"/>
+  <line x1="620.0" y1="12" x2="620.0" y2="218" stroke="#c9d1dc" stroke-dasharray="3,3"/>
+  <line x1="40" y1="65.0" x2="620" y2="65.0" stroke="#c9d1dc"/>
+  <polyline points="185.0,64.7 189.5,64.0 194.1,63.3 198.6,62.6 203.1,62.0 207.7,61.5 212.2,61.1 216.7,60.8 221.2,60.6 225.8,60.7 230.3,60.8 234.8,61.2 239.4,61.8 243.9,62.5 248.4,63.4 253.0,64.4 257.5,65.6 262.0,66.9 266.6,68.2 271.1,69.6 275.6,71.0 280.2,72.3 284.7,73.6 289.2,74.9 293.8,76.0 298.3,76.9 302.8,77.7 307.3,78.3 311.9,78.7 316.4,78.8 320.9,78.7 325.5,78.4 330.0,78.7 334.5,79.8 339.1,80.8 343.6,81.8 348.1,82.7 352.7,83.5 357.2,84.2 361.7,84.8 366.2,85.2 370.8,85.5 375.3,85.6 379.8,85.6 384.4,85.3 388.9,84.9 393.4,84.3 398.0,83.6 402.5,82.7 407.0,81.7 411.6,80.5 416.1,79.3 420.6,78.0 425.2,76.7 429.7,75.3 434.2,74.0 438.8,72.6 443.3,71.3 447.8,70.1 452.3,69.0 456.9,67.9 461.4,66.9 465.9,66.1 470.5,65.3" fill="none" stroke="#1f5f8b" stroke-width="1.8"/>
+  <polyline points="330.0,65.0 334.5,65.0 339.1,65.0 343.6,64.8 348.1,64.7 352.7,64.5 357.2,64.3 361.7,64.2 366.2,64.0 370.8,64.0 375.3,64.0 379.8,64.0 384.4,64.1 388.9,64.3 393.4,64.5 398.0,64.8 402.5,65.2 407.0,65.5 411.6,65.9 416.1,66.2 420.6,66.6 425.2,66.8 429.7,67.0 434.2,67.2 438.8,67.2 443.3,67.1 447.8,66.9 452.3,66.5 456.9,66.0 461.4,65.4 465.9,64.6 470.5,63.6 475.0,61.3 479.5,57.9 484.1,54.4 488.6,51.1 493.1,47.9 497.7,44.9 502.2,42.3 506.7,40.0 511.2,38.0 515.8,36.5 520.3,35.3 524.8,34.7 529.4,34.4 533.9,34.6 538.4,35.3 543.0,36.3 547.5,37.7 552.0,39.3 556.6,41.3 561.1,43.5 565.6,45.8 570.2,48.2 574.7,50.6 579.2,53.0 583.8,55.3 588.3,57.5 592.8,59.4 597.3,61.2 601.9,62.6 606.4,63.7 610.9,64.5 615.5,64.9" fill="none" stroke="#9a6400" stroke-width="1.8"/>
+  <line x1="40" y1="170.0" x2="620" y2="170.0" stroke="#c9d1dc"/>
+  <polyline points="330.0,183.7 334.5,184.8 339.1,185.7 343.6,186.6 348.1,187.3 352.7,188.0 357.2,188.5 361.7,189.0 366.2,189.3 370.8,189.5 375.3,189.6 379.8,189.6 384.4,189.5 388.9,189.2 393.4,188.9 398.0,188.4 402.5,187.9 407.0,187.2 411.6,186.4 416.1,185.5 420.6,184.6 425.2,183.5 429.7,182.4 434.2,181.1 438.8,179.8 443.3,178.5 447.8,177.0 452.3,175.5 456.9,173.9 461.4,172.3 465.9,170.6 470.5,169.0" fill="none" stroke="#c9d1dc" stroke-width="7"/>
+  <polyline points="330.0,183.7 334.5,184.8 339.1,185.7 343.6,186.6 348.1,187.3 352.7,188.0 357.2,188.5 361.7,189.0 366.2,189.3 370.8,189.5 375.3,189.6 379.8,189.6 384.4,189.5 388.9,189.2 393.4,188.9 398.0,188.4 402.5,187.9 407.0,187.2 411.6,186.4 416.1,185.5 420.6,184.6 425.2,183.5 429.7,182.4 434.2,181.1 438.8,179.8 443.3,178.5 447.8,177.0 452.3,175.5 456.9,173.9 461.4,172.3 465.9,170.6 470.5,169.0" fill="none" stroke="#1f5f8b" stroke-width="1.8"/>
+  <text x="189.0" y="14" fill="#1f5f8b" font-size="12">frame t: 2M values back, windowed</text>
+  <text x="479.0" y="14" fill="#9a6400" font-size="12">frame t+1</text>
+  <text x="334.0" y="124" fill="#1f5f8b" font-size="12">sum in the overlap = signal</text>
+  <text x="334.0" y="212" fill="#5b6475" font-size="11">(wide grey: input signal)</text>
+  <text x="40.0" y="232" text-anchor="middle" fill="#5b6475" font-size="11">0</text>
+  <text x="185.0" y="232" text-anchor="middle" fill="#5b6475" font-size="11">M</text>
+  <text x="330.0" y="232" text-anchor="middle" fill="#5b6475" font-size="11">2M</text>
+  <text x="475.0" y="232" text-anchor="middle" fill="#5b6475" font-size="11">3M</text>
+  <text x="620.0" y="232" text-anchor="middle" fill="#5b6475" font-size="11">4M</text>
+</svg>
+<figcaption>Computed with <code>Fensterbank</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">M = 32</annotation></semantics></math>, sine window. Top: the inverse of two frames, each with its aliasing; bottom: their sum in the common region over the input signal – both lines coincide.</figcaption>
+</figure>
+
+<div class="hinweis"><b>Convention in the framework:</b> <code>Mdct</code> is the bare definition with the factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mi>M</mi></mrow><annotation encoding="application/x-tex">1/M</annotation></semantics></math> in the inverse and without a window. The factor 2 that turns <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">s/2</annotation></semantics></math> back into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> is carried by <code>Fensterbank.synthese</code>. AAC carries it in the forward transform; here <code>Mdct</code> thus remains the definition without an extra factor.</div>
+
+<h2 id="schnell">The fast path</h2>
+<p>Computed directly, the MDCT costs <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><msup><mrow><mi>M</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2M^2</annotation></semantics></math> multiplications, about two million per block at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">M = 1024</annotation></semantics></math>. The path in <code>Mdct</code> needs one FFT of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">M/2</annotation></semantics></math>.</p>
+<p><b>1. Folding.</b> The <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>M</mi></mrow><annotation encoding="application/x-tex">2M</annotation></semantics></math> values are folded into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> values. With the quarters <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(a, b, c, d)</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>u</mi><mo>=</mo><mo stretchy="false">(</mo><mo>−</mo><mi>c</mi><mo>'</mo><mo>−</mo><mi>d</mi><mo>,</mo><mspace width="0.2778em"/><mi>a</mi><mo>−</mo><mi>b</mi><mo>'</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">u = \big(-c' - d,\; a - b'\big)</annotation></semantics></math></p>
+<p>Then the MDCT of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> equals the <b>DCT-IV</b> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>n</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>u</mi></mrow><mrow><mi>n</mi></mrow></msub><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">[</mo><mfrac><mrow><mi mathvariant="normal">π</mi></mrow><mrow><mi>M</mi></mrow></mfrac><mrow><mo fence="true" stretchy="true">(</mo><mi>n</mi><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mrow><mo fence="true" stretchy="true">(</mo><mi>k</mi><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo fence="true" stretchy="true">]</mo></mrow></mrow><annotation encoding="application/x-tex">X_k = \sum_{n=0}^{M-1} u_n \cos\!\left[\frac{\pi}{M}\left(n + \frac12\right)\left(k + \frac12\right)\right]</annotation></semantics></math></p>
+<p><b>2. DCT-IV via a complex FFT of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">M/2</annotation></semantics></math>.</b> Pairs of real values become one complex number, rotated, transformed and rotated again:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>u</mi></mrow><mrow><mn>2</mn><mi>n</mi></mrow></msub><mo>+</mo><mi>i</mi><mspace width="0.1667em"/><msub><mrow><mi>u</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mn>2</mn><mi>n</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msup><mrow><mi>e</mi></mrow><mrow><mo>−</mo><mi>i</mi><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>n</mi><mo>+</mo><mn>1</mn><mo>/</mo><mn>8</mn><mo stretchy="false">)</mo><mo>/</mo><mi>M</mi></mrow></msup><mo>,</mo><mspace width="2em"/><mi>Z</mi><mo>=</mo><mspace width="0.1667em"/><msub><mi>FFT</mi><mrow><mi>M</mi><mo>/</mo><mn>2</mn></mrow></msub><mo>⁡</mo><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z_n = \big(u_{2n} + i\,u_{M-1-2n}\big)\, e^{-i\pi(n + 1/8)/M}, \qquad Z = \mathrm{FFT}_{M/2}(z)</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi>Z</mi></mrow><mrow><mi>k</mi></mrow></msub><mspace width="0.1667em"/><msup><mrow><mi>e</mi></mrow><mrow><mo>−</mo><mi>i</mi><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>k</mi><mo>+</mo><mn>1</mn><mo>/</mo><mn>8</mn><mo stretchy="false">)</mo><mo>/</mo><mi>M</mi></mrow></msup><mo>,</mo><mspace width="2em"/><msub><mrow><mi>X</mi></mrow><mrow><mn>2</mn><mi>k</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>Re</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace width="0.1667em"/><msub><mrow><mi>w</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>X</mi></mrow><mrow><mi>M</mi><mo>−</mo><mn>1</mn><mo>−</mo><mn>2</mn><mi>k</mi></mrow></msub><mo>=</mo><mo>−</mo><mspace width="0.1667em"/><mi>Im</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace width="0.1667em"/><msub><mrow><mi>w</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">w_k = Z_k\, e^{-i\pi(k + 1/8)/M}, \qquad X_{2k} = \mathrm{Re}\,w_k, \qquad X_{M-1-2k} = -\mathrm{Im}\,w_k</annotation></semantics></math></p>
+<p><b>3. Inverse.</b> The DCT-IV is its own inverse up to the factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>/</mo><mi>M</mi></mrow><annotation encoding="application/x-tex">2/M</annotation></semantics></math>. The inverse therefore computes the same DCT-IV and unfolds with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>u</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>u</mi></mrow><mrow><mn>0</mn><mo>…</mo><mi>M</mi><mo>/</mo><mn>2</mn><mo>−</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">u_1 = u_{0 \dots M/2-1}</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>u</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><msub><mrow><mi>u</mi></mrow><mrow><mi>M</mi><mo>/</mo><mn>2</mn><mo>…</mo><mi>M</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">u_2 = u_{M/2 \dots M-1}</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>y</mi><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>M</mi></mrow></mfrac><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>u</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>,</mo><mspace width="0.2778em"/><mo>−</mo><msub><mrow><mi>u</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>'</mo><mo>,</mo><mspace width="0.2778em"/><mo>−</mo><msub><mrow><mi>u</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>'</mo><mo>,</mo><mspace width="0.2778em"/><mo>−</mo><msub><mrow><mi>u</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y = \frac{1}{M}\,\big(u_2,\; -u_2',\; -u_1',\; -u_1\big)</annotation></semantics></math></p>
+<p>The factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">\tfrac12</annotation></semantics></math> of the unfolding and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>/</mo><mi>M</mi></mrow><annotation encoding="application/x-tex">2/M</annotation></semantics></math> of the DCT-IV together give <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mi>M</mi></mrow><annotation encoding="application/x-tex">1/M</annotation></semantics></math>.</p>
+
+<h3>Pseudocode – <code>Mdct.vorwaerts</code> and <code>dct4</code></h3>
+<pre class="pseudo"><i>// once in the constructor: M power of two ≥ 4, h ← M/2</i>
+preCos[n], preSin[n] ← cos, sin(π(n + 1/8)/M)    for n = 0 … h−1
+fftCos[i], fftSin[i] ← cos, sin(2πi/h)           for i = 0 … h/2−1
+reverse[i] ← bit-reversed index of i (log2 h bits)
+
+<b>function</b> vorwaerts(x, from, out, at):
+    <b>for</b> n ← 0 <b>to</b> h−1:
+        u[n]   ← −x[from+M+h−1−n] − x[from+M+h+n]        <i>−c′ − d</i>
+        u[h+n] ←  x[from+n] − x[from+M−1−n]              <i>a − b′</i>
+    dct4(u);  out[at … at+M−1] ← u
+
+<b>function</b> dct4(v):                                      <i>in place, without normalisation</i>
+    <b>for</b> n ← 0 <b>to</b> h−1:                                   <i>pre-rotation, stored bit-reversed</i>
+        (r, i) ← (v[2n], v[M−1−2n])
+        re[reverse[n]] ← r·preCos[n] + i·preSin[n]
+        im[reverse[n]] ← i·preCos[n] − r·preSin[n]
+    fft()                                                <i>radix 2, negative exponent</i>
+    <b>for</b> k ← 0 <b>to</b> h−1:                                   <i>post-rotation</i>
+        r ← re[k]·preCos[k] + im[k]·preSin[k]
+        i ← im[k]·preCos[k] − re[k]·preSin[k]
+        v[2k] ← r;  v[M−1−2k] ← −i
+
+<b>function</b> rueckwaerts(coeff, from, y):
+    u ← coeff[from … from+M−1];  dct4(u)
+    <b>for</b> n ← 0 <b>to</b> h−1:
+        y[n] ← u[h+n]/M;       y[h+n] ← −u[M−1−n]/M
+        y[M+n] ← −u[h−1−n]/M;  y[M+h+n] ← −u[n]/M</pre>
+<p class="quelle">Source: <code>envisionz-framework-audiocodec/src/envisionz/audiocodec/Mdct.java</code>. The FFT is a radix-2 loop of its own in the class with precomputed twiddle factors; the work arrays are reused. For the FFT itself see <a href="../math/index.html#fourier">framework-math</a>.</p>
+
+<h2 id="beispiel">Numbers</h2>
+<ul>
+  <li><b>Frequency position.</b> A cosine of amplitude 1000 exactly on the centre of band <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>37</mn></mrow><annotation encoding="application/x-tex">k_0 = 37</annotation></semantics></math> of a filter bank with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>256</mn></mrow><annotation encoding="application/x-tex">M = 256</annotation></semantics></math>, one long frame with sine window: the largest coefficient is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mn>37</mn></mrow></msub></mrow><annotation encoding="application/x-tex">X_{37}</annotation></semantics></math>, and 99.1 % of the energy lies in bands 36 to 38.</li>
+  <li><b>Aliasing.</b> For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">M = 64</annotation></semantics></math> and integer noise in ±1000, the inverse of one block matches the form <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">(</mo><mi>a</mi><mo>−</mo><mi>b</mi><mo>'</mo><mo>,</mo><mi>b</mi><mo>−</mo><mi>a</mi><mo>'</mo><mo>,</mo><mi>c</mi><mo>+</mo><mi>d</mi><mo>'</mo><mo>,</mo><mi>d</mi><mo>+</mo><mi>c</mi><mo>'</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\tfrac12(a-b', b-a', c+d', d+c')</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math> but deviates from the signal itself by up to 886.</li>
+  <li><b>Figure above.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">M = 32</annotation></semantics></math>, input signal <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1000</mn><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2</mn><mi mathvariant="normal">π</mi><mi>n</mi><mo>/</mo><mn>99.2</mn><mo stretchy="false">)</mo><mo>+</mo><mn>300</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{round}(1000 \sin(2\pi n / 99.2) + 300)</annotation></semantics></math>; shown are the windowed, doubled inverses of the frames on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>M</mi><mo>,</mo><mn>3</mn><mi>M</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[M, 3M)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>2</mn><mi>M</mi><mo>,</mo><mn>4</mn><mi>M</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[2M, 4M)</annotation></semantics></math> and their sum on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>2</mn><mi>M</mi><mo>,</mo><mn>3</mn><mi>M</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[2M, 3M)</annotation></semantics></math>.</li>
+</ul>
+
+<h2 id="pruefung">How it is tested</h2>
+<p>The <code>Mdctprobe</code> (90 checks) tests the transform against anchors that do not stem from its own computation path:</p>
+<ul>
+  <li><b>Against the definition</b>: forward and inverse for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>4</mn><mo>,</mo><mn>8</mn><mo>,</mo><mn>16</mn><mo>,</mo><mn>128</mn><mo>,</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">M = 4, 8, 16, 128, 1024</annotation></semantics></math> against the directly computed sum, relative deviation below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>11</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-11}</annotation></semantics></math> (measured at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.1</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>13</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.1 \cdot 10^{-13}</annotation></semantics></math> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">M = 1024</annotation></semantics></math>). A size that is not a power of two (12) is rejected.</li>
+  <li><b>Shape of the aliasing</b> as above, to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>, and proof that a single block is indeed not the signal (deviation above 10).</li>
+  <li><b>Frequency position</b>: band 37 and more than 90 % of the energy in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>±</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k_0 \pm 1</annotation></semantics></math>.</li>
+</ul>
+<p>The checks of the windows, sequences and the bit-exact round trip are on the <a href="fensterbank.html#pruefung">filter bank page</a>.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> must be a power of two from 4 upwards.</li>
+  <li><code>Mdct</code> is not thread-safe; the work arrays are reused on every call. One instance per thread.</li>
+  <li>Computation is in <code>double</code>. The inverse matches the signal up to rounding errors, not exactly; it becomes bit-exact only by rounding to integers (<a href="fensterbank.html#bitgenau">filter bank</a>).</li>
+  <li>There is no quantiser yet and no method in the stream format that transmits coefficients.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>J. P. Princen, A. B. Bradley: Analysis/Synthesis Filter Bank Design Based on Time Domain Aliasing Cancellation. IEEE Transactions on Acoustics, Speech, and Signal Processing 34 (1986).</li>
+  <li>J. P. Princen, A. W. Johnson, A. B. Bradley: Subband/Transform Coding Using Filter Bank Designs Based on Time Domain Aliasing Cancellation. Proceedings ICASSP (1987).</li>
+</ul>
+
+<footer>
+envisionz-framework-audiocodec · background to <a href="index.html#mdct">MDCT and filter bank</a> · next: <a href="fensterbank.html">windows and block switching</a> · probes: <code>Mdctprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

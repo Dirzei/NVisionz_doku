@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sensitivity analysis – Sobol indices, permutation importance, model-free estimation – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#core">The network</a>
+<a class="unterseite" href="netz.html">Network</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimisers</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Data, normalisation, metrics</a>
+<a class="unterseite" href="daten.html">Data and metrics</a>
+<a class="rubrik" href="index.html#model">Surrogate model, ensemble, storage</a>
+<a class="unterseite" href="ersatzmodell.html">Surrogate model</a>
+<a class="rubrik" href="index.html#search">Model search</a>
+<a class="unterseite" href="modellsuche.html">Model search</a>
+<a class="rubrik" href="index.html#analysis">Sensitivity analysis</a>
+<a class="unterseite aktiv" href="sensitivitaet.html">Sensitivity</a>
+<a class="rubrik" href="index.html#api">Interface for other applications</a>
+<a class="rubrik" href="index.html#ocr">Character recognition without Tesseract</a>
+<a class="unterseite" href="ocr.html">Glyph recognition</a>
+<a class="rubrik" href="index.html#seq">Sequences without alignment: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Beam search</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-neural</a> › Sensitivity analysis – Sobol indices, permutation importance, model-free estimation</span><a class="sprachwahl" href="../../de/neural/sensitivitaet.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.analysis</div>
+  <h1>Sensitivity analysis – Sobol indices, permutation importance, model-free estimation</h1>
+  <p class="unter">The computation behind <code>SobolAnalyzer</code>, <code>PermutationImportance</code> and <code>DataSensitivity</code>: how the spread of an output is distributed over the inputs, how the shares are estimated after Saltelli and Jansen and why the estimators must be centred, how permutation and binning arrive at similar statements without a model – with pseudocode following the source, examples with known solutions, checks and limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A surrogate for the efficiency has four inputs. Which one determines the result, which one hardly matters, and do two act only together? Local derivatives answer this at a single point only. <b>Variance-based</b> sensitivity analysis asks globally: if all inputs scatter over their range, which share of the output's spread goes back to which input?</p>
+<p>The module offers three tools that check each other. The <b>Sobol analysis</b> calls a function – usually the surrogate model – at points it chooses itself and decomposes the variance completely, interactions included. The <b>permutation importance</b> works on the real data with the model and measures how much worse it gets when one input is scrambled. The <b>model-free estimation</b> needs no model at all and reads the main effects directly from the data.</p>
+
+<h2 id="zerlegung">Decomposing the variance</h2>
+<p>For a function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi><mo>=</mo><mi>f</mi><mo stretchy="false">(</mo><msub><mrow><mi>X</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>X</mi></mrow><mrow><mi>d</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Y = f(X_1, \dots, X_d)</annotation></semantics></math> with <b>independent</b> inputs, the variance can be decomposed uniquely into shares of single inputs, of pairs, triples and so on:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>Y</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>&lt;</mo><mi>j</mi></mrow></munder><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>+</mo><mo>…</mo><mo>+</mo><msub><mrow><mi>V</mi></mrow><mrow><mn>12</mn><mo>…</mo><mi>d</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mi>V</mi><mo stretchy="false">(</mo><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><mi>Y</mi><mo>∣</mo><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">]</mo><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">V(Y) = \sum_i V_i + \sum_{i&lt;j} V_{ij} + \dots + V_{12\dots d}, \qquad V_i = V\bigl(\mathrm{E}[Y \mid X_i]\bigr).</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">V_i</annotation></semantics></math> is the variance of what one knows about <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi></mrow><annotation encoding="application/x-tex">Y</annotation></semantics></math> on average when only <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math> is known. The indices follow:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>Y</mi><mo stretchy="false">)</mo></mrow></mfrac><mo>,</mo><mspace width="2em"/><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><mi>V</mi><mo stretchy="false">(</mo><mi>Y</mi><mo>∣</mo><msub><mrow><mi>X</mi></mrow><mrow><mo>∼</mo><mi>i</mi></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">]</mo></mrow><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>Y</mi><mo stretchy="false">)</mo></mrow></mfrac><mo>=</mo><mn>1</mn><mo>−</mo><mfrac><mrow><mi>V</mi><mo stretchy="false">(</mo><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><mi>Y</mi><mo>∣</mo><msub><mrow><mi>X</mi></mrow><mrow><mo>∼</mo><mi>i</mi></mrow></msub><mo stretchy="false">]</mo><mo stretchy="false">)</mo></mrow><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>Y</mi><mo stretchy="false">)</mo></mrow></mfrac><mo>,</mo><mspace width="2em"/><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub></mrow><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>Y</mi><mo stretchy="false">)</mo></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">S_i = \frac{V_i}{V(Y)}, \qquad S_{Ti} = \frac{\mathrm{E}\bigl[V(Y \mid X_{\sim i})\bigr]}{V(Y)} = 1 - \frac{V\bigl(\mathrm{E}[Y \mid X_{\sim i}]\bigr)}{V(Y)}, \qquad S_{ij} = \frac{V_{ij}}{V(Y)} .</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">S_i</annotation></semantics></math>, the <b>first-order index</b> (main effect), is the share <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math> explains on its own. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">S_{Ti}</annotation></semantics></math>, the <b>total index</b>, is the share that would remain if all inputs except <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math> were held fixed – the main effect plus all interactions in which <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math> takes part. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>≤</mo><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">S_i \le S_{Ti}</annotation></semantics></math> holds; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">1 - \sum_i S_i</annotation></semantics></math> is the total interaction share. An input with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mi>i</mi></mrow></msub><mo>≈</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">S_{Ti} \approx 0</annotation></semantics></math> can be held fixed without the output changing noticeably.</p>
+
+<h2 id="saltelli">The estimators after Saltelli and Jansen</h2>
+<p>Two independent sample matrices <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> rows each are drawn, uniformly distributed over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>l</mi><msub><mrow><mi>o</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mi>h</mi><msub><mrow><mi>i</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[lo_i, hi_i]</annotation></semantics></math>. In addition, per input <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math>, a mixed matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>A</mi></mrow><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup></mrow><annotation encoding="application/x-tex">A_B^{(i)}</annotation></semantics></math>: all columns from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math>, only column <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math>.</p>
+
+<figure>
+<svg viewBox="0 0 620 250" width="620" font-family="sans-serif" font-size="13">
+  <rect x="40" y="44" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="59" y="60" fill="#1f5f8b" text-anchor="middle" font-size="12">a11</text>
+  <rect x="78" y="44" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="97" y="60" fill="#1f5f8b" text-anchor="middle" font-size="12">a12</text>
+  <rect x="116" y="44" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="135" y="60" fill="#1f5f8b" text-anchor="middle" font-size="12">a13</text>
+  <rect x="40" y="66" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="59" y="82" fill="#1f5f8b" text-anchor="middle" font-size="12">a21</text>
+  <rect x="78" y="66" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="97" y="82" fill="#1f5f8b" text-anchor="middle" font-size="12">a22</text>
+  <rect x="116" y="66" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="135" y="82" fill="#1f5f8b" text-anchor="middle" font-size="12">a23</text>
+  <rect x="40" y="88" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="59" y="104" fill="#1f5f8b" text-anchor="middle" font-size="12">a31</text>
+  <rect x="78" y="88" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="97" y="104" fill="#1f5f8b" text-anchor="middle" font-size="12">a32</text>
+  <rect x="116" y="88" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="135" y="104" fill="#1f5f8b" text-anchor="middle" font-size="12">a33</text>
+  <rect x="40" y="110" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="59" y="126" fill="#1f5f8b" text-anchor="middle" font-size="12">a41</text>
+  <rect x="78" y="110" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="97" y="126" fill="#1f5f8b" text-anchor="middle" font-size="12">a42</text>
+  <rect x="116" y="110" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="135" y="126" fill="#1f5f8b" text-anchor="middle" font-size="12">a43</text>
+  <rect x="40" y="132" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="59" y="148" fill="#1f5f8b" text-anchor="middle" font-size="12">a51</text>
+  <rect x="78" y="132" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="97" y="148" fill="#1f5f8b" text-anchor="middle" font-size="12">a52</text>
+  <rect x="116" y="132" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="135" y="148" fill="#1f5f8b" text-anchor="middle" font-size="12">a53</text>
+  <text x="59" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₁</text>
+  <text x="97" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₂</text>
+  <text x="135" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₃</text>
+  <text x="97" y="18" fill="#1f5f8b" text-anchor="middle">A</text>
+  <text x="97" y="172" fill="#5b6475" text-anchor="middle">f → f(A)</text>
+  <rect x="250" y="44" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="269" y="60" fill="#9a6400" text-anchor="middle" font-size="12">b11</text>
+  <rect x="288" y="44" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="307" y="60" fill="#9a6400" text-anchor="middle" font-size="12">b12</text>
+  <rect x="326" y="44" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="345" y="60" fill="#9a6400" text-anchor="middle" font-size="12">b13</text>
+  <rect x="250" y="66" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="269" y="82" fill="#9a6400" text-anchor="middle" font-size="12">b21</text>
+  <rect x="288" y="66" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="307" y="82" fill="#9a6400" text-anchor="middle" font-size="12">b22</text>
+  <rect x="326" y="66" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="345" y="82" fill="#9a6400" text-anchor="middle" font-size="12">b23</text>
+  <rect x="250" y="88" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="269" y="104" fill="#9a6400" text-anchor="middle" font-size="12">b31</text>
+  <rect x="288" y="88" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="307" y="104" fill="#9a6400" text-anchor="middle" font-size="12">b32</text>
+  <rect x="326" y="88" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="345" y="104" fill="#9a6400" text-anchor="middle" font-size="12">b33</text>
+  <rect x="250" y="110" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="269" y="126" fill="#9a6400" text-anchor="middle" font-size="12">b41</text>
+  <rect x="288" y="110" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="307" y="126" fill="#9a6400" text-anchor="middle" font-size="12">b42</text>
+  <rect x="326" y="110" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="345" y="126" fill="#9a6400" text-anchor="middle" font-size="12">b43</text>
+  <rect x="250" y="132" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="269" y="148" fill="#9a6400" text-anchor="middle" font-size="12">b51</text>
+  <rect x="288" y="132" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="307" y="148" fill="#9a6400" text-anchor="middle" font-size="12">b52</text>
+  <rect x="326" y="132" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="345" y="148" fill="#9a6400" text-anchor="middle" font-size="12">b53</text>
+  <text x="269" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₁</text>
+  <text x="307" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₂</text>
+  <text x="345" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₃</text>
+  <text x="307" y="18" fill="#9a6400" text-anchor="middle">B</text>
+  <text x="307" y="172" fill="#5b6475" text-anchor="middle">f → f(B)</text>
+  <rect x="460" y="44" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="479" y="60" fill="#1f5f8b" text-anchor="middle" font-size="12">a11</text>
+  <rect x="498" y="44" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="517" y="60" fill="#9a6400" text-anchor="middle" font-size="12">b12</text>
+  <rect x="536" y="44" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="555" y="60" fill="#1f5f8b" text-anchor="middle" font-size="12">a13</text>
+  <rect x="460" y="66" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="479" y="82" fill="#1f5f8b" text-anchor="middle" font-size="12">a21</text>
+  <rect x="498" y="66" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="517" y="82" fill="#9a6400" text-anchor="middle" font-size="12">b22</text>
+  <rect x="536" y="66" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="555" y="82" fill="#1f5f8b" text-anchor="middle" font-size="12">a23</text>
+  <rect x="460" y="88" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="479" y="104" fill="#1f5f8b" text-anchor="middle" font-size="12">a31</text>
+  <rect x="498" y="88" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="517" y="104" fill="#9a6400" text-anchor="middle" font-size="12">b32</text>
+  <rect x="536" y="88" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="555" y="104" fill="#1f5f8b" text-anchor="middle" font-size="12">a33</text>
+  <rect x="460" y="110" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="479" y="126" fill="#1f5f8b" text-anchor="middle" font-size="12">a41</text>
+  <rect x="498" y="110" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="517" y="126" fill="#9a6400" text-anchor="middle" font-size="12">b42</text>
+  <rect x="536" y="110" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="555" y="126" fill="#1f5f8b" text-anchor="middle" font-size="12">a43</text>
+  <rect x="460" y="132" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="479" y="148" fill="#1f5f8b" text-anchor="middle" font-size="12">a51</text>
+  <rect x="498" y="132" width="38" height="22" fill="#ffffff" stroke="#9a6400" stroke-width="2"/>
+  <text x="517" y="148" fill="#9a6400" text-anchor="middle" font-size="12">b52</text>
+  <rect x="536" y="132" width="38" height="22" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1"/>
+  <text x="555" y="148" fill="#1f5f8b" text-anchor="middle" font-size="12">a53</text>
+  <text x="479" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₁</text>
+  <text x="517" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₂</text>
+  <text x="555" y="38" fill="#5b6475" text-anchor="middle" font-size="12">x₃</text>
+  <text x="517" y="18" fill="#1f5f8b" text-anchor="middle">A<tspan baseline-shift="sub" font-size="10">B</tspan><tspan baseline-shift="super" font-size="10">(2)</tspan></text>
+  <text x="517" y="172" fill="#5b6475" text-anchor="middle">f → f(A_B)</text>
+  <text x="310" y="200" fill="#5b6475" text-anchor="middle">f(A) and f(A_B): only x₂ differs → remaining influence of x₂ → S_T</text>
+  <text x="310" y="222" fill="#9a6400" text-anchor="middle">f(B) and f(A_B): only x₂ shared → influence of x₂ alone → S₁</text>
+</svg>
+<figcaption>The sample matrices for three inputs and the input x₂. The mixed matrix takes column 2 from B (amber), everything else from A (blue). Compared with A it differs only in x₂ – that measures the total index. With B it shares only x₂ – that measures the main effect.</figcaption>
+</figure>
+
+<p>With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">f_0</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi></mrow><annotation encoding="application/x-tex">V</annotation></semantics></math>, mean and variance of all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>n</mi></mrow><annotation encoding="application/x-tex">2n</annotation></semantics></math> values of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>A</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(A)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>B</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(B)</annotation></semantics></math>, the code computes</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>V</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></munderover><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">(</mo><mi>B</mi><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mn>0</mn></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>A</mi></mrow><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><mi>f</mi><mo stretchy="false">(</mo><mi>A</mi><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="1em"/><mtext>(Saltelli 2010)</mtext><mo>,</mo></mrow><annotation encoding="application/x-tex">\hat V_i = \frac1n \sum_{j=1}^{n} \bigl(f(B)_j - f_0\bigr)\bigl(f(A_B^{(i)})_j - f(A)_j\bigr) \quad \text{(Saltelli 2010)},</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>V</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>T</mi><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn><mi>n</mi></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></munderover><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">(</mo><mi>A</mi><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>A</mi></mrow><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>j</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mspace width="1em"/><mtext>(Jansen 1999)</mtext><mo>,</mo><mspace width="2em"/><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mover accent="true"><mrow><mi>V</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi></mrow></msub><mo>/</mo><mi>V</mi><mo>,</mo><mspace width="1em"/><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>T</mi><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mover accent="true"><mrow><mi>V</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>T</mi><mi>i</mi></mrow></msub><mo>/</mo><mi>V</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">\hat V_{Ti} = \frac{1}{2n} \sum_{j=1}^{n} \bigl(f(A)_j - f(A_B^{(i)})_j\bigr)^2 \quad \text{(Jansen 1999)}, \qquad \hat S_i = \hat V_i / V, \quad \hat S_{Ti} = \hat V_{Ti} / V .</annotation></semantics></math></p>
+<p>Why this works: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>A</mi></mrow><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(A_B^{(i)})</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>B</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(B)</annotation></semantics></math> share <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math> and nothing else; their product therefore measures the covariance through <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math>, which is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">V_i</annotation></semantics></math>. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>A</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(A)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>A</mi></mrow><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(A_B^{(i)})</annotation></semantics></math> differ only in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math>; half the mean squared difference is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><mi>V</mi><mo stretchy="false">(</mo><mi>Y</mi><mo>∣</mo><msub><mrow><mi>X</mi></mrow><mrow><mo>∼</mo><mi>i</mi></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">\mathrm{E}[V(Y \mid X_{\sim i})]</annotation></semantics></math>.</p>
+<p>Second order additionally needs <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>B</mi></mrow><mrow><mi>A</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup></mrow><annotation encoding="application/x-tex">B_A^{(i)}</annotation></semantics></math> (all columns from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math>, column <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math>). <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>B</mi></mrow><mrow><mi>A</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(B_A^{(i)})</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>A</mi></mrow><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>j</mi><mo stretchy="false">)</mo></mrow></msubsup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(A_B^{(j)})</annotation></semantics></math> share exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math> (from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math>) and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_j</annotation></semantics></math> (from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math>). That yields the "closed" share of both together, from which the two main effects are subtracted (Saltelli 2002):</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msubsup><mrow><mover accent="true"><mrow><mi>V</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi><mi>j</mi></mrow><mrow><mi>c</mi></mrow></msubsup><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>B</mi></mrow><mrow><mi>A</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mn>0</mn></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>A</mi></mrow><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>j</mi><mo stretchy="false">)</mo></mrow></msubsup><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mn>0</mn></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mfrac><mrow><msubsup><mrow><mover accent="true"><mrow><mi>V</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi><mi>j</mi></mrow><mrow><mi>c</mi></mrow></msubsup></mrow><mrow><mi>V</mi></mrow></mfrac><mo>−</mo><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi></mrow></msub><mo>−</mo><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>j</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\hat V^c_{ij} = \frac1n \sum_{k} \bigl(f(B_A^{(i)})_k - f_0\bigr)\bigl(f(A_B^{(j)})_k - f_0\bigr), \qquad \hat S_{ij} = \frac{\hat V^c_{ij}}{V} - \hat S_i - \hat S_j .</annotation></semantics></math></p>
+<p>The cost is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>d</mi><mo>+</mo><mn>2</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>n</mi></mrow><annotation encoding="application/x-tex">(d+2)\,n</annotation></semantics></math> function calls without and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mi>d</mi><mo>+</mo><mn>2</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>n</mi></mrow><annotation encoding="application/x-tex">(2d+2)\,n</annotation></semantics></math> with second order. The estimation error falls with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><msqrt><mi>n</mi></msqrt></mrow><annotation encoding="application/x-tex">1/\sqrt n</annotation></semantics></math>.</p>
+
+<h3>Pseudocode – <code>SobolAnalyzer.analyze(f, lo, hi, n, seed, secondOrder)</code></h3>
+<pre class="pseudo"><b>check</b> hi_i &gt; lo_i for all i,  n ≥ 64                 <i>otherwise exception</i>
+rnd ← Random(seed)
+A ← n rows uniform in [lo, hi];   B ← likewise
+fA ← f(A);  fB ← f(B)
+<b>for</b> i ← 1 <b>to</b> d:
+    fAB[i] ← f(A with column i from B)
+    <b>if</b> secondOrder:  fBA[i] ← f(B with column i from A)
+<b>for</b> each output o:
+    f0 ← mean over fA and fB (2n values);   V ← variance over them (divisor 2n)
+    <b>for</b> i:
+        Vi  ← Σ_j (fB_j − f0) · (fAB[i]_j − fA_j) / n           <i>CENTRED</i>
+        VTi ← Σ_j (fA_j − fAB[i]_j)² / (2n)
+        S1[i] ← Vi / V;   ST[i] ← VTi / V                         <i>NaN if V &lt; 10⁻³⁰⁰</i>
+    <b>if</b> secondOrder:
+        <b>for</b> i &lt; j:
+            Vc ← Σ_k (fBA[i]_k − f0) · (fAB[j]_k − f0) / n
+            S2[i][j] ← S2[j][i] ← Vc / V − S1[i] − S1[j]
+<b>return</b> (S1, ST, S2, V, number of calls)</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/analysis/SobolAnalyzer.java</code>. <code>f</code> is called sequentially; a surrogate model is passed as its own copy (<code>m.copy()::predict</code>).</p>
+
+<h2 id="zentrierung">Why centring is necessary</h2>
+<p>The estimator for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">V_i</annotation></semantics></math> is unbiased even without subtracting <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">f_0</annotation></semantics></math>, since <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><mi>f</mi><mo stretchy="false">(</mo><msubsup><mrow><mi>A</mi></mrow><mrow><mi>B</mi></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo stretchy="false">)</mo><mo>−</mo><mi>f</mi><mo stretchy="false">(</mo><mi>A</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\mathrm{E}[f(A_B^{(i)}) - f(A)] = 0</annotation></semantics></math>. Its <b>variance</b>, however, depends on it: without centring, every summand is weighted with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>B</mi><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f(B)_j</annotation></semantics></math> instead of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>B</mi><msub><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">f(B)_j - f_0</annotation></semantics></math>, and the Monte Carlo noise grows with the ratio <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><msub><mrow><mi>f</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>|</mo><mo>/</mo><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">|f_0|/\sigma</annotation></semantics></math>. For the efficiency of a compressor the mean is around 0.87 at a spread of 0.02 – a ratio above 40. According to the source comment, the uncentred estimator gave <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>≈</mo><mo>−</mo><mn>0.55</mn></mrow><annotation encoding="application/x-tex">S_1 \approx -0.55</annotation></semantics></math> there instead of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>+</mo><mn>0.03</mn></mrow><annotation encoding="application/x-tex">+0.03</annotation></semantics></math>. Centred, the noise depends on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">\sigma</annotation></semantics></math> only. Jansen's estimator for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi></mrow></msub></mrow><annotation encoding="application/x-tex">S_T</annotation></semantics></math> works with differences and was never affected.</p>
+<div class="hinweis"><b>Framework convention:</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">S_{ij}</annotation></semantics></math> are estimated centred, with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">f_0</annotation></semantics></math> from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>∪</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">A \cup B</annotation></semantics></math>. Small negative values are estimation noise and are not clipped. The sample is uniformly random over the given ranges, not quasi-random. The inputs are assumed independent.</div>
+
+<h2 id="permutation">Permutation importance</h2>
+<p>The Sobol analysis evaluates the model on a box, also where there never were data. Permutation importance stays with the data: one input column is shuffled row-wise – its distribution is preserved, its relation to the target destroyed – and the increase of the error is measured:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>I</mi></mrow><mrow><mi>o</mi><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mrow><mtext>MSE</mtext></mrow><mrow><mi>o</mi></mrow></msub><mo stretchy="false">(</mo><mtext>column </mtext><mi>i</mi><mtext> shuffled</mtext><mo stretchy="false">)</mo><mo>−</mo><msub><mrow><mtext>MSE</mtext></mrow><mrow><mi>o</mi></mrow></msub><mo stretchy="false">(</mo><mtext>baseline</mtext><mo stretchy="false">)</mo></mrow><mrow><mi>V</mi><mo stretchy="false">(</mo><msub><mrow><mi>t</mi></mrow><mrow><mi>o</mi></mrow></msub><mo stretchy="false">)</mo></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">I_{oi} = \frac{\text{MSE}_o(\text{column } i \text{ shuffled}) - \text{MSE}_o(\text{baseline})}{V(t_o)} .</annotation></semantics></math></p>
+<p>Dividing by the target variance puts <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi></mrow><annotation encoding="application/x-tex">I</annotation></semantics></math> on the same scale as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1 - R^2</annotation></semantics></math> and the Sobol indices. For classification <code>accuracyDrop</code> measures the drop in accuracy. Where Sobol indices and permutation importance agree, the statement is robust; permutation, however, does not separate main effect and interaction.</p>
+<pre class="pseudo">baseline ← MSE per output of f on the data
+V ← variance of the targets per output           <i>divisor n</i>
+<b>for</b> each column i:
+    X' ← data, column i Fisher-Yates shuffled with Random(seed + i)
+    I[o][i] ← (MSE_o(f on X') − baseline_o) / V_o   <i>NaN for a constant target</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/analysis/PermutationImportance.java</code>.</p>
+
+<h2 id="daten">Model-free from the data: binned main effects</h2>
+<p><code>DataSensitivity.binnedFirstOrder</code> estimates <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mi>V</mi><mo stretchy="false">(</mo><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><mi>Y</mi><mo>∣</mo><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">]</mo><mo stretchy="false">)</mo><mo>/</mo><mi>V</mi><mo stretchy="false">(</mo><mi>Y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">S_i = V(\mathrm{E}[Y \mid X_i])/V(Y)</annotation></semantics></math> without a model. The data are sorted by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">X_i</annotation></semantics></math> and split into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> equally populated bins; the mean of the target per bin estimates <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><mi>Y</mi><mo>∣</mo><msub><mrow><mi>X</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">\mathrm{E}[Y \mid X_i]</annotation></semantics></math> in that range, and the spread of the bin means estimates <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">V_i</annotation></semantics></math>. With the sums of squares between and within the bins</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>SSB</mtext><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>b</mi></mrow></munder><msub><mrow><mi>n</mi></mrow><mrow><mi>b</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>y</mi></mrow></mrow><mrow><mi>b</mi></mrow></msub><mo>−</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>y</mi></mrow><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>,</mo><mspace width="2em"/><mtext>SSW</mtext><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>b</mi></mrow></munder><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi><mo>∈</mo><mi>b</mi></mrow></munder><mo stretchy="false">(</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>y</mi></mrow></mrow><mrow><mi>b</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>,</mo><mspace width="2em"/><mtext>SST</mtext><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><mo stretchy="false">(</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>y</mi></mrow><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\text{SSB} = \sum_b n_b (\bar y_b - \bar y)^2, \qquad \text{SSW} = \sum_b \sum_{k \in b} (y_k - \bar y_b)^2, \qquad \text{SST} = \sum_k (y_k - \bar y)^2</annotation></semantics></math></p>
+<p>SSB/SST would be too large: pure noise also produces differing bin means. From the analysis of variance, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><mtext>SSB</mtext><mo stretchy="false">]</mo><mo>=</mo><mi>n</mi><mspace width="0.1667em"/><msub><mrow><mi>V</mi></mrow><mrow><mtext>between</mtext></mrow></msub><mo>+</mo><mo stretchy="false">(</mo><mi>M</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><msubsup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mtext>within</mtext></mrow><mrow><mn>2</mn></mrow></msubsup></mrow><annotation encoding="application/x-tex">\mathrm{E}[\text{SSB}] = n\,V_\text{between} + (M-1)\,\sigma^2_\text{within}</annotation></semantics></math>; with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mtext>within</mtext></mrow><mrow><mn>2</mn></mrow></msubsup><mo>≈</mo><mtext>SSW</mtext><mo>/</mo><mo stretchy="false">(</mo><mi>n</mi><mo>−</mo><mi>M</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\sigma^2_\text{within} \approx \text{SSW}/(n-M)</annotation></semantics></math> the corrected estimator follows:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><mtext>SSB</mtext><mo>−</mo><mo stretchy="false">(</mo><mi>M</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><mtext>SSW</mtext><mo>/</mo><mo stretchy="false">(</mo><mi>n</mi><mo>−</mo><mi>M</mi><mo stretchy="false">)</mo></mrow><mrow><mtext>SST</mtext></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">\hat S_i = \frac{\text{SSB} - (M-1)\,\text{SSW}/(n-M)}{\text{SST}} .</annotation></semantics></math></p>
+<p>It captures arbitrary, also non-monotonic main effects. <code>spearman</code> adds the rank correlation (Pearson correlation of the ranks, average ranks for ties) as a hint at direction and monotonicity – blind to a parabola around an optimum, which yields <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ρ</mi><mo>≈</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\rho \approx 0</annotation></semantics></math> despite a large influence. That is why both measures belong together.</p>
+<div class="hinweis"><b>Framework convention:</b> At least 16 rows. The automatic number of bins is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><msqrt><mi>n</mi></msqrt><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{round}(\sqrt n)</annotation></semantics></math>, clamped to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>4</mn><mo>,</mo><mn>50</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[4, 50]</annotation></semantics></math> and at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2</mn><mo>,</mo><mo stretchy="false">⌊</mo><mi>n</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(2, \lfloor n/4 \rfloor)</annotation></semantics></math> – 10 bins for 100 rows, 6 for 40 rows, 50 for 4000 rows. A number of bins given explicitly is capped at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n/2</annotation></semantics></math>. The indices apply to the distribution in which the data are given, including their correlations.</div>
+
+<h2 id="beispiel">Worked examples with known solutions</h2>
+<p><b>Linear.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><mn>2</mn><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">f = x_1 + 2x_2</annotation></semantics></math> on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><msup><mrow><mo stretchy="false">]</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">[0, 1]^2</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>12</mn></mrow></mfrac></mstyle><mo>+</mo><mstyle displaystyle="false"><mfrac><mrow><mn>4</mn></mrow><mrow><mn>12</mn></mrow></mfrac></mstyle><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>5</mn></mrow><mrow><mn>12</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">V = \tfrac{1}{12} + \tfrac{4}{12} = \tfrac{5}{12}</annotation></semantics></math>, so <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0.2</mn></mrow><annotation encoding="application/x-tex">S_1 = 0.2</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0.8</mn></mrow><annotation encoding="application/x-tex">S_2 = 0.8</annotation></semantics></math>, no interaction, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi></mrow></msub><mo>=</mo><mi>S</mi></mrow><annotation encoding="application/x-tex">S_T = S</annotation></semantics></math>. <code>SobolAnalyzer.analyze</code> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>8192</mn></mrow><annotation encoding="application/x-tex">n = 8192</annotation></semantics></math>, seed 1, second order: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0.200</mn></mrow><annotation encoding="application/x-tex">\hat S_1 = 0.200</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0.787</mn></mrow><annotation encoding="application/x-tex">\hat S_2 = 0.787</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>T</mi><mn>1</mn></mrow></msub><mo>=</mo><mn>0.192</mn></mrow><annotation encoding="application/x-tex">\hat S_{T1} = 0.192</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>T</mi><mn>2</mn></mrow></msub><mo>=</mo><mn>0.780</mn></mrow><annotation encoding="application/x-tex">\hat S_{T2} = 0.780</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>12</mn></mrow></msub><mo>=</mo><mo>−</mo><mn>0.004</mn></mrow><annotation encoding="application/x-tex">\hat S_{12} = -0.004</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mn>0.426</mn></mrow><annotation encoding="application/x-tex">V = 0.426</annotation></semantics></math> (exactly 0.4167), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6</mn><mo>⋅</mo><mn>8192</mn><mo>=</mo><mn>49,152</mn></mrow><annotation encoding="application/x-tex">6 \cdot 8192 = 49{,}152</annotation></semantics></math> calls.</p>
+<p><b>Product.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">f = x_1 x_2</annotation></semantics></math> on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><msup><mrow><mo stretchy="false">]</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">[0, 1]^2</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>9</mn></mrow></mfrac></mstyle><mo>−</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>16</mn></mrow></mfrac></mstyle><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>7</mn></mrow><mrow><mn>144</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">V = \tfrac19 - \tfrac1{16} = \tfrac{7}{144}</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mi>V</mi><mo stretchy="false">(</mo><mstyle displaystyle="false"><mfrac><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">)</mo><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>48</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">V_1 = V(\tfrac{x_1}{2}) = \tfrac{1}{48}</annotation></semantics></math>, so <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>S</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>3</mn></mrow><mrow><mn>7</mn></mrow></mfrac></mstyle><mo>=</mo><mn>0.429</mn></mrow><annotation encoding="application/x-tex">S_1 = S_2 = \tfrac37 = 0.429</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>12</mn></mrow></msub><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>7</mn></mrow></mfrac></mstyle><mo>=</mo><mn>0.143</mn></mrow><annotation encoding="application/x-tex">S_{12} = \tfrac17 = 0.143</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi></mrow></msub><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>4</mn></mrow><mrow><mn>7</mn></mrow></mfrac></mstyle><mo>=</mo><mn>0.571</mn></mrow><annotation encoding="application/x-tex">S_{T} = \tfrac47 = 0.571</annotation></semantics></math>. Estimated: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0.434</mn></mrow><annotation encoding="application/x-tex">\hat S_1 = 0.434</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0.435</mn></mrow><annotation encoding="application/x-tex">\hat S_2 = 0.435</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>12</mn></mrow></msub><mo>=</mo><mn>0.125</mn></mrow><annotation encoding="application/x-tex">\hat S_{12} = 0.125</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>T</mi><mn>1</mn></mrow></msub><mo>=</mo><mn>0.553</mn></mrow><annotation encoding="application/x-tex">\hat S_{T1} = 0.553</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>T</mi><mn>2</mn></mrow></msub><mo>=</mo><mn>0.573</mn></mrow><annotation encoding="application/x-tex">\hat S_{T2} = 0.573</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mn>0.869</mn></mrow><annotation encoding="application/x-tex">\sum \hat S_i = 0.869</annotation></semantics></math>, i.e. about 13 % interaction.</p>
+<p><b>Ishigami</b>, the usual touchstone: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><mn>7</mn><mspace width="0.1667em"/><msup><mi>sin</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>+</mo><mn>0.1</mn><mspace width="0.1667em"/><msubsup><mrow><mi>x</mi></mrow><mrow><mn>3</mn></mrow><mrow><mn>4</mn></mrow></msubsup><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">f = \sin x_1 + 7 \sin^2 x_2 + 0.1\, x_3^4 \sin x_1</annotation></semantics></math> on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mi mathvariant="normal">π</mi><mo>,</mo><mi mathvariant="normal">π</mi><msup><mrow><mo stretchy="false">]</mo></mrow><mrow><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">[-\pi, \pi]^3</annotation></semantics></math>. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_2</annotation></semantics></math> acts non-monotonically, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_3</annotation></semantics></math> only through its interaction with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_1</annotation></semantics></math>.</p>
+<table>
+  <tr><th>Quantity</th><th>exact</th><th>Sobol, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>16,384</mn></mrow><annotation encoding="application/x-tex">n = 16{,}384</annotation></semantics></math></th><th>binned from 4000 rows</th><th>Spearman</th></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_1</annotation></semantics></math></td><td>0.314</td><td>0.329</td><td>0.334</td><td>+0.454</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_2</annotation></semantics></math></td><td>0.442</td><td>0.448</td><td>0.454</td><td>+0.010</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_3</annotation></semantics></math></td><td>0</td><td>−0.005</td><td>0.000</td><td>−0.043</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_{T1}</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_{T2}</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_{T3}</annotation></semantics></math></td><td>0.558; 0.442; 0.244</td><td>0.570; 0.443; 0.246</td><td>–</td><td>–</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>13</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_{13}</annotation></semantics></math></td><td>0.244</td><td>0.234</td><td>–</td><td>–</td></tr>
+</table>
+<p>The table shows the division of labour: Spearman does not see <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_2</annotation></semantics></math> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>+</mo><mn>0.010</mn></mrow><annotation encoding="application/x-tex">+0.010</annotation></semantics></math> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0.44</mn></mrow><annotation encoding="application/x-tex">S_2 = 0.44</annotation></semantics></math>), the binned estimate does. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_3</annotation></semantics></math> has no main effect but a total index of 0.24 – an input one would consider irrelevant by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_1</annotation></semantics></math> alone. The Sobol values come from 131,072 calls (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mo>⋅</mo><mn>3</mn><mo>+</mo><mn>2</mn><mo stretchy="false">)</mo><mo>⋅</mo><mn>16,384</mn></mrow><annotation encoding="application/x-tex">(2 \cdot 3 + 2) \cdot 16{,}384</annotation></semantics></math>).</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>Sobol against Ishigami</b> (<code>TestMain</code> [11]): <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">a = 7</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">b = 0.1</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>16,384</mn></mrow><annotation encoding="application/x-tex">n = 16{,}384</annotation></semantics></math>, seed 7, with second order. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi></mrow></msub></mrow><annotation encoding="application/x-tex">S_T</annotation></semantics></math> of all three inputs within 0.05 of the analytical values, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>13</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_{13}</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>12</mn></mrow></msub></mrow><annotation encoding="application/x-tex">S_{12}</annotation></semantics></math> within 0.08.</li>
+  <li><b>Centring</b>: the same function shifted by +100 (mean far above the spread) must yield the same indices within the same tolerances. The run gave exactly the same rounded values.</li>
+  <li><b>Permutation</b>: Ishigami with a fourth, ineffective input, 800 rows: the importance of the dead input must be below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_2</annotation></semantics></math> must rank above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_3</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>I</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>&gt;</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">I_1 &gt; 0.1</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>I</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>&gt;</mo><mn>0.3</mn></mrow><annotation encoding="application/x-tex">I_2 &gt; 0.3</annotation></semantics></math>. Measured: 1.080, 0.879, 0.493, 0.0000.</li>
+  <li><b>Binned and Spearman</b> (<code>TestMain</code> [12]): 4000 Ishigami rows with a dead fourth input; the binned indices within 0.06 of the exact ones, the dead input within 0.06 of zero, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>&gt;</mo><mn>0.3</mn></mrow><annotation encoding="application/x-tex">\rho_1 &gt; 0.3</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>|</mo><mo>&lt;</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">|\rho_2| &lt; 0.1</annotation></semantics></math>.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Sobol presupposes independent, uniformly distributed inputs. If the inputs are in reality coupled – say speed and mass flow along an operating line –, the analysis evaluates the model in regions where it has never seen data, and the statement applies to the model, not to the machine.</li>
+  <li>The statements apply to the range given. Too wide a range queries the surrogate outside its training data.</li>
+  <li>Monte Carlo error <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∼</mo><mn>1</mn><mo>/</mo><msqrt><mi>n</mi></msqrt></mrow><annotation encoding="application/x-tex">\sim 1/\sqrt n</annotation></semantics></math>; in the linear example <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>S</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\hat S_2</annotation></semantics></math> deviates by 0.013 from the exact value at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>8192</mn></mrow><annotation encoding="application/x-tex">n = 8192</annotation></semantics></math> – indices of that order cannot be told apart from noise.</li>
+  <li>With coupled inputs permutation also creates unrealistic combinations, and it does not separate interactions.</li>
+  <li>The model-free estimate captures main effects only, measurement noise enters fully, and it applies only to the distribution of the data at hand.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>I. M. Sobol': Global sensitivity indices for nonlinear mathematical models and their Monte Carlo estimates. Mathematics and Computers in Simulation 55 (2001).</li>
+  <li>A. Saltelli: Making best use of model evaluations to compute sensitivity indices. Computer Physics Communications 145 (2002).</li>
+  <li>A. Saltelli, P. Annoni, I. Azzini, F. Campolongo, M. Ratto, S. Tarantola: Variance based sensitivity analysis of model output. Design and estimator for the total sensitivity index. Computer Physics Communications 181 (2010).</li>
+  <li>T. Ishigami, T. Homma: An importance quantification technique in uncertainty analysis for computer models. ISUMA 1990.</li>
+  <li>L. Breiman: Random Forests. Machine Learning 45 (2001).</li>
+  <li>E. Plischke, E. Borgonovo, C. L. Smith: Global sensitivity measures from given data. European Journal of Operational Research 226 (2013).</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Background to <a href="index.html#analysis">Sensitivity analysis</a> · Checks: <code>TestMain</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

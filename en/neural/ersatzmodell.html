@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surrogate model, ensemble and the .ennet format – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#core">The network</a>
+<a class="unterseite" href="netz.html">Network</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimisers</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Data, normalisation, metrics</a>
+<a class="unterseite" href="daten.html">Data and metrics</a>
+<a class="rubrik" href="index.html#model">Surrogate model, ensemble, storage</a>
+<a class="unterseite aktiv" href="ersatzmodell.html">Surrogate model</a>
+<a class="rubrik" href="index.html#search">Model search</a>
+<a class="unterseite" href="modellsuche.html">Model search</a>
+<a class="rubrik" href="index.html#analysis">Sensitivity analysis</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivity</a>
+<a class="rubrik" href="index.html#api">Interface for other applications</a>
+<a class="rubrik" href="index.html#ocr">Character recognition without Tesseract</a>
+<a class="unterseite" href="ocr.html">Glyph recognition</a>
+<a class="rubrik" href="index.html#seq">Sequences without alignment: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Beam search</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-neural</a> › Surrogate model, ensemble and the .ennet format – background</span><a class="sprachwahl" href="../../de/neural/ersatzmodell.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.model · de.envisionz.neural.io</div>
+  <h1>Surrogate model, ensemble and the .ennet format – background</h1>
+  <p class="unter">The computation behind <code>SurrogateModel</code>, <code>Ensemble</code> and <code>NetIO</code>: how network and normalisers become a function on raw physical values, what the spread of an ensemble measures and how a model is stored and read back bit for bit – with pseudocode following the source, a complete file example, checks and limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A trained network on its own is hardly usable as a map: it expects normalised inputs and returns normalised outputs. Whoever calls it in a cycle calculation would have to know with which mean and spread every column was normalised during training – and carry these numbers along. Forgotten or mixed-up normalisation is, according to the class description, the most frequent source of error with network surrogates.</p>
+<p>The <code>SurrogateModel</code> turns this into one unit: network, input and target normalisers and metadata belong together, are stored together and loaded together. <code>predict</code> takes raw physical values and returns raw physical values. On top sit the <code>Ensemble</code>, which averages several such models and reports their disagreement as a measure of uncertainty, and <code>NetIO</code>, which writes everything into a readable XML file with bit-exact weights.</p>
+
+<h2 id="kette">The evaluation chain</h2>
+<p>With input normaliser <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msup><mrow><mi>o</mi></mrow><mrow><mi>x</mi></mrow></msup><mo>,</mo><msup><mrow><mi>s</mi></mrow><mrow><mi>x</mi></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(o^x, s^x)</annotation></semantics></math>, target normaliser <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msup><mrow><mi>o</mi></mrow><mrow><mi>y</mi></mrow></msup><mo>,</mo><msup><mrow><mi>s</mi></mrow><mrow><mi>y</mi></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(o^y, s^y)</annotation></semantics></math> and the network function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>predict</mtext><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mrow><mi>s</mi></mrow><mrow><mi>y</mi></mrow></msup><mo>⊙</mo><mi>N</mi><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mfrac><mrow><mi>x</mi><mo>−</mo><msup><mrow><mi>o</mi></mrow><mrow><mi>x</mi></mrow></msup></mrow><mrow><msup><mrow><mi>s</mi></mrow><mrow><mi>x</mi></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo>+</mo><msup><mrow><mi>o</mi></mrow><mrow><mi>y</mi></mrow></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">\text{predict}(x) = s^y \odot N\!\left(\frac{x - o^x}{s^x}\right) + o^y,</annotation></semantics></math></p>
+<p>where division and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>⊙</mo></mrow><annotation encoding="application/x-tex">\odot</annotation></semantics></math> act column by column. Both normalisers are optional: if one is missing, nothing is computed in its place. Classification models (such as glyph recognition) have no target normaliser because their outputs are logits.</p>
+
+<figure>
+<svg viewBox="0 0 620 170" width="620" font-family="sans-serif" font-size="13">
+  <defs><marker id="pfeil-kette" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker></defs>
+  <rect x="10" y="30" width="90" height="56" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="55" y="54" fill="#1f5f8b" text-anchor="middle">raw value</text>
+  <text x="55" y="74" fill="#5b6475" text-anchor="middle">x</text>
+  <rect x="125" y="30" width="130" height="56" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="190" y="54" fill="#1f5f8b" text-anchor="middle">normalise</text>
+  <text x="190" y="74" fill="#5b6475" text-anchor="middle">(x − o) / s</text>
+  <rect x="280" y="30" width="80" height="56" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="320" y="54" fill="#1f5f8b" text-anchor="middle">network</text>
+  <text x="320" y="74" fill="#5b6475" text-anchor="middle">run</text>
+  <rect x="385" y="30" width="130" height="56" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="450" y="54" fill="#1f5f8b" text-anchor="middle">denormalise</text>
+  <text x="450" y="74" fill="#5b6475" text-anchor="middle">y · s + o</text>
+  <rect x="540" y="30" width="70" height="56" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="575" y="54" fill="#1f5f8b" text-anchor="middle">raw</text>
+  <text x="575" y="74" fill="#5b6475" text-anchor="middle">y</text>
+  <line x1="100" y1="58" x2="123" y2="58" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="255" y1="58" x2="278" y2="58" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="360" y1="58" x2="383" y2="58" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="515" y1="58" x2="538" y2="58" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <text x="55" y="106" fill="#9a6400" text-anchor="middle">14</text>
+  <text x="190" y="106" fill="#9a6400" text-anchor="middle">(14 − 10) / 4 = 1</text>
+  <text x="320" y="106" fill="#9a6400" text-anchor="middle">1 − 2.5 = −1.5</text>
+  <text x="450" y="106" fill="#9a6400" text-anchor="middle">−1.5 · 2 + 0.5</text>
+  <text x="575" y="106" fill="#9a6400" text-anchor="middle">−2.5</text>
+  <line x1="10" y1="126" x2="610" y2="126" stroke="#c9d1dc"/>
+  <line x1="10" y1="120" x2="10" y2="132" stroke="#c9d1dc"/><line x1="610" y1="120" x2="610" y2="132" stroke="#c9d1dc"/>
+  <text x="310" y="150" fill="#5b6475" text-anchor="middle">SurrogateModel.predict – all together in one .ennet file</text>
+  <text x="310" y="18" fill="#5b6475" text-anchor="middle">input normaliser (o = 10, s = 4) · network · target normaliser (o = 0.5, s = 2)</text>
+</svg>
+<figcaption>The chain of a surrogate model with the numbers of the file example below: the raw value 14 is normalised, evaluated by the network (here a single linear neuron with weight 1 and bias −2.5) and converted back into the unit of the target. Whoever calls only the network gets −1.5 instead of −2.5.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>SurrogateModel.predict(raw)</code></h3>
+<pre class="pseudo">x ← (inputNorm ≠ none) ? inputNorm.transform(raw) : raw
+y ← net.run(x)                                     <i>copy of the output</i>
+<b>return</b> (targetNorm ≠ none) ? targetNorm.inverse(y) : y</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/model/SurrogateModel.java</code>. At construction, <code>of(…)</code> checks that the dimension of each normaliser matches the number of network inputs or outputs.</p>
+<div class="hinweis"><b>Framework convention:</b> <code>copy()</code> copies the network deeply and the metadata shallowly; the normalisers are shared, they are immutable. <code>metadata()</code> returns the live table – whatever is entered is stored with the model. <code>ModelSearch.trainFinal</code> enters <code>created</code>, <code>spec</code>, <code>epochs_run</code>, <code>train_loss</code> and, if there is a validation set, <code>val_loss</code> and <code>r2_val</code>; glyph recognition enters <code>charset</code> and <code>raster_n</code>. Like the network, a surrogate model is not thread-safe: one copy per thread.</div>
+
+<h2 id="ensemble">Ensemble: mean and spread</h2>
+<p>Training the same network several times on the same data, only with different initial values, lands the runs in different, roughly equally good minima. Where data lie, they agree – the data force them to. Where there are no data, each network takes its own course. The <code>Ensemble</code> uses both: the mean smooths the response and averages out the chance of the initial values, the spread shows where the models disagree.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>y</mi></mrow></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>K</mi></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>K</mi></mrow></munderover><msubsup><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>,</mo><mspace width="2em"/><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msqrt><mfrac><mrow><mn>1</mn></mrow><mrow><mi>K</mi><mo>−</mo><mn>1</mn></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>K</mi></mrow></munderover><mo stretchy="false">(</mo><msubsup><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>y</mi></mrow></mrow><mrow><mi>j</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></msqrt><mo>.</mo></mrow><annotation encoding="application/x-tex">\bar y_j = \frac{1}{K}\sum_{k=1}^{K} y_j^{(k)}, \qquad s_j = \sqrt{\frac{1}{K-1}\sum_{k=1}^{K}\bigl(y_j^{(k)} - \bar y_j\bigr)^2}.</annotation></semantics></math></p>
+<p>The spread is a measure of <b>model uncertainty</b>: it grows outside the training range. The module documentation records this as measured – spread 0.02 to 0.04 inside the training range against 0.16 to 0.23 outside. A quantile band (three models with the pinball loss, see <a href="training.html#verluste">Training</a>) measures something else: the spread of the <b>data</b> themselves, such as measurement noise. The band does not reliably stay wide outside the data; the ensemble spread says nothing about the noise inside.</p>
+
+<h3>Pseudocode – <code>Ensemble.predictStd(raw)</code></h3>
+<pre class="pseudo">p[k] ← member[k].predict(raw)     <b>for</b> k ← 1 <b>to</b> K
+mean ← Σ p[k] / K                  <i>per output</i>
+<b>if</b> K &lt; 2:  <b>return</b> 0              <i>one model has no spread</i>
+<b>return</b> √( Σ (p[k] − mean)² / (K − 1) )</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/model/Ensemble.java</code>. The constructor requires at least one member and the same number of inputs and outputs for all members.</p>
+<div class="hinweis"><b>Framework convention:</b> The spread is the sample standard deviation (divisor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">K - 1</annotation></semantics></math>). The members <b>must</b> be trained with different seeds. With the same seed, the same data and no dropout all runs are bit-identical and the spread is exactly zero everywhere – the feature would look as if it worked while measuring nothing.</div>
+
+<h2 id="format">The .ennet format</h2>
+<p><code>NetIO</code> writes a surrogate model as XML in version 1. The layout:</p>
+<pre class="pseudo">&lt;ennet version="1"&gt;
+  &lt;meta&gt;  &lt;entry key="…" value="…"/&gt; …  &lt;/meta&gt;
+  &lt;net inputs="n"&gt;
+    &lt;layer in="…" out="…" activation="SILU" [dropout="0.2"]&gt;
+      &lt;weights encoding="base64-double-le"&gt;…&lt;/weights&gt;
+      &lt;bias encoding="base64-double-le"&gt;…&lt;/bias&gt;
+    &lt;/layer&gt; …
+  &lt;/net&gt;
+  &lt;normalizer role="input"  type="ZSCORE"&gt; &lt;offset&gt;…&lt;/offset&gt; &lt;scale&gt;…&lt;/scale&gt; &lt;/normalizer&gt;
+  &lt;normalizer role="target" type="ZSCORE"&gt; … &lt;/normalizer&gt;
+&lt;/ennet&gt;</pre>
+<p>Weights and biases are stored as Base64 over the raw bytes of the <code>double</code> values in little-endian order – every bit is preserved. The normaliser parameters are plain text written with <code>Double.toString</code>; its shortest decimal representation is read back by <code>Double.parseDouble</code> to exactly the same number. Together this gives a <b>bit-exact round trip</b>: a loaded model delivers the same bits as the stored one.</p>
+
+<figure>
+<svg viewBox="0 0 560 150" width="560" font-family="sans-serif" font-size="13">
+  <text x="10" y="24" fill="#5b6475">1.0 as double: 3FF0 0000 0000 0000 (hex), stored little-endian:</text>
+  <rect x="10" y="36" width="60" height="30" fill="#e8f0f6" stroke="#1f5f8b"/><text x="40" y="56" fill="#1f5f8b" text-anchor="middle" font-family="monospace">00</text>
+  <rect x="70" y="36" width="60" height="30" fill="#e8f0f6" stroke="#1f5f8b"/><text x="100" y="56" fill="#1f5f8b" text-anchor="middle" font-family="monospace">00</text>
+  <rect x="130" y="36" width="60" height="30" fill="#e8f0f6" stroke="#1f5f8b"/><text x="160" y="56" fill="#1f5f8b" text-anchor="middle" font-family="monospace">00</text>
+  <rect x="190" y="36" width="60" height="30" fill="#e8f0f6" stroke="#1f5f8b"/><text x="220" y="56" fill="#1f5f8b" text-anchor="middle" font-family="monospace">00</text>
+  <rect x="250" y="36" width="60" height="30" fill="#e8f0f6" stroke="#1f5f8b"/><text x="280" y="56" fill="#1f5f8b" text-anchor="middle" font-family="monospace">00</text>
+  <rect x="310" y="36" width="60" height="30" fill="#e8f0f6" stroke="#1f5f8b"/><text x="340" y="56" fill="#1f5f8b" text-anchor="middle" font-family="monospace">00</text>
+  <rect x="370" y="36" width="60" height="30" fill="#ffffff" stroke="#9a6400" stroke-width="2"/><text x="400" y="56" fill="#9a6400" text-anchor="middle" font-family="monospace">F0</text>
+  <rect x="430" y="36" width="60" height="30" fill="#ffffff" stroke="#9a6400" stroke-width="2"/><text x="460" y="56" fill="#9a6400" text-anchor="middle" font-family="monospace">3F</text>
+  <line x1="10" y1="76" x2="190" y2="76" stroke="#c9d1dc"/><line x1="190" y1="76" x2="370" y2="76" stroke="#c9d1dc" stroke-dasharray="3,2"/><line x1="370" y1="76" x2="490" y2="76" stroke="#c9d1dc"/>
+  <text x="100" y="96" fill="#1f5f8b" text-anchor="middle" font-family="monospace">AAAA</text>
+  <text x="280" y="96" fill="#1f5f8b" text-anchor="middle" font-family="monospace">AAAA</text>
+  <text x="430" y="96" fill="#9a6400" text-anchor="middle" font-family="monospace">8D8=</text>
+  <text x="10" y="126" fill="#5b6475">every 3 bytes become 4 Base64 characters; the rest is padded with "="</text>
+  <text x="10" y="144" fill="#5b6475">→ &lt;weights encoding="base64-double-le"&gt;AAAAAAAA8D8=&lt;/weights&gt;</text>
+</svg>
+<figcaption>How a weight gets into the file bit for bit: the eight bytes of the number 1.0 in little-endian order (least significant byte first) and their Base64 representation. Sign, exponent and mantissa sit in the last two bytes and are carried over unchanged.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>NetIO.load(path)</code></h3>
+<pre class="pseudo">reader ← StAX reader, DTD off, external entities off         <i>hardening against XXE</i>
+<b>for</b> each start element:
+    ennet      → <b>check</b> version = 1                          <i>otherwise exception</i>
+    entry      → meta[unescape(key)] ← unescape(value)
+    net        → inputs ← inputs
+    layer      → read in, out, activation, dropout (optional)
+                 weights ← decode(Base64, expected out·in values)
+                 bias    ← decode(Base64, expected out values)
+    normalizer → role input or target, otherwise exception; offset and scale as plain text
+    otherwise  → skip                                       <i>forward compatible</i>
+<b>check</b> inputs &gt; 0 and at least one layer
+net ← builder with seed 0: hidden layers, the last one as output
+<b>for</b> each layer k:  <b>check</b> in_k = out_(k−1);  copy weights and bias
+<b>return</b> SurrogateModel.of(net, inputNorm, targetNorm, meta)</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/io/NetIO.java</code>. Every read or format error, including an unknown activation, surfaces as an <code>IOException</code> naming the file.</p>
+
+<h2 id="kodierung">Characters outside ASCII</h2>
+<p>The metadata contain text – column names, units, the character set of a glyph model. The JDK's XML writer replaces a character with a question mark if it cannot be represented in the <b>platform encoding</b> – regardless of which encoding it is told to use for the file. The fault only shows on machines without a UTF-8 environment, and the same file is then damaged elsewhere; it was observed that the degree sign disappeared from the character set of a glyph model. <code>NetIO</code> therefore writes every character above 126 as an escape made of a backslash, "u" and four hexadecimal digits, and doubles a real backslash; reading converts both back. The file is thus pure ASCII and independent of the environment.</p>
+
+<h2 id="beispiel">Worked example</h2>
+<p>A model with one input and one output, the network a single linear neuron with weight 1.0 and bias −2.5, input normaliser ZSCORE with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi><mo>=</mo><mn>10</mn></mrow><annotation encoding="application/x-tex">o = 10</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">s = 4</annotation></semantics></math>, target normaliser MINMAX with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">o = 0.5</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">s = 2</annotation></semantics></math>, one metadata entry "einheit = °C". <code>NetIO.save</code> writes exactly this file:</p>
+<pre class="pseudo">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;ennet version="1"&gt;
+&lt;meta&gt;
+&lt;entry key="einheit" value="°C"/&gt;
+&lt;/meta&gt;
+&lt;net inputs="1"&gt;
+&lt;layer in="1" out="1" activation="LINEAR"&gt;
+&lt;weights encoding="base64-double-le"&gt;AAAAAAAA8D8=&lt;/weights&gt;
+&lt;bias encoding="base64-double-le"&gt;AAAAAAAABMA=&lt;/bias&gt;
+&lt;/layer&gt;
+&lt;/net&gt;
+&lt;normalizer role="input" type="ZSCORE"&gt;
+&lt;offset&gt;10.0&lt;/offset&gt;
+&lt;scale&gt;4.0&lt;/scale&gt;
+&lt;/normalizer&gt;
+&lt;normalizer role="target" type="MINMAX"&gt;
+&lt;offset&gt;0.5&lt;/offset&gt;
+&lt;scale&gt;2.0&lt;/scale&gt;
+&lt;/normalizer&gt;
+&lt;/ennet&gt;</pre>
+<p>As a <code>double</code>, −2.5 is C004 0000 0000 0000; read in reverse the bytes end in 04 C0, which gives "BMA=". The degree sign appears as the escape for U+00B0. <code>predict(14)</code> computes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>14</mn><mo>−</mo><mn>10</mn><mo stretchy="false">)</mo><mo>/</mo><mn>4</mn><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">(14 - 10)/4 = 1</annotation></semantics></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>⋅</mo><mn>1</mn><mo>−</mo><mn>2.5</mn><mo>=</mo><mo>−</mo><mn>1.5</mn></mrow><annotation encoding="application/x-tex">1 \cdot 1 - 2.5 = -1.5</annotation></semantics></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>1.5</mn><mo>⋅</mo><mn>2</mn><mo>+</mo><mn>0.5</mn><mo>=</mo><mo>−</mo><mn>2.5</mn></mrow><annotation encoding="application/x-tex">-1.5 \cdot 2 + 0.5 = -2.5</annotation></semantics></math> – checked with the stored and the loaded model.</p>
+<p>For the ensemble: three linear models <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">y = x</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mn>2</mn><mi>x</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">y = 2x + 1</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mn>3</mn><mi>x</mi><mo>+</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">y = 3x + 2</annotation></semantics></math> deliver the values 2, 5, 8 at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">x = 2</annotation></semantics></math>. Mean 5, sample standard deviation <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mo stretchy="false">(</mo><mn>9</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>9</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></msqrt><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\sqrt{(9 + 0 + 9)/2} = 3</annotation></semantics></math>.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>Round trip</b> (<code>TestMain</code> [7]): a 16–16 surrogate with both normalisers and metadata from <code>trainFinal</code> is saved and loaded; at 50 random raw inputs the largest difference of the predictions must be exactly 0.0, the metadata must be equal and contain <code>r2_val</code>. The file had 4723 bytes in the run.</li>
+  <li><b>Dropout rates</b> (<code>TestMain</code> [13]): after the round trip the first layer again has rate 0.2, the output layer 0, and the output is bit-identical.</li>
+  <li><b>Ensemble</b> (<code>Optimiererprobe</code>): mean 5 and sample standard deviation 3 as above, a single model has spread 0, <code>predictAll</code> agrees with <code>predict</code>, an empty ensemble and members with different input counts are rejected, <code>members()</code> returns a copy.</li>
+  <li><b>Loading from a directory</b> (<code>Optimiererprobe</code>): a library of self-written <code>.ennet</code> files including a broken one; the broken one yields <code>null</code> or <code>NaN</code> instead of an exception.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Only version 1 is read; any other version number is rejected. Unknown elements within version 1 are skipped.</li>
+  <li>The ensemble spread is not a calibrated confidence interval. With few members it is itself uncertain, and it only captures differences arising from different initial values.</li>
+  <li>A surrogate model does not know where its training data lay. It keeps computing outside without warning; the ensemble spread is the only built-in hint.</li>
+  <li>The file is not compressed. For the usual network sizes this is irrelevant.</li>
+  <li>Not thread-safe; <code>copy()</code> per thread.</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Background to <a href="index.html#model">Surrogate model, ensemble, storage</a> · Checks: <code>TestMain</code>, <code>Optimiererprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signals and WAV – representation, quantisation, file layout – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag aktiv" href="index.html">framework-audiometrik</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#signale">Signals</a>
+<a class="rubrik" href="index.html#wav">WAV</a>
+<a class="unterseite aktiv" href="wav.html">Signals and WAV</a>
+<a class="rubrik" href="index.html#spektren">Spectra, windows and hearing model</a>
+<a class="unterseite" href="fenster.html">Spectrum and windows</a>
+<a class="unterseite" href="gehoermodell.html">Hearing model</a>
+<a class="rubrik" href="index.html#ausrichtung">Alignment</a>
+<a class="unterseite" href="ausrichtung.html">Background</a>
+<a class="rubrik" href="index.html#masse">The measures</a>
+<a class="unterseite" href="masse.html">Time and spectral measures</a>
+<a class="unterseite" href="nmr.html">NMR</a>
+<a class="rubrik" href="index.html#messstrecke">Measurement chain and report</a>
+<a class="unterseite" href="messstrecke.html">Background</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-audiometrik</a> › Signals and WAV – representation, quantisation, file layout</span><a class="sprachwahl" href="../../de/audiometrik/wav.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-audiometrik · envisionz.audiometrik</div>
+  <h1>Signals and WAV – representation, quantisation, file layout</h1>
+  <p class="unter">The computation behind <code>Audiosignal</code>, <code>Ganzsignal</code>, <code>Wavleser</code>, <code>Wavschreiber</code> and <code>Wavformat</code>: how a sample is converted between file, integer and floating point, how a RIFF/WAVE file is laid out, what “bit-exact” means, pseudocode following the source, how it is tested and where the limits are.</p>
+</header>
+
+<h2 id="problem">What this is about</h2>
+<p>A digital audio signal is a sequence of numbers: one sample per channel at fixed time intervals, at 48 kHz that is 48,000 values per second and channel. In a file these values are stored as <b>integers</b> of fixed word length (8, 16, 24 or 32 bit) or as <b>floating-point numbers</b> (32 or 64 bit). The measurement chain, on the other hand, wants to compute with a single representation independent of the file, so that a signal-to-noise ratio does not depend on whether the reference is a 16-bit file and the test signal a 24-bit file.</p>
+<p>The module therefore keeps two forms side by side:</p>
+<ul>
+  <li><b><code>Audiosignal</code></b> – one <code>double</code> array per channel in the range −1…+1. All measures, the alignment and the spectra work on it.</li>
+  <li><b><code>Ganzsignal</code></b> – one <code>int</code> array per channel with the raw values of the file and the word length. This is the form in which a lossless encoder sees its input, and the only one in which “bit-exact” can be taken literally.</li>
+</ul>
+<p><code>Wavleser</code> and <code>Wavschreiber</code> mediate between both and the file. They read and write RIFF/WAVE directly, without a third-party library and without <code>javax.sound</code>.</p>
+
+<h2 id="skalierung">Integer and floating point</h2>
+<p>An integer with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> bits in two's complement covers the values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-2^{b-1}</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{b-1}-1</annotation></semantics></math>. The conversion to the range −1…+1 divides by the power of two <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">V = 2^{b-1}</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>=</mo><mfrac><mrow><mi>k</mi></mrow><mrow><mi>V</mi></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>V</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>∈</mo><mo stretchy="false">{</mo><mo>−</mo><mi>V</mi><mo>,</mo><mo>…</mo><mo>,</mo><mi>V</mi><mo>−</mo><mn>1</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">x = \frac{k}{V}, \qquad V = 2^{b-1}, \qquad k \in \{-V, \dots, V-1\}</annotation></semantics></math></p>
+<p>The range is therefore <b>asymmetric</b>: −1 is exactly representable, +1 is not. The largest positive value is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><mn>1</mn><mo>/</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">1 - 1/V</annotation></semantics></math>, for 16 bit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32767</mn><mo>/</mo><mn>32768</mn><mo>≈</mo><mn>0.99997</mn></mrow><annotation encoding="application/x-tex">32767/32768 \approx 0.99997</annotation></semantics></math>. The opposite direction rounds to the nearest integer and clamps to the representable range:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>k</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mi>V</mi><mo>−</mo><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mo>−</mo><mi>V</mi><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>x</mi><mo>⋅</mo><mi>V</mi><mo stretchy="false">)</mo><mo fence="true" stretchy="true">)</mo></mrow><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">k = \min\left(V-1,\ \max\left(-V,\ \operatorname{round}(x \cdot V)\right)\right)</annotation></semantics></math></p>
+<p>As long as nothing is clamped, the error of a round trip is at most half a quantisation step:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo>|</mo><mi>x</mi><mo>−</mo><mi>k</mi><mo>/</mo><mi>V</mi><mo>|</mo><mo>≤</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn><mi>V</mi></mrow></mfrac><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mi>b</mi></mrow></msup></mrow><annotation encoding="application/x-tex">|x - k/V| \le \frac{1}{2V} = 2^{-b}</annotation></semantics></math></p>
+<p>For 16 bit that is about <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.5</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.5 \cdot 10^{-5}</annotation></semantics></math>, for 24 bit about <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">6 \cdot 10^{-8}</annotation></semantics></math>. This is exactly the bound that <code>Wavprobe</code> checks.</p>
+<div class="hinweis"><b>Convention in the framework:</b> reader, writer and <code>Ganzsignal.alsAudiosignal()</code> all use the same power of two <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{b-1}</annotation></semantics></math>. The writer does <b>not</b> scale by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{b-1}-1</annotation></semantics></math>. The source code notes that mixing both factors produces a systematic level error of about one quantisation step. The price of the uniform power of two: +1.0 is clamped to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">V-1</annotation></semantics></math> on writing and comes back as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><mn>1</mn><mo>/</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">1 - 1/V</annotation></semantics></math>.</div>
+
+<h3>The 8-bit peculiarity</h3>
+<p>WAV stores 8-bit values, as the only word length, <b>unsigned</b> with the zero point at 128. The reader subtracts 128 before dividing by 128; the writer adds 128. From 16 bit upwards the values are signed and stored with the least significant byte first (little endian).</p>
+<table>
+  <tr><th>Value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></th><th>16 bit: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math></th><th>read back</th><th>8 bit: byte in the file</th></tr>
+  <tr><td>0</td><td>0</td><td>0</td><td>128</td></tr>
+  <tr><td>0.5</td><td>16,384</td><td>0.5</td><td>192</td></tr>
+  <tr><td>0.3</td><td>9,830</td><td>0.29998779…</td><td>–</td></tr>
+  <tr><td>1.0</td><td>32,767 (clamped)</td><td>0.99996948…</td><td>255 (clamped)</td></tr>
+  <tr><td>−1.0</td><td>−32,768</td><td>−1.0</td><td>0</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-5}</annotation></semantics></math></td><td>0</td><td>0</td><td>–</td></tr>
+</table>
+<p class="quelle">Recomputed with <code>Wavschreiber.alsBytes</code> and <code>Wavleser.lies(byte[])</code>.</p>
+
+<h3>Floating point</h3>
+<p>With IEEE floating point (format type 3) nothing is scaled: the value in the file is the value in the <code>Audiosignal</code>. 32 bit are read via <code>Float.intBitsToFloat</code>, 64 bit via <code>Double.longBitsToDouble</code>, both little endian. Values outside −1…+1 are preserved – a floating-point file may exceed full scale without anything being cut off. When writing with 32 bit, only the rounding from <code>double</code> to <code>float</code> is lost.</p>
+
+<h2 id="riff">The layout of a WAV file</h2>
+<p>A WAV file is a RIFF container: a header consisting of the tag <code>RIFF</code>, the remaining length and the tag <code>WAVE</code>, followed by a sequence of <b>chunks</b>. Each chunk starts with four characters of type and four bytes of length; the length counts only the content. Chunks of odd length are padded to even length with one byte. For reading, two chunks matter: <code>fmt </code> describes the format, <code>data</code> contains the samples. Everything else – metadata, markers, extra information from recording software – is skipped.</p>
+
+<figure>
+<svg viewBox="0 0 600 236" width="600" font-family="sans-serif" font-size="13">
+  <text x="0" y="14" fill="#5b6475" font-size="11">Byte 0</text>
+  <text x="100" y="14" fill="#5b6475" font-size="11">4</text>
+  <text x="200" y="14" fill="#5b6475" font-size="11">8</text>
+  <text x="300" y="14" fill="#5b6475" font-size="11">12</text>
+  <text x="400" y="14" fill="#5b6475" font-size="11">16</text>
+  <rect x="0" y="20" width="100" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="100" y="20" width="100" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="200" y="20" width="100" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="300" y="20" width="100" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="400" y="20" width="100" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="50" y="40" fill="#1f5f8b" text-anchor="middle" font-family="monospace">RIFF</text>
+  <text x="150" y="40" fill="#1f5f8b" text-anchor="middle">rest length</text>
+  <text x="250" y="40" fill="#1f5f8b" text-anchor="middle" font-family="monospace">WAVE</text>
+  <text x="350" y="40" fill="#1f5f8b" text-anchor="middle" font-family="monospace">fmt</text>
+  <text x="450" y="40" fill="#1f5f8b" text-anchor="middle">length</text>
+  <text x="150" y="66" fill="#5b6475" text-anchor="middle" font-size="12">36 + N</text>
+  <text x="450" y="66" fill="#5b6475" text-anchor="middle" font-size="12">16</text>
+  <text x="0" y="92" fill="#5b6475" font-size="11">20</text>
+  <text x="50" y="92" fill="#5b6475" font-size="11">22</text>
+  <text x="100" y="92" fill="#5b6475" font-size="11">24</text>
+  <text x="200" y="92" fill="#5b6475" font-size="11">28</text>
+  <text x="300" y="92" fill="#5b6475" font-size="11">32</text>
+  <text x="350" y="92" fill="#5b6475" font-size="11">34</text>
+  <rect x="0" y="98" width="50" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="50" y="98" width="50" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="100" y="98" width="100" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="200" y="98" width="100" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="300" y="98" width="50" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="350" y="98" width="50" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="25" y="118" fill="#1f5f8b" text-anchor="middle" font-size="12">type</text>
+  <text x="75" y="118" fill="#1f5f8b" text-anchor="middle" font-size="12">chan.</text>
+  <text x="150" y="118" fill="#1f5f8b" text-anchor="middle">sample rate</text>
+  <text x="250" y="118" fill="#1f5f8b" text-anchor="middle">bytes/s</text>
+  <text x="325" y="118" fill="#1f5f8b" text-anchor="middle" font-size="12">block</text>
+  <text x="375" y="118" fill="#1f5f8b" text-anchor="middle" font-size="12">bits</text>
+  <text x="25" y="144" fill="#5b6475" text-anchor="middle" font-size="12">1</text>
+  <text x="75" y="144" fill="#5b6475" text-anchor="middle" font-size="12">1</text>
+  <text x="150" y="144" fill="#5b6475" text-anchor="middle" font-size="12">48000</text>
+  <text x="250" y="144" fill="#5b6475" text-anchor="middle" font-size="12">96000</text>
+  <text x="325" y="144" fill="#5b6475" text-anchor="middle" font-size="12">2</text>
+  <text x="375" y="144" fill="#5b6475" text-anchor="middle" font-size="12">16</text>
+  <text x="412" y="118" fill="#9a6400" font-size="12">fmt content, 16 bytes</text>
+  <text x="0" y="170" fill="#5b6475" font-size="11">36</text>
+  <text x="100" y="170" fill="#5b6475" font-size="11">40</text>
+  <text x="200" y="170" fill="#5b6475" font-size="11">44</text>
+  <rect x="0" y="176" width="100" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="100" y="176" width="100" height="30" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="200" y="176" width="300" height="30" fill="#ffffff" stroke="#1f5f8b" stroke-dasharray="5 3"/>
+  <text x="50" y="196" fill="#1f5f8b" text-anchor="middle" font-family="monospace">data</text>
+  <text x="150" y="196" fill="#1f5f8b" text-anchor="middle">length N</text>
+  <text x="350" y="196" fill="#1f5f8b" text-anchor="middle">samples, interleaved</text>
+  <text x="150" y="222" fill="#5b6475" text-anchor="middle" font-size="12">4</text>
+  <text x="350" y="222" fill="#5b6475" text-anchor="middle" font-size="12">00 20 · 00 E0</text>
+</svg>
+<figcaption>The 44-byte header as <code>Wavschreiber</code> writes it, with the values of a mono 16-bit file at 48 kHz containing the two samples 0.25 and −0.25 (grey). The four-character tags have a blue background; all numbers are little endian.</figcaption>
+</figure>
+
+<p>The fields of the <code>fmt </code> chunk:</p>
+<table>
+  <tr><th>Offset in chunk</th><th>Size</th><th>Content</th><th>read as</th></tr>
+  <tr><td>0</td><td>2 bytes</td><td>format type: 1 = PCM, 3 = IEEE floating point, 0xFFFE = extensible</td><td><code>Wavformat.art()</code></td></tr>
+  <tr><td>2</td><td>2 bytes</td><td>number of channels</td><td><code>kanaele()</code></td></tr>
+  <tr><td>4</td><td>4 bytes</td><td>sample rate in Hz</td><td><code>abtastrate()</code></td></tr>
+  <tr><td>8</td><td>4 bytes</td><td>bytes per second = rate · block align</td><td>not evaluated</td></tr>
+  <tr><td>12</td><td>2 bytes</td><td>block align = channels · bytes per sample</td><td>not evaluated</td></tr>
+  <tr><td>14</td><td>2 bytes</td><td>bits per sample (container width)</td><td><code>bitsJeWert()</code></td></tr>
+  <tr><td>18</td><td>2 bytes</td><td>extensible only: valid bits per sample</td><td>read, not used</td></tr>
+  <tr><td>24</td><td>2 bytes</td><td>extensible only: first field of the format GUID = true format type</td><td>replaces the type</td></tr>
+</table>
+<p>With <code>WAVE_FORMAT_EXTENSIBLE</code> (type 0xFFFE) the chunk must be at least 40 bytes long; the actual type – PCM or floating point – is then found in the first two bytes of the format GUID at offset 24. In <code>data</code> the values follow <b>interleaved by channel</b>: first the first value of all channels, then the second, and so on. Such a set of one value per channel is called a <b>frame</b>; its size is returned by <code>Wavformat.bytesJeRahmen()</code>.</p>
+
+<h3>Pseudocode – <code>Wavleser.zerlege(daten, mitDaten)</code></h3>
+<pre class="pseudo"><b>check</b> length ≥ 12, bytes 0–3 = "RIFF", bytes 8–11 = "WAVE"    <i>otherwise exception</i>
+pos ← 12;  dataStart ← −1
+<b>while</b> pos + 8 ≤ length(data):
+    type ← 4 characters at pos;  len ← u32(pos+4);  content ← pos + 8
+    <b>if</b> content + len &gt; length(data):
+        len ← length(data) − content                 <i>truncated file: take the rest</i>
+    <b>if</b> type = "fmt ": readFormat(content, len)
+    <b>else if</b> type = "data": dataStart ← content; dataLength ← len
+    pos ← content + len
+    <b>if</b> len odd: pos ← pos + 1                        <i>pad byte</i>
+<b>check</b> fmt found                                      <i>otherwise exception</i>
+<b>if not</b> withData: <b>done</b>                               <i>profile only</i>
+<b>check</b> data found
+frames ← dataLength / (bytes per sample · channels)     <i>integer, remainder dropped</i>
+<b>for</b> r ← 0 <b>to</b> frames−1, <b>for</b> c ← 0 <b>to</b> channels−1:
+    x[c][r] ← readValue(dataStart + (r·channels + c)·bytes per sample)
+
+readValue(p):
+    <b>if</b> floating point: 32 bit → float from u32(p);  64 bit → double from 8 bytes
+    8 bit:  (byte − 128) / 128
+    16 bit: signed from 2 bytes / 32768
+    24 bit: signed from 3 bytes / 8388608
+    32 bit: int from 4 bytes / 2147483648</pre>
+<p class="quelle">Source: <code>envisionz-framework-audiometrik/src/envisionz/audiometrik/Wavleser.java</code>. The sign for 16 and 24 bit arises because the most significant byte is shifted without a mask: Java sign-extends the <code>byte</code> by itself when converting it to <code>int</code>.</p>
+
+<h3>Pseudocode – <code>Wavschreiber.alsBytes(signal, bits, gleitkomma)</code></h3>
+<pre class="pseudo">N ← frames · channels · bits/8
+write header: "RIFF", 36+N, "WAVE", "fmt ", 16, type (1 or 3), channels, rate,
+              rate·channels·bits/8, channels·bits/8, bits, "data", N
+<b>for</b> each frame r, <b>for</b> each channel c:
+    x ← signal[c][r];  <b>if</b> x = NaN: x ← 0
+    <b>if</b> floating point:
+        bits = 32 → float(x) as 4 bytes;  <b>else</b> → double(x) as 8 bytes
+    <b>else</b>:
+        V ← 2^(bits−1)
+        k ← round(x · V);  clamp k to [−V, V−1]          <i>quantisiere</i>
+        8 bit: byte ← k + 128;  otherwise k in bits/8 bytes, least significant first</pre>
+<p class="quelle">Source: <code>envisionz-framework-audiometrik/src/envisionz/audiometrik/Wavschreiber.java</code>, methods <code>alsBytes</code>, <code>schreibKopf</code>, <code>schreibWert</code>, <code>quantisiere</code>.</p>
+
+<div class="hinweis"><b>Convention in the framework:</b> the writer always produces the lean 44-byte header with a 16-byte <code>fmt </code> chunk, also for floating point and for more than two channels – no extensible header, no <code>fact</code> chunk. The reader, on the other hand, accepts everything that is PCM or IEEE floating point, including the extensible form. A <code>NaN</code> in the signal is written as 0.</div>
+
+<h2 id="ganz">The integer path and “bit-exact”</h2>
+<p>For a lossless encoder the floating-point signal is not sufficient as proof. The conversion <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>→</mo><mi>k</mi><mo>/</mo><mi>V</mi><mo>→</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>x</mi><mo>⋅</mo><mi>V</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">k \to k/V \to \operatorname{round}(x \cdot V)</annotation></semantics></math> is exactly invertible for every word length up to 32 bit, because a <code>double</code> has a 53-bit mantissa and division by a power of two only changes the exponent. But a comparison in floating point needs a tolerance, and the tolerance decides what counts as equal. <code>Ganzsignal</code> avoids this: it keeps the raw values as <code>int</code>, and <code>gleicht(andere)</code> compares channel count, length, sample rate, word length and every single value for equality – without a tolerance.</p>
+<ul>
+  <li><code>Wavleser.liesGanz(path)</code> reads PCM only; a floating-point file is rejected with an exception instead of being rounded silently.</li>
+  <li><code>Wavschreiber.schreibGanz(path, ganzsignal)</code> writes the values back without any conversion (for 8 bit with the offset 128).</li>
+  <li><code>ersterUnterschied(andere)</code> returns the index of the first differing frame, for debugging an encoder.</li>
+  <li><code>rohgroesseBytes()</code> = length · channels · bits/8 is the reference size for the compression ratio.</li>
+</ul>
+<h3>Pseudocode – <code>Ganzsignal.gleicht(andere)</code></h3>
+<pre class="pseudo"><b>if</b> other = null <b>or</b> channels, length, rate <b>or</b> word length differ:
+    <b>return</b> false
+<b>for</b> each channel c, <b>for</b> each index i:
+    <b>if</b> a[c][i] ≠ b[c][i]: <b>return</b> false
+<b>return</b> true</pre>
+<p class="quelle">Source: <code>envisionz-framework-audiometrik/src/envisionz/audiometrik/Ganzsignal.java</code>.</p>
+
+<div class="hinweis"><b>Convention in the framework:</b> <code>Audiosignal</code> and <code>Ganzsignal</code> take over the arrays passed in <b>without copying</b>, and <code>kanal(i)</code> returns the array itself. With audio data every silent copy matters; whoever still writes into an array after handing it over changes the signal as well. The transforming methods (<code>verschoben</code>, <code>ausschnitt</code>, <code>skaliert</code>, <code>aufLaenge</code>), in contrast, return new signals – except in the neutral case (offset 0, same length, whole range), where they return the signal itself.</div>
+
+<h2 id="umformen">Transformations: mono, shift, excerpt</h2>
+<p>The measurement chain needs four simple transformations, all in <code>Audiosignal</code>:</p>
+<ul>
+  <li><b><code>alsMono()</code></b> – arithmetic mean over the channels, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>m</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>C</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>c</mi></mrow></munder><msub><mrow><mi>x</mi></mrow><mrow><mi>c</mi><mo>,</mo><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">m_i = \frac{1}{C}\sum_c x_{c,i}</annotation></semantics></math>. With it the alignment estimates the offset once for all channels.</li>
+  <li><b><code>verschoben(v)</code></b> – <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>−</mo><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">y_i = x_{i-v}</annotation></semantics></math> where <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi>i</mi><mo>−</mo><mi>v</mi><mo>&lt;</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">0 \le i - v &lt; n</annotation></semantics></math>, otherwise 0. Positive <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> shifts backwards; the length stays the same, zeros appear at the vacated edge.</li>
+  <li><b><code>aufLaenge(n)</code></b> – cuts off or pads with zeros.</li>
+  <li><b><code>ausschnitt(von, bis)</code></b> – half-open interval <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mtext>von</mtext><mo>,</mo><mtext>bis</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[\text{von}, \text{bis})</annotation></semantics></math>; the bounds are clipped to the signal, an empty excerpt is an error.</li>
+</ul>
+<p>In addition <code>spitzenwert()</code> = largest magnitude over all channels, to which the silence threshold of the measures refers, and <code>dauerSekunden()</code> = length / rate for the bit rate.</p>
+
+<h2 id="beispiel">Worked example</h2>
+<p>A mono signal of two values, 0.25 and −0.25, at 48 kHz written as 16-bit PCM (<code>Wavschreiber.alsBytes(signal, 16, false)</code>). The 48 bytes of the file in hexadecimal:</p>
+<pre class="pseudo">52 49 46 46  28 00 00 00  57 41 56 45       <i>"RIFF", 40 = 36 + 4, "WAVE"</i>
+66 6D 74 20  10 00 00 00                    <i>"fmt ", 16</i>
+01 00  01 00  80 BB 00 00  00 77 01 00      <i>PCM, 1 channel, 48000, 96000 bytes/s</i>
+02 00  10 00                                <i>2 bytes per frame, 16 bit</i>
+64 61 74 61  04 00 00 00                    <i>"data", 4 bytes</i>
+00 20  00 E0                                <i>+8192, −8192</i></pre>
+<p>0.25 · 32768 = 8192 = 0x2000, least significant byte first: <code>00 20</code>. −8192 in two's complement is 0xE000: <code>00 E0</code>. Read back, 8192 / 32768 gives exactly 0.25 again – both values are exactly representable in 16 bit, the round-trip error is zero.</p>
+
+<h2 id="pruefung">How it is tested</h2>
+<p><code>Wavprobe</code> generates a stereo signal (left 32 periods with amplitude 0.8, right 64 periods with 0.4 and phase π/3, 4096 values each, 48 kHz), writes it to a temporary directory and reads it back – 19 checks:</p>
+<ul>
+  <li>For 8, 16, 24 and 32 bit PCM: sample rate, channel count and length are preserved, and the largest error stays below half a quantisation step <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.5</mn><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">0.5 / 2^{b-1}</annotation></semantics></math> (with the factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1 + 10^{-9}</annotation></semantics></math> as rounding slack). The bound is known in closed form and does not come from an earlier run.</li>
+  <li>32-bit floating point: deviation below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math> – only the rounding to <code>float</code>.</li>
+  <li>The profile (<code>liesFormat</code>) of a 16-bit file reports 16 bit, PCM and 4 bytes per frame.</li>
+</ul>
+<p>The probe removes its directory afterwards. The test data are generated, not shipped.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The whole file is read into memory with <code>Files.readAllBytes</code>; positions and lengths are <code>int</code>. Files above 2 GB cannot be read this way.</li>
+  <li>Supported are PCM with 8, 16, 24 and 32 bit and floating point with 32 and 64 bit. Other format types (such as compressed WAV variants) are rejected with an exception, as is 64-bit PCM.</li>
+  <li>With the extensible form, the valid-bits field is read but not used: the container width is what counts. A 20-bit recording in 24-bit containers is treated as 24 bit. The channel mask is not evaluated.</li>
+  <li>A truncated file is not rejected: if a chunk is longer than the file, the rest counts as content. An incomplete last frame is dropped.</li>
+  <li>For floating point, the writer does not check the word length. Only 32 and 64 bit are intended; for any other value it writes 8 bytes per sample into an array that is too small and fails with an index-out-of-bounds exception.</li>
+  <li>The WAV classes duplicate those in framework-audio; merging them is an open point with the owner.</li>
+</ul>
+
+<footer>
+envisionz-framework-audiometrik · Background to <a href="index.html#signale">Signals</a> and <a href="index.html#wav">WAV</a> · Probes: <code>Wavprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

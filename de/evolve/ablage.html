@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ablage und Bewertungsspeicher – Formate und LRU – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag aktiv" href="index.html">framework-evolve</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#geruest">Grundgerüst: Kandidat, Bewertung, Archiv, Suchlauf</a>
+<a class="unterseite" href="mapelites.html">MAP-Elites</a>
+<a class="unterseite" href="suchlauf.html">Suchlauf</a>
+<a class="rubrik" href="index.html#zahlen">Operatoren für Zahlengene</a>
+<a class="unterseite" href="cmaes-ersatz.html">CMA-ES und Ersatzmodell</a>
+<a class="unterseite" href="gauss-de.html">Gauß und DE</a>
+<a class="rubrik" href="index.html#struktur">Strukturgene und Folgen</a>
+<a class="unterseite" href="struktur.html">Struktur und Folgen</a>
+<a class="rubrik" href="index.html#mischung">Operatoren mischen</a>
+<a class="unterseite" href="mischung.html">Mischen</a>
+<a class="rubrik" href="index.html#ablage">Ablage und Bewertungsspeicher</a>
+<a class="unterseite aktiv" href="ablage.html">Ablage und Speicher</a>
+<a class="rubrik" href="index.html#anbindung">Anbindung über den ServiceLoader</a>
+<a class="rubrik" href="index.html#praeferenz">Präferenzmodell aus Paarurteilen</a>
+<a class="unterseite" href="praeferenz.html">Präferenzmodell</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-evolve</a> › Ablage und Bewertungsspeicher – Formate und LRU</span><a class="sprachwahl" href="../../en/evolve/ablage.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-evolve · envisionz.evolve</div>
+  <h1>Ablage und Bewertungsspeicher – Formate und LRU</h1>
+  <p class="unter">Was hinter <code>GenomeIO</code>, <code>ArchiveIO</code> und <code>MemoizingEvaluator</code> steckt: das Textformat eines Genoms, der Aufbau eines gesicherten Archivs, was beim Laden und Weiterrechnen geschieht, und wie der Bewertungsspeicher Wiederholungen erkennt und wieder vergisst – mit Pseudocode nach dem Quelltext, einer echten Archivdatei, den Prüfungen und den Grenzen.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Ein Suchlauf ist erst nützlich, wenn sein Ergebnis dort ankommt, wo es gebraucht wird: als Voreinstellung in der Oberfläche einer Anwendung. Er ist erst wirtschaftlich, wenn man ihn morgen dort fortsetzen kann, wo er heute stand, und wenn er dieselbe teure Bewertung nicht zweimal rechnet. Drei kleine Bausteine erledigen das:</p>
+<ul>
+  <li><b><code>GenomeIO</code></b> – ein Genom als Textdatei, die Austauschform zwischen Suche und Oberfläche;</li>
+  <li><b><code>ArchiveIO</code></b> – ein ganzes Archiv als Verzeichnis, zum Weiterlernen über Läufe und Sitzungen;</li>
+  <li><b><code>MemoizingEvaluator</code></b> – ein Speicher „Genom → Bewertung“ um einen deterministischen Bewerter.</li>
+</ul>
+<p>Alle drei kommen mit <code>java.base</code> aus; das Modul bleibt damit ohne Fremdbibliothek und native-image-tauglich.</p>
+
+<h2 id="genomformat">Das Genomformat</h2>
+<p>Ein Genom ist eine geordnete Zuordnung Name → Zeichenkette. Die Datei hält sie zeilenweise, UTF-8:</p>
+<pre><code># beliebiger Kommentar, auch mehrzeilig
+radius=2.5
+stufen=4
+modus=fein
+glatt=true</code></pre>
+<p><b>Lesen</b> (<code>load</code>, <code>loadResource</code>): Jede Zeile wird an beiden Enden von Leerraum befreit. Leere Zeilen und Zeilen, die mit <code>#</code> beginnen, werden übergangen. Der Schlüssel ist alles vor dem <b>ersten</b> Gleichheitszeichen, der Wert alles danach, beides erneut beschnitten. Eine Zeile ohne Gleichheitszeichen oder mit leerem Schlüssel bricht mit einer Meldung samt Zeilennummer ab. Die Reihenfolge der Datei bleibt erhalten.</p>
+<p><b>Schreiben</b> (<code>save</code>): zuerst der Kommentar, jede seiner Zeilen mit <code>#␣</code> davor, dann je Gen eine Zeile <code>schlüssel=wert</code> in der Reihenfolge der Zuordnung.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Bewusst <b>nicht</b> <code>java.util.Properties</code>: Das verlöre die Reihenfolge und würde Sonderzeichen maskieren. Die Datei soll sich lesen wie die Einstellungsliste, die sie ist, und in der Reihenfolge der Oberfläche stehen. Mit <code>loadResource(klasse, name)</code> kann eine Anwendung Voreinstellungen im eigenen Paket mitliefern.</div>
+
+<h2 id="archivformat">Das Archivformat</h2>
+<p>Ein Archiv wird ein Verzeichnis, empfohlen benannt nach der Kennung des Bewerters. Darin liegen eine Achsendatei und je Elite eine Datei, beide im Genomformat:</p>
+
+<figure>
+<svg viewBox="0 0 620 262" width="620" font-family="sans-serif" font-size="13">
+  <rect x="8" y="8" width="604" height="208" rx="6" fill="none" stroke="#c9d1dc" stroke-dasharray="5,4"/>
+  <text x="18" y="28" fill="#5b6475">lauf-01/</text>
+  <text x="24" y="52" fill="#1f5f8b">axes.properties</text>
+  <rect x="20" y="58" width="280" height="112" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="30" y="78" fill="#5b6475" font-family="monospace" font-size="12"># MAP-Elites-Archiv, Achsend…</text>
+  <text x="30" y="94" fill="#1f5f8b" font-family="monospace" font-size="12">count=1</text>
+  <text x="30" y="110" fill="#1f5f8b" font-family="monospace" font-size="12">0.name=x</text>
+  <text x="30" y="126" fill="#1f5f8b" font-family="monospace" font-size="12">0.min=-5.0</text>
+  <text x="30" y="142" fill="#1f5f8b" font-family="monospace" font-size="12">0.max=5.0</text>
+  <text x="30" y="158" fill="#1f5f8b" font-family="monospace" font-size="12">0.bins=8</text>
+  <text x="324" y="52" fill="#1f5f8b">elite-0000.properties</text>
+  <rect x="320" y="58" width="284" height="150" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="330" y="76" fill="#5b6475" font-family="monospace" font-size="12"># Archiv-Elite (auch als Preset…</text>
+  <text x="330" y="92" fill="#9a6400" font-family="monospace" font-size="12">_fitness=-0.0047</text>
+  <text x="330" y="107" fill="#9a6400" font-family="monospace" font-size="12">_descriptors=-0.0144</text>
+  <text x="330" y="122" fill="#9a6400" font-family="monospace" font-size="12">_id=3f2a91c0</text>
+  <text x="330" y="137" fill="#9a6400" font-family="monospace" font-size="12">_gen=12</text>
+  <text x="330" y="152" fill="#9a6400" font-family="monospace" font-size="12">_origin=MUTATION</text>
+  <text x="330" y="167" fill="#9a6400" font-family="monospace" font-size="12">_parent=b71e0d44</text>
+  <text x="330" y="184" fill="#1f5f8b" font-family="monospace" font-size="12">y=-0.0667</text>
+  <text x="330" y="199" fill="#1f5f8b" font-family="monospace" font-size="12">x=-0.0144</text>
+  <text x="520" y="130" fill="#9a6400">Metadaten</text>
+  <text x="520" y="192" fill="#1f5f8b">Genom</text>
+  <text x="24" y="196" fill="#5b6475">elite-0001.properties …</text>
+  <text x="18" y="238" fill="#5b6475">Eine Elite-Datei ist zugleich ein gültiges Genom: Eine Oberfläche lädt sie</text>
+  <text x="18" y="256" fill="#5b6475">als Voreinstellung und übergeht die Schlüssel mit Unterstrich.</text>
+</svg>
+<figcaption>Ein gesichertes Archiv mit einer Achse und einer Elite, geschrieben von <code>ArchiveIO.save</code>. Die Schlüssel mit Unterstrich (amber) tragen Güte, Deskriptoren, Kennung, Generation, Herkunft und Elternteil; alle übrigen Zeilen sind das Genom. Die Kommentarzeilen sind im Bild gekürzt.</figcaption>
+</figure>
+
+<table>
+  <tr><th>Datei</th><th>Schlüssel</th><th>Inhalt</th></tr>
+  <tr><td><code>axes.properties</code></td><td><code>count</code></td><td>Zahl der Achsen</td></tr>
+  <tr><td></td><td><code>i.name</code>, <code>i.unit</code>, <code>i.min</code>, <code>i.max</code>, <code>i.bins</code></td><td>Achse <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math>, beginnend bei 0; <code>unit</code> nur, wenn gesetzt</td></tr>
+  <tr><td><code>elite-NNNN.properties</code></td><td><code>_fitness</code></td><td>Güte</td></tr>
+  <tr><td></td><td><code>_descriptors</code></td><td>Deskriptoren, durch Komma getrennt</td></tr>
+  <tr><td></td><td><code>_metric.name</code></td><td>je Zusatzmetrik eine Zeile</td></tr>
+  <tr><td></td><td><code>_id</code>, <code>_gen</code>, <code>_origin</code>, <code>_parent</code></td><td>Kennung, Generation, Herkunft, Elternteil (nur wenn vorhanden)</td></tr>
+  <tr><td></td><td>alle ohne <code>_</code></td><td>das Genom</td></tr>
+</table>
+<h3>Pseudocode – <code>ArchiveIO.save(archiv, verzeichnis)</code> und <code>load(verzeichnis)</code></h3>
+<pre class="pseudo"><i>// save</i>
+lege verzeichnis an (samt Eltern)
+schreibe axes.properties: count, je Achse name, unit (falls gesetzt), min, max, bins
+lösche alle vorhandenen elite-*.properties              <i>das Archiv könnte geschrumpft sein</i>
+n ← 0
+<b>für jede</b> Elite in archiv.elites():                    <i>Reihenfolge der Tabelle</i>
+    f ← _fitness, _descriptors, _metric.*, _id, _gen, _origin, [_parent], dann die Gene
+    schreibe f nach elite-%04d.properties mit n;  n ← n + 1
+
+<i>// load</i>
+ax ← lies axes.properties;  count ← ax.count (fehlend: 0)
+<b>wenn</b> count &lt; 1: <b>Ausnahme</b> „axes.properties ohne Achsen“
+archiv ← neues MapElitesArchive(Achsen 0 … count−1)
+<b>für jede</b> Datei elite-*.properties, nach Namen sortiert:
+    f ← lies Datei
+    gene ← alle Schlüssel ohne „_“;  metriken ← alle _metric.*
+    d ← _descriptors an Kommas getrennt, als Zahlen
+    kandidat ← (_id oder „geladen“, gene, _parent, _origin oder SEED, _gen oder 0)
+    archiv.insert(kandidat, Evaluation.ok(_fitness oder 0, d, metriken))
+<b>gib</b> archiv <b>zurück</b></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-evolve/src/envisionz/evolve/ArchiveIO.java</code> und <code>GenomeIO.java</code>. Dazu <code>exists(verzeichnis)</code> (gibt es <code>axes.properties</code>?) und <code>describe(verzeichnis)</code> („N Elites in …“).</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Beim Laden wird jede Elite über <code>insert</code> eingefügt, nicht direkt in die Tabelle geschrieben. Die Nische wird also aus Deskriptoren und <b>gespeicherten</b> Achsen neu berechnet, und die Zähler des Archivs laufen mit: Ein geladenes Archiv mit sieben Eliten meldet sieben Einfügeversuche. Ein Archivverzeichnis gehört einem Schreiber; Sperren gibt es nicht.</div>
+
+<h2 id="weiterlernen">Weiterrechnen auf einem geladenen Archiv</h2>
+<p>Die Engine hat einen zweiten Konstruktor, der ein vorbesetztes Archiv nimmt. Ist es nicht leer, werden die Startwerte des Bewerters nicht bewertet; die Suche setzt dort an, wo die gespeicherte aufhörte:</p>
+<pre><code>ArchiveIO.save(archiv, Path.of("lauf-01"));
+MapElitesArchive weiter = ArchiveIO.load(Path.of("lauf-01"));
+new EvolveEngine(bewerter, operator, cfg, weiter).run(null);</code></pre>
+<p>Zwei Dinge sind dabei zu beachten. Erstens zählen die geladenen Eliten zum Budget: Nachgemessen setzt ein Lauf mit Budget 100 auf einem Archiv mit sieben Eliten nur 96 neue Bewertungen hinzu (siehe <a href="suchlauf.html#budget">Budget und Abbruch</a>). Zweitens bringt das Archiv seine eigenen Achsen mit. Liefert der Bewerter inzwischen eine andere Zahl von Deskriptoren, scheitert das erste Einfügen eines neuen Kindes mit einer Ausnahme; liefert er dieselbe Zahl mit anderer Bedeutung, merkt es niemand.</p>
+<p>Lernende Operatoren fangen beim Fortsetzen von vorn an: CMA-ES beginnt mit seiner Anfangsverteilung, das Ersatzmodell liest nur die Beispiele des ersten Kontexts. Wer dem Ersatzmodell das ganze Archiv mitgeben will, speist es mit <code>observe</code> ein.</p>
+
+<h2 id="speicher">Der Bewertungsspeicher</h2>
+<p>Mutationsoperatoren erzeugen Duplikate: kleine Schritte, die nach der Rundung auf vier Nachkommastellen auf demselben Wert landen, Strukturzüge, die zurückschalten, Verschiebungen an dieselbe Stelle. Bei Bewertungen von Sekunden ist jede Wiederholung teuer. <code>MemoizingEvaluator</code> legt sich als Dekorator um den Bewerter und merkt sich zu jedem Genom die Bewertung.</p>
+<p><b>Schlüssel</b> ist die Textform des Genoms: alle Einträge als <code>name=wert</code> mit Zeilenumbruch, in der Reihenfolge der Zuordnung. Zwei Kandidaten mit verschiedener Kennung, aber denselben Genen, treffen also denselben Eintrag – genau das ist der Zweck, denn im Suchlauf entstehen ständig gleiche Genome mit neuer Kennung.</p>
+<p><b>Verdrängung</b> nach LRU (<i>least recently used</i>): Der Speicher ist eine <code>LinkedHashMap</code> in Zugriffsreihenfolge; jeder Treffer rückt den Eintrag nach hinten, und wenn nach einem Einfügen mehr als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> Einträge vorhanden sind, fällt der vorderste – der am längsten nicht benutzte – heraus. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>16</mn><mo>,</mo><mtext>capacity</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">C = \max(16, \text{capacity})</annotation></semantics></math>, Vorgabe 10 000.</p>
+<h3>Pseudocode – <code>MemoizingEvaluator.evaluate(kandidat)</code></h3>
+<pre class="pseudo">k ← Σ über die Gene in Reihenfolge: name + "=" + wert + "\n"
+<b>gesperrt</b>:
+    e ← speicher.hole(k)                          <i>rückt den Eintrag nach hinten</i>
+    <b>wenn</b> e ≠ nichts: treffer ← treffer + 1;  <b>gib</b> e <b>zurück</b>
+e ← delegat.evaluate(kandidat)                   <i>ohne Sperre: parallel möglich</i>
+<b>gesperrt</b>:
+    fehlgriffe ← fehlgriffe + 1
+    speicher.lege(k, e)                            <i>über C Einträge: ältesten verwerfen</i>
+<b>gib</b> e <b>zurück</b></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-evolve/src/envisionz/evolve/MemoizingEvaluator.java</code>. Kennung, Anzeigename, Achsen, Startwerte und Genbeschreibung reicht der Dekorator unverändert durch.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Nur um einen <b>deterministischen</b> Bewerter legen. Bei einem Bewerter mit Streuung würde der Speicher die erste Messung festschreiben und die Streuung verdecken. Wer nur einen Teil memoisieren will – etwa eine teure Vorverarbeitung, die von wenigen Genen abhängt –, baut das im eigenen Bewerter; nur der kennt die Struktur. Die Trefferquote sagt dabei etwas über die Suche selbst: Viele Treffer heißen, dass dieselben Kandidaten immer wieder vorgeschlagen werden – die Vielfalt der Vorschläge lässt nach.</div>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<p>Die <code>Evolveprobe</code>:</p>
+<ul>
+  <li><b>Genomdatei hin und zurück:</b> drei Gene, darunter ein Wert mit Leerzeichen im Inneren und ein leerer Wert, kommen vollzählig und mit ihren Werten zurück.</li>
+  <li><b>Archiv hin und zurück:</b> zwei Eliten mit Güte 5 und 7 in einem Verzeichnis gesichert; <code>exists</code> findet es, geladen kommen ebenso viele Nischen zurück, der beste Wert ist 7 (Toleranz <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>), <code>describe</code> nennt etwas, und ein nicht vorhandenes Verzeichnis gilt nicht als Archiv. Die Dateien werden in einem Zwischenverzeichnis erzeugt und danach gelöscht.</li>
+  <li><b>Bewertungsspeicher gegen einen zählenden Bewerter:</b> drei Bewertungen, davon zwei Kandidaten mit gleichen Genen, erreichen den Bewerter genau zweimal; beide liefern dieselbe Güte; ein Treffer, zwei Fehlgriffe; Kennung und Achsen werden durchgereicht.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li><b>Werte mit Rand-Leerraum, Zeilenumbruch oder führendem <code>#</code></b> überstehen das Genomformat nicht: Leerraum an den Enden wird abgeschnitten, ein Zeilenumbruch zerreißt die Zeile, ein Schlüssel mit <code>#</code> am Anfang wird zur Kommentarzeile. Schlüssel dürfen kein <code>=</code> enthalten, Werte schon.</li>
+  <li><b>Unvollständige Elite-Dateien.</b> Fehlt <code>_fitness</code>, wird die Güte 0 – eine plausible Zahl, keine Fehlermeldung. Fehlt <code>_descriptors</code>, bricht das Laden mit einem Zahlenformatfehler ab.</li>
+  <li><b>Nummerierung nicht stabil.</b> Die Elite-Dateien werden in der Reihenfolge der Archivtabelle nummeriert; dieselbe Elite kann nach dem nächsten Sichern eine andere Nummer tragen. Beim Sichern werden alle alten Dateien zuerst gelöscht; bricht das Schreiben danach ab, ist das Verzeichnis unvollständig.</li>
+  <li><b>Schlüssel des Speichers hängt an der Reihenfolge.</b> Dieselben Gene in anderer Reihenfolge ergeben einen anderen Schlüssel. Nachgemessen: zwei Kandidaten mit <code>a=1, b=2</code> und <code>b=2, a=1</code> erreichten den Bewerter zweimal, ohne Treffer. Im Suchlauf tritt das nicht auf, weil alle Operatoren die Reihenfolge des Elternteils übernehmen.</li>
+  <li><b>Auch Fehler werden gemerkt.</b> Eine <code>ERROR</code>-Bewertung landet im Speicher wie jede andere; ein vorübergehender Fehler des Bewerters gilt für dieses Genom danach dauerhaft. Nachgemessen: Nach einem einmaligen Fehler lieferte die zweite Anfrage dasselbe <code>ERROR</code> ohne neuen Aufruf.</li>
+  <li><b>Gleichzeitige Anfragen</b> nach demselben neuen Genom rechnen beide; der Speicher sperrt nur das Nachschlagen und Ablegen, nicht die Bewertung.</li>
+  <li><b>Kleinste Kapazität 16.</b> Kleinere Angaben werden auf 16 angehoben.</li>
+</ul>
+
+<footer>
+envisionz-framework-evolve · Hintergrund zu <a href="index.html#ablage">Ablage und Bewertungsspeicher</a> · Proben: <code>Evolveprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

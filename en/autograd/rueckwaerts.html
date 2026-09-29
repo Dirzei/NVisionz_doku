@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tensor, operations, gradient check – Reverse-mode automatic differentiation – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite" href="matmul.html">Matrix product</a>
+<a class="unterseite aktiv" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Tensor, operations, gradient check – Reverse-mode automatic differentiation</span><a class="sprachwahl" href="../../de/autograd/rueckwaerts.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd</div>
+  <h1>Tensor, operations, gradient check – Reverse-mode automatic differentiation</h1>
+  <p class="unter">The computation behind <code>Tensor</code> and <code>Ops</code>: how the forward pass builds a computation graph, how <code>backward()</code> sorts it topologically without recursion and walks it backwards, why gradients are accumulated, and how the one-sided stretching of unequal shapes is collected again on the way back – with pseudocode following the source, a worked example checked by hand, the probes and the limits. The derivative rules of the individual operations are on the page <a href="ableitungen.html">Derivatives of the operations</a>, the matrix product on <a href="matmul.html">Matrix product</a>, the numerical check on <a href="gradcheck.html">Gradient check</a>.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A network learns by reducing a scalar loss function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo stretchy="false">(</mo><mi mathvariant="normal">θ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L(\theta)</annotation></semantics></math> over its parameters <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi></mrow><annotation encoding="application/x-tex">\theta</annotation></semantics></math>. Every optimiser step needs the gradient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>∇</mi></mrow><mrow><mi mathvariant="normal">θ</mi></mrow></msub><mi>L</mi></mrow><annotation encoding="application/x-tex">\nabla_\theta L</annotation></semantics></math> for that – for each of the often hundreds of thousands of parameters, the derivative of the loss with respect to exactly that parameter.</p>
+<p>With difference quotients this would be hopeless: two extra evaluations of the whole model per parameter. With 500,000 parameters that is a million forward passes for a single step. <b>Reverse mode</b> automatic differentiation delivers the same gradient, exact up to rounding, for the cost of roughly two to three forward passes – regardless of how many parameters there are. That is why networks with millions of weights can be trained at all.</p>
+<p>The idea is the chain rule, applied consistently from the back. The computation is split into elementary steps whose derivatives are known – addition, matrix product, tanh, mean –, the forward pass records which step came from which inputs, and afterwards this chain is walked backwards once. Each step passes the sensitivity of the loss with respect to its output on to its inputs.</p>
+
+<h2 id="graph">The computation graph and the chain rule</h2>
+<p>Every intermediate value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> of the computation is a node. A node arises from its parents <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>u</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>u</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">u_1,\dots,u_k</annotation></semantics></math> through an elementary operation, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>=</mo><mi mathvariant="normal">φ</mi><mo stretchy="false">(</mo><msub><mrow><mi>u</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>u</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">v = \varphi(u_1,\dots,u_k)</annotation></semantics></math>. The leaves are input data (without gradient) and parameters (with gradient); the root is the scalar loss <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>.</p>
+<p>Sought for every node is the quantity</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>v</mi></mrow></msub><mo>=</mo><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><mi>v</mi></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">g_v = \frac{\partial L}{\partial v},</annotation></semantics></math></p>
+<p>often called the <i>adjoint</i> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> in the literature and written <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>v</mi></mrow></mrow><annotation encoding="application/x-tex">\bar v</annotation></semantics></math>. In the code it is the field <code>grad</code> of the tensor, as long as <code>data</code>. At the root, trivially <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>L</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">g_L = 1</annotation></semantics></math>. If a node <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math> feeds several children <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>v</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>v</mi></mrow><mrow><mi>m</mi></mrow></msub></mrow><annotation encoding="application/x-tex">v_1,\dots,v_m</annotation></semantics></math>, the multivariate chain rule says</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>u</mi></mrow></msub><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>m</mi></mrow></munderover><msub><mrow><mi>g</mi></mrow><mrow><msub><mrow><mi>v</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow></msub><mspace width="0.1667em"/><mfrac><mrow><mi>∂</mi><msub><mrow><mi>v</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><mrow><mi>∂</mi><mi>u</mi></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">g_u = \sum_{j=1}^{m} g_{v_j}\,\frac{\partial v_j}{\partial u}.</annotation></semantics></math></p>
+<p>The whole design follows from this: every child <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> <b>adds</b> its contribution <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>v</mi></mrow></msub><mspace width="0.1667em"/><mi>∂</mi><mi>v</mi><mo>/</mo><mi>∂</mi><mi>u</mi></mrow><annotation encoding="application/x-tex">g_v\,\partial v/\partial u</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>u</mi></mrow></msub></mrow><annotation encoding="application/x-tex">g_u</annotation></semantics></math>. Once all children of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math> are done, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>u</mi></mrow></msub></mrow><annotation encoding="application/x-tex">g_u</annotation></semantics></math> holds the complete sum, and only then may <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math> pass on to its own parents. This order – every node only after all nodes that use it – is the reverse topological order of the graph.</p>
+<p>For tensors <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><mi>v</mi><mo>/</mo><mi>∂</mi><mi>u</mi></mrow><annotation encoding="application/x-tex">\partial v/\partial u</annotation></semantics></math> is a Jacobian matrix that nobody ever builds. Instead each operation knows the product <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>g</mi></mrow><mrow><mi>v</mi></mrow><mrow><mspace width="0.1667em"/><mi>T</mi></mrow></msubsup><mspace width="0.1667em"/><mi>∂</mi><mi>v</mi><mo>/</mo><mi>∂</mi><mi>u</mi></mrow><annotation encoding="application/x-tex">g_v^{\,T}\,\partial v/\partial u</annotation></semantics></math> in closed form: for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>=</mo><mspace width="0.1667em"/><mi>tanh</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>u</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">v = \tanh(u)</annotation></semantics></math> element-wise <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>v</mi></mrow></msub><mo>⊙</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msup><mrow><mi>v</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">g_v \odot (1 - v^2)</annotation></semantics></math>, for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>=</mo><mi>A</mi><mi>B</mi></mrow><annotation encoding="application/x-tex">C = AB</annotation></semantics></math> the matrix products <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>C</mi></mrow></msub><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">g_C B^T</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><msub><mrow><mi>g</mi></mrow><mrow><mi>C</mi></mrow></msub></mrow><annotation encoding="application/x-tex">A^T g_C</annotation></semantics></math>. This product is called a vector-Jacobian product, and it is exactly what the backward function of an operation computes.</p>
+
+<figure>
+<svg viewBox="0 0 640 210" width="640" font-family="sans-serif" font-size="13">
+  <defs>
+    <marker id="pfeil-rw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker>
+    <marker id="pfeil-rw2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9a6400"/></marker>
+  </defs>
+  <rect x="10" y="30" width="64" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="42" y="50" fill="#1f5f8b" text-anchor="middle">w [2,2]</text>
+  <text x="42" y="22" fill="#5b6475" text-anchor="middle" font-size="11">parameter</text>
+  <rect x="10" y="104" width="64" height="30" rx="4" fill="#ffffff" stroke="#5b6475"/>
+  <text x="42" y="124" fill="#5b6475" text-anchor="middle">x [2,2]</text>
+  <text x="42" y="150" fill="#5b6475" text-anchor="middle" font-size="11">data</text>
+  <rect x="120" y="67" width="80" height="30" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="160" y="87" fill="#1f5f8b" text-anchor="middle">matmul</text>
+  <rect x="290" y="67" width="60" height="30" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="320" y="87" fill="#1f5f8b" text-anchor="middle">tanh</text>
+  <rect x="440" y="67" width="60" height="30" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="470" y="87" fill="#1f5f8b" text-anchor="middle">mean</text>
+  <circle cx="598" cy="82" r="17" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="598" y="87" fill="#1f5f8b" text-anchor="middle">L</text>
+  <line x1="74" y1="45" x2="118" y2="74" stroke="#1f5f8b" stroke-width="1.6" marker-end="url(#pfeil-rw)"/>
+  <line x1="74" y1="119" x2="118" y2="91" stroke="#1f5f8b" stroke-width="1.6" marker-end="url(#pfeil-rw)"/>
+  <line x1="200" y1="82" x2="288" y2="82" stroke="#1f5f8b" stroke-width="1.6" marker-end="url(#pfeil-rw)"/>
+  <text x="244" y="74" fill="#5b6475" text-anchor="middle">z</text>
+  <line x1="350" y1="82" x2="438" y2="82" stroke="#1f5f8b" stroke-width="1.6" marker-end="url(#pfeil-rw)"/>
+  <text x="394" y="74" fill="#5b6475" text-anchor="middle">t</text>
+  <line x1="500" y1="82" x2="579" y2="82" stroke="#1f5f8b" stroke-width="1.6" marker-end="url(#pfeil-rw)"/>
+  <line x1="580" y1="128" x2="502" y2="128" stroke="#9a6400" stroke-width="1.6" stroke-dasharray="5,3" marker-end="url(#pfeil-rw2)"/>
+  <line x1="438" y1="128" x2="352" y2="128" stroke="#9a6400" stroke-width="1.6" stroke-dasharray="5,3" marker-end="url(#pfeil-rw2)"/>
+  <line x1="288" y1="128" x2="202" y2="128" stroke="#9a6400" stroke-width="1.6" stroke-dasharray="5,3" marker-end="url(#pfeil-rw2)"/>
+  <line x1="118" y1="128" x2="76" y2="52" stroke="#9a6400" stroke-width="1.6" stroke-dasharray="5,3" marker-end="url(#pfeil-rw2)"/>
+  <text x="598" y="160" fill="#9a6400" text-anchor="middle">g<tspan baseline-shift="sub" font-size="10">L</tspan> = 1</text>
+  <text x="470" y="160" fill="#9a6400" text-anchor="middle">g<tspan baseline-shift="sub" font-size="10">t</tspan> = g<tspan baseline-shift="sub" font-size="10">L</tspan>/4</text>
+  <text x="320" y="160" fill="#9a6400" text-anchor="middle">g<tspan baseline-shift="sub" font-size="10">z</tspan> = g<tspan baseline-shift="sub" font-size="10">t</tspan>·(1 − t²)</text>
+  <text x="160" y="160" fill="#9a6400" text-anchor="middle">g<tspan baseline-shift="sub" font-size="10">w</tspan> = xᵀ · g<tspan baseline-shift="sub" font-size="10">z</tspan></text>
+  <text x="320" y="196" fill="#5b6475" text-anchor="middle" font-size="12">forward: values from left to right – backward: gradients from right to left</text>
+</svg>
+<figcaption>The computation graph of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mspace width="0.1667em"/><mi>mean</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>tanh</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>x</mi><mspace width="0.1667em"/><mi>w</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L = \mathrm{mean}(\tanh(x\,w))</annotation></semantics></math>. During the forward pass (blue) every result tensor records its parents and its backward function. <code>backward()</code> sets <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>L</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">g_L = 1</annotation></semantics></math> and calls the backward functions in reverse order (amber); each passes the gradient on to its parents using its own derivative. The data <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> receive no gradient.</figcaption>
+</figure>
+
+<h2 id="tensor">The tensor as a node</h2>
+<p>A <code>Tensor</code> is a flat <code>double[] data</code> with a shape <code>int[] shape</code>, stored row-major. The strides follow from the shape: for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><msub><mrow><mi>d</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><msub><mrow><mi>d</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>r</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[d_0, d_1, \dots, d_{r-1}]</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>r</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">s_{r-1} = 1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>d</mi></mrow><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">s_i = s_{i+1}\,d_{i+1}</annotation></semantics></math>; the flat index of a multi-index is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>c</mi></mrow><mrow><mi>i</mi></mrow></msub><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum_i c_i s_i</annotation></semantics></math>. In addition every tensor carries</p>
+<ul>
+  <li><code>grad</code> – an array of the same length, or <code>null</code> if no gradient is needed for this tensor,</li>
+  <li><code>parents</code> – the inputs of the operation that produced it,</li>
+  <li><code>back</code> – the backward function (interface <code>Backward</code> with one method <code>accumulate(self)</code>) that distributes <code>self.grad</code> to the parents.</li>
+</ul>
+<p>There are three kinds of tensors. <code>Tensor.of</code> creates a leaf without gradient (input data, constants), <code>Tensor.param</code> a leaf with gradient (parameters), and every operation in <code>Ops</code> produces a result tensor through <code>Tensor.result</code>. That tensor carries a gradient and a backward function exactly when at least one parent carries a gradient. Computations that involve only data – a positional encoding, a mask, a precomputed spectrum – therefore never hang on the graph, and their backward path costs nothing.</p>
+<div class="hinweis"><b>Decision in the framework:</b> the graph is built <b>implicitly</b> during the forward computation. There is no tape, no recording and no mode to switch on: whoever computes, builds. Hence every call of the loss function builds a <b>fresh</b> graph – <code>GradCheck</code>, the trainers and the fitting methods rely on that.</div>
+<p>All values are <code>double</code>. That is deliberate: the gradient check needs the resolution, and bit-exact comparisons between the serial and the parallel path, or between an uninterrupted and a resumed training run, can only be made sharply in double precision. The optional <code>float</code> path concerns only the forward step of the matrix product (see <a href="index.html#vector">Matrix kernels</a>).</p>
+
+<h2 id="backward">The backward pass</h2>
+<p><code>backward()</code> is only allowed on a tensor with exactly one element – the loss. It sets that gradient to 1, sorts the graph topologically and calls the backward functions in reverse order.</p>
+<h3>Pseudocode – <code>Tensor.backward()</code></h3>
+<pre class="pseudo"><b>if</b> size() ≠ 1:          <b>throw</b> "backward() only on a scalar"
+<b>if</b> grad = null:         <b>throw</b> "no gradient path (no parameter in the graph?)"
+order ← topoSort(this)                    <i>parents before child</i>
+grad[0] ← 1                               <i>g_L = 1, set, not added</i>
+<b>for</b> i ← |order|−1 <b>down to</b> 0:
+    t ← order[i]
+    <b>if</b> t.back ≠ null: t.back.accumulate(t)     <i>distributes t.grad to t.parents</i></pre>
+<p>The topological sort runs <b>without recursion</b>. A transformer with several blocks produces graphs with thousands of nodes in sequence; a recursive depth-first search would blow the call stack for deep networks. Instead the sort keeps its own stack with two phases per node: in phase 0 the parents are scheduled, in phase 1 the node is emitted – that is, only once all its parents have been emitted.</p>
+<h3>Pseudocode – <code>Tensor.topoSort(root)</code></h3>
+<pre class="pseudo">order ← [];  done ← {};  onStack ← {}
+stack ← [(root, 0)]
+<b>while</b> stack not empty:
+    (t, phase) ← top element
+    <b>if</b> t ∈ done:  pop;  <b>continue</b>
+    <b>if</b> phase = 0:
+        phase of top element ← 1
+        onStack ← onStack ∪ {t}
+        <b>for each</b> parent p of t (not null, not done):
+            <b>if</b> p ∈ onStack:  <b>throw</b> "cycle in computation graph"
+            push (p, 0)
+    <b>else</b>:
+        pop;  onStack ← onStack \ {t}
+        done ← done ∪ {t};  append t to order
+<b>return</b> order</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/Tensor.java</code>, methods <code>backward</code> and <code>topoSort</code>. The sets are <code>HashSet</code>s over object identity; a tensor used several times appears exactly once in the order.</p>
+<p>A cycle cannot arise through the public interface, because every operation creates a new tensor and never changes an existing one. The check guards against later extensions.</p>
+
+<h2 id="summe">Accumulating instead of overwriting</h2>
+<p>Every backward function writes into its parents' gradients with <code>+=</code>. That is the sum of the chain rule from section <a href="#graph">Computation graph</a>, and it has three consequences worth knowing:</p>
+<ul>
+  <li><b>Shared weights collect every contribution.</b> A tensor used at several places – the embedding matrix that also serves as output head, or a value multiplied by itself – receives the sum of all contributions. For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mo largeop="true" movablelimits="true">∑</mo><mi>x</mi><mo>⊙</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">L = \sum x \odot x</annotation></semantics></math> the result is correctly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>x</mi></mrow><annotation encoding="application/x-tex">2x</annotation></semantics></math>.</li>
+  <li><b>Reset before every pass.</b> Parameter gradients remain after <code>backward()</code>. Before the next backward pass <code>zeroGrad()</code> must set them to zero; <code>Adam.zeroGrad()</code> and <code>Module.zeroGrad()</code> do that.</li>
+  <li><b>Batches without a batch axis.</b> Two backward passes over two different sequences without <code>zeroGrad()</code> in between give exactly the sum of the two individual gradients. That is how the sequence trainer batches sequences of different length without padding them (see <a href="sequenztraining.html">Sequence training</a>).</li>
+</ul>
+<p>If an intermediate value is to be used further as a constant, <code>detach()</code> cuts it off: the result is a copy of the values without parents and without gradient. For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mo largeop="true" movablelimits="true">∑</mo><mi>x</mi><mo>⊙</mo><mspace width="0.1667em"/><mi>detach</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L = \sum x \odot \mathrm{detach}(x)</annotation></semantics></math> the gradient with respect to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> is therefore <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math>, not <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>x</mi></mrow><annotation encoding="application/x-tex">2x</annotation></semantics></math> – the second factor counts as a number.</p>
+
+<h2 id="ausdehnung">One-sided stretching of unequal shapes</h2>
+<p><code>add</code>, <code>sub</code>, <code>mul</code> and <code>div</code> allow the second operand to be smaller than the first. It is stretched <b>right-aligned</b> into the shape of the first: missing leading axes and axes of length 1 are repeated. That covers the two cases a transformer needs: a bias <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>D</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[D]</annotation></semantics></math> on a sequence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>T</mi><mo>,</mo><mi>D</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[T, D]</annotation></semantics></math> and a mask <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>T</mi><mo>,</mo><mi>T</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[T, T]</annotation></semantics></math> on the scores of all heads <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>H</mi><mo>,</mo><mi>T</mi><mo>,</mo><mi>T</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[H, T, T]</annotation></semantics></math>.</p>
+<p>This is implemented with <b>effective strides</b>. For each axis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> of the first operand, the second one gets the stride <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow><mrow><mi>b</mi></mrow></msubsup></mrow><annotation encoding="application/x-tex">s^b_i</annotation></semantics></math> if the lengths are equal, and 0 where it is stretched. The flat index into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> for the flat index <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> is then</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>idx</mi><mrow><mi>b</mi></mrow></msub><mo>⁡</mo><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>c</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>e</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>e</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><msubsup><mrow><mi>s</mi></mrow><mrow><mi>i</mi><mo>−</mo><mi>o</mi></mrow><mrow><mi>b</mi></mrow></msubsup></mtd><mtd style="text-align:left"><mtext>if </mtext><msub><mrow><mi>b</mi></mrow><mrow><mi>i</mi><mo>−</mo><mi>o</mi></mrow></msub><mo>=</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>i</mi></mrow></msub></mtd></mtr><mtr><mtd style="text-align:left"><mn>0</mn></mtd><mtd style="text-align:left"><mtext>if </mtext><msub><mrow><mi>b</mi></mrow><mrow><mi>i</mi><mo>−</mo><mi>o</mi></mrow></msub><mo>=</mo><mn>1</mn><mtext> or </mtext><mi>i</mi><mo>&lt;</mo><mi>o</mi></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\mathrm{idx}_b(f) = \sum_i c_i(f)\, e_i, \qquad e_i = \begin{cases} s^b_{i-o} &amp; \text{if } b_{i-o} = a_i \\ 0 &amp; \text{if } b_{i-o} = 1 \text{ or } i \lt o \end{cases}</annotation></semantics></math></p>
+<p>with the offset <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi></mrow><annotation encoding="application/x-tex">o</annotation></semantics></math> = rank(a) − rank(b) and the coordinates <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">c_i(f)</annotation></semantics></math> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math>. On the way back the chain rule implies that every value of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> that was copied to many places in the forward pass receives the sum of the gradients of all those places:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>b</mi></mrow></msub><mo stretchy="false">[</mo><mi>j</mi><mo stretchy="false">]</mo><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>f</mi><mo>:</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><msub><mi>idx</mi><mrow><mi>b</mi></mrow></msub><mo>⁡</mo><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">)</mo><mo>=</mo><mi>j</mi></mrow></munder><msub><mrow><mi>g</mi></mrow><mrow><mi>a</mi><mo>+</mo><mi>b</mi></mrow></msub><mo stretchy="false">[</mo><mi>f</mi><mo stretchy="false">]</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">g_{b}[j] = \sum_{f:\ \mathrm{idx}_b(f) = j} g_{a+b}[f].</annotation></semantics></math></p>
+<p>For a bias this means: its gradient is the column sum of the output gradient over all rows.</p>
+<h3>Pseudocode – <code>Ops.add(a, b)</code></h3>
+<pre class="pseudo">e ← broadcastStride(a.shape, b.shape)      <i>throws for incompatible shapes</i>
+<b>for</b> f ← 0 <b>to</b> |a|−1:  out[f] ← a[f] + b[idx_b(f)]
+<b>backward</b>:
+    <b>if</b> a.grad ≠ null: <b>for each</b> f: a.grad[f] += g[f]
+    <b>if</b> b.grad ≠ null: <b>for each</b> f: b.grad[idx_b(f)] += g[f]    <i>sum over stretched axes</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/Ops.java</code>, methods <code>broadcastStride</code>, <code>mapIndex</code>, <code>add</code>; <code>sub</code>, <code>mul</code> and <code>div</code> are built the same way.</p>
+<div class="hinweis"><b>Decision in the framework:</b> stretching is <b>one-sided</b> – only the second operand is stretched – and limited to right-aligned axes of length 1 or missing axes. If the second operand has more axes than the first, or an axis does not match, the operation throws (<code>[2,3]</code> against <code>[2]</code>: "shapes not broadcast-compatible … (axis 1)"). Better an exception than a silently wrong shape.</div>
+
+<h2 id="beispiel">Worked example</h2>
+<p>The example from the overview, checked by hand: data <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>1</mn></mtd><mtd style="text-align:left"><mn>2</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>3</mn></mtd><mtd style="text-align:left"><mn>4</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">x = \left(\begin{matrix} 1 &amp; 2 \\ 3 &amp; 4 \end{matrix}\right)</annotation></semantics></math>, parameter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>0.3</mn></mtd><mtd style="text-align:left"><mo>−</mo><mn>1.2</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0.7</mn></mtd><mtd style="text-align:left"><mn>2.0</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">w = \left(\begin{matrix} 0.3 &amp; -1.2 \\ 0.7 &amp; 2.0 \end{matrix}\right)</annotation></semantics></math>, loss <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mspace width="0.1667em"/><mi>mean</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>tanh</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>x</mi><mspace width="0.1667em"/><mi>w</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L = \mathrm{mean}(\tanh(x\,w))</annotation></semantics></math>.</p>
+<table>
+  <tr><th>Step</th><th>forward</th><th>backward</th></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mi>x</mi><mspace width="0.1667em"/><mi>w</mi></mrow><annotation encoding="application/x-tex">z = x\,w</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>1.7</mn></mtd><mtd style="text-align:left"><mn>2.8</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>3.7</mn></mtd><mtd style="text-align:left"><mn>4.4</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">\left(\begin{matrix} 1.7 &amp; 2.8 \\ 3.7 &amp; 4.4 \end{matrix}\right)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>w</mi></mrow></msub><mo>=</mo><msup><mrow><mi>x</mi></mrow><mrow><mi>T</mi></mrow></msup><msub><mrow><mi>g</mi></mrow><mrow><mi>z</mi></mrow></msub></mrow><annotation encoding="application/x-tex">g_w = x^T g_z</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><mspace width="0.1667em"/><mi>tanh</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>z</mi></mrow><annotation encoding="application/x-tex">t = \tanh z</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>0.935409</mn></mtd><mtd style="text-align:left"><mn>0.992632</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0.998778</mn></mtd><mtd style="text-align:left"><mn>0.999699</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">\left(\begin{matrix} 0.935409 &amp; 0.992632 \\ 0.998778 &amp; 0.999699 \end{matrix}\right)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>z</mi></mrow></msub><mo>=</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>t</mi></mrow></msub><mo>⊙</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msup><mrow><mi>t</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">g_z = g_t \odot (1 - t^2)</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn></mrow></mfrac><mo largeop="true" movablelimits="true">∑</mo><mi>t</mi></mrow><annotation encoding="application/x-tex">L = \frac14 \sum t</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.981629</mn></mrow><annotation encoding="application/x-tex">0.981629</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>t</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn></mrow></mfrac></mrow><annotation encoding="application/x-tex">g_t = \frac14</annotation></semantics></math> in every entry</td></tr>
+</table>
+<p>Backwards: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>z</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn></mrow></mfrac><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msup><mrow><mi>t</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>3.1252</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mtd><mtd style="text-align:left"><mn>3.6707</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mtd></mtr><mtr><mtd style="text-align:left"><mn>6.1051</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mtd><mtd style="text-align:left"><mn>1.5069</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">g_z = \frac14(1 - t^2) = \left(\begin{matrix} 3.1252\cdot 10^{-2} &amp; 3.6707\cdot 10^{-3} \\ 6.1051\cdot 10^{-4} &amp; 1.5069\cdot 10^{-4} \end{matrix}\right)</annotation></semantics></math> and</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>w</mi></mrow></msub><mo>=</mo><msup><mrow><mi>x</mi></mrow><mrow><mi>T</mi></mrow></msup><msub><mrow><mi>g</mi></mrow><mrow><mi>z</mi></mrow></msub><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>1</mn><mo>⋅</mo><mn>0.031252</mn><mo>+</mo><mn>3</mn><mo>⋅</mo><mn>0.000611</mn></mtd><mtd style="text-align:left"><mn>1</mn><mo>⋅</mo><mn>0.003671</mn><mo>+</mo><mn>3</mn><mo>⋅</mo><mn>0.000151</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>2</mn><mo>⋅</mo><mn>0.031252</mn><mo>+</mo><mn>4</mn><mo>⋅</mo><mn>0.000611</mn></mtd><mtd style="text-align:left"><mn>2</mn><mo>⋅</mo><mn>0.003671</mn><mo>+</mo><mn>4</mn><mo>⋅</mo><mn>0.000151</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>0.033084</mn></mtd><mtd style="text-align:left"><mn>0.004123</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0.064947</mn></mtd><mtd style="text-align:left"><mn>0.007944</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow><mo>.</mo></mrow><annotation encoding="application/x-tex">g_w = x^T g_z = \left(\begin{matrix} 1\cdot 0.031252 + 3\cdot 0.000611 &amp; 1\cdot 0.003671 + 3\cdot 0.000151 \\ 2\cdot 0.031252 + 4\cdot 0.000611 &amp; 2\cdot 0.003671 + 4\cdot 0.000151 \end{matrix}\right) = \left(\begin{matrix} 0.033084 &amp; 0.004123 \\ 0.064947 &amp; 0.007944 \end{matrix}\right).</annotation></semantics></math></p>
+<p>Exactly these values are in <code>w.grad</code> after <code>L.backward()</code>. <code>GradCheck.check(List.of(w), …)</code> compares them with central differences at all four components (there are no more; the default of 40 probes is capped at 4) and reports a largest relative error of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.6\cdot 10^{-9}</annotation></semantics></math>.</p>
+<p>The example also shows why saturated nonlinearities learn slowly: at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mn>4.4</mn></mrow><annotation encoding="application/x-tex">z = 4.4</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><mspace width="0.1667em"/><msup><mi>tanh</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mspace width="0.1667em"/><mi>z</mi></mrow><annotation encoding="application/x-tex">1 - \tanh^2 z</annotation></semantics></math> is already <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">6\cdot 10^{-4}</annotation></semantics></math>, and almost nothing of the gradient reaches the parameter.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>AutogradTest</code></b>, part 1: every operation of <code>Ops</code> individually against central differences via <code>GradCheck</code> (40 probes, step <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-5}</annotation></semantics></math>, relative step <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>, tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>), including <code>add</code>, <code>sub</code>, <code>mul</code> with a stretched bias and with two stretched axes, all three forms of the matrix product, reshaping and nonlinearities; in addition composed blocks (self-attention with two heads, feed-forward with residual and LayerNorm) and an embedding with a <b>repeated</b> index that proves accumulation into the same row. According to the module documentation the worst relative error was <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.0</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.0\cdot 10^{-9}</annotation></semantics></math>.</li>
+  <li><b><code>AutogradTest</code></b>, learning proof: a 2-32-32-1 network with GELU learns <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>sin</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>3</mn><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>+</mo><mn>0.5</mn><mspace width="0.1667em"/><msubsup><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></msubsup></mrow><annotation encoding="application/x-tex">\sin(3x_1)\,x_2 + 0.5\,x_1^2</annotation></semantics></math> and must reach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>&gt;</mo><mn>0.99</mn></mrow><annotation encoding="application/x-tex">R^2 \gt 0.99</annotation></semantics></math> on held-out points; the gradient norm afterwards must be finite and greater than zero. Correct gradients say nothing about the interplay with initial values and optimiser – hence separately.</li>
+  <li><b><code>Gradientenprobe</code></b> (63 checks) computes its difference quotients itself and deliberately does not call <code>GradCheck</code>. Among other things it pins down <code>detach()</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><mi>x</mi><mo>⊙</mo><mspace width="0.1667em"/><mi>detach</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\sum x \odot \mathrm{detach}(x)</annotation></semantics></math> has the gradient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> and explicitly not <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>x</mi></mrow><annotation encoding="application/x-tex">2x</annotation></semantics></math>, the detached tensor carries no gradient and keeps the values.</li>
+  <li><b><code>EncoderTest</code></b>: two backward passes without <code>zeroGrad()</code> in between give the sum of the individual gradients to better than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math> (measured <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.4</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.4\cdot 10^{-16}</annotation></semantics></math> according to the module documentation).</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>First derivatives only.</b> The backward functions compute on raw arrays and build no graph; a derivative of the derivative (Hessian-vector products, gradient penalties) is not possible.</li>
+  <li><b>One backward pass per graph.</b> The gradients of intermediate nodes are not reset before a second <code>backward()</code> on the same graph. Recomputed for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mo largeop="true" movablelimits="true">∑</mo><mspace width="0.1667em"/><msup><mi>tanh</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mo stretchy="false">(</mo><mi>w</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L = \sum \tanh^2(w)</annotation></semantics></math>: after the second call <code>w.grad</code> does not hold twice but four times the single gradient. Whoever wants to differentiate twice builds the graph twice.</li>
+  <li><b>Memory grows with the graph.</b> Every intermediate value is kept until the end of the backward pass – for a transformer all activations of all layers, for attention quadratically in the sequence length.</li>
+  <li><b>No in-place operations.</b> Every operation creates a new tensor. Whoever changes a parameter's <code>data</code> directly (like the clamps in the fitting methods) does so outside the graph and after the optimiser step.</li>
+  <li><b>Not for concurrent backward passes.</b> Parallelism lives inside the matrix product; two threads differentiating into the same parameters at the same time would corrupt each other's gradients.</li>
+  <li><b>Kinks.</b> For <code>relu</code> and <code>l1Loss</code> the derivative at the kink is defined as 0; see <a href="ableitungen.html#grenzen">Derivatives, limits</a>.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>A. Griewank, A. Walther: <i>Evaluating Derivatives. Principles and Techniques of Algorithmic Differentiation</i>, 2nd ed., SIAM 2008.</li>
+  <li>D. E. Rumelhart, G. E. Hinton, R. J. Williams: Learning representations by back-propagating errors. <i>Nature</i> 323 (1986).</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#kern">Tensor, operations, gradient check</a> · Probes: <code>AutogradTest</code>, <code>Gradientenprobe</code>, <code>EncoderTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

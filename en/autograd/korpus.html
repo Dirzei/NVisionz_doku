@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loading and vetting a speech corpus in advance – WAV chunks, metadata and phoneme coverage – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite" href="matmul.html">Matrix product</a>
+<a class="unterseite" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite aktiv" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Loading and vetting a speech corpus in advance – WAV chunks, metadata and phoneme coverage</span><a class="sprachwahl" href="../../de/autograd/korpus.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd.corpus</div>
+  <h1>Loading and vetting a speech corpus in advance – WAV chunks, metadata and phoneme coverage</h1>
+  <p class="unter">The computation behind <code>CorpusLoader</code> and <code>G2pCoverage</code>: a WAV file as a sequence of chunks, the conversion of samples per bit depth, the corpus duration extrapolated from a sample, and the figure "phonemes per character" – with pseudocode following the source, worked examples, the probes and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A speech corpus consists of text lines and the matching recordings. Learning targets are later derived from it – for example the formant trajectories of the second stage (see <a href="rahmenfolge.html">Frame sequences</a>) or phoneme sequences for speech output. A training run on it takes hours. Faults in the corpus – a missing file, an unexpected sample rate, characters the phoneme converter does not know – do not necessarily show up during training, because a model learns something even from wrong targets.</p>
+<p>The package therefore settles three questions <b>beforehand</b>: Are all clips present and readable? How large is the corpus, and does it have a usable sample rate? Does the phoneme conversion cope with the text?</p>
+
+<h2 id="aufbau">Layout of the corpus directory</h2>
+<p>The HUI layout is read: a directory with a file <code>metadata.csv</code> and a subdirectory <code>wavs/</code>. Every line of the metadata has the form</p>
+<pre class="pseudo"><i>id</i>|<i>raw text</i>|<i>normalised text</i></pre>
+<p>The separator is the pipe, not the comma – despite the extension <code>.csv</code>. A comma reader would get a single column. The id belongs to the file <code>wavs/</code><i>id</i><code>.wav</code>.</p>
+<p>The third column is the normalised text: numbers written out, abbreviations expanded. That is exactly what a grapheme-to-phoneme converter needs. <code>Entry.text()</code> therefore returns the third column, and the second only if the third is missing or blank.</p>
+<p>Lines whose audio file is missing are <b>skipped and counted</b>; the count is printed. A missing clip would otherwise only surface in the middle of a training run. The loader keeps only references to the files, not the audio data itself: 22 hours at 44.1 kHz are about 3.5 billion samples, i.e. about 14 GB as <code>float</code>. Audio data is read file by file with <code>readWav</code>.</p>
+
+<h2 id="wav">The WAV file as a sequence of chunks</h2>
+<p>A WAV file is a RIFF file: after a 12-byte header (<code>RIFF</code>, total length, <code>WAVE</code>) come chunks. Every chunk starts with a four-character id and a length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ℓ</mi></mrow><annotation encoding="application/x-tex">\ell</annotation></semantics></math> as a 32-bit little-endian number, followed by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ℓ</mi></mrow><annotation encoding="application/x-tex">\ell</annotation></semantics></math> bytes of content. Chunks start at even positions; an odd length is followed by a pad byte. The next chunk therefore starts at</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>p</mi><mo>'</mo><mo>=</mo><mi>p</mi><mo>+</mo><mn>8</mn><mo>+</mo><mi mathvariant="normal">ℓ</mi><mo>+</mo><mo stretchy="false">(</mo><mi mathvariant="normal">ℓ</mi><mo>mod</mo><mn>2</mn><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">p' = p + 8 + \ell + (\ell \bmod 2).</annotation></semantics></math></p>
+<p>Two chunks are needed: <code>fmt </code> with format tag, channel count, sample rate and bit depth (at offsets 0, 2, 4 and 14 of the content), and <code>data</code> with the samples. Many files have exactly these two chunks, and then the samples always start at byte 44. Some tools, however, insert further chunks, such as <code>LIST</code> with recording information. A reader with a fixed offset of 44 then reads metadata as samples. <code>readWav</code> therefore walks the chunks.</p>
+
+<figure>
+<svg viewBox="0 0 620 220" width="620" font-family="sans-serif" font-size="13">
+  <title>Chunk sequence of a WAV file with an inserted LIST chunk</title>
+  <defs>
+    <marker id="ag-korpus-pfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker>
+    <marker id="ag-korpus-pfeil2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9a6400"/></marker>
+  </defs>
+  <text x="20" y="18" fill="#1f5f8b">Walking the chunks: p ← p + 8 + length + pad</text>
+  <path d="M122,48 Q190,24 258,48" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#ag-korpus-pfeil)"/>
+  <path d="M262,48 Q342,22 422,48" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#ag-korpus-pfeil)"/>
+  <rect x="20" y="50" width="100" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="70" y="71" fill="#1f5f8b" text-anchor="middle">RIFF header</text>
+  <text x="70" y="89" fill="#5b6475" text-anchor="middle" font-size="11">RIFF n WAVE</text>
+  <rect x="120" y="50" width="140" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="190" y="71" fill="#1f5f8b" text-anchor="middle">fmt chunk</text>
+  <text x="190" y="89" fill="#5b6475" text-anchor="middle" font-size="11">format · rate · bits</text>
+  <rect x="260" y="50" width="150" height="50" fill="#ffffff" stroke="#9a6400"/>
+  <text x="335" y="71" fill="#9a6400" text-anchor="middle">LIST chunk</text>
+  <text x="335" y="89" fill="#5b6475" text-anchor="middle" font-size="11">21 bytes, odd</text>
+  <rect x="410" y="50" width="14" height="50" fill="#c9d1dc" stroke="#1f5f8b"/>
+  <rect x="424" y="50" width="60" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="454" y="71" fill="#1f5f8b" text-anchor="middle">data</text>
+  <text x="454" y="89" fill="#5b6475" text-anchor="middle" font-size="11">8820</text>
+  <rect x="484" y="50" width="116" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="542" y="71" fill="#1f5f8b" text-anchor="middle">samples</text>
+  <text x="542" y="89" fill="#5b6475" text-anchor="middle" font-size="11">4410 × 16 bit</text>
+  <text x="20" y="116" fill="#5b6475" font-size="11">0</text>
+  <text x="120" y="116" fill="#5b6475" font-size="11">12</text>
+  <text x="260" y="116" fill="#5b6475" font-size="11">36</text>
+  <text x="424" y="116" fill="#5b6475" font-size="11">66</text>
+  <text x="484" y="116" fill="#5b6475" font-size="11">74</text>
+  <text x="600" y="116" fill="#5b6475" font-size="11" text-anchor="end">8894</text>
+  <line x1="417" y1="100" x2="417" y2="128" stroke="#5b6475"/>
+  <text x="417" y="142" fill="#5b6475" font-size="11" text-anchor="middle">pad byte</text>
+  <line x1="301" y1="172" x2="301" y2="104" stroke="#9a6400" stroke-width="1.5" marker-end="url(#ag-korpus-pfeil2)"/>
+  <text x="301" y="188" fill="#9a6400" text-anchor="middle">a reader with fixed offset 44</text>
+  <text x="301" y="206" fill="#9a6400" text-anchor="middle">reads the LIST chunk as samples</text>
+</svg>
+<figcaption>The file from the probe with an inserted chunk: 4410 samples at 16 bit, mono, 44,100 Hz. Offsets are in bytes; the widths are not to scale. <code>readWav</code> jumps from chunk to chunk and accounts for the pad byte after the odd-length <code>LIST</code> chunk; a reader that expects the samples from byte 44 lands in the middle of the recording information.</figcaption>
+</figure>
+
+<h3>Conversion of the samples</h3>
+<p>The values are mapped to the interval <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[-1, 1)</annotation></semantics></math>. With the raw value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> read, per bit depth:</p>
+<table>
+  <tr><th>Bit depth</th><th>Raw value</th><th>Sample</th></tr>
+  <tr><td>8 bit</td><td>unsigned, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi>b</mi><mo>≤</mo><mn>255</mn></mrow><annotation encoding="application/x-tex">0 \le b \le 255</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>b</mi><mo>−</mo><mn>128</mn><mo stretchy="false">)</mo><mo>/</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">(b - 128)/128</annotation></semantics></math></td></tr>
+  <tr><td>16 bit</td><td>signed</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{15}</annotation></semantics></math></td></tr>
+  <tr><td>24 bit</td><td>signed, top byte sign-extended</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>23</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{23}</annotation></semantics></math></td></tr>
+  <tr><td>32 bit, format tag 3</td><td>IEEE 754 <code>float</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> unchanged</td></tr>
+  <tr><td>32 bit, otherwise</td><td>signed</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{31}</annotation></semantics></math></td></tr>
+</table>
+<p>8 bit is the only unsigned depth – its centre is 128. Multichannel files stay interleaved (left, right, left, …); the duration is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>⋅</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">n / (f_s \cdot c)</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> samples, sample rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_s</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> channels.</p>
+
+<h3>Pseudocode – <code>CorpusLoader.readWav(file)</code></h3>
+<pre class="pseudo">d ← all bytes of the file
+<b>check</b> |d| ≥ 44, d[0..4) = "RIFF", d[8..12) = "WAVE"
+rate ← 0;  channels ← 1;  bits ← 16;  format ← 1;  dataFrom ← −1
+p ← 12
+<b>while</b> p + 8 ≤ |d|:
+    id ← d[p..p+4);  ℓ ← le32(d, p+4);  content ← p + 8
+    <b>if</b> ℓ &lt; 0 <b>or</b> content + ℓ &gt; |d|:  ℓ ← |d| − content       <i>truncated file</i>
+    <b>if</b> id = "fmt " <b>and</b> ℓ ≥ 16:
+        format ← le16(content);  channels ← max(1, le16(content+2))
+        rate ← le32(content+4);  bits ← le16(content+14)
+    <b>else if</b> id = "data":  dataFrom ← content;  dataLength ← ℓ
+    p ← content + ℓ + (ℓ mod 2)                                 <i>pad byte</i>
+<b>check</b> dataFrom ≥ 0
+w ← max(1, bits / 8);  n ← ⌊dataLength / w⌋
+<b>for</b> i = 0 … n−1:  s[i] ← conversion as in the table, other depths 0
+<b>return</b> (s, rate, channels)</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/corpus/CorpusLoader.java</code>, method <code>readWav</code>.</p>
+
+<div class="hinweis"><b>Decision in the framework:</b> an own WAV reader instead of <code>javax.sound.sampled</code>. The JDK package is awkward to include in a native image and adds nothing for uncompressed PCM files. Supported are 8, 16, 24 and 32 bit integer and 32 bit floating point. The loader holds only references; audio data is read per file on request.</div>
+
+<h2 id="bericht">Short report on the corpus</h2>
+<p><code>summary(eintraege, stichprobe)</code> counts the entries and the characters of the texts and then reads <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mtext>stichprobe</mtext><mo>,</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>E</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">m = \min(\text{stichprobe}, n_E)</annotation></semantics></math> audio files. The sample is spread evenly over the corpus – entry <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>i</mi><mspace width="0.1667em"/><msub><mrow><mi>n</mi></mrow><mrow><mi>E</mi></mrow></msub><mo>/</mo><mi>m</mi><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor i\, n_E / m \rfloor</annotation></semantics></math> for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>=</mo><mn>0</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>m</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">i = 0, \dots, m-1</annotation></semantics></math> – rather than the first <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math>: corpora are often ordered by chapter, and the first clips are not representative. From the mean duration <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow></mrow><annotation encoding="application/x-tex">\bar{t}</annotation></semantics></math> of the clips read follows the extrapolated total duration</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>T</mi><mo>≈</mo><mfrac><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow><mo>⋅</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>E</mi></mrow></msub></mrow><mrow><mn>3600</mn></mrow></mfrac><mspace width="0.3333em"/><mtext>h</mtext><mo>.</mo></mrow><annotation encoding="application/x-tex">T \approx \frac{\bar{t} \cdot n_E}{3600}\ \text{h}.</annotation></semantics></math></p>
+<p>The report lists all sample rates that occur and warns in two cases: when more than one rate occurs and when a rate is below 22,050 Hz. The reason for the second threshold: the Nyquist frequency is half the sample rate. A corpus at 16 kHz only reaches 8 kHz, and the centre of the /s/ lies at 6 to 8 kHz – right at the edge. Unreadable files in the sample are skipped so that a single broken file does not prevent the report.</p>
+
+<h2 id="abdeckung">Phoneme coverage before training</h2>
+<p>A grapheme-to-phoneme converter developed on short dialogue lines meets proper names, French and Latin fragments, old spelling and typographic characters in an audiobook. An unknown character is silently skipped, so the word is mispronounced. <code>G2pCoverage.check(texte, bekannt, conv)</code> checks three things:</p>
+<ol>
+  <li><b>Character coverage:</b> every character of the lower-cased text that is not whitespace and not in <code>bekannt</code> is counted with its frequency.</li>
+  <li><b>Yield:</b> the ratio <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mi>L</mi><mo>/</mo><mi>Z</mi></mrow><annotation encoding="application/x-tex">a = L / Z</annotation></semantics></math> of the number <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> of phonemes produced to the number <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math> of characters.</li>
+  <li><b>Empty conversions:</b> lines from which the converter produces not a single phoneme. In training they would be silent targets.</li>
+</ol>
+<p>The denominator counts all characters of the lower-cased text including spaces and punctuation. According to the class description German text yields 0.8 to 1.0 phonemes per character. Below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>0.6</mn></mrow><annotation encoding="application/x-tex">a = 0.6</annotation></semantics></math> the report warns: text is probably being swallowed. <code>ok()</code> is true if neither unknown characters nor empty conversions occurred; the yield does not enter <code>ok()</code>.</p>
+
+<h3>Pseudocode – <code>G2pCoverage.check(texte, bekannt, conv)</code></h3>
+<pre class="pseudo">unknown ← empty count;  empty ← [];  Z ← 0;  L ← 0
+<b>for each</b> line t in texte:
+    <b>if</b> t blank:  <b>continue</b>
+    k ← lowercase(t);  Z ← Z + |k|
+    <b>for each</b> character c in k:
+        <b>if</b> c not whitespace <b>and</b> c ∉ bekannt:  unknown[c] += 1
+    n ← conv.countPhonemes(t);  L ← L + n
+    <b>if</b> n = 0:  empty ← empty + [t]
+<b>return</b> Report(|texte|, Z, L, unknown, empty, L / Z  <i>(0 if Z = 0)</i>)</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/corpus/G2pCoverage.java</code>.</p>
+
+<div class="hinweis"><b>Decision in the framework:</b> the converter is passed as the functional interface <code>Converter</code> (<code>countPhonemes(text)</code>) so that the package does not depend on the speech output. The supplied base set <code>GERMAN_BASE</code> contains the lower-case letters a–z with ä, ö, ü, ß, the digits, common punctuation including the typographic quotation marks „ “ ” ‘ ’ and the dashes – —, plus é, è, ê, à, ç, ñ, á, í, ó, ú. The typographic forms are included on purpose: they occur constantly in book text, and a set with only the typewriter forms would report them as unknown by the dozen.</div>
+
+<h2 id="beispiel">Worked examples</h2>
+<p><b>File size.</b> The file in the figure has 4410 samples of 2 bytes, i.e. 8820 bytes of data. With 12 bytes of RIFF header, 8 + 16 bytes of <code>fmt</code>, 8 + 21 + 1 bytes of <code>LIST</code> and 8 bytes of <code>data</code> chunk header this gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>12</mn><mo>+</mo><mn>24</mn><mo>+</mo><mn>30</mn><mo>+</mo><mn>8</mn><mo>+</mo><mn>8820</mn><mo>=</mo><mn>8894</mn></mrow><annotation encoding="application/x-tex">12 + 24 + 30 + 8 + 8820 = 8894</annotation></semantics></math> bytes; the samples start at byte 74, not 44.</p>
+<p><b>Extrapolation.</b> In the probe every clip has 22,050 samples at 44,100 Hz, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">\bar{t} = 0.5</annotation></semantics></math> s. With four entries that gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.5</mn><mo>⋅</mo><mn>4</mn><mo>/</mo><mn>3600</mn><mo>≈</mo><mn>0.0006</mn></mrow><annotation encoding="application/x-tex">0.5 \cdot 4 / 3600 \approx 0.0006</annotation></semantics></math> h; the report shows a mean of 0.5 s and an extrapolated 0.0 h.</p>
+<p><b>Yield.</b> The probe converter simply counts letters. "Der Verdichter läuft rund." has 26 characters and 22 letters, "Die Turbine erreicht ihre Drehzahl." 35 characters and 30 letters. Together <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>52</mn><mo>/</mo><mn>61</mn><mo>≈</mo><mn>0.85</mn></mrow><annotation encoding="application/x-tex">a = 52/61 \approx 0.85</annotation></semantics></math> – within the expected range. A converter that returns nothing gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a = 0</annotation></semantics></math>, two empty conversions and the warning in the report.</p>
+<p><b>Book-typical characters.</b> In "»Das ist ein Zitat«, sagte er — nachdenklich…" and "Der Coup d'État war ein Fiasko." the check finds three unknown characters: the two guillemets and the ellipsis as a single character. The É becomes é by lower-casing and is known.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>CorpusTest</code></b> rebuilds a corpus in memory – metadata and WAV files are generated by the probe – so that the expected result is known. 18 checks:
+    <ul>
+      <li>WAV round trip of a 440 Hz sine at 8, 16, 24 and 32 bit with tolerances 0.02 / 0.001 / 10<sup>−5</sup> / 10<sup>−5</sup>; measured largest deviations were 1.17·10<sup>−2</sup>, 4.57·10<sup>−5</sup>, 1.49·10<sup>−7</sup> and 0;</li>
+      <li>an inserted odd-length <code>LIST</code> chunk with pad byte is skipped; a file without the RIFF id is rejected;</li>
+      <li>of five metadata lines with four existing files, four are read; separator and preference for the normalised text; the report names the sample rate and extrapolates the duration; a missing <code>metadata.csv</code> raises an exception;</li>
+      <li>coverage: clean text without unknown characters, plausible yield, book-typical characters are flagged, empty conversions are reported, too low a yield is warned about, <code>ok()</code> distinguishes correctly.</li>
+    </ul></li>
+  <li>With a directory as argument the probe additionally measures a real corpus (number of entries, mean duration, sample rates).</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The format tag is only evaluated to distinguish "32-bit float or integer". A file in the extensible format (tag 0xFFFE) with floating-point samples is read as integer – a probe with the values 0.5 / −0.25 / 0.1 gave 0.49 / −0.51 / 0.48. Compressed formats are not rejected.</li>
+  <li>Bit depths other than 8, 16, 24 and 32 (for example 20 bit) silently yield all zeros.</li>
+  <li>The whole file is read into memory at once; for individual corpus clips that is harmless, for recordings lasting hours it is not.</li>
+  <li>Channels are not separated; anyone needing mono samples must de-interleave themselves.</li>
+  <li>Metadata lines with fewer than two fields are skipped without being counted; only missing audio files are reported.</li>
+  <li>The yield is a rough indicator: it tells whether text is being swallowed, not whether the phonemes are right.</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#corpus">Loading and vetting a speech corpus in advance</a> · Probes: <code>CorpusTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

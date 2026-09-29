@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text, tokeniser, language model – byte pair encoding – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite" href="matmul.html">Matrix product</a>
+<a class="unterseite" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite aktiv" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Text, tokeniser, language model – byte pair encoding</span><a class="sprachwahl" href="../../de/autograd/bpe.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd.text</div>
+  <h1>Text, tokeniser, language model – byte pair encoding</h1>
+  <p class="unter">The computation behind <code>BytePairEncoder</code>: why subwords, why bytes as the base, how pre-tokenisation protects word boundaries, how learning counts and merges pairs, how encoding finds the same segmentation again, and what the text storage looks like – with pseudocode following the source, an example recomputed with the module, the probes and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A language model works on a fixed vocabulary of symbols. How a text is split into symbols decides the size and usefulness of the model:</p>
+<ul>
+  <li><b>Whole words</b> fail in German. Compounds are unboundedly productive – "Verdichterkennfeldinterpolation" (compressor map interpolation) is in no dictionary –, and this holds even more for technical vocabulary. Every unknown word would become a placeholder, and the information would be lost.</li>
+  <li><b>Single characters</b> do not have this problem but make sequences about five times longer. Attention costs quadratically in the length (see <a href="aufmerksamkeit.html#grenzen">Attention</a>): five times the length means twenty-five times the effort.</li>
+  <li><b>Subwords</b> lie in between. Frequent words become one symbol, rare ones stay split into pieces, and in the worst case a word falls back to single bytes – it is never lost.</li>
+</ul>
+<p>Byte pair encoding (Sennrich, Haddow, Birch, after a compression method by Gage) determines the subwords from the data: start with the smallest units and repeatedly merge the most frequent adjacent pair into a new symbol.</p>
+
+<h2 id="grundlage">Bytes as the base</h2>
+<p>The first 256 ids are fixed as the byte values 0 to 255 of the UTF-8 encoding. Umlauts, ß and all other characters are thus covered without special handling: a character outside ASCII is a sequence of two to four bytes, which the method merges back together by itself when frequent enough. Encoding traps – a character the tokeniser does not know – cannot arise at all.</p>
+<p>The ids are assigned like this:</p>
+<table>
+  <tr><th>Range</th><th>Meaning</th></tr>
+  <tr><td>0 … 255</td><td>the byte values</td></tr>
+  <tr><td>256 … 256 + <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi></mrow><annotation encoding="application/x-tex">S</annotation></semantics></math> − 1</td><td>the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi></mrow><annotation encoding="application/x-tex">S</annotation></semantics></math> special symbols in the order given (for example <code>&lt;s&gt;</code>, <code>&lt;pad&gt;</code>); they have no byte sequence</td></tr>
+  <tr><td>from 256 + <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi></mrow><annotation encoding="application/x-tex">S</annotation></semantics></math></td><td>the merges in learning order; rank <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> gets id <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>256</mn><mo>+</mo><mi>S</mi><mo>+</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">256 + S + i</annotation></semantics></math></td></tr>
+</table>
+
+<h2 id="vorzerlegung">Pre-tokenisation at word boundaries</h2>
+<p>Before merging, the text is split into word forms so that no symbols arise across word boundaries ("der Verdichter" must not become one symbol). The walk is over <b>code points</b>, not over <code>char</code>:</p>
+<ul>
+  <li>A leading space stays <b>with</b> the following word. The model thus distinguishes "Feld" at the start of a sentence from " Feld" in the middle, without spaces using up symbols of their own.</li>
+  <li>A run of letters forms a word, and so does a run of digits – separately, so that no symbols like "feld3" arise.</li>
+  <li>Every other character (punctuation, line break, anything else) stands alone.</li>
+</ul>
+<div class="hinweis"><b>Decision in the framework:</b> pre-tokenisation walks over code points. Characters outside the basic plane (emoji, for example) consist of a surrogate pair in Java; walking char by char would tear the pair apart, and Java's UTF-8 encoder would turn each half into a question mark. According to the module documentation exactly this happened first – Greek, Cyrillic and Japanese passed without error because they lie in the basic plane; only an emoji in the test text revealed the fault.</div>
+
+<h2 id="lernen">Learning</h2>
+<p>Counting is done not on the raw text but on the <b>unique</b> word forms with their frequencies: a word that occurs ten thousand times is split once and carried with weight 10,000. That gives the same pair counts at a fraction of the effort.</p>
+<h3>Pseudocode – <code>BytePairEncoder.lerne(texts, targetVocab, minFrequency, specials)</code></h3>
+<pre class="pseudo"><b>check</b> targetVocab &gt; 256 + |specials|
+freq ← empty ordered map word form → count
+<b>for each</b> text:  <b>for each</b> word form w <b>in</b> pretokenise(text): freq[w] += 1
+words ← per word form the list of its UTF-8 bytes;  count ← per word form its frequency
+next ← 256 + |specials|;  merges ← []
+<b>repeat</b> (targetVocab − next) times:
+    pairs ← empty
+    <b>for each</b> word form w:  <b>for each</b> adjacent pair (a, b) in w: pairs[(a,b)] += count[w]
+    (a, b) ← pair with the largest count;  on ties the one with the smaller key a·2³² + b
+    <b>if</b> count &lt; minFrequency: <b>break</b>
+    append (a, b) to merges;  new ← next;  next += 1
+    <b>for each</b> word form w: replace each occurrence of (a, b), left to right, by new
+<b>return</b> BytePairEncoder(specials, merges)</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/text/BytePairEncoder.java</code>, methods <code>lerne</code>, <code>verschmelze</code>, <code>vorzerlege</code>.</p>
+<div class="hinweis"><b>Decision in the framework:</b> on a tie in pair count the pair with the smaller key <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup><mo>+</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a\cdot 2^{32} + b</annotation></semantics></math> wins. Otherwise the result would depend on the order of the hash table, and two learning runs on the same data would produce different vocabularies. <code>minFrequency</code> ends learning as soon as the best pair is rarer – this prevents random sequences from typos becoming symbols at the end; the vocabulary may then stay smaller than requested.</div>
+
+<h2 id="kodieren">Encoding and decoding</h2>
+<p>Encoding must produce the same segmentation as learning. Therefore, per word form, the adjacent pair with the <b>smallest rank</b> – the one learned first – is always merged, until none of the pairs is in the list of merges any more.</p>
+<h3>Pseudocode – <code>BytePairEncoder.kodiere(text)</code></h3>
+<pre class="pseudo">out ← []
+<b>for each</b> word form w <b>in</b> pretokenise(text):
+    ids ← UTF-8 bytes of w
+    <b>while</b> |ids| ≥ 2:
+        find the adjacent pair (ids[i], ids[i+1]) with the smallest rank
+        <b>if</b> none is known: <b>break</b>
+        replace all occurrences of this pair by its id
+    append ids to out
+<b>return</b> out</pre>
+<p>Decoding concatenates the byte sequences of the ids and reads the result as UTF-8; special symbols are skipped, unknown ids throw. Because every byte has its own id, every input is representable and the round trip is lossless – even for text the tokeniser has never seen.</p>
+<p>Storage is <b>text</b> in UTF-8: magic <code>EVZBPE1</code>, number of special symbols, one special symbol per line, number of merges, one pair "a b" per line. The merges are plain number pairs; the file stays readable and can be checked by hand if something goes wrong.</p>
+
+<h2 id="beispiel">Worked example</h2>
+<p>Learned on three sentences – "der Verdichter verdichtet", "die Verdichter verdichten", "der Verdichter" – with target vocabulary 268 (i.e. twelve merges), minimum frequency 2, no special symbols. The word forms are "der", " Verdichter" (three times), " verdichtet", "die", " verdichten". The module learns in this order:</p>
+<table>
+  <tr><th>Rank</th><th>Id</th><th>Pair</th><th>Result</th></tr>
+  <tr><td>0</td><td>256</td><td>101 114</td><td>"er"</td></tr>
+  <tr><td>1</td><td>257</td><td>100 105</td><td>"di"</td></tr>
+  <tr><td>2</td><td>258</td><td>99 104</td><td>"ch"</td></tr>
+  <tr><td>3</td><td>259</td><td>256 257</td><td>"erdi"</td></tr>
+  <tr><td>4</td><td>260</td><td>258 116</td><td>"cht"</td></tr>
+  <tr><td>5</td><td>261</td><td>259 260</td><td>"erdicht"</td></tr>
+  <tr><td>6</td><td>262</td><td>32 86</td><td>" V"</td></tr>
+  <tr><td>7</td><td>263</td><td>261 256</td><td>"erdichter"</td></tr>
+  <tr><td>8</td><td>264</td><td>262 263</td><td>" Verdichter"</td></tr>
+  <tr><td>9</td><td>265</td><td>32 118</td><td>" v"</td></tr>
+  <tr><td>10</td><td>266</td><td>100 256</td><td>"der"</td></tr>
+  <tr><td>11</td><td>267</td><td>261 101</td><td>"erdichte"</td></tr>
+</table>
+
+<figure>
+<svg viewBox="0 0 600 290" width="600" font-family="sans-serif" font-size="13">
+  <rect x="35" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="50" y="267" fill="#5b6475" text-anchor="middle">␣</text>
+  <rect x="83" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="98" y="267" fill="#5b6475" text-anchor="middle">V</text>
+  <rect x="131" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="146" y="267" fill="#5b6475" text-anchor="middle">e</text>
+  <rect x="179" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="194" y="267" fill="#5b6475" text-anchor="middle">r</text>
+  <rect x="227" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="242" y="267" fill="#5b6475" text-anchor="middle">d</text>
+  <rect x="275" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="290" y="267" fill="#5b6475" text-anchor="middle">i</text>
+  <rect x="323" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="338" y="267" fill="#5b6475" text-anchor="middle">c</text>
+  <rect x="371" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="386" y="267" fill="#5b6475" text-anchor="middle">h</text>
+  <rect x="419" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="434" y="267" fill="#5b6475" text-anchor="middle">t</text>
+  <rect x="467" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="482" y="267" fill="#5b6475" text-anchor="middle">e</text>
+  <rect x="515" y="250" width="30" height="24" fill="#ffffff" stroke="#5b6475"/><text x="530" y="267" fill="#5b6475" text-anchor="middle">r</text>
+  <line x1="146" y1="250" x2="170" y2="224" stroke="#1f5f8b"/><line x1="194" y1="250" x2="170" y2="224" stroke="#1f5f8b"/>
+  <line x1="482" y1="250" x2="506" y2="224" stroke="#1f5f8b"/><line x1="530" y1="250" x2="506" y2="224" stroke="#1f5f8b"/>
+  <line x1="242" y1="250" x2="266" y2="224" stroke="#1f5f8b"/><line x1="290" y1="250" x2="266" y2="224" stroke="#1f5f8b"/>
+  <line x1="338" y1="250" x2="362" y2="224" stroke="#1f5f8b"/><line x1="386" y1="250" x2="362" y2="224" stroke="#1f5f8b"/>
+  <line x1="50" y1="250" x2="74" y2="224" stroke="#1f5f8b"/><line x1="98" y1="250" x2="74" y2="224" stroke="#1f5f8b"/>
+  <rect x="150" y="200" width="40" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="170" y="217" fill="#1f5f8b" text-anchor="middle">er</text>
+  <rect x="486" y="200" width="40" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="506" y="217" fill="#1f5f8b" text-anchor="middle">er</text>
+  <rect x="246" y="200" width="40" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="266" y="217" fill="#1f5f8b" text-anchor="middle">di</text>
+  <rect x="342" y="200" width="40" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="362" y="217" fill="#1f5f8b" text-anchor="middle">ch</text>
+  <rect x="54" y="200" width="40" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="74" y="217" fill="#1f5f8b" text-anchor="middle">␣V</text>
+  <text x="193" y="216" fill="#9a6400" font-size="11">0</text>
+  <text x="529" y="216" fill="#9a6400" font-size="11">0</text>
+  <text x="289" y="216" fill="#9a6400" font-size="11">1</text>
+  <text x="385" y="216" fill="#9a6400" font-size="11">2</text>
+  <text x="97" y="216" fill="#9a6400" font-size="11">6</text>
+  <line x1="170" y1="200" x2="218" y2="174" stroke="#1f5f8b"/><line x1="266" y1="200" x2="218" y2="174" stroke="#1f5f8b"/>
+  <line x1="362" y1="200" x2="398" y2="174" stroke="#1f5f8b"/><line x1="434" y1="250" x2="398" y2="174" stroke="#1f5f8b"/>
+  <rect x="188" y="150" width="60" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="218" y="167" fill="#1f5f8b" text-anchor="middle">erdi</text>
+  <rect x="373" y="150" width="50" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="398" y="167" fill="#1f5f8b" text-anchor="middle">cht</text>
+  <text x="251" y="166" fill="#9a6400" font-size="11">3</text>
+  <text x="426" y="166" fill="#9a6400" font-size="11">4</text>
+  <line x1="218" y1="150" x2="308" y2="124" stroke="#1f5f8b"/><line x1="398" y1="150" x2="308" y2="124" stroke="#1f5f8b"/>
+  <rect x="268" y="100" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="308" y="117" fill="#1f5f8b" text-anchor="middle">erdicht</text>
+  <text x="351" y="116" fill="#9a6400" font-size="11">5</text>
+  <line x1="308" y1="100" x2="407" y2="74" stroke="#1f5f8b"/><line x1="506" y1="200" x2="407" y2="74" stroke="#1f5f8b"/>
+  <rect x="357" y="50" width="100" height="24" fill="#e8f0f6" stroke="#1f5f8b"/><text x="407" y="67" fill="#1f5f8b" text-anchor="middle">erdichter</text>
+  <text x="460" y="66" fill="#9a6400" font-size="11">7</text>
+  <line x1="74" y1="200" x2="240" y2="30" stroke="#1f5f8b"/><line x1="407" y1="50" x2="240" y2="30" stroke="#1f5f8b"/>
+  <rect x="180" y="6" width="120" height="24" fill="#1f5f8b" stroke="#1f5f8b"/><text x="240" y="23" fill="#ffffff" text-anchor="middle">␣Verdichter</text>
+  <text x="304" y="22" fill="#9a6400" font-size="11">8</text>
+</svg>
+<figcaption>How the eleven bytes of " Verdichter" become a single symbol. At the bottom the bytes (␣ for the leading space), above them the merges with their rank (amber). Encoding always merges the pair with the smallest rank first; that reproduces exactly this tree.</figcaption>
+</figure>
+
+<p>Encoded, "der Verdichter" gives two symbols: [266, 264] = "der", " Verdichter". The never-seen "Verdichterkennfeld" – at the start of a sentence, without a leading space – becomes [86, 263, 107, 101, 110, 110, 102, 101, 108, 100]: "V", "erdichter" and the bytes of "kennfeld", which were not frequent enough in this small set. " verdichtet" becomes " v", "erdichte", "t". All three decode losslessly to the original text.</p>
+<p>The corresponding file has 15 lines: <code>EVZBPE1</code>, <code>0</code>, <code>12</code> and the twelve pairs from "101 114" to "261 101".</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>TokenizerTest</code></b> (7 checks): lossless round trip over the whole training set; lossless round trip for completely unknown text (including Greek, Cyrillic, Japanese and emoji); no id outside the vocabulary; a second learning run gives the same vocabulary; saving and loading changes nothing, special symbols are preserved; sequences are at least two times shorter than byte-wise. According to the module documentation the compression factor on known text was 6.65.</li>
+  <li><b><code>TextKorpusTest</code></b> and <b><code>GeneratorTest</code></b> use the tokeniser as well: umlauts survive odd block sizes; all generated command examples round-trip losslessly.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>Learning cost.</b> Every merge recounts all pairs of all word forms. For a target vocabulary of a few thousand entries on a large corpus this is noticeable; an incremental pair count would be faster but does not exist here.</li>
+  <li><b>Special symbols</b> are not recognised in the text: "&lt;s&gt;" in the input text is encoded byte by byte. The caller inserts special symbols as ids (<code>specialId</code>).</li>
+  <li><b>Only the space</b> attaches to the following word. Tab and line break are symbols of their own.</li>
+  <li><b>No symbols across word boundaries.</b> Fixed phrases of several words never become one symbol; digit runs stay separate from letters.</li>
+  <li>The vocabulary may stay smaller than requested if the minimum frequency takes effect earlier.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>P. Gage: A New Algorithm for Data Compression. <i>The C Users Journal</i> 12 (2), 1994.</li>
+  <li>R. Sennrich, B. Haddow, A. Birch: Neural Machine Translation of Rare Words with Subword Units. <i>ACL</i> 2016.</li>
+  <li>A. Radford, J. Wu, R. Child, D. Luan, D. Amodei, I. Sutskever: Language Models are Unsupervised Multitask Learners. Technical report, 2019 (byte level).</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#text">Text, tokeniser, language model</a> · Probes: <code>TokenizerTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

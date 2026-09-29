@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prediction and stereo – linear prediction (LPC) – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag aktiv" href="index.html">framework-audiocodec</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kodierer">Encoder and decoder</a>
+<a class="unterseite" href="rahmen.html">Frames and subframes</a>
+<a class="rubrik" href="index.html#strom">Stream format EVAS</a>
+<a class="unterseite" href="evas.html">Layout and checksums</a>
+<a class="rubrik" href="index.html#praediktion">Prediction and stereo</a>
+<a class="unterseite" href="fest.html">Fixed predictors</a>
+<a class="unterseite aktiv" href="lpc.html">LPC</a>
+<a class="unterseite" href="stereo.html">Stereo decomposition</a>
+<a class="rubrik" href="index.html#entropie">Entropy coding</a>
+<a class="unterseite" href="bereich.html">Range coder</a>
+<a class="unterseite" href="rice.html">Golomb-Rice</a>
+<a class="rubrik" href="index.html#stapel">Batch run</a>
+<a class="unterseite" href="bilanz.html">Overall balance</a>
+<a class="rubrik" href="index.html#mdct">MDCT and filter bank</a>
+<a class="unterseite" href="fensterbank.html">Windows and block switching</a>
+<a class="unterseite" href="mdct.html">MDCT and TDAC</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-audiocodec</a> › Prediction and stereo – linear prediction (LPC)</span><a class="sprachwahl" href="../../de/audiocodec/lpc.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-audiocodec · envisionz.audiocodec</div>
+  <h1>Prediction and stereo – linear prediction (LPC)</h1>
+  <p class="unter">The computation behind <code>Lpcpraediktor</code>: the prediction model, the normal equations, autocorrelation with a Welch window, the Levinson-Durbin recursion, the order estimate, quantisation with the rounding error passed on, and the integer prediction that encoder and decoder compute identically bit for bit. With pseudocode following the source, numerical examples, probes and limits.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>The <a href="fest.html">fixed predictors</a> continue polynomials; their weights are fixed once and for all. A tone with few samples per period, a resonance, a sound with pronounced overtones – none of these is a polynomial. Linear prediction therefore determines the weights <b>from the signal itself</b>, anew for each subframe, so that the prediction error is as small as possible on average. The price: the weights have to go into the stream, and the decoder must compute exactly the same with them as the encoder.</p>
+<p>This second condition is the delicate part. The weights are determined in floating point, then quantised to integers, and from then on both sides compute in integers only. If the encoder formed the prediction in floating point and the decoder in integers, they would drift apart and the stream would be lost from that point on.</p>
+
+<h2 id="modell">The model and the normal equations</h2>
+<p>The predictor of order <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> estimates each value as a weighted sum of its <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> predecessors:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>p</mi></mrow></munderover><msub><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi><mo>−</mo><mi>j</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>e</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>−</mo><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>n</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\hat{x}_n = \sum_{j=1}^{p} a_j\, x_{n-j}, \qquad e_n = x_n - \hat{x}_n</annotation></semantics></math></p>
+<p>We seek the weights that minimise the error energy <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>n</mi></mrow></munder><msubsup><mrow><mi>e</mi></mrow><mrow><mi>n</mi></mrow><mrow><mn>2</mn></mrow></msubsup></mrow><annotation encoding="application/x-tex">E = \sum_n e_n^2</annotation></semantics></math>. Setting the derivative with respect to each <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">a_i</annotation></semantics></math> to zero gives a linear system. In the <b>autocorrelation form</b> – the sum runs over the whole block, continued with zeros outside – its entries depend only on the distance of the indices:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>p</mi></mrow></munderover><msub><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>r</mi></mrow><mrow><mo>|</mo><mi>i</mi><mo>−</mo><mi>j</mi><mo>|</mo></mrow></msub><mo>=</mo><msub><mrow><mi>r</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="1em"/><mi>i</mi><mo>=</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>p</mi><mo>,</mo><mspace width="2em"/><msub><mrow><mi>r</mi></mrow><mrow><mi>v</mi></mrow></msub><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>n</mi><mo>=</mo><mi>v</mi></mrow><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>y</mi></mrow><mrow><mi>n</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>y</mi></mrow><mrow><mi>n</mi><mo>−</mo><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum_{j=1}^{p} a_j\, r_{|i-j|} = r_i, \quad i = 1,\dots,p, \qquad r_v = \sum_{n=v}^{N-1} y_n\, y_{n-v}</annotation></semantics></math></p>
+<p>The matrix with entries <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mo>|</mo><mi>i</mi><mo>−</mo><mi>j</mi><mo>|</mo></mrow></msub></mrow><annotation encoding="application/x-tex">r_{|i-j|}</annotation></semantics></math> is a symmetric <b>Toeplitz matrix</b>. That is more than a nicety: for such systems there is the Levinson-Durbin recursion, which solves in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">p^2</annotation></semantics></math> instead of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">p^3</annotation></semantics></math> steps and delivers the solutions of <b>all</b> smaller orders along the way.</p>
+<h3>Autocorrelation with a Welch window</h3>
+<p>The autocorrelation is not formed over the raw values but over the windowed signal <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><msub><mrow><mi>w</mi></mrow><mrow><mi>n</mi></mrow></msub><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi></mrow></msub></mrow><annotation encoding="application/x-tex">y_n = w_n x_n</annotation></semantics></math>. Without a window the block edges would be a jump to zero, and the recursion would find weights that fit this artefact instead of the signal. The Welch window, a downward-open parabola, is used:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><mn>1</mn><mo>−</mo><msup><mrow><mrow><mo fence="true" stretchy="true">(</mo><mfrac><mrow><mi>n</mi><mo>−</mo><mfrac><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mrow><mrow><mfrac><mrow><mi>N</mi><mo>+</mo><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow></mrow><mrow><mn>2</mn></mrow></msup><mo>,</mo><mspace width="2em"/><mi>n</mi><mo>=</mo><mn>0</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>N</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">w_n = 1 - \left(\frac{n - \frac{N-1}{2}}{\frac{N+1}{2}}\right)^2, \qquad n = 0,\dots,N-1</annotation></semantics></math></p>
+<p>It falls to a small positive value at the edges and is 1 in the middle. The window only affects the determination of the weights; the unwindowed signal is what gets predicted.</p>
+
+<h2 id="levinson">The Levinson-Durbin recursion</h2>
+<p>The recursion builds the solution of order <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi></mrow><annotation encoding="application/x-tex">o</annotation></semantics></math> from the solution of order <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">o-1</annotation></semantics></math>. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">E_0 = r_0</annotation></semantics></math> and for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi><mo>=</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>p</mi></mrow><annotation encoding="application/x-tex">o = 1, 2, \dots, p</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mrow><mi>r</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>−</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>o</mi><mo>−</mo><mn>1</mn></mrow></munderover><msubsup><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>o</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mspace width="0.1667em"/><msub><mrow><mi>r</mi></mrow><mrow><mi>o</mi><mo>−</mo><mi>j</mi></mrow></msub></mrow><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>o</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">k_o = \frac{r_o - \sum_{j=1}^{o-1} a_j^{(o-1)}\, r_{o-j}}{E_{o-1}}</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msubsup><mrow><mi>a</mi></mrow><mrow><mi>o</mi></mrow><mrow><mo stretchy="false">(</mo><mi>o</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>=</mo><msub><mrow><mi>k</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msubsup><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>o</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>=</mo><msubsup><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>o</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msub><mrow><mi>k</mi></mrow><mrow><mi>o</mi></mrow></msub><mspace width="0.1667em"/><msubsup><mrow><mi>a</mi></mrow><mrow><mi>o</mi><mo>−</mo><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>o</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mo>,</mo><mspace width="1em"/><mi>j</mi><mo>=</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>o</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">a_o^{(o)} = k_o, \qquad a_j^{(o)} = a_j^{(o-1)} - k_o\, a_{o-j}^{(o-1)}, \quad j = 1,\dots,o-1</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>=</mo><msub><mrow><mi>E</mi></mrow><mrow><mi>o</mi><mo>−</mo><mn>1</mn></mrow></msub><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msubsup><mrow><mi>k</mi></mrow><mrow><mi>o</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">E_o = E_{o-1}\,(1 - k_o^2)</annotation></semantics></math></p>
+<p>The <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow><annotation encoding="application/x-tex">k_o</annotation></semantics></math> are called <b>reflection coefficients</b>. As long as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><msub><mrow><mi>k</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>|</mo><mo>&lt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">|k_o| &lt; 1</annotation></semantics></math>, the residual energy <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow><annotation encoding="application/x-tex">E_o</annotation></semantics></math> decreases with every order, and the corresponding synthesis filter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow></msub><msup><mrow><mi>z</mi></mrow><mrow><mo>−</mo><mi>j</mi></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">1/(1 - \sum a_j z^{-j})</annotation></semantics></math> is stable. The residual energies themselves are the basis of the order choice: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow><annotation encoding="application/x-tex">E_o</annotation></semantics></math> tells how much energy is left in the error after <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>o</mi></mrow><annotation encoding="application/x-tex">o</annotation></semantics></math> weights.</p>
+<h3>Pseudocode – <code>Lpcpraediktor.levinsonDurbin(r, pmax)</code></h3>
+<pre class="pseudo">coeff[0] ← [];  error[0] ← r[0]
+<b>if</b> r[0] ≤ 0:  all coefficients 0, all errors 0;  <b>return</b>
+a ← zeros;  e ← r[0]
+<b>for</b> o ← 1 <b>to</b> pmax:
+    s ← r[o] − Σ_{j=1}^{o−1} a[j]·r[o−j]
+    k ← (e = 0) ? 0 : s/e;   <b>if</b> k not finite: k ← 0
+    k ← clamp(k, −0.999999, 0.999999)                    <i>stability</i>
+    new[o] ← k;  new[j] ← a[j] − k·a[o−j]  for j = 1 … o−1
+    a[1..o] ← new[1..o]
+    e ← e·(1 − k²);   <b>if</b> e &lt; 1e−12: e ← 1e−12
+    error[o] ← e;  coeff[o] ← (a[1], …, a[o])            <i>index 0 = most recent value</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-audiocodec/src/envisionz/audiocodec/Lpcpraediktor.java</code>, <code>autokorrelation</code> and <code>levinsonDurbin</code>.</p>
+<div class="hinweis"><b>Convention in the framework:</b> Every reflection coefficient is limited to magnitude 0.999999, the residual energy from below to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>. Without these bounds a degenerate signal – such as a pure sine, predictable almost without error by two weights – would produce an unstable predictor or non-finite numbers. If the signal energy <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_0</annotation></semantics></math> is not positive (silence), all weights are zero.</div>
+
+<h2 id="ordnung">Choosing the order</h2>
+<p>More weights lower the error but cost space: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math> bits per weight (precision) and one warm-up value of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> bits per order. For a residual with mean energy <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\sigma^2</annotation></semantics></math> a good entropy coder needs roughly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><msup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\tfrac12 \log_2 \sigma^2</annotation></semantics></math> bits per value plus a constant. The constant does not depend on the order and drops out of the comparison. This gives the estimate</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mover accent="true"><mrow><mi>K</mi></mrow><mo stretchy="true">^</mo></mover><mo stretchy="false">(</mo><mi>o</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mi>o</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>o</mi></mrow></msub></mrow><mrow><mi>N</mi></mrow></mfrac><mo>+</mo><mi>o</mi><mspace width="0.1667em"/><mi>q</mi><mo>+</mo><mi>o</mi><mspace width="0.1667em"/><mi>b</mi><mo>,</mo><mspace width="2em"/><mover accent="true"><mrow><mi>p</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mspace width="0.1667em"/><mi>arg</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace width="0.1667em"/><msub><mi>min</mi><mrow><mn>1</mn><mo>≤</mo><mi>o</mi><mo>&lt;</mo><mi>N</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mover accent="true"><mrow><mi>K</mi></mrow><mo stretchy="true">^</mo></mover><mo stretchy="false">(</mo><mi>o</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\hat{K}(o) = (N - o)\,\frac{1}{2}\log_2 \frac{E_o}{N} + o\,q + o\,b, \qquad \hat{p} = \arg\min_{1 \le o &lt; N} \hat{K}(o)</annotation></semantics></math></p>
+<p>with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>o</mi></mrow></msub><mo>/</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">E_o/N</annotation></semantics></math> bounded below by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>. It hits the order of magnitude but not always the minimum: the residual energy measures the error of the <b>windowed</b> signal with <b>unrounded</b> weights, while what is coded is the unwindowed residual with rounded ones. The encoder therefore computes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>p</mi></mrow><mo stretchy="true">^</mo></mover></mrow><annotation encoding="application/x-tex">\hat p</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>p</mi></mrow><mo stretchy="true">^</mo></mover><mo>±</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\hat p \pm 1</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>p</mi></mrow><mo stretchy="true">^</mo></mover><mo>±</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\hat p \pm 2</annotation></semantics></math>, 8, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>16</mn><mo>,</mo><msub><mrow><mi>p</mi></mrow><mrow><mtext>max</mtext></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\min(16, p_\text{max})</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mtext>max</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">p_\text{max}</annotation></semantics></math> exactly and takes the order with the truly smallest bit cost (<a href="rahmen.html#wahl">subframe choice</a>).</p>
+
+<figure>
+<svg viewBox="0 0 620 230" width="620" font-family="sans-serif" font-size="13">
+  <line x1="60" y1="170.0" x2="600" y2="170.0" stroke="#c9d1dc"/>
+  <text x="54" y="174.0" text-anchor="end" fill="#5b6475" font-size="11">28000</text>
+  <line x1="60" y1="120.0" x2="600" y2="120.0" stroke="#c9d1dc"/>
+  <text x="54" y="124.0" text-anchor="end" fill="#5b6475" font-size="11">29000</text>
+  <line x1="60" y1="70.0" x2="600" y2="70.0" stroke="#c9d1dc"/>
+  <text x="54" y="74.0" text-anchor="end" fill="#5b6475" font-size="11">30000</text>
+  <line x1="60" y1="20.0" x2="600" y2="20.0" stroke="#c9d1dc"/>
+  <text x="54" y="24.0" text-anchor="end" fill="#5b6475" font-size="11">31000</text>
+  <text x="60.0" y="206" text-anchor="middle" fill="#5b6475" font-size="11">1</text>
+  <text x="112.3" y="206" text-anchor="middle" fill="#5b6475" font-size="11">4</text>
+  <text x="181.9" y="206" text-anchor="middle" fill="#5b6475" font-size="11">8</text>
+  <text x="251.6" y="206" text-anchor="middle" fill="#5b6475" font-size="11">12</text>
+  <text x="321.3" y="206" text-anchor="middle" fill="#5b6475" font-size="11">16</text>
+  <text x="391.0" y="206" text-anchor="middle" fill="#5b6475" font-size="11">20</text>
+  <text x="460.6" y="206" text-anchor="middle" fill="#5b6475" font-size="11">24</text>
+  <text x="530.3" y="206" text-anchor="middle" fill="#5b6475" font-size="11">28</text>
+  <text x="600.0" y="206" text-anchor="middle" fill="#5b6475" font-size="11">32</text>
+  <line x1="60" y1="190" x2="600" y2="190" stroke="#5b6475"/>
+  <polyline points="94.8,67.7 112.3,115.2 129.7,137.6 147.1,153.9 164.5,162.8 181.9,166.5 199.4,173.3 216.8,176.2 234.2,177.3 251.6,178.8 269.0,178.8 286.5,177.9 303.9,176.6 321.3,174.7 338.7,172.3 356.1,170.4 373.5,168.7 391.0,167.2 408.4,167.8 425.8,166.6 443.2,166.3 460.6,165.7 478.1,165.2 495.5,164.6 512.9,164.2 530.3,162.6 547.7,161.8 565.2,160.2 582.6,159.0 600.0,157.6" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="234.2" cy="177.3" r="3.5" fill="white" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="216.8" cy="176.2" r="3.5" fill="white" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="251.6" cy="178.8" r="3.5" fill="white" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="199.4" cy="173.3" r="3.5" fill="white" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="269.0" cy="178.8" r="3.5" fill="white" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="181.9" cy="166.5" r="3.5" fill="white" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="321.3" cy="174.7" r="3.5" fill="white" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="600.0" cy="157.6" r="3.5" fill="white" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="269.0" cy="178.8" r="4.5" fill="#9a6400"/>
+  <line x1="234.2" y1="20" x2="234.2" y2="190" stroke="#9a6400" stroke-dasharray="4,3"/>
+  <text x="239.2" y="32" fill="#9a6400" font-size="12">estimate: 11</text>
+  <text x="275.0" y="152.8" fill="#9a6400" font-size="12">chosen: 13 (27,823 bits)</text>
+  <text x="330.0" y="222" text-anchor="middle" fill="#5b6475" font-size="12">order</text>
+  <text x="600" y="32" text-anchor="end" fill="#5b6475" font-size="11">order 1: 44,778, 2: 31,768</text>
+  <text x="14" y="105.0" fill="#5b6475" font-size="12" transform="rotate(-90 14 105.0)" text-anchor="middle">bits per subframe</text>
+</svg>
+<figcaption>Exactly counted bits of one subframe (4096 values, 17 bits) over the LPC order, from the worked example on the frame page. The estimate is 11, the circles are the candidates computed exactly, 13 is chosen.</figcaption>
+</figure>
+<p>The figure shows the typical course: up to order 4 the curve falls steeply (from 44,778 bits at order 1 to 29,095 at order 4), then it flattens, and beyond the minimum the cost rises again, because every further weight costs 15 + 17 = 32 bits and hardly brings anything. This agrees with the measurement in the module documentation: on generated material LPC gained about two percent over the fixed predictors, most of it already up to order 8 (table in the <a href="index.html#praediktion">overview</a>).</p>
+
+<h2 id="quantisierung">Quantisation with the rounding error passed on</h2>
+<p>The weights are transmitted as integers <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_j</annotation></semantics></math> with a common denominator <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>s</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^s</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>≈</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>s</mi></mrow></msup></mrow><annotation encoding="application/x-tex">a_j \approx c_j / 2^s</annotation></semantics></math>. The <b>shift</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> is chosen so that the largest weight just uses the word length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>s</mi><mo>=</mo><mi>q</mi><mo>−</mo><mn>2</mn><mo>−</mo><mrow><mo fence="true" stretchy="true">⌊</mo><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mspace width="0.1667em"/><msub><mi>max</mi><mrow><mi>j</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo>|</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>|</mo><mo fence="true" stretchy="true">⌋</mo></mrow><mo>,</mo><mspace width="2em"/><mn>0</mn><mo>≤</mo><mi>s</mi><mo>≤</mo><mn>31</mn></mrow><annotation encoding="application/x-tex">s = q - 2 - \left\lfloor \log_2 \max_j |a_j| \right\rfloor, \qquad 0 \le s \le 31</annotation></semantics></math></p>
+<p>Then the weights are rounded in order, and the rounding error passes on to the next weight:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow></msub><mspace width="0.1667em"/><msup><mrow><mn>2</mn></mrow><mrow><mi>s</mi></mrow></msup><mo>+</mo><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow></msub><mspace width="0.1667em"/><msup><mrow><mn>2</mn></mrow><mrow><mi>s</mi></mrow></msup><mo>+</mo><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">c_j = \operatorname{round}\!\left(a_j\, 2^s + \delta_{j-1}\right), \qquad \delta_j = a_j\, 2^s + \delta_{j-1} - c_j, \qquad \delta_0 = 0</annotation></semantics></math></p>
+<p>Each <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_j</annotation></semantics></math> is additionally clamped to the two's-complement range <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>q</mi><mo>−</mo><mn>1</mn></mrow></msup><mo>,</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>q</mi><mo>−</mo><mn>1</mn></mrow></msup><mo>−</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-2^{q-1}, 2^{q-1}-1]</annotation></semantics></math>. Passing the error on prevents many roundings in the same direction from adding up to a systematic offset of the prediction: as long as nothing is clamped, every partial sum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>≤</mo><mi>i</mi></mrow></munder><msub><mrow><mi>c</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum_{j \le i} c_j</annotation></semantics></math> deviates from the exact partial sum by at most half a unit, however long the series. Rounded individually, the errors could add up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">i/2</annotation></semantics></math>.</p>
+<h3>Pseudocode – <code>Lpcpraediktor.quantisiere(a, q)</code></h3>
+<pre class="pseudo">g ← max |a[j]|
+<b>if</b> g ≤ 0 <b>or</b> not finite:  <b>return</b> (zeros, s = 0)
+limit ← 2^(q−1) − 1
+s ← q − 1 − ⌊log2 g⌋ − 1;   s ← clamp(s, 0, 31)
+f ← 0
+<b>for</b> j ← 0 <b>to</b> p−1:
+    f ← f + a[j]·2^s
+    c[j] ← clamp(round(f), −limit−1, limit)
+    f ← f − c[j]                                         <i>remainder carries on</i>
+<b>return</b> (c, s, q)</pre>
+
+<h2 id="ganzzahlig">The integer prediction</h2>
+<p>From here on there are no floating-point numbers. The prediction is the sum of the products, arithmetically shifted right by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> places – that is division by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>s</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^s</annotation></semantics></math> with rounding towards the smaller integer, also for negative sums:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mi>s</mi></mrow></msup><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>c</mi></mrow><mrow><mi>j</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>j</mi></mrow></msub><mo fence="true" stretchy="true">⌋</mo></mrow></mrow><annotation encoding="application/x-tex">\hat{x}_n = \left\lfloor 2^{-s} \sum_{j=0}^{p-1} c_j\, x_{n-1-j} \right\rfloor</annotation></semantics></math></p>
+<h3>Pseudocode – <code>residuum</code> and <code>ruecktransformiere</code></h3>
+<pre class="pseudo"><b>function</b> prediction(w, i, p, c, s):
+    sum ← 0                                              <i>long, 64 bits</i>
+    <b>for</b> j ← 0 <b>to</b> p−1:  sum ← sum + c[j]·w[i−1−j]
+    <b>return</b> sum ≫ s                                      <i>arithmetic</i>
+
+<b>function</b> residuum(values, p, c, s):
+    <b>for</b> i ← 0 <b>to</b> N−p−1:  rest[i] ← values[i+p] − prediction(values, i+p, p, c, s)
+
+<b>function</b> ruecktransformiere(values, rest, p, c, s):   <i>values[0..p−1] = warm-up</i>
+    <b>for</b> i ← p <b>to</b> N−1:  values[i] ← rest[i−p] + prediction(values, i, p, c, s)</pre>
+<p class="quelle">Source: <code>Lpcpraediktor.java</code>, <code>quantisiere</code>, <code>residuum</code>, <code>ruecktransformiere</code>. Both directions live in the same class and use the same private function <code>vorhersage</code>.</p>
+<div class="hinweis"><b>Convention in the framework:</b> The sum runs in <code>long</code>. At order 32, 25-bit word length and 15-bit weights it reaches up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32</mn><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>14</mn></mrow></msup><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>43</mn></mrow></msup></mrow><annotation encoding="application/x-tex">32 \cdot 2^{14} \cdot 2^{24} = 2^{43}</annotation></semantics></math> and clearly exceeds the 32-bit limit. Defaults: highest order 32 (<code>MAX_ORDNUNG</code>), precision 15 bits (<code>VORGABE_PRAEZISION</code>, adjustable 2 to 16), shift 0 to 31 (<code>MAX_VERSCHIEBUNG</code>). The subframe header holds order − 1 (5 bits), precision − 1 (4 bits) and shift (5 bits).</div>
+
+<h2 id="beispiel">Worked example</h2>
+<p><b>A pure sine.</b> For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><mi>A</mi><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi mathvariant="normal">ω</mi><mi>n</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x_n = A \sin(\omega n)</annotation></semantics></math> we have exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">ω</mi><mspace width="0.2778em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_n = 2\cos\omega\; x_{n-1} - x_{n-2}</annotation></semantics></math>; the ideal second-order predictor thus has <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">ω</mi></mrow><annotation encoding="application/x-tex">a_1 = 2\cos\omega</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">a_2 = -1</annotation></semantics></math>. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mn>20,000</mn></mrow><annotation encoding="application/x-tex">A = 20{,}000</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ω</mi><mo>=</mo><mn>2</mn><mi mathvariant="normal">π</mi><mo>⋅</mo><mn>0.05</mn></mrow><annotation encoding="application/x-tex">\omega = 2\pi \cdot 0.05</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>4096</mn></mrow><annotation encoding="application/x-tex">N = 4096</annotation></semantics></math> (rounded to integers) the recursion gives:</p>
+<table>
+  <tr><th>Quantity</th><th>Value</th><th>Expected</th></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">a_1</annotation></semantics></math></td><td>1.902111</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">ω</mi><mo>=</mo><mn>1.902113</mn></mrow><annotation encoding="application/x-tex">2\cos\omega = 1.902113</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">a_2</annotation></semantics></math></td><td>−0.999999</td><td>−1</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>E</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>E</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">E_0,\ E_1,\ E_2</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.37</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>11</mn></mrow></msup><mo>,</mo><mspace width="0.3333em"/><mn>4.17</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>10</mn></mrow></msup><mo>,</mo><mspace width="0.3333em"/><mn>1.01</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.37 \cdot 10^{11},\ 4.17 \cdot 10^{10},\ 1.01 \cdot 10^{5}</annotation></semantics></math></td><td>collapse at order 2</td></tr>
+</table>
+<p>Quantised with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>=</mo><mn>15</mn></mrow><annotation encoding="application/x-tex">q = 15</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mo>|</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>|</mo><mo>=</mo><mn>1.902</mn></mrow><annotation encoding="application/x-tex">\max|a_j| = 1.902</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mn>1.902</mn><mo stretchy="false">⌋</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\lfloor\log_2 1.902\rfloor = 0</annotation></semantics></math>, hence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mn>13</mn></mrow><annotation encoding="application/x-tex">s = 13</annotation></semantics></math>. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.902111</mn><mo>⋅</mo><mn>8192</mn><mo>=</mo><mn>15,582.1</mn></mrow><annotation encoding="application/x-tex">1.902111 \cdot 8192 = 15{,}582.1</annotation></semantics></math> becomes 15,582, the remainder 0.1 carries on; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0.999999</mn><mo>⋅</mo><mn>8192</mn><mo>+</mo><mn>0.1</mn><mo>=</mo><mo>−</mo><mn>8191.9</mn></mrow><annotation encoding="application/x-tex">-0.999999 \cdot 8192 + 0.1 = -8191.9</annotation></semantics></math> becomes −8192. The warm-up values are 0 and 6180, the third value is 11,756:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mn>15,582</mn><mo>⋅</mo><mn>6180</mn><mo>−</mo><mn>8192</mn><mo>⋅</mo><mn>0</mn></mrow><mrow><mn>8192</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>=</mo><mo stretchy="false">⌊</mo><mn>11,754.98</mn><mo stretchy="false">⌋</mo><mo>=</mo><mn>11,754</mn><mo>,</mo><mspace width="2em"/><msub><mrow><mi>e</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>11,756</mn><mo>−</mo><mn>11,754</mn><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\hat{x}_2 = \left\lfloor \frac{15{,}582 \cdot 6180 - 8192 \cdot 0}{8192} \right\rfloor = \lfloor 11{,}754.98 \rfloor = 11{,}754, \qquad e_2 = 11{,}756 - 11{,}754 = 2</annotation></semantics></math></p>
+<p>The first ten residuals are 2, −1, 2, 1, 1, 1, 2, −1, 2, 0 – only the rounding error of the samples remains.</p>
+<p><b>Rounding error passed on.</b> The weights 1.8734, −0.9123, 0.2451, −0.0876, 0.0123 become 15,347, −7474, 2008, −717, 100 with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mn>13</mn></mrow><annotation encoding="application/x-tex">s = 13</annotation></semantics></math>. Rounded individually, the last two would be −718 and 101. With five weights the difference is small – the partial sum of the first four is exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>9163.57</mn></mrow><annotation encoding="application/x-tex">9163.57</annotation></semantics></math>, 9164 with the error passed on, 9163 when rounded individually. The half-unit bound, however, holds for any length, for 32 weights as for five.</p>
+
+<h2 id="pruefung">How it is tested</h2>
+<p>The <code>Lpcprobe</code> (12 checks) with anchors in closed form:</p>
+<ul>
+  <li><b>Sine</b> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mn>0.05</mn></mrow><annotation encoding="application/x-tex">f = 0.05</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mn>20,000</mn></mrow><annotation encoding="application/x-tex">A = 20{,}000</annotation></semantics></math>): <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">a_1</annotation></semantics></math> hits <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">ω</mi></mrow><annotation encoding="application/x-tex">2\cos\omega</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">a_2</annotation></semantics></math> hits −1 within 0.02; quantised to 15 bits the order-2 residual stays below 60 (measured: at most 2); the residual energy decreases monotonically with the order.</li>
+  <li><b>White noise</b>: after order 16 more than 95 % of the energy remains (measured 0.9984).</li>
+  <li><b>AR(1) signal</b> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>0.95</mn></mrow><annotation encoding="application/x-tex">a = 0.95</annotation></semantics></math>: the first-order coefficient hits <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> within 0.02 (measured 0.9453), the residual energy hits <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><msup><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><mn>0.0975</mn></mrow><annotation encoding="application/x-tex">1 - a^2 = 0.0975</annotation></semantics></math> within 0.02 (measured 0.1062).</li>
+  <li><b>Quantisation</b>: the weights of the example above to within 0.001; all fit the precision; all zeros give all zeros.</li>
+  <li><b>Reversibility</b> for every order 1 to 32 and the shifts 0, 7, 15 and 31 with random weights uniformly distributed in ±16,000: residual and reconstruction return the signal bit-exactly.</li>
+  <li><b>Overflow edge case</b>: order 32, values alternating <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{24}-1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-2^{24}</annotation></semantics></math>, all weights <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>14</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{14}-1</annotation></semantics></math>, shift 14 – the round trip stays bit-exact.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Computing time grows with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>⋅</mo><msub><mrow><mi>p</mi></mrow><mrow><mtext>max</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">N \cdot p_\text{max}</annotation></semantics></math> for the autocorrelation and with the number of candidates computed exactly (up to eight residuals and Rice plans per subframe).</li>
+  <li>The sum in <code>long</code> is exact, but the residual is stored as <code>int</code>. With very large weights and values the difference wraps around, identically on both sides – the round trip stays correct, but such a residual is expensive and is not chosen.</li>
+  <li>The order estimate can be off; only the candidates are computed exactly, not all orders.</li>
+  <li>Short subframes with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>≤</mo><msub><mrow><mi>p</mi></mrow><mrow><mtext>max</mtext></mrow></msub><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">N \le p_\text{max} + 1</annotation></semantics></math> get no LPC.</li>
+  <li>The gain depends on the material. On the generated material of the module documentation it was about two percent over the fixed predictors; more is expected on real music, which so far is documented only through the batch run.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>J. Makhoul: Linear Prediction: A Tutorial Review. Proceedings of the IEEE 63 (1975).</li>
+</ul>
+
+<footer>
+envisionz-framework-audiocodec · background to <a href="index.html#praediktion">Prediction and stereo</a> · back: <a href="fest.html">fixed predictors</a> · next: <a href="stereo.html">stereo decomposition</a> · probes: <code>Lpcprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

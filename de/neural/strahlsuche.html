@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strahlsuche und Fehlerrate – Entziffern und Bewerten von CTC-Ausgaben – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#core">Das Netz</a>
+<a class="unterseite" href="netz.html">Netz</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimierer</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Daten, Normierung, Metriken</a>
+<a class="unterseite" href="daten.html">Daten und Metriken</a>
+<a class="rubrik" href="index.html#model">Ersatzmodell, Ensemble, Ablage</a>
+<a class="unterseite" href="ersatzmodell.html">Ersatzmodell</a>
+<a class="rubrik" href="index.html#search">Modellsuche</a>
+<a class="unterseite" href="modellsuche.html">Modellsuche</a>
+<a class="rubrik" href="index.html#analysis">Sensitivitätsanalyse</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivität</a>
+<a class="rubrik" href="index.html#api">Schnittstelle für andere Anwendungen</a>
+<a class="rubrik" href="index.html#ocr">Zeichenerkennung ohne Tesseract</a>
+<a class="unterseite" href="ocr.html">Zeichenerkennung</a>
+<a class="rubrik" href="index.html#seq">Folgen ohne Ausrichtung: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite aktiv" href="strahlsuche.html">Strahlsuche</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-neural</a> › Strahlsuche und Fehlerrate – Entziffern und Bewerten von CTC-Ausgaben</span><a class="sprachwahl" href="../../en/neural/strahlsuche.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.seq</div>
+  <h1>Strahlsuche und Fehlerrate – Entziffern und Bewerten von CTC-Ausgaben</h1>
+  <p class="unter">Die Rechnung hinter <code>Strahlsuche</code> und <code>Fehlerrate</code>: warum die gierige Entzifferung den wahrscheinlichsten Pfad und nicht die wahrscheinlichste Ausgabe findet, wie die Präfix-Strahlsuche mit zwei Wahrscheinlichkeiten je Präfix arbeitet, wo ein Sprachmodell eingreift und wie der Editierabstand eine erkannte Folge bewertet – mit Pseudocode nach dem Quelltext, einem nachgerechneten Beispiel, Prüfungen und Grenzen. Das Training mit CTC steht auf der Seite <a href="ctc.html">CTC</a>.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Nach dem Training liefert das Netz je Zeitfenster eine Verteilung über die Zeichen. Gesucht ist die Zeichenfolge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math>, die dazu am besten passt – die mit der größten Wahrscheinlichkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><mi>l</mi><mo>∣</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">P(l \mid x)</annotation></semantics></math>, also der größten Summe über alle ihre Pfade. Diese Suche heißt <b>Entziffern</b>. Genau lässt sie sich nicht lösen, weil die Zahl möglicher Folgen mit der Länge explodiert; zwei Näherungen sind umgesetzt: die gierige Entzifferung und die Strahlsuche.</p>
+<p>Danach muss bewertet werden, wie gut die erkannte Folge ist. „Richtig oder falsch“ ist bei Lautfolgen zu grob – zwischen „haus“ und „maus“ liegt ein Laut, zwischen „haus“ und „telefon“ liegen sechs. Das übliche Maß ist der Editierabstand, bezogen auf die Länge der richtigen Folge: die <b>Lautfehlerrate</b>.</p>
+
+<h2 id="gierig">Gierige Entzifferung</h2>
+<p><code>Ctc.gierig</code> nimmt je Fenster das Zeichen mit dem größten Logit und zieht den Pfad dann zusammen (gleiche Nachbarn zu einem, Leerzeichen weg). Das ist der wahrscheinlichste <b>Pfad</b> – gesucht ist aber die wahrscheinlichste <b>Ausgabe</b>, und die hat viele Pfade, deren Wahrscheinlichkeiten sich addieren.</p>
+<p>Der Unterschied ist keine Feinheit. Steht in fünf Fenstern hintereinander das Leerzeichen bei 0,70 und ein Laut bei 0,30, gewinnt gierig in jedem Fenster das Leerzeichen, und der Laut fällt weg. Die Wahrscheinlichkeit, dass er in mindestens einem der fünf Fenster ausgegeben wird, ist aber</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mn>1</mn><mo>−</mo><msup><mn>0,70</mn><mrow><mn>5</mn></mrow></msup><mo>=</mo><mn>0,832</mn><mo>.</mo></mrow><annotation encoding="application/x-tex">1 - 0{,}70^5 = 0{,}832 .</annotation></semantics></math></p>
+<p>Genauer, mit <code>Ctc.verlust</code> auf diesen fünf Fenstern gerechnet: Die Ausgabe „a“ hat 0,537, „a a“ 0,282, die leere Ausgabe nur 0,168. So erklärt sich, warum ein CTC-Modell mit niedrigem Verlust gierig schlecht entziffert werden kann: Der Verlust misst die Summe über alle Pfade, die gierige Entzifferung sieht nur einen.</p>
+
+<figure>
+<svg viewBox="0 0 620 230" width="620" font-family="sans-serif" font-size="13">
+  <text x="60" y="42" fill="#5b6475" text-anchor="end">Leer</text>
+  <line x1="70" y1="50" x2="574" y2="50" stroke="#c9d1dc"/>
+  <rect x="73" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="97" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="121" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="145" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="169" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="193" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="217" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="241" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="265" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="289" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="313" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="337" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="361" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="385" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="409" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="433" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="457" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="481" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="505" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="529" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="553" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <text x="60" y="78" fill="#5b6475" text-anchor="end">4</text>
+  <line x1="70" y1="86" x2="574" y2="86" stroke="#c9d1dc"/>
+  <rect x="73" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="97" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="121" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="145" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="169" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <text x="60" y="114" fill="#5b6475" text-anchor="end">2</text>
+  <line x1="70" y1="122" x2="574" y2="122" stroke="#c9d1dc"/>
+  <rect x="241" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="265" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="289" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="313" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="337" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <text x="60" y="150" fill="#5b6475" text-anchor="end">3</text>
+  <line x1="70" y1="158" x2="574" y2="158" stroke="#c9d1dc"/>
+  <rect x="409" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="433" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="457" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="481" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="505" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <text x="82.0" y="170" fill="#5b6475" text-anchor="middle">1</text>
+  <text x="202.0" y="170" fill="#5b6475" text-anchor="middle">6</text>
+  <text x="322.0" y="170" fill="#5b6475" text-anchor="middle">11</text>
+  <text x="442.0" y="170" fill="#5b6475" text-anchor="middle">16</text>
+  <text x="562.0" y="170" fill="#5b6475" text-anchor="middle">21</text>
+  <text x="582" y="170" fill="#5b6475">t</text>
+  <text x="20" y="198" fill="#5b6475">gierig: in jedem Fenster gewinnt das Leerzeichen → Ausgabe leer (P = 0,0047)</text>
+  <text x="20" y="220" fill="#9a6400">Strahlsuche, Breite 2: 4 2 3 (P = 0,155, rund 33-mal so wahrscheinlich)</text>
+</svg>
+<figcaption>Die Wahrscheinlichkeiten je Zeitfenster aus der Probe in <code>SequenzSelfTest</code>: Leerzeichen (blau) meist bei 0,999, in drei Blöcken zu fünf Fenstern bei 0,70 neben einem Laut (amber) bei 0,30. Die gierige Entzifferung liest nichts, die Strahlsuche liest „4 2 3“ – die Ausgabe, die nach CTC rund 33-mal so wahrscheinlich ist.</figcaption>
+</figure>
+
+<h2 id="praefixe">Präfix-Strahlsuche</h2>
+<p>Die Strahlsuche verfolgt nicht Pfade, sondern <b>Präfixe</b> – angefangene Ausgaben – und behält je Zeitschritt nur die besten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> (die Strahlbreite). Zu jedem Präfix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> werden zwei Wahrscheinlichkeiten geführt, beide als Logarithmus:</p>
+<ul>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mo>−</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{-}(l)</annotation></semantics></math>: die Summe über alle bisherigen Pfade, die <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> ergeben und auf einem <b>Leerzeichen</b> enden,</li>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mo>+</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}(l)</annotation></semantics></math>: die Summe über alle, die <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> ergeben und auf dem <b>letzten Zeichen</b> von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> enden.</li>
+</ul>
+<p>Die Trennung ist nötig, weil ein wiederholtes Zeichen die Ausgabe nur dann verlängert, wenn vorher ein Leerzeichen kam. Mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math> den Wahrscheinlichkeiten des nächsten Fensters, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y(\varepsilon)</annotation></semantics></math> der des Leerzeichens, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mrow><mi>p</mi></mrow><mrow><mo>−</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mo>+</mo><msup><mrow><mi>p</mi></mrow><mrow><mo>+</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(l) = p^{-}(l) + p^{+}(l)</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> einem Zeichen außer Leer gelten die Übergänge:</p>
+<table>
+  <tr><th>nächstes Zeichen</th><th>Präfix danach</th><th>wird addiert zu</th><th>Beitrag</th></tr>
+  <tr><td>Leer</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> (unverändert)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mtext>neu</mtext></mrow><mrow><mo>−</mo></mrow></msubsup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{-}_\text{neu}(l)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(l)\,y(\varepsilon)</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> = letztes Zeichen von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> (Wiederholung ohne Leer)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mtext>neu</mtext></mrow><mrow><mo>+</mo></mrow></msubsup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}_\text{neu}(l)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mo>+</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}(l)\,y(c)</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> = letztes Zeichen von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>+</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">l + c</annotation></semantics></math> (nach einem Leer)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mtext>neu</mtext></mrow><mrow><mo>+</mo></mrow></msubsup><mo stretchy="false">(</mo><mi>l</mi><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}_\text{neu}(l+c)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mo>−</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{-}(l)\,y(c)</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> ≠ letztes Zeichen</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>+</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">l + c</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mtext>neu</mtext></mrow><mrow><mo>+</mo></mrow></msubsup><mo stretchy="false">(</mo><mi>l</mi><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}_\text{neu}(l+c)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(l)\,y(c)</annotation></semantics></math></td></tr>
+</table>
+<p>Wer nur eine Zahl je Präfix führt, bekommt Doppelbuchstaben falsch – derselbe Fallstrick wie in der Sprungbedingung von CTC, an anderer Stelle.</p>
+
+<h3>Pseudocode – <code>Strahlsuche.suche(logits, breite, sprache, gewicht, längenBonus)</code></h3>
+<pre class="pseudo"><b>prüfe</b> breite ≥ 1, T ≥ 1
+lnY ← zeilenweise log-Softmax
+strahl ← { leeres Präfix: (p− = 0, p+ = −∞, bonus = 0) }      <i>Werte im Logarithmus</i>
+<b>für</b> t ← 1 <b>bis</b> T:
+    neu ← {}
+    <b>für</b> jedes (l, p−, p+, bonus) in strahl:
+        trage ein: l,  p− ← p(l) + lnY[t][Leer],  bonus
+        <b>für</b> c ← 1 <b>bis</b> K−1:
+            <b>wenn</b> c = letztes Zeichen von l:
+                trage ein: l,     p+ ← p+(l) + lnY[t][c],  bonus
+                trage ein: l + c, p+ ← p−(l) + lnY[t][c],  bonus + beitrag(l, c)
+            <b>sonst</b>:
+                trage ein: l + c, p+ ← p(l) + lnY[t][c],   bonus + beitrag(l, c)
+    strahl ← die besten „breite“ Einträge nach p + bonus
+sortiere strahl nach p + bonus, bestes zuerst
+<b>für</b> jeden Eintrag:  logP ← −Ctc.verlust(logits, folge)        <i>NACHGERECHNET, nicht aus dem Strahl</i>
+<b>liefere</b> Liste der (folge, logP)
+
+<b>funktion</b> trage ein(l, …):  bestehende Einträge für l werden per logsumexp addiert, bonus ← max
+<b>funktion</b> beitrag(l, c) = längenBonus + gewicht · sprache.logWahrscheinlichkeit(l, c)   <i>ohne Sprachmodell nur längenBonus</i></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-neural/src/de/envisionz/neural/seq/Strahlsuche.java</code>. <code>suche(logits, breite)</code> ist die Form ohne Sprachmodell und ohne Längenbonus und liefert nur den besten Treffer.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die gemeldete Wahrscheinlichkeit eines Treffers wird mit <code>Ctc.verlust</code> nachgerechnet. Der Strahl summiert nur über die Pfade, die das Beschneiden überlebt haben, und unterschätzt darum; laut Quelltextkommentar lag die Unterschätzung bei Breite 50 und kurzen Folgen bei bis zu <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1,1</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1{,}1\cdot10^{-2}</annotation></semantics></math> im Logarithmus – klein genug für die Rangfolge, zu groß für eine Zahl, die man weitergibt. Der gemeldete Wert enthält keinen Sprachmodellanteil und ist damit mit dem CTC-Verlust vergleichbar. Präfixe werden über ihren Inhalt verglichen, nicht über das Feld.</div>
+
+<h2 id="sprachmodell">Platz für ein Sprachmodell</h2>
+<p>CTC nimmt an, dass die Fenster unabhängig sind; das Wissen, welche Lautfolgen es in einer Sprache gibt, steckt nicht im Modell. Die Strahlsuche kann es beim Verlängern eines Präfixes dazunehmen: Ein <code>Sprachmodell</code> liefert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">(</mo><mi>c</mi><mo>∣</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\ln P(c \mid l)</annotation></semantics></math>, und der Strahl ordnet nach</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>p</mi><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mtext>Verlängerungen</mtext></mrow></munder><mo stretchy="false">(</mo><mi mathvariant="normal">λ</mi><mspace width="0.1667em"/><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>P</mi></mrow><mrow><mtext>SM</mtext></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo>∣</mo><mtext>Präfix</mtext><mo stretchy="false">)</mo><mo>+</mo><mi mathvariant="normal">β</mi><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\ln p(l) + \sum_{\text{Verlängerungen}} \bigl(\lambda\, \ln P_\text{SM}(c \mid \text{Präfix}) + \beta\bigr),</annotation></semantics></math></p>
+<p>mit dem Gewicht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> und dem Längenbonus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">β</mi></mrow><annotation encoding="application/x-tex">\beta</annotation></semantics></math> je ausgegebenem Zeichen. Der Bonus gleicht aus, dass ein Sprachmodell jede Verlängerung mit einem negativen Logarithmus belegt und damit kurze Folgen bevorzugt. Die Schnittstelle ist bewusst schmal: mehr als „wie gut passt dieses Zeichen hinter diese Folge“ braucht die Suche nicht. Ein Sprachmodell selbst liefert das Modul nicht mit.</p>
+
+<h2 id="fehlerrate">Editierabstand und Fehlerrate</h2>
+<p>Der Editierabstand nach Levenshtein ist die kleinste Zahl von Einfügungen, Löschungen und Ersetzungen, die eine Folge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> in eine Folge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> überführt. Mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">D_{i,j}</annotation></semantics></math> dem Abstand der ersten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> Elemente von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> zu den ersten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math> von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mn>0</mn></mrow></msub><mo>=</mo><mi>i</mi><mo>,</mo><mspace width="2em"/><msub><mrow><mi>D</mi></mrow><mrow><mn>0</mn><mo>,</mo><mi>j</mi></mrow></msub><mo>=</mo><mi>j</mi><mo>,</mo><mspace width="2em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><mo stretchy="false">[</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>≠</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">]</mo><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>j</mi></mrow></msub><mo>+</mo><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">D_{i,0} = i, \qquad D_{0,j} = j, \qquad D_{i,j} = \min\bigl(D_{i-1,j-1} + [a_i \ne b_j],\ D_{i-1,j} + 1,\ D_{i,j-1} + 1\bigr).</annotation></semantics></math></p>
+<p>Gerechnet wird mit zwei Zeilen statt der ganzen Tabelle – für die Zahl genügt das, der Weg dorthin wird nicht gebraucht. Die Fehlerrate teilt durch die Länge der <b>richtigen</b> Folge; über eine Menge wird die Summe der Abstände durch die Summe der Längen geteilt, nicht der Mittelwert der Einzelraten gebildet – sonst zählte eine dreilautige Äußerung so viel wie eine dreißiglautige.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Rate</mtext><mo>=</mo><mfrac><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>u</mi></mrow></munder><mi>D</mi><mo stretchy="false">(</mo><msub><mrow><mtext>erkannt</mtext></mrow><mrow><mi>u</mi></mrow></msub><mo>,</mo><msub><mrow><mtext>richtig</mtext></mrow><mrow><mi>u</mi></mrow></msub><mo stretchy="false">)</mo></mrow><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>u</mi></mrow></munder><mo>|</mo><msub><mrow><mtext>richtig</mtext></mrow><mrow><mi>u</mi></mrow></msub><mo>|</mo></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">\text{Rate} = \frac{\sum_u D(\text{erkannt}_u, \text{richtig}_u)}{\sum_u |\text{richtig}_u|} .</annotation></semantics></math></p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die Rate kann über 1 liegen: Wer auf drei richtige Laute zwanzig ausgibt, hat siebzehn Einfügungen zu viel. Am Anfang eines Trainings sieht ein Modell deshalb oft aus, als würde es schlechter – es lernt zuerst, überhaupt etwas zu sagen, und erst danach, wann es schweigen soll. Ist die richtige Folge leer, ist die Rate 0 bei leerer Erkennung und sonst die Zahl der erkannten Elemente.</div>
+
+<h2 id="beispiel">Rechenbeispiel</h2>
+<p>Das Beispiel aus dem Bild: 21 Fenster, sechs Zeichen, Leerzeichen sonst bei 0,999, drei Blöcke zu fünf Fenstern mit Leer 0,70 und je einem Laut (4, dann 2, dann 3) bei 0,30.</p>
+<table>
+  <tr><th>Entzifferung</th><th>Ergebnis</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi></mrow><annotation encoding="application/x-tex">\ln P</annotation></semantics></math> nach CTC</th></tr>
+  <tr><td>gierig</td><td>leer</td><td>−5,350 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>0,0047</mn></mrow><annotation encoding="application/x-tex">P = 0{,}0047</annotation></semantics></math>)</td></tr>
+  <tr><td>Strahl, Breite 1</td><td>leer</td><td>−5,350</td></tr>
+  <tr><td>Strahl, Breite 2</td><td>4 2 3</td><td>−1,865 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>0,155</mn></mrow><annotation encoding="application/x-tex">P = 0{,}155</annotation></semantics></math>)</td></tr>
+  <tr><td>Strahl, Breite 25</td><td>4 2 3; zweitbester Treffer 4 2 2 3</td><td>−1,865; −2,511</td></tr>
+</table>
+<p>Schon mit Breite 2 wird die richtige Folge gefunden; Breite 1 verhält sich hier wie gierig. Die gefundene Folge ist nach CTC <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,155</mn><mo>/</mo><mn>0,0047</mn><mo>≈</mo><mn>33</mn></mrow><annotation encoding="application/x-tex">0{,}155/0{,}0047 \approx 33</annotation></semantics></math>-mal so wahrscheinlich wie die leere.</p>
+<p>Zur Fehlerrate: erkannt „5 3“, richtig „2 5 3“. Die Tabelle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi></mrow><annotation encoding="application/x-tex">D</annotation></semantics></math> (Zeilen: erkannt, Spalten: richtig):</p>
+<table>
+  <tr><th></th><th>–</th><th>2</th><th>5</th><th>3</th></tr>
+  <tr><th>–</th><td>0</td><td>1</td><td>2</td><td>3</td></tr>
+  <tr><th>5</th><td>1</td><td>1</td><td>1</td><td>2</td></tr>
+  <tr><th>3</th><td>2</td><td>2</td><td>2</td><td>1</td></tr>
+</table>
+<p>Abstand 1 (die 2 fehlt), Rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">1/3</annotation></semantics></math>. Über die Menge: erkannt {„1 2 3 4“, „9“}, richtig {„1 2 3 4“, „1“} ergibt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mn>4</mn><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>=</mo><mn>0,2</mn></mrow><annotation encoding="application/x-tex">(0 + 1)/(4 + 1) = 0{,}2</annotation></semantics></math> – der Mittelwert der Einzelraten wäre 0,5.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b>Strahl gegen gierig</b> (<code>SequenzSelfTest</code>): das Beispiel oben. Gierig muss alle Laute verlieren, die Strahlsuche mit Breite 25 muss „4 2 3“ finden, diese Folge muss nach <code>Ctc</code> wahrscheinlicher sein als die leere, und die gemeldete Wahrscheinlichkeit muss auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math> die von <code>Ctc.verlust</code> sein.</li>
+  <li><b>Strahl nie schlechter</b>: Auf der künstlichen Lernaufgabe muss die Fehlerrate mit Strahlbreite 12 höchstens die gierige sein (gemessen 0,222 gegen 0,267; bei schwankenden Dauern 0,275 gegen 0,482).</li>
+  <li><b>Editierabstand</b>: gleiche Folgen 0, eine Ersetzung, Löschung, Einfügung je 1, gegen die leere Folge die Länge, in beide Richtungen; symmetrisch und mit Dreiecksungleichung für 300 zufällige Paare bzw. Tripel.</li>
+  <li><b>Fehlerrate</b>: eine falsche von drei ergibt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">1/3</annotation></semantics></math>, sechs Ausgaben auf ein richtiges Zeichen ergeben 6, leer gegen leer 0, die Mengenrate ist Summe durch Summe und nicht der Mittelwert der Einzelraten.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Die Strahlsuche ist nicht vollständig: Das Beschneiden kann die richtige Ausgabe verwerfen, wenn sie zwischendurch schlecht aussieht. Mit wachsender Breite nähert sie sich der erschöpfenden Suche.</li>
+  <li>Aufwand je Zeitschritt: Breite mal Zeichenzahl Einträge, dazu das Sortieren beim Beschneiden und am Ende je Treffer eine CTC-Vorwärtsrechnung.</li>
+  <li>Kein Sprachmodell im Lieferumfang; der Sprachmodell- und Längenanteil zweier zusammenfallender Präfixe wird nicht gemittelt oder summiert, sondern mit dem größeren angesetzt.</li>
+  <li>Die Fehlerrate zählt jede Abweichung gleich; ähnliche Laute sind nicht „weniger falsch“.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>V. I. Levenshtein: Binary codes capable of correcting deletions, insertions, and reversals. Soviet Physics Doklady 10 (1966).</li>
+  <li>A. Graves: Supervised Sequence Labelling with Recurrent Neural Networks. Springer, 2012.</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Hintergrund zu <a href="index.html#seq">Folgen ohne Ausrichtung: CTC</a> · Proben: <code>SequenzSelfTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

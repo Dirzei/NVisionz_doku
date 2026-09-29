@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimiser and weight storage – weight file, provenance and checkpoint – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite" href="matmul.html">Matrix product</a>
+<a class="unterseite" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite aktiv" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Optimiser and weight storage – weight file, provenance and checkpoint</span><a class="sprachwahl" href="../../de/autograd/gewichtsdatei.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd</div>
+  <h1>Optimiser and weight storage – weight file, provenance and checkpoint</h1>
+  <p class="unter">The computation behind <code>WeightIO</code> and <code>Checkpoint</code>: the layout of the weight file byte by byte, the FNV-1a checksum, the order of checks when loading, the provenance record for later merging of models, and the optimiser state file – with pseudocode following the source, recounted file sizes, the probes and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A trained model is an ordered list of number arrays. To store it, writing out the numbers is not enough. On loading it must be certain that the file fits exactly this model – same number of tensors, same shapes –, that it is undamaged, and that after loading <b>bit for bit</b> the same values are in the parameters. Only then can an interrupted and resumed training run be compared with an uninterrupted one, and only then is a shipped model the same as the tested one.</p>
+<p>Two further things are needed only later and cannot be added afterwards: where a weight state comes from (for merging models) and the optimiser's state (for resuming).</p>
+
+<h2 id="format">Layout of the weight file</h2>
+<p>The format is flat and little-endian throughout. The tensors appear in the order of <code>Module.parameters()</code> (see <a href="bausteine.html#module">Building blocks</a>).</p>
+<table>
+  <tr><th>Field</th><th>Size</th><th>Content</th></tr>
+  <tr><td>magic</td><td>8 bytes</td><td><code>EVZAGW01</code> in ASCII</td></tr>
+  <tr><td>format version</td><td>4 bytes</td><td><code>int</code>, currently 2; version 1 remains readable</td></tr>
+  <tr><td>provenance length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi></mrow><annotation encoding="application/x-tex">P</annotation></semantics></math></td><td>4 bytes</td><td>from version 2 only</td></tr>
+  <tr><td>provenance</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi></mrow><annotation encoding="application/x-tex">P</annotation></semantics></math> bytes</td><td>UTF-8, five fields separated by the character U+001F; from version 2 only</td></tr>
+  <tr><td>number of tensors <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>T</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_T</annotation></semantics></math></td><td>4 bytes</td><td><code>int</code></td></tr>
+  <tr><td>per tensor</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>+</mo><mn>4</mn><mi>r</mi></mrow><annotation encoding="application/x-tex">4 + 4r</annotation></semantics></math> bytes</td><td>rank <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math> axis lengths</td></tr>
+  <tr><td>values</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mi>N</mi></mrow><annotation encoding="application/x-tex">8N</annotation></semantics></math> bytes</td><td>all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> values as <code>double</code>, tensor by tensor, row-major</td></tr>
+  <tr><td>checksum</td><td>8 bytes</td><td>FNV-1a over the value range</td></tr>
+</table>
+<p>The file size is thus</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mn>8</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>+</mo><mi>P</mi><mo>+</mo><mn>4</mn><mo>+</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>T</mi></mrow></msub></mrow></munderover><mo stretchy="false">(</mo><mn>4</mn><mo>+</mo><mn>4</mn><msub><mrow><mi>r</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">)</mo><mo>+</mo><mn>8</mn><mi>N</mi><mo>+</mo><mn>8</mn><mspace width="0.3333em"/><mtext>bytes</mtext><mo>.</mo></mrow><annotation encoding="application/x-tex">8 + 4 + 4 + P + 4 + \sum_{i=1}^{n_T} (4 + 4 r_i) + 8N + 8 \ \text{bytes}.</annotation></semantics></math></p>
+
+<figure>
+<svg viewBox="0 0 620 230" width="620" font-family="sans-serif" font-size="13">
+  <rect x="30" y="30" width="110" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="85" y="51" fill="#1f5f8b" text-anchor="middle">magic</text>
+  <text x="85" y="69" fill="#5b6475" text-anchor="middle" font-size="11">EVZAGW01</text>
+  <rect x="140" y="30" width="80" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="180" y="51" fill="#1f5f8b" text-anchor="middle">version</text>
+  <text x="180" y="69" fill="#5b6475" text-anchor="middle" font-size="11">2</text>
+  <rect x="220" y="30" width="80" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="260" y="51" fill="#1f5f8b" text-anchor="middle">length P</text>
+  <text x="260" y="69" fill="#5b6475" text-anchor="middle" font-size="11">29</text>
+  <rect x="300" y="30" width="200" height="50" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="400" y="51" fill="#1f5f8b" text-anchor="middle">provenance (UTF-8)</text>
+  <text x="400" y="69" fill="#5b6475" text-anchor="middle" font-size="11">tiny-01 · · d64-L2 · 120 · Probelauf</text>
+  <rect x="500" y="30" width="90" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="545" y="51" fill="#1f5f8b" text-anchor="middle">count</text>
+  <text x="545" y="69" fill="#5b6475" text-anchor="middle" font-size="11">2</text>
+  <text x="30" y="96" fill="#5b6475" font-size="11">0</text>
+  <text x="140" y="96" fill="#5b6475" font-size="11">8</text>
+  <text x="220" y="96" fill="#5b6475" font-size="11">12</text>
+  <text x="300" y="96" fill="#5b6475" font-size="11">16</text>
+  <text x="500" y="96" fill="#5b6475" font-size="11">45</text>
+  <rect x="30" y="120" width="120" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="90" y="141" fill="#1f5f8b" text-anchor="middle">tensor 0</text>
+  <text x="90" y="159" fill="#5b6475" text-anchor="middle" font-size="11">rank 2: [2, 3]</text>
+  <rect x="150" y="120" width="110" height="50" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="205" y="141" fill="#1f5f8b" text-anchor="middle">tensor 1</text>
+  <text x="205" y="159" fill="#5b6475" text-anchor="middle" font-size="11">rank 1: [3]</text>
+  <rect x="260" y="120" width="220" height="50" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="370" y="141" fill="#1f5f8b" text-anchor="middle">values</text>
+  <text x="370" y="159" fill="#5b6475" text-anchor="middle" font-size="11">9 × double = 72 bytes</text>
+  <rect x="480" y="120" width="110" height="50" fill="#e8f0f6" stroke="#9a6400"/>
+  <text x="535" y="141" fill="#9a6400" text-anchor="middle">checksum</text>
+  <text x="535" y="159" fill="#5b6475" text-anchor="middle" font-size="11">FNV-1a, 8 bytes</text>
+  <text x="30" y="186" fill="#5b6475" font-size="11">49</text>
+  <text x="150" y="186" fill="#5b6475" font-size="11">61</text>
+  <text x="260" y="186" fill="#5b6475" font-size="11">69</text>
+  <text x="480" y="186" fill="#5b6475" font-size="11">141</text>
+  <text x="590" y="186" fill="#5b6475" text-anchor="end" font-size="11">149</text>
+  <line x1="262" y1="198" x2="478" y2="198" stroke="#9a6400" stroke-width="1.5"/>
+  <line x1="262" y1="192" x2="262" y2="204" stroke="#9a6400" stroke-width="1.5"/>
+  <line x1="478" y1="192" x2="478" y2="204" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="370" y="220" fill="#9a6400" text-anchor="middle" font-size="12">the checksum covers this range</text>
+</svg>
+<figcaption>The weight file of a layer <code>Linear(2, 3)</code> with provenance, byte offsets below. Header, shapes and values follow each other; the checksum covers only the values and is verified on loading <b>before</b> a single value is taken over. The dots in the provenance stand for the separator U+001F; the second field (ancestor) is empty.</figcaption>
+</figure>
+
+<div class="hinweis"><b>Decision in the framework:</b> values are stored as <code>double</code>, not as <code>float</code>. The file is therefore twice as large (8 instead of 4 MB for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^6</annotation></semantics></math> parameters), but saving and loading is <b>bit-exact</b> – the precondition for comparing a resumed run with an uninterrupted one at all. The class description of <code>WeightIO</code> still shows the layout of version 1 without the two provenance fields; version 2 is written as in the table.</div>
+
+<h2 id="pruefsumme">The FNV-1a checksum</h2>
+<p>FNV-1a (Fowler, Noll, Vo) is a simple, fast hash function over bytes. With 64 bits it starts at the offset basis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">h_0</annotation></semantics></math> and processes every byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> with an exclusive or and a multiplication modulo <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>64</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{64}</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><msub><mrow><mi>cbf</mi><mn>29</mn><mi>ce</mi><mn>484222325</mn></mrow><mrow><mn>16</mn></mrow></msub><mo>,</mo><mspace width="2em"/><mi>h</mi><mo>←</mo><mo stretchy="false">(</mo><mi>h</mi><mo>⊕</mo><mi>b</mi><mo stretchy="false">)</mo><mo>⋅</mo><msub><mrow><mn>100000001</mn><mi mathvariant="normal">b</mi><mn>3</mn></mrow><mrow><mn>16</mn></mrow></msub><mo>mod</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>64</mn></mrow></msup><mo>.</mo></mrow><annotation encoding="application/x-tex">h_0 = \mathtt{cbf29ce484222325}_{16}, \qquad h \leftarrow (h \oplus b) \cdot \mathtt{100000001b3}_{16} \bmod 2^{64}.</annotation></semantics></math></p>
+<p>A single flipped bit changes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi></mrow><annotation encoding="application/x-tex">h</annotation></semantics></math> for certain, because <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>⊕</mo></mrow><annotation encoding="application/x-tex">\oplus</annotation></semantics></math> with a different byte and multiplication by the odd prime are each invertible; over many bytes the change spreads to all digits. FNV does not protect against deliberate modification – that is not its purpose. What it is after are aborted writes and damaged files.</p>
+<pre class="pseudo">h ← 0xcbf29ce484222325
+<b>for each</b> byte b <b>in</b> the value range:
+    h ← h xor (b and 0xFF)
+    h ← h · 0x100000001b3                 <i>64-bit multiplication with overflow</i>
+<b>return</b> h</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/WeightIO.java</code>, method <code>fnv</code>; <code>Checkpoint</code> uses the same function for the state file.</p>
+
+<h2 id="laden">Writing and loading</h2>
+<p><b>Writing</b> first puts the whole header into a buffer, writes it, and then streams the values through a buffer of at most 1 MiB; every time the buffer is flushed, the checksum is continued over its content. The 8 bytes of the checksum follow at the end. The file is re-created with <code>TRUNCATE_EXISTING</code>.</p>
+<p><b>Loading</b> checks in a fixed order before anything is changed – a half-loaded model is worse than one that was not loaded at all:</p>
+<h3>Pseudocode – <code>WeightIO.load(path, params)</code></h3>
+<pre class="pseudo">open file;  map it in an arena (read only)
+header ← parseHeader:
+    <b>check</b> length ≥ 16, magic = EVZAGW01, 1 ≤ version ≤ 2
+    <b>if</b> version ≥ 2: read P (<b>check</b> 0 ≤ P ≤ 1 MiB), read provenance
+    read n_T (<b>check</b> 0 ≤ n_T ≤ 1,000,000)
+    <b>for each</b> tensor: rank (<b>check</b> 1 ≤ r ≤ 8), axis lengths
+<b>check</b> n_T = |params|                           <i>otherwise: a different model</i>
+<b>check</b> shape of each tensor = shape of the parameter
+<b>check</b> remaining length = 8·N + 8               <i>truncated file</i>
+<b>check</b> FNV-1a(value range) = stored sum          <i>damaged file</i>
+<b>only now</b>: copy all values in order into params[i].data
+close arena                                       <i>releases the mapping at once</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/WeightIO.java</code>, methods <code>save</code>, <code>load</code>, <code>readHeader</code>, <code>parseHeader</code>, <code>abbilden</code>.</p>
+<div class="hinweis"><b>Decision in the framework:</b> reading uses a file mapping – it saves the copy step and works in native-image without extra runtime support. The mapping is created in a confined <code>java.lang.foreign.Arena</code>, whose closing releases it <b>deterministically</b>. An ordinary mapping would keep the file locked on Windows until the buffer is garbage-collected, and the sequence "write checkpoint, load, continue, write again" failed when reopening with <code>TRUNCATE_EXISTING</code>.</div>
+
+<h2 id="herkunft">Provenance</h2>
+<p>From version 2 on every file carries a <code>Provenance</code> with five fields: model id, id of the ancestor (empty for a run from scratch), architecture (for example "enc:MODERN,L4,d128,h4,ff256"), step count and a note. It is stored as text with the separator U+001F, so that it stays readable in an editor if something goes wrong.</p>
+<p>The reason is the later <b>merging</b> of models. Two networks trained independently from scratch cannot be averaged: every permutation of the neurons of a layer (with a matching permutation of the next) gives the same network, so the weights of two runs live in different coordinate systems, and their mean is noise. Only models that started from the same state can be combined via task vectors – the difference to the common ancestor. This record must exist before the first real run; afterwards the ancestor cannot be reconstructed.</p>
+<p><code>sharesAncestorWith(o)</code> is true if both have an ancestor recorded and either the ancestors are equal or one state is the ancestor of the other. Without a recorded ancestor nothing is faked.</p>
+
+<h2 id="pruefpunkt">Checkpoint: two files</h2>
+<p><code>Checkpoint.save</code> writes two files side by side: <code>name.evzw</code> (the weights, format as above) and <code>name.evzo</code> (the optimiser state). The weights are the result and are passed on and compared; the optimiser state is about twice as large, is of interest only to a resuming run, and would be ballast when shipping.</p>
+<table>
+  <tr><th>Field of the state file</th><th>Size</th></tr>
+  <tr><td>magic <code>EVZAGO01</code></td><td>8 bytes</td></tr>
+  <tr><td>version (1), step count <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math>, group count <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math></td><td>4 bytes each</td></tr>
+  <tr><td>length of each group</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>G</mi></mrow><annotation encoding="application/x-tex">4G</annotation></semantics></math> bytes</td></tr>
+  <tr><td>all first moments <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math>, then all second moments <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>⋅</mo><mn>8</mn><mi>N</mi></mrow><annotation encoding="application/x-tex">2\cdot 8N</annotation></semantics></math> bytes</td></tr>
+  <tr><td>FNV-1a over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math></td><td>8 bytes</td></tr>
+</table>
+<div class="hinweis"><b>Decision in the framework:</b> the weights are written <b>first</b>. If the process aborts afterwards, the model survives and only resumability is lost – the less bad half. On loading a <b>missing</b> state file is not an error (a model that has been passed on has none; <code>Loaded.optimizerRestored()</code> reports it); an <b>existing but unsuitable</b> one throws, because if ignored silently the run would quietly start estimating from scratch. The path of the state file is formed by replacing the extension of the weight file with <code>.evzo</code>.</div>
+
+<h2 id="beispiel">Worked example: file sizes</h2>
+<p>A layer <code>Linear(2, 3)</code> has two tensors, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>2</mn><mo>,</mo><mn>3</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[2, 3]</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>3</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[3]</annotation></semantics></math>, together <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>9</mn></mrow><annotation encoding="application/x-tex">N = 9</annotation></semantics></math> values.</p>
+<ul>
+  <li><b>Without provenance</b> the five empty fields with step count 0 are encoded as "␟␟␟0␟", <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">P = 5</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>5</mn><mo>+</mo><mn>4</mn><mo>+</mo><mo stretchy="false">(</mo><mn>4</mn><mo>+</mo><mn>8</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo stretchy="false">)</mo><mo>+</mo><mn>72</mn><mo>+</mo><mn>8</mn><mo>=</mo><mn>125</mn></mrow><annotation encoding="application/x-tex">8+4+4+5+4+(4+8)+(4+4)+72+8 = 125</annotation></semantics></math> bytes.</li>
+  <li><b>With provenance</b> "tiny-01", no ancestor, "d64-L2", 120 steps, "Probelauf": <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>7</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>6</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>3</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>9</mn><mo>=</mo><mn>29</mn></mrow><annotation encoding="application/x-tex">P = 7+1+0+1+6+1+3+1+9 = 29</annotation></semantics></math>, file <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>125</mn><mo>−</mo><mn>5</mn><mo>+</mo><mn>29</mn><mo>=</mo><mn>149</mn></mrow><annotation encoding="application/x-tex">125 - 5 + 29 = 149</annotation></semantics></math> bytes (figure).</li>
+  <li><b>State file</b> for it: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>⋅</mo><mn>2</mn><mo>+</mo><mn>2</mn><mo>⋅</mo><mn>8</mn><mo>⋅</mo><mn>9</mn><mo>+</mo><mn>8</mn><mo>=</mo><mn>180</mn></mrow><annotation encoding="application/x-tex">8 + 4 + 4 + 4 + 4\cdot 2 + 2\cdot 8\cdot 9 + 8 = 180</annotation></semantics></math> bytes.</li>
+</ul>
+<p>All three sizes were measured with the module's classes. For a model with one million parameters that is about 8 MB of weights and 16 MB of optimiser state.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>EncoderTest</code></b>: header read, parameter count correct; round trip save and load bit-exact; a different shape is rejected; a file with a single flipped bit is caught by the checksum.</li>
+  <li><b><code>ModernTest</code></b>: provenance is written and read; without a record it stays empty; a common ancestor is recognised, a missing one is not faked; the values stay bit-exact despite the provenance field.</li>
+  <li><b><code>TrainerTest</code></b>: two files written; provenance and optimiser state read; weights and state bit-exact; a missing state file is reported, not thrown; an unsuitable state is rejected.</li>
+  <li><b><code>Gewichtsdateiprobe</code></b> (6 checks): write, read – with the built-in counter-check that reading really happened –, write the same file <b>again</b> afterwards, also after <code>readHeader</code>; the file can be deleted (a held file could not be removed on Windows); the round trip stays bit-exact.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The value range is addressed internally with <code>int</code> offsets: at most just under 2 GiB of values, i.e. about 268 million parameters per file.</li>
+  <li>The checksum covers only the values. Header and provenance are checked via plausibility limits, shapes and length, but not via a checksum; a damaged character in the note goes unnoticed.</li>
+  <li>FNV-1a detects damage, not manipulation.</li>
+  <li>No names: assignment works by order and shapes alone. Two models of equal shape but with the registration of two equally sized tensors swapped would load into each other.</li>
+  <li>The state file is still read via an ordinary file mapping, not via the arena; on Windows it may therefore stay locked for a while after loading.</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#optim">Optimiser and weight storage</a> · Probes: <code>Gewichtsdateiprobe</code>, <code>EncoderTest</code>, <code>ModernTest</code>, <code>TrainerTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

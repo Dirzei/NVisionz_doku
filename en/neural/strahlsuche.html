@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beam search and error rate – decoding and rating CTC outputs – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#core">The network</a>
+<a class="unterseite" href="netz.html">Network</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimisers</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Data, normalisation, metrics</a>
+<a class="unterseite" href="daten.html">Data and metrics</a>
+<a class="rubrik" href="index.html#model">Surrogate model, ensemble, storage</a>
+<a class="unterseite" href="ersatzmodell.html">Surrogate model</a>
+<a class="rubrik" href="index.html#search">Model search</a>
+<a class="unterseite" href="modellsuche.html">Model search</a>
+<a class="rubrik" href="index.html#analysis">Sensitivity analysis</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivity</a>
+<a class="rubrik" href="index.html#api">Interface for other applications</a>
+<a class="rubrik" href="index.html#ocr">Character recognition without Tesseract</a>
+<a class="unterseite" href="ocr.html">Glyph recognition</a>
+<a class="rubrik" href="index.html#seq">Sequences without alignment: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite aktiv" href="strahlsuche.html">Beam search</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-neural</a> › Beam search and error rate – decoding and rating CTC outputs</span><a class="sprachwahl" href="../../de/neural/strahlsuche.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.seq</div>
+  <h1>Beam search and error rate – decoding and rating CTC outputs</h1>
+  <p class="unter">The computation behind <code>Strahlsuche</code> and <code>Fehlerrate</code>: why greedy decoding finds the most probable path and not the most probable output, how prefix beam search works with two probabilities per prefix, where a language model comes in and how the edit distance rates a recognised sequence – with pseudocode following the source, a recomputed example, checks and limits. Training with CTC is on the page <a href="ctc.html">CTC</a>.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>After training the network delivers, per time window, a distribution over the characters. What is sought is the character sequence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> that fits best – the one with the largest probability <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><mi>l</mi><mo>∣</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">P(l \mid x)</annotation></semantics></math>, i.e. the largest sum over all its paths. This search is called <b>decoding</b>. It cannot be solved exactly because the number of possible sequences explodes with length; two approximations are implemented: greedy decoding and beam search.</p>
+<p>Afterwards the recognised sequence has to be rated. "Right or wrong" is too coarse for sound sequences – between "house" and "mouse" lies one sound, between "house" and "telephone" several. The usual measure is the edit distance relative to the length of the correct sequence: the <b>phone error rate</b>.</p>
+
+<h2 id="gierig">Greedy decoding</h2>
+<p><code>Ctc.gierig</code> takes the character with the largest logit in every window and then collapses the path (equal neighbours into one, blanks removed). That is the most probable <b>path</b> – but what is sought is the most probable <b>output</b>, and it has many paths whose probabilities add up.</p>
+<p>The difference is not a subtlety. If in five consecutive windows the blank stands at 0.70 and a sound at 0.30, greedy decoding picks the blank in every window and the sound disappears. The probability that it is emitted in at least one of the five windows, however, is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mn>1</mn><mo>−</mo><msup><mn>0.70</mn><mrow><mn>5</mn></mrow></msup><mo>=</mo><mn>0.832</mn><mo>.</mo></mrow><annotation encoding="application/x-tex">1 - 0.70^5 = 0.832 .</annotation></semantics></math></p>
+<p>More precisely, computed with <code>Ctc.verlust</code> on these five windows: the output "a" has 0.537, "a a" 0.282, the empty output only 0.168. This explains why a CTC model with a low loss can decode badly when greedy: the loss measures the sum over all paths, greedy decoding sees only one.</p>
+
+<figure>
+<svg viewBox="0 0 620 230" width="620" font-family="sans-serif" font-size="13">
+  <text x="60" y="42" fill="#5b6475" text-anchor="end">blank</text>
+  <line x1="70" y1="50" x2="574" y2="50" stroke="#c9d1dc"/>
+  <rect x="73" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="97" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="121" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="145" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="169" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="193" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="217" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="241" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="265" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="289" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="313" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="337" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="361" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="385" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="409" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="433" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="457" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="481" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="505" y="30.4" width="18" height="19.6" fill="#1f5f8b"/>
+  <rect x="529" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <rect x="553" y="22.0" width="18" height="28.0" fill="#1f5f8b"/>
+  <text x="60" y="78" fill="#5b6475" text-anchor="end">4</text>
+  <line x1="70" y1="86" x2="574" y2="86" stroke="#c9d1dc"/>
+  <rect x="73" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="97" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="121" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="145" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="169" y="77.6" width="18" height="8.4" fill="#9a6400"/>
+  <text x="60" y="114" fill="#5b6475" text-anchor="end">2</text>
+  <line x1="70" y1="122" x2="574" y2="122" stroke="#c9d1dc"/>
+  <rect x="241" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="265" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="289" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="313" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="337" y="113.6" width="18" height="8.4" fill="#9a6400"/>
+  <text x="60" y="150" fill="#5b6475" text-anchor="end">3</text>
+  <line x1="70" y1="158" x2="574" y2="158" stroke="#c9d1dc"/>
+  <rect x="409" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="433" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="457" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="481" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <rect x="505" y="149.6" width="18" height="8.4" fill="#9a6400"/>
+  <text x="82.0" y="170" fill="#5b6475" text-anchor="middle">1</text>
+  <text x="202.0" y="170" fill="#5b6475" text-anchor="middle">6</text>
+  <text x="322.0" y="170" fill="#5b6475" text-anchor="middle">11</text>
+  <text x="442.0" y="170" fill="#5b6475" text-anchor="middle">16</text>
+  <text x="562.0" y="170" fill="#5b6475" text-anchor="middle">21</text>
+  <text x="582" y="170" fill="#5b6475">t</text>
+  <text x="20" y="198" fill="#5b6475">greedy: the blank wins in every window → empty output (P = 0.0047)</text>
+  <text x="20" y="220" fill="#9a6400">beam search, width 2: 4 2 3 (P = 0.155, about 33 times as probable)</text>
+</svg>
+<figcaption>The probabilities per time window from the check in <code>SequenzSelfTest</code>: blank (blue) mostly at 0.999, in three blocks of five windows at 0.70 next to a sound (amber) at 0.30. Greedy decoding reads nothing, beam search reads "4 2 3" – the output that according to CTC is about 33 times as probable.</figcaption>
+</figure>
+
+<h2 id="praefixe">Prefix beam search</h2>
+<p>Beam search does not follow paths but <b>prefixes</b> – outputs begun – and keeps only the best <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> per time step (the beam width). For each prefix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> two probabilities are carried, both as logarithms:</p>
+<ul>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mo>−</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{-}(l)</annotation></semantics></math>: the sum over all paths so far that yield <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> and end on a <b>blank</b>,</li>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mo>+</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}(l)</annotation></semantics></math>: the sum over all that yield <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> and end on the <b>last character</b> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math>.</li>
+</ul>
+<p>The split is necessary because a repeated character extends the output only if a blank came before it. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math> the probabilities of the next window, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y(\varepsilon)</annotation></semantics></math> that of the blank, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mrow><mi>p</mi></mrow><mrow><mo>−</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mo>+</mo><msup><mrow><mi>p</mi></mrow><mrow><mo>+</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(l) = p^{-}(l) + p^{+}(l)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> a character other than blank, the transitions are:</p>
+<table>
+  <tr><th>next character</th><th>prefix afterwards</th><th>added to</th><th>contribution</th></tr>
+  <tr><td>blank</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> (unchanged)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mtext>new</mtext></mrow><mrow><mo>−</mo></mrow></msubsup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{-}_\text{new}(l)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(l)\,y(\varepsilon)</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> = last character of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> (repetition without blank)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mtext>new</mtext></mrow><mrow><mo>+</mo></mrow></msubsup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}_\text{new}(l)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mo>+</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}(l)\,y(c)</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> = last character of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>+</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">l + c</annotation></semantics></math> (after a blank)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mtext>new</mtext></mrow><mrow><mo>+</mo></mrow></msubsup><mo stretchy="false">(</mo><mi>l</mi><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}_\text{new}(l+c)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mo>−</mo></mrow></msup><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{-}(l)\,y(c)</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> ≠ last character</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>+</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">l + c</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mtext>new</mtext></mrow><mrow><mo>+</mo></mrow></msubsup><mo stretchy="false">(</mo><mi>l</mi><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p^{+}_\text{new}(l+c)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>y</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(l)\,y(c)</annotation></semantics></math></td></tr>
+</table>
+<p>Whoever carries only one number per prefix gets double letters wrong – the same pitfall as in the jump condition of CTC, in another place.</p>
+
+<h3>Pseudocode – <code>Strahlsuche.suche(logits, width, language, weight, lengthBonus)</code></h3>
+<pre class="pseudo"><b>check</b> width ≥ 1, T ≥ 1
+lnY ← row-wise log-softmax
+beam ← { empty prefix: (p− = 0, p+ = −∞, bonus = 0) }        <i>values as logarithms</i>
+<b>for</b> t ← 1 <b>to</b> T:
+    next ← {}
+    <b>for</b> each (l, p−, p+, bonus) in beam:
+        enter: l,  p− ← p(l) + lnY[t][blank],  bonus
+        <b>for</b> c ← 1 <b>to</b> K−1:
+            <b>if</b> c = last character of l:
+                enter: l,     p+ ← p+(l) + lnY[t][c],  bonus
+                enter: l + c, p+ ← p−(l) + lnY[t][c],  bonus + contribution(l, c)
+            <b>else</b>:
+                enter: l + c, p+ ← p(l) + lnY[t][c],   bonus + contribution(l, c)
+    beam ← the best "width" entries by p + bonus
+sort beam by p + bonus, best first
+<b>for</b> each entry:  logP ← −Ctc.verlust(logits, sequence)           <i>RECOMPUTED, not taken from the beam</i>
+<b>return</b> list of (sequence, logP)
+
+<b>function</b> enter(l, …):  existing entries for l are added via logsumexp, bonus ← max
+<b>function</b> contribution(l, c) = lengthBonus + weight · language.logProbability(l, c)   <i>without a language model only lengthBonus</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/seq/Strahlsuche.java</code>. <code>suche(logits, width)</code> is the form without language model and length bonus and returns only the best hit.</p>
+<div class="hinweis"><b>Framework convention:</b> The reported probability of a hit is recomputed with <code>Ctc.verlust</code>. The beam sums only over the paths that survived pruning and therefore underestimates; according to the source comment, the underestimate was up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.1</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.1\cdot10^{-2}</annotation></semantics></math> in the logarithm for width 50 and short sequences – small enough for the ranking, too large for a number passed on. The reported value contains no language-model share and is thus comparable with the CTC loss. Prefixes are compared by content, not by array identity.</div>
+
+<h2 id="sprachmodell">Room for a language model</h2>
+<p>CTC assumes the windows are independent; the knowledge of which sound sequences exist in a language is not in the model. Beam search can bring it in when extending a prefix: a <code>Sprachmodell</code> delivers <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">(</mo><mi>c</mi><mo>∣</mo><mi>l</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\ln P(c \mid l)</annotation></semantics></math>, and the beam ranks by</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>p</mi><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">)</mo><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mtext>extensions</mtext></mrow></munder><mo stretchy="false">(</mo><mi mathvariant="normal">λ</mi><mspace width="0.1667em"/><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>P</mi></mrow><mrow><mtext>LM</mtext></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo>∣</mo><mtext>prefix</mtext><mo stretchy="false">)</mo><mo>+</mo><mi mathvariant="normal">β</mi><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\ln p(l) + \sum_{\text{extensions}} \bigl(\lambda\, \ln P_\text{LM}(c \mid \text{prefix}) + \beta\bigr),</annotation></semantics></math></p>
+<p>with the weight <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> and the length bonus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">β</mi></mrow><annotation encoding="application/x-tex">\beta</annotation></semantics></math> per emitted character. The bonus compensates for a language model charging every extension with a negative logarithm and thus favouring short sequences. The interface is deliberately narrow: the search needs no more than "how well does this character fit after this sequence". The module itself ships no language model.</p>
+
+<h2 id="fehlerrate">Edit distance and error rate</h2>
+<p>The Levenshtein edit distance is the smallest number of insertions, deletions and substitutions that turns a sequence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> into a sequence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math>. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">D_{i,j}</annotation></semantics></math> the distance of the first <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> elements of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> to the first <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mn>0</mn></mrow></msub><mo>=</mo><mi>i</mi><mo>,</mo><mspace width="2em"/><msub><mrow><mi>D</mi></mrow><mrow><mn>0</mn><mo>,</mo><mi>j</mi></mrow></msub><mo>=</mo><mi>j</mi><mo>,</mo><mspace width="2em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><mo stretchy="false">[</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>≠</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">]</mo><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>j</mi></mrow></msub><mo>+</mo><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">D_{i,0} = i, \qquad D_{0,j} = j, \qquad D_{i,j} = \min\bigl(D_{i-1,j-1} + [a_i \ne b_j],\ D_{i-1,j} + 1,\ D_{i,j-1} + 1\bigr).</annotation></semantics></math></p>
+<p>It is computed with two rows instead of the full table – that suffices for the number, the way there is not needed. The error rate divides by the length of the <b>correct</b> sequence; over a set, the sum of distances is divided by the sum of lengths rather than averaging the individual rates – otherwise a three-sound utterance would count as much as a thirty-sound one.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>rate</mtext><mo>=</mo><mfrac><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>u</mi></mrow></munder><mi>D</mi><mo stretchy="false">(</mo><msub><mrow><mtext>recognised</mtext></mrow><mrow><mi>u</mi></mrow></msub><mo>,</mo><msub><mrow><mtext>correct</mtext></mrow><mrow><mi>u</mi></mrow></msub><mo stretchy="false">)</mo></mrow><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>u</mi></mrow></munder><mo>|</mo><msub><mrow><mtext>correct</mtext></mrow><mrow><mi>u</mi></mrow></msub><mo>|</mo></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">\text{rate} = \frac{\sum_u D(\text{recognised}_u, \text{correct}_u)}{\sum_u |\text{correct}_u|} .</annotation></semantics></math></p>
+<div class="hinweis"><b>Framework convention:</b> The rate can exceed 1: whoever outputs twenty sounds for three correct ones has seventeen insertions too many. At the start of training a model therefore often looks as if it got worse – it first learns to say anything at all, and only then when to stay silent. If the correct sequence is empty, the rate is 0 for an empty recognition and otherwise the number of recognised elements.</div>
+
+<h2 id="beispiel">Worked example</h2>
+<p>The example from the figure: 21 windows, six characters, blank at 0.999 elsewhere, three blocks of five windows with blank 0.70 and one sound each (4, then 2, then 3) at 0.30.</p>
+<table>
+  <tr><th>Decoding</th><th>Result</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi></mrow><annotation encoding="application/x-tex">\ln P</annotation></semantics></math> by CTC</th></tr>
+  <tr><td>greedy</td><td>empty</td><td>−5.350 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>0.0047</mn></mrow><annotation encoding="application/x-tex">P = 0.0047</annotation></semantics></math>)</td></tr>
+  <tr><td>beam, width 1</td><td>empty</td><td>−5.350</td></tr>
+  <tr><td>beam, width 2</td><td>4 2 3</td><td>−1.865 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>0.155</mn></mrow><annotation encoding="application/x-tex">P = 0.155</annotation></semantics></math>)</td></tr>
+  <tr><td>beam, width 25</td><td>4 2 3; second hit 4 2 2 3</td><td>−1.865; −2.511</td></tr>
+</table>
+<p>Width 2 already finds the correct sequence; width 1 behaves like greedy here. According to CTC the sequence found is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.155</mn><mo>/</mo><mn>0.0047</mn><mo>≈</mo><mn>33</mn></mrow><annotation encoding="application/x-tex">0.155/0.0047 \approx 33</annotation></semantics></math> times as probable as the empty one.</p>
+<p>On the error rate: recognised "5 3", correct "2 5 3". The table <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi></mrow><annotation encoding="application/x-tex">D</annotation></semantics></math> (rows: recognised, columns: correct):</p>
+<table>
+  <tr><th></th><th>–</th><th>2</th><th>5</th><th>3</th></tr>
+  <tr><th>–</th><td>0</td><td>1</td><td>2</td><td>3</td></tr>
+  <tr><th>5</th><td>1</td><td>1</td><td>1</td><td>2</td></tr>
+  <tr><th>3</th><td>2</td><td>2</td><td>2</td><td>1</td></tr>
+</table>
+<p>Distance 1 (the 2 is missing), rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">1/3</annotation></semantics></math>. Over a set: recognised {"1 2 3 4", "9"}, correct {"1 2 3 4", "1"} gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mn>4</mn><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>=</mo><mn>0.2</mn></mrow><annotation encoding="application/x-tex">(0 + 1)/(4 + 1) = 0.2</annotation></semantics></math> – the mean of the individual rates would be 0.5.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>Beam against greedy</b> (<code>SequenzSelfTest</code>): the example above. Greedy must lose all sounds, beam search with width 25 must find "4 2 3", this sequence must be more probable than the empty one according to <code>Ctc</code>, and the reported probability must equal that of <code>Ctc.verlust</code> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>.</li>
+  <li><b>Beam never worse</b>: on the artificial learning task the error rate with beam width 12 must not exceed the greedy one (measured 0.222 against 0.267; with varying durations 0.275 against 0.482).</li>
+  <li><b>Edit distance</b>: equal sequences 0, one substitution, deletion, insertion 1 each, against the empty sequence the length, in both directions; symmetric and satisfying the triangle inequality for 300 random pairs and triples.</li>
+  <li><b>Error rate</b>: one wrong out of three gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">1/3</annotation></semantics></math>, six outputs for one correct character give 6, empty against empty 0, the set rate is sum over sum and not the mean of the individual rates.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Beam search is not complete: pruning can discard the correct output if it looks poor in between. With growing width it approaches exhaustive search.</li>
+  <li>Cost per time step: width times number of characters entries, plus sorting when pruning and, at the end, one CTC forward pass per hit.</li>
+  <li>No language model included; the language-model and length share of two merging prefixes is neither averaged nor summed but set to the larger one.</li>
+  <li>The error rate counts every deviation equally; similar sounds are not "less wrong".</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>V. I. Levenshtein: Binary codes capable of correcting deletions, insertions, and reversals. Soviet Physics Doklady 10 (1966).</li>
+  <li>A. Graves: Supervised Sequence Labelling with Recurrent Neural Networks. Springer, 2012.</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Background to <a href="index.html#seq">Sequences without alignment: CTC</a> · Checks: <code>SequenzSelfTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

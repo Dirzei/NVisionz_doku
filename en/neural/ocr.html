@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glyph recognition – line segmentation, rasterisation, classification – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#core">The network</a>
+<a class="unterseite" href="netz.html">Network</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimisers</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Data, normalisation, metrics</a>
+<a class="unterseite" href="daten.html">Data and metrics</a>
+<a class="rubrik" href="index.html#model">Surrogate model, ensemble, storage</a>
+<a class="unterseite" href="ersatzmodell.html">Surrogate model</a>
+<a class="rubrik" href="index.html#search">Model search</a>
+<a class="unterseite" href="modellsuche.html">Model search</a>
+<a class="rubrik" href="index.html#analysis">Sensitivity analysis</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivity</a>
+<a class="rubrik" href="index.html#api">Interface for other applications</a>
+<a class="rubrik" href="index.html#ocr">Character recognition without Tesseract</a>
+<a class="unterseite aktiv" href="ocr.html">Glyph recognition</a>
+<a class="rubrik" href="index.html#seq">Sequences without alignment: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Beam search</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-neural</a> › Glyph recognition – line segmentation, rasterisation, classification</span><a class="sprachwahl" href="../../de/neural/ocr.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.ocr</div>
+  <h1>Glyph recognition – line segmentation, rasterisation, classification</h1>
+  <p class="unter">The computation behind <code>LineSegmenter</code>, <code>GlyphRaster</code>, <code>GlyphDataGen</code>, <code>TrainGlyphOcr</code>, <code>NeuralGlyphOcr</code> and <code>TemplateGlyphOcr</code>: how a text line falls apart into glyphs via the ink projection, how touching glyphs are separated, how every glyph is brought onto a fixed raster and recognised by a network or by template matching – with pseudocode following the source, figures from the checks and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A scanned map carries its axis labels as an image: "1060.38", "0,85", "(NRT1 = 1060.38)". To translate the curves into numbers, the digitiser has to read these labels. Large text recognition programs with native libraries exist for that; for axis labels and table cells – short lines, few distinct characters, one typeface per document – less suffices. The package <code>ocr</code> is a pure Java chain without a native library:</p>
+<ol>
+  <li>split the line into single glyphs (<code>LineSegmenter</code>),</li>
+  <li>bring each glyph onto a fixed <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>×</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">N \times N</annotation></semantics></math> greyscale image (<code>GlyphRaster</code>),</li>
+  <li>assign the greyscale image to a class of the character set – with a trained network (<code>NeuralGlyphOcr</code>) or by comparison with templates (<code>TemplateGlyphOcr</code>).</li>
+</ol>
+<p>Training data for the network are produced synthetically from system fonts (<code>GlyphDataGen</code>) or collected from the document itself (in app-pdfdigitizer). Two character sets are predefined: <code>standard()</code> with 73 classes (digits, upper and lower case letters, <code>.,:;=+-()%/</code>) and <code>digits()</code> with 17 classes (<code>0123456789.,+-()=</code>). The digit set deliberately contains no letters – the confusions 0/O and 1/l cannot occur there at all.</p>
+
+<h2 id="tinte">What counts as ink</h2>
+<p>Red, green and blue are combined into brightness with the usual weighting</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Y</mi><mo>=</mo><mn>0.299</mn><mspace width="0.1667em"/><mi>R</mi><mo>+</mo><mn>0.587</mn><mspace width="0.1667em"/><mi>G</mi><mo>+</mo><mn>0.114</mn><mspace width="0.1667em"/><mi>B</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">Y = 0.299\,R + 0.587\,G + 0.114\,B .</annotation></semantics></math></p>
+<p>Transparent pixels (alpha below 128) are background. Segmentation works with a hard threshold: ink is whatever is darker than 160. Rasterisation works softly so that anti-aliasing is preserved:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>t</mi><mo stretchy="false">(</mo><mi>Y</mi><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mfrac><mrow><mn>235</mn><mo>−</mo><mi>Y</mi></mrow><mrow><mn>235</mn><mo>−</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>234</mn><mo>,</mo><mi>s</mi><mo stretchy="false">)</mo></mrow></mfrac><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>s</mi><mo>=</mo><mn>160</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">t(Y) = \min\Bigl(1,\ \max\Bigl(0,\ \frac{235 - Y}{235 - \min(234, s)}\Bigr)\Bigr), \qquad s = 160 ,</annotation></semantics></math></p>
+<p>i.e. 0 from brightness 235 upwards, rising linearly and fully 1 from the threshold 160.</p>
+
+<h2 id="zerlegung">Segmenting a line</h2>
+<p>The idea is the <b>vertical projection</b>: count the ink pixels per pixel column. Columns with ink belong to a glyph, a run of empty columns separates two glyphs, a wide gap is a word space. To make this work on scans, three measures are added: specks are removed first, all thresholds are relative to the line height <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi></mrow><annotation encoding="application/x-tex">h</annotation></semantics></math>, and pieces that are too wide are split as touching glyphs.</p>
+<ol>
+  <li><b>Remove specks:</b> connected ink regions (8-neighbourhood, breadth-first search) with fewer than 4 pixels are discarded. Full stop and comma lie well above that at usual font sizes.</li>
+  <li><b>Projection:</b> a column counts as ink if it has at least <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mo stretchy="false">⌊</mo><mi>h</mi><mo>/</mo><mn>20</mn><mo stretchy="false">⌋</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(1, \lfloor h/20 \rfloor)</annotation></semantics></math> ink pixels.</li>
+  <li><b>Pieces:</b> a gap of at least <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0.06</mn><mspace width="0.1667em"/><mi>h</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">g = \max(1, \operatorname{round}(0.06\,h))</annotation></semantics></math> empty columns closes a piece. If the gap before a piece was at least <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>g</mi><mo>+</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0.45</mn><mspace width="0.1667em"/><mi>h</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(g+1, \operatorname{round}(0.45\,h))</annotation></semantics></math> wide, a space precedes it.</li>
+  <li><b>Split touching glyphs:</b> if a piece is at least 1.6 times as wide as the median of all piece widths, it counts as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mtext>width</mtext><mo>/</mo><mtext>median</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">k = \operatorname{round}(\text{width}/\text{median})</annotation></semantics></math> glyphs. It is cut <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k-1</annotation></semantics></math> times, each at the column with the least ink in a window of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>±</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mo stretchy="false">⌊</mo><mtext>median</mtext><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\pm\max(1, \lfloor\text{median}/4\rfloor)</annotation></semantics></math> around the even split point.</li>
+  <li><b>Cut out:</b> pieces with fewer than 4 ink pixels are dropped; for the rest the vertical ink range is determined and the sub-image cut out.</li>
+</ol>
+
+<figure>
+<svg viewBox="0 0 560 270" width="560" font-family="sans-serif" font-size="13">
+  <rect x="40" y="22" width="448" height="72" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="68" y="30" width="84" height="56" fill="#1f5f8b" stroke="#ffffff" stroke-width="0.5"/>
+  <rect x="180" y="30" width="84" height="56" fill="#1f5f8b" stroke="#ffffff" stroke-width="0.5"/>
+  <rect x="264" y="30" width="84" height="56" fill="#1f5f8b" stroke="#ffffff" stroke-width="0.5"/>
+  <rect x="376" y="30" width="84" height="56" fill="#1f5f8b" stroke="#ffffff" stroke-width="0.5"/>
+  <text x="496" y="62" fill="#5b6475">image</text>
+  <line x1="40" y1="170" x2="488" y2="170" stroke="#c9d1dc"/>
+  <rect x="68" y="114" width="84" height="56" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="180" y="114" width="168" height="56" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="376" y="114" width="84" height="56" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="496" y="146" fill="#5b6475">column</text>
+  <text x="496" y="162" fill="#5b6475">ink</text>
+  <text x="64" y="118" fill="#5b6475" text-anchor="end">28</text>
+  <rect x="69" y="186" width="82" height="20" fill="#ffffff" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="110.0" y="201" fill="#9a6400" text-anchor="middle">12</text>
+  <rect x="181" y="186" width="68" height="20" fill="#ffffff" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="215.0" y="201" fill="#9a6400" text-anchor="middle">10</text>
+  <rect x="251" y="186" width="96" height="20" fill="#ffffff" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="299.0" y="201" fill="#9a6400" text-anchor="middle">14</text>
+  <rect x="377" y="186" width="82" height="20" fill="#ffffff" stroke="#9a6400" stroke-width="1.5"/>
+  <text x="418.0" y="201" fill="#9a6400" text-anchor="middle">12</text>
+  <line x1="264" y1="108" x2="264" y2="212" stroke="#5b6475" stroke-dasharray="3,3"/>
+  <line x1="250" y1="108" x2="250" y2="212" stroke="#9a6400" stroke-width="2"/>
+  <line x1="243" y1="103" x2="292" y2="103" stroke="#9a6400" stroke-width="2"/><line x1="243" y1="98" x2="243" y2="108" stroke="#9a6400" stroke-width="2"/><line x1="292" y1="98" x2="292" y2="108" stroke="#9a6400" stroke-width="2"/>
+  <text x="40" y="14" fill="#5b6475">search window ±3 around the even split (dashed)</text>
+  <text x="40" y="232" fill="#5b6475">median 12 px, piece 24 px → two glyphs, cut at the first column</text>
+  <text x="40" y="250" fill="#5b6475">of least ink in the window (amber): 10 + 14 instead of 12 + 12</text>
+</svg>
+<figcaption>The font-free test pattern from <code>OcrSelfTest</code>: four bars of 12 pixels, the middle two touch. The projection shows three pieces (12, 24, 12). The middle one is twice the median width and gets split – with a flat ink profile at the left window edge, i.e. into 10 and 14 instead of 12 and 12. The count is right: four glyphs.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>LineSegmenter.segment(line)</code></h3>
+<pre class="pseudo">g ← max(absMinGap, round(h · 0.06));   gSpace ← max(g + 1, round(h · 0.45))
+raw ← ink mask (brightness &lt; 160, alpha ≥ 128)
+mask ← raw without 8-components of fewer than minGlyphInk (4) pixels
+ink[x] ← number of mask pixels in column x
+isInk[x] ← ink[x] ≥ max(1, h/20)
+
+<i>// pieces from the projection</i>
+<b>for</b> x ← 0 <b>to</b> w (x = w counts as empty):
+    <b>if</b> isInk[x]:  start ← start or x;  gap ← 0
+    <b>else if</b> a piece is open:
+        gap ← gap + 1
+        <b>if</b> gap ≥ g <b>or</b> x = w:
+            store piece [start, x − gap], space before ← (previousGap ≥ gSpace)
+            previousGap ← gap;  close piece
+    <b>else</b>:  previousGap ← previousGap + 1
+
+<i>// touching glyphs</i>
+<b>if</b> splitting <b>and</b> pieces exist:
+    m ← median of the piece widths
+    <b>for</b> each piece of width b, k ← round(b / m):
+        <b>if</b> k ≥ 2 <b>and</b> b ≥ 1.6 · m:
+            <b>for</b> j ← 1 <b>to</b> k−1:
+                target ← start + round(b · j / k);   f ← max(1, m/4)
+                cut ← first column with the least ink[x] in [target − f, target + f]
+            replace the piece by its parts           <i>only the first inherits "space before"</i>
+
+<i>// cut out</i>
+<b>for</b> each piece:  <b>if</b> Σ ink ≥ minGlyphInk:  sub-image from the topmost to the lowest mask row</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/ocr/LineSegmenter.java</code>. Defaults: threshold 160, gap 0.06 · h, word gap 0.45 · h (at least twice the gap), absolute minimum gap 1 pixel, splitting on, speck limit 4 pixels.</p>
+
+<h2 id="raster">Rasterisation</h2>
+<p>The cut-out glyph may be 8 or 80 pixels high. The network needs a fixed number of inputs, and it should see an "8" the same way however large it was printed. <code>GlyphRaster</code> therefore determines the bounding box of the ink, scales it, preserving the aspect ratio, into a field of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo><mo>×</mo><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(N-2) \times (N-2)</annotation></semantics></math> points, places it centred in the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>×</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">N \times N</annotation></semantics></math> raster (one point margin) and returns the ink strengths row by row as a vector of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>N</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">N^2</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mfrac><mrow><mi>N</mi><mo>−</mo><mn>2</mn></mrow><mrow><msub><mrow><mi>b</mi></mrow><mrow><mi>w</mi></mrow></msub></mrow></mfrac><mo>,</mo><mfrac><mrow><mi>N</mi><mo>−</mo><mn>2</mn></mrow><mrow><msub><mrow><mi>b</mi></mrow><mrow><mi>h</mi></mrow></msub></mrow></mfrac><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi>d</mi></mrow><mrow><mi>w</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>w</mi></mrow></msub><mi mathvariant="normal">σ</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="1em"/><msub><mrow><mi>d</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>h</mi></mrow></msub><mi mathvariant="normal">σ</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mtext>offset</mtext><mo>=</mo><mo stretchy="false">⌊</mo><mfrac><mrow><mi>N</mi><mo>−</mo><mi>d</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mo stretchy="false">⌋</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\sigma = \min\Bigl(\frac{N-2}{b_w}, \frac{N-2}{b_h}\Bigr), \qquad d_w = \max\bigl(1, \operatorname{round}(b_w \sigma)\bigr), \quad d_h = \max\bigl(1, \operatorname{round}(b_h \sigma)\bigr), \qquad \text{offset} = \Bigl\lfloor \frac{N - d}{2} \Bigr\rfloor .</annotation></semantics></math></p>
+<p>Scaling is bilinear on a white background; transparent areas would otherwise turn black and thus become ink. An empty image yields the zero vector.</p>
+<div class="hinweis"><b>Framework convention:</b> The same rasterisation serves training and recognition – it must be bit-identical, otherwise the network would see a different distribution at recognition time than during learning. The raster size is therefore stored with the model (<code>raster_n</code>, default 20). Rasterisation keeps the aspect ratio but discards the absolute size: a full stop and a comma are stretched to the same height as a digit, and only their shape tells them apart.</div>
+
+<h2 id="netz">Recognition with the network</h2>
+<p><code>TrainGlyphOcr</code> builds a classification network from the module's building blocks: input <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>N</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">N^2</annotation></semantics></math>, two hidden layers with 256 and 128 RELU neurons, each with dropout 0.1, output <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> linear logits, He initialisation. Training uses softmax cross-entropy and Adam (learning rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math>), batch 64, an exponential learning-rate schedule with factor 0.98 per epoch and early stopping after 8 epochs without an improvement of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-4}</annotation></semantics></math>; 85 % of the samples for training, 15 % for validation. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">N = 20</annotation></semantics></math> and the 17 digit classes the network has <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>400</mn><mo>⋅</mo><mn>256</mn><mo>+</mo><mn>256</mn><mo>+</mo><mn>256</mn><mo>⋅</mo><mn>128</mn><mo>+</mo><mn>128</mn><mo>+</mo><mn>128</mn><mo>⋅</mo><mn>17</mn><mo>+</mo><mn>17</mn><mo>=</mo><mn>137,745</mn></mrow><annotation encoding="application/x-tex">400\cdot256+256 + 256\cdot128+128 + 128\cdot17+17 = 137{,}745</annotation></semantics></math> parameters.</p>
+<div class="hinweis"><b>Framework convention:</b> The classification model has neither an input nor a target normaliser – the raster values already lie in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math>. The metadata hold <code>task</code> = glyph-ocr, <code>charset</code>, <code>raster_n</code>, <code>classes</code> and <code>val_accuracy</code>. Called from the command line, training uses 120 samples per glyph, at most 40 epochs, raster 20, the full character set and seed 1234 unless stated otherwise.</div>
+<p>Each glyph is recognised by the <code>argmax</code> of the logits. If a minimum confidence is set and the largest softmax probability lies below it, "?" appears instead of a character.</p>
+<h3>Pseudocode – <code>NeuralGlyphOcr.recognize(line)</code></h3>
+<pre class="pseudo"><b>if</b> line = none:  <b>return</b> ""
+text ← ""
+<b>for</b> each glyph image z from segmenter.segment(line):
+    <b>if</b> z.spaceBefore:  text ← text + " "
+    v ← raster.toVector(z)
+    <b>if</b> the model has an input normaliser:  v ← normalise(v)
+    logits ← net.run(v);   k ← argmax(logits)
+    <b>if</b> minConfidence &gt; 0 <b>and</b> softmax(logits)[k] &lt; minConfidence:
+        text ← text + "?";  <b>continue</b>
+    text ← text + charset[k]
+<b>return</b> text</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/ocr/NeuralGlyphOcr.java</code>. <code>load(path)</code> reads character set and raster size from the metadata (defaults: standard set, 20) and sets the minimum confidence to 0.</p>
+
+<h2 id="vorlagen">Recognition by template matching</h2>
+<p><code>TemplateGlyphOcr</code> needs no training. For every glyph of the set, a raster vector is produced once from one typeface and its mean removed. An unknown glyph is rasterised and centred the same way and assigned to the template with the largest normalised correlation:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mfrac><mrow><mo stretchy="false">(</mo><mi>v</mi><mo>−</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>v</mi></mrow><mo stretchy="false">)</mo><mo>⋅</mo><mo stretchy="false">(</mo><msub><mrow><mi>t</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo></mrow><mrow><mo>‖</mo><mi>v</mi><mo>−</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>v</mi></mrow><mo>‖</mo><mspace width="0.2778em"/><mo>‖</mo><msub><mrow><mi>t</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>t</mi></mrow></mrow><mrow><mi>k</mi></mrow></msub><mo>‖</mo></mrow></mfrac><mo>,</mo><mspace width="2em"/><mover accent="true"><mrow><mi>k</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mspace width="0.1667em"/><mi>arg</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace width="0.1667em"/><msub><mi>max</mi><mrow><mi>k</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">r_k = \frac{(v - \bar v)\cdot(t_k - \bar t_k)}{\|v - \bar v\|\;\|t_k - \bar t_k\|}, \qquad \hat k = \arg\max_k r_k .</annotation></semantics></math></p>
+<p>That is fast and needs no data, but depends on the one typeface of the templates. It serves as a baseline for the network. The templates are produced with <code>GlyphDataGen.generate(1, 12345)</code> – one sample per glyph with the same random variation as training data, i.e. with size and position scatter and noise.</p>
+
+<h2 id="trainingsdaten">Synthetic training data</h2>
+<p><code>GlyphDataGen.generate(perGlyph, seed)</code> draws every glyph of the set <code>perGlyph</code> times black on white into a 48 × 48 pixel field, each time with a random variation, rasterises it with the same <code>GlyphRaster</code> as recognition and creates a one-hot target. The variations per sample:</p>
+<table>
+  <tr><th>Quantity</th><th>Range</th></tr>
+  <tr><td>font family</td><td>uniform from the list; default: the logical fonts SansSerif, Serif, Monospaced</td></tr>
+  <tr><td>style</td><td>plain or bold</td></tr>
+  <tr><td>font size</td><td>20 to 35 points, plus a stretch of 0.9 to 1.1</td></tr>
+  <tr><td>anti-aliasing</td><td>on or off</td></tr>
+  <tr><td>offset</td><td>±2 pixels horizontally and vertically</td></tr>
+  <tr><td>noise</td><td>per raster point uniformly up to ±6 %, then clamped to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math></td></tr>
+</table>
+<p>The samples come in blocks per glyph; the trainer does the shuffling. With the same seed and the same installed fonts, the same samples arise.</p>
+
+<h2 id="beispiel">Worked example</h2>
+<p>The bar pattern from the figure measures 64 × 36 pixels. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mn>36</mn></mrow><annotation encoding="application/x-tex">h = 36</annotation></semantics></math> the separating gap is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2.16</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">g = \max(1, \operatorname{round}(2.16)) = 2</annotation></semantics></math> columns, the word gap <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>3</mn><mo>,</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>16.2</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>=</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">\max(3, \operatorname{round}(16.2)) = 16</annotation></semantics></math> columns, the column threshold <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>36</mn><mo>/</mo><mn>20</mn><mo stretchy="false">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\max(1, 36/20) = 1</annotation></semantics></math> pixel. The gaps between the bars are 4 columns wide – they separate, but are no word space. The middle piece is 24 wide, the median 12, so <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k = 2</annotation></semantics></math>; the even cut would be at column 32, the search window runs from 29 to 35, all columns have 28 ink pixels, the first one is chosen: 29.</p>
+<p>A bar of 12 × 28 pixels in the raster <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">N = 20</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>18</mn><mo>/</mo><mn>12</mn><mo>,</mo><mspace width="0.3333em"/><mn>18</mn><mo>/</mo><mn>28</mn><mo stretchy="false">)</mo><mo>=</mo><mn>0.643</mn></mrow><annotation encoding="application/x-tex">\sigma = \min(18/12,\ 18/28) = 0.643</annotation></semantics></math>, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>×</mo><mn>18</mn></mrow><annotation encoding="application/x-tex">8 \times 18</annotation></semantics></math> points, offset 6 horizontally and 1 vertically, 144 raster points with ink.</p>
+<p>Measured accuracies from the module documentation: the digit model reaches 100 % on the validation set and reads legend numbers such as "1060.38" and "2533.14" exactly; the full set lies at about 98 %. A scanned document showed what these figures do not say: template matching read every 6 there as an 8, a network with 1.0000 on system fonts confused 9 and 3, and only a network trained on glyphs from the same print read everything correctly. The validation accuracy was measured correctly – on the wrong distribution.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>Rasterisation</b> (<code>OcrSelfTest</code>): an empty image gives the zero vector, the vector length is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>N</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><mn>400</mn></mrow><annotation encoding="application/x-tex">N^2 = 400</annotation></semantics></math>.</li>
+  <li><b>Segmentation</b>: "12.5" yields exactly four glyphs without a false word gap. The bar pattern yields fewer pieces without splitting than with it, exactly four with it. The pattern is deliberately drawn without a font: with a logical font it depended on the machine whether two letters touch at all.</li>
+  <li><b>Recognition</b>: a digit model (120 samples per glyph, 25 epochs, seed 7) must reach at least 0.98 on the validation set and read "1060.38", "42.7" and "2533.14" exactly. Template matching must return a non-empty result.</li>
+  <li><b>Training data</b> (<code>Glyphdatenprobe</code>, 11 checks): number equal to glyphs times samples, raster length, one-hot targets in blocks, all values in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math>, same seed gives the same samples, a different seed different ones, the default fonts are SansSerif, Serif, Monospaced in this order. Only what does not depend on the installed fonts is checked.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>One line per call; finding the lines and cells is up to the application.</li>
+  <li>Touching glyphs remain the weak spot of the projection. Splitting presupposes that most glyphs are equally wide, and with even ink it cuts at the left window edge instead of in the middle (figure above). Italics and overhanging letters cannot be separated vertically at all.</li>
+  <li>No language model, no dictionary: every glyph is decided on its own.</li>
+  <li>Synthetic data from system fonts do not reliably cover the typeface of a particular print (see example). The logical font names resolve differently on each operating system; models from synthetic data are therefore not identical across machines.</li>
+  <li>Rasterisation stretches every glyph to full height; afterwards full stop, comma and hyphen differ only by their shape, not by their size or position in the line.</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Background to <a href="index.html#ocr">Glyph recognition without Tesseract</a> · Checks: <code>OcrSelfTest</code>, <code>Glyphdatenprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

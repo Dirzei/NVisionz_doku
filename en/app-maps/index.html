@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>View compressor and turbine maps, derive further plots and compare them with measured data – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag aktiv" href="index.html">app-maps</a>
+<div class="rubriken">
+<a class="rubrik" href="#zweck">What the app is for</a>
+<a class="rubrik" href="#funktionen">What it can do</a>
+<a class="rubrik" href="#daten">Data and formats</a>
+<a class="rubrik" href="#aufbau">What it is built on</a>
+<a class="rubrik" href="#stand">Status and limits</a>
+</div>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › app-maps</span><a class="sprachwahl" href="../../de/app-maps/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-app-maps</div>
+  <h1>View compressor and turbine maps, derive further plots and compare them with measured data</h1>
+  <p class="unter">Overview of the app, as of 29 September 2026. The app reads map files in several formats, shows them as lines, filled contours and spatial views, derives further charts from them and lays operating lines and measured points over them. For turbines there is a Smith chart.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>46</b><span>source files in 6 packages</span></div>
+  <div class="zahl"><b>4</b><span>map formats for reading: MIdata, NPSS, GasTurb, .chr</span></div>
+  <div class="zahl"><b>3</b><span>views per characteristic: line, contour, 3D</span></div>
+  <div class="zahl"><b>5</b><span>sources of stage work in the Smith chart</span></div>
+  <div class="zahl"><b>5</b><span>command-line classes in package <code>cmd.maos</code></span></div>
+  <div class="zahl"><b>11</b><span>help pages, German and English</span></div>
+</div>
+
+<h2 id="zweck">What the app is for</h2>
+<p>A <b>map</b> describes how a compressor or turbine behaves over its whole operating range: pressure ratio, efficiency and flow over speed and operating point. The design programs of the industry write these maps in different, partly proprietary file formats. Anyone who wants to check maps, compare them or move them into another program needs a tool that reads all the formats and shows the maps the way engineers know them.</p>
+<p>The app is that tool, successor to an older version inside the framework. It answers questions such as: where does the operating point lie in the map? What does the map look like in the usual derived quantities? Is the map still correct after conversion to another format? What does the stage of a turbine deliver when seen in the Smith chart?</p>
+
+<h2 id="funktionen">What it can do</h2>
+
+<div class="karte">
+  <h3>Load maps</h3>
+  <p class="zweck">A model directory is read as a tree: file, component, characteristic. The format is recognised from the content, not only from the extension.</p>
+  <ul>
+    <li>Formats: MIdata files (<code>.dat</code>), NPSS maps and models (<code>.map</code>, <code>.mdl</code>, <code>.run</code>, with <code>#include</code> chains in both spellings), maps in the GasTurb format and maps in the <code>.chr</code> format (file name <code>&lt;quantity&gt;_&lt;component&gt;.CHR</code>, the role is in the name; all <code>.chr</code> files of a folder count as one set).</li>
+    <li>Characteristics have zero to four dimensions, structured (speed lines of equal length) or unstructured (lines of different length).</li>
+    <li>Defective files are rejected with file name and reason, never with an exception from inside the reader.</li>
+    <li>A click on the file node shows the text of the file, read-only, up to 2 MB. This helps most with files that could not be read as a map. Nodes without content show an empty page.</li>
+  </ul>
+</div>
+
+<div class="karte">
+  <h3>Display characteristics</h3>
+  <p class="zweck">Every characteristic can be shown in three views and adapted in its units.</p>
+  <ul>
+    <li><b>Line</b>, <b>contour</b> (filled contours and iso-lines with colour scales and labelled lines) and <b>3D</b> (see below). The axes x1 and x2 can be swapped.</li>
+    <li>A <b>role editor</b> (&ldquo;Assignment&rdquo;) decides which quantity plays which role in the map; defaults and alias names for axes are preset.</li>
+    <li><b>Units:</b> display profile per map (SI, imperial and others). On loading, data can be converted to SI base units; a warning appears when columns that were not converted are taken over into operating lines.</li>
+    <li><b>Read-out:</b> the crosshair is the master switch of the read-out. A click gives the values at that point in the status line and as an annotation in the plot.</li>
+    <li>Fine control per series (dash pattern, colour, conditions with AND, OR and precedence) is saved.</li>
+  </ul>
+</div>
+
+<div class="karte">
+  <h3>Derived plots (&ldquo;Additional&rdquo;)</h3>
+  <p class="zweck">From the maps of a component come the usual further charts, for instance the corrected flow over the pressure ratio with efficiency islands.</p>
+  <ul>
+    <li>Efficiency islands from a marching-squares method on a quadrilateral grid, without a triangle mesh.</li>
+    <li>Line of maximum efficiency with a table.</li>
+    <li><b>Surge line</b> in the derived plot. For GasTurb and NPSS maps it is shown when the file names one; for <code>.dat</code> one picks the characteristic oneself in the component tree. Two-dimensional surge lines get a section. Turbines do not get the page.</li>
+    <li>A <b>special-lines dialog</b> (families A, B and efficiency, levels, iso-line generator) for additional lines.</li>
+  </ul>
+</div>
+
+<div class="karte">
+  <h3>Smith chart for turbines</h3>
+  <p class="zweck">Stage loading and flow coefficient of a turbine, computed from the map instead of estimated.</p>
+  <ul>
+    <li><b>Stage work</b> picks the best available source itself, in a fixed order: Δh/T as a characteristic, as an axis, the pressure ratio as a characteristic, as an axis, and last an assumption. Title and bar name the origin.</li>
+    <li><b>Geometry</b> as input: mean radius and area, or hub and tip radius, whole number of stages, reference speed. Wrong entries are rejected with the reason in red, not rounded.</li>
+    <li><b>Flow coefficient from the mass flow:</b> when the units of flow and speed are known, φ is computed through Mach number (air, subsonic) and blade speed. Points above the choking value are counted and reported.</li>
+  </ul>
+</div>
+
+<div class="karte">
+  <h3>Operating lines and measured points</h3>
+  <p class="zweck">Measured data or calculation runs are laid on the maps that carry their quantities.</p>
+  <ul>
+    <li>Sources: CSV, H2 databases and the hand-over from <a href="../app-epds/index.html">app-epds</a> (one run per row, through a button there). If an H2 file holds several tables, the app asks with a card in the content area instead of guessing.</li>
+    <li>Conditions (filters), unit conversion to SI, binding to a map model. The presets for x and y per map plot are built in; for NPSS maps the map coordinates apply.</li>
+    <li>H2 data is loaded only when a column is needed; columns are cached, filtered ones too, and the query runs in the background.</li>
+    <li>Expressions such as <code>SUR(…)</code> call surrogate models from <a href="../neural/index.html">framework-neural</a>, for instance a network that <a href="../app-neural/index.html">app-neural</a> has just trained.</li>
+  </ul>
+</div>
+
+<div class="karte">
+  <h3>Spatial view</h3>
+  <p class="zweck">Characteristics as a surface or volume, drawn with the 3D toolkit of the framework.</p>
+  <ul>
+    <li><b>Surface:</b> map value as height over x1 and x2, meshed from the cells of the characteristic. Speed lines of different length give holes, not invented values.</li>
+    <li><b>Volume</b> of a 3D characteristic with different planes: value as colour in ten bands, the hull up to the chosen position, with the cut surface there as a lid.</li>
+    <li>The triangle mesh can be switched on (off by default).</li>
+  </ul>
+</div>
+
+<div class="karte">
+  <h3>Converting between formats</h3>
+  <p class="zweck">What works in the user interface also works on the command line, through the same program code.</p>
+  <ul>
+    <li>&ldquo;Save as NPSS&rdquo; button (visible while something from a GasTurb file is selected): writes the file next to the source. A counterpart converts NPSS maps back to GasTurb; a map with more beta values than the target format can represent is refused instead of written wrongly.</li>
+    <li>&ldquo;NPSS → CSV&rdquo; button: reads the output of an NPSS run together with its view file and writes a CSV that can be loaded as an operating line.</li>
+    <li>Command-line tools in <code>cmd.maos</code>: conversion GasTurb to NPSS, NPSS to GasTurb, NPSS output to H2, and a checking tool for map files.</li>
+  </ul>
+</div>
+
+<h2 id="daten">Data and formats</h2>
+<ul>
+  <li><b>Reading maps:</b> MIdata (<code>.dat</code>), NPSS (<code>.map</code>, <code>.mdl</code>, <code>.run</code>), GasTurb, <code>.chr</code>. Some of the readers and writers live in <a href="../fileformats/index.html">framework-fileformats</a>.</li>
+  <li><b>Writing:</b> maps as NPSS or GasTurb, working data as CSV or H2.</li>
+  <li><b>Operating lines:</b> CSV, H2 (lazy, with units in a side table), tables from the hand-over.</li>
+  <li><b>Bindings:</b> which expressions for x and y belong to which map plot, from built-in presets; the roles per chart are saved.</li>
+  <li><b>Interface state:</b> chart options per map are saved. Operating-line definitions last for the session only.</li>
+</ul>
+
+<h2 id="aufbau">What it is built on</h2>
+<ul>
+  <li><a href="../fileformats/index.html">framework-fileformats</a>: readers and writers of the map formats, NPSS output.</li>
+  <li><a href="../chart/index.html">framework-chart</a>: contours, colour scales, iso-lines and their labels.</li>
+  <li><a href="../chart3d/index.html">framework-chart3d</a>: 3D view, meshing and cut display of the spatial view.</li>
+  <li><a href="../thermo/index.html">framework-thermo</a>: air and aero-thermodynamics for derived quantities and the flow coefficient.</li>
+  <li><a href="../data/index.html">framework-data</a>: units and quantity kinds, H2 storage, CSV reading.</li>
+  <li><a href="../neural/index.html">framework-neural</a>: surrogate models in expressions.</li>
+  <li><a href="../swing/index.html">framework-swing</a>: user interface, cards in the tool bar, chart components.</li>
+  <li><a href="../api/index.html">framework-api</a>: registration as an app and events between apps.</li>
+</ul>
+<p>The core (<code>maps.model</code>) is free of user-interface classes and runs without a screen. The expression evaluator for axes and quantities, the quadrilateral meshing and the format switch are code of the app itself.</p>
+
+<h2 id="stand">Status and limits</h2>
+<p>For structured MIdata, NPSS, GasTurb and <code>.chr</code> maps the app is functionally complete: loading, line, contour and 3D, derived plots with surge line, Smith chart with geometry and flow coefficient, operating lines from CSV, H2 and hand-over, surrogate models, conversion in both directions. The probes check on generated maps and on sample maps that reader, format switch, conversion and user interface fit together.</p>
+<div class="hinweis">A few limits are intended or still open: the Smith chart treats air with a fixed isentropic exponent and in subsonic flow; above the choking value there is no value. The turbine from <code>.chr</code> gets its pressure ratio from dry air and a reference temperature (default 1500 K). The layout of unstructured <code>.dat</code> maps is reconstructed from the old reader and not yet tested against a real file. Fine control of colour-bar labels and operating points in the contour view are missing. Operating lines do not survive a restart.</div>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

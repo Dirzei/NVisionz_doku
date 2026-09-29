@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CTC – learning sequences without alignment – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#core">The network</a>
+<a class="unterseite" href="netz.html">Network</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimisers</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Data, normalisation, metrics</a>
+<a class="unterseite" href="daten.html">Data and metrics</a>
+<a class="rubrik" href="index.html#model">Surrogate model, ensemble, storage</a>
+<a class="unterseite" href="ersatzmodell.html">Surrogate model</a>
+<a class="rubrik" href="index.html#search">Model search</a>
+<a class="unterseite" href="modellsuche.html">Model search</a>
+<a class="rubrik" href="index.html#analysis">Sensitivity analysis</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivity</a>
+<a class="rubrik" href="index.html#api">Interface for other applications</a>
+<a class="rubrik" href="index.html#ocr">Character recognition without Tesseract</a>
+<a class="unterseite" href="ocr.html">Glyph recognition</a>
+<a class="rubrik" href="index.html#seq">Sequences without alignment: CTC</a>
+<a class="unterseite aktiv" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Beam search</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-neural</a> › CTC – learning sequences without alignment</span><a class="sprachwahl" href="../../de/neural/ctc.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.seq</div>
+  <h1>CTC – learning sequences without alignment</h1>
+  <p class="unter">The computation behind <code>Ctc</code> and <code>SequenzTrainer</code>: how Connectionist Temporal Classification sums over all alignments of a sound sequence, why that works in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>T</mi><mo>⋅</mo><mi>S</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(T \cdot S)</annotation></semantics></math> with forward and backward variables, where the simple gradient with respect to the logits comes from and how the existing network learns sequences with it – with pseudocode following the source, an example worked by hand, the checks and the limits. Decoding with beam search and the error rate are on the page <a href="strahlsuche.html">Beam search</a>.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>An acoustic model sees a hundred time windows per second and is to deliver a word of five sounds. It could be trained like an ordinary classifier only if one knew which window belongs to which sound. Nobody knows this assignment – the <b>alignment</b>; entering it by hand costs many times the recording.</p>
+<p>Connectionist Temporal Classification turns the question around: instead of assuming one alignment, it sums the probability over <b>all</b> alignments that produce the correct output. What is trained is the probability of the sound sequence, regardless of how it is spread over the windows. The network learns the alignment by itself on the way.</p>
+
+<h2 id="pfade">Paths, blank, collapsing</h2>
+<p>For each time window <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>T</mi></mrow><annotation encoding="application/x-tex">t = 1, \dots, T</annotation></semantics></math> the network delivers logits over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> characters; index 0 is the <b>blank</b>, written <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ε</mi></mrow><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math> in formulas and "_" in examples. After the softmax, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y_t(k)</annotation></semantics></math> is the probability of character <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> in window <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math>. Choosing one character per window gives a <b>path</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">\pi</annotation></semantics></math> of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math>. The path becomes the output in two steps: first merge equal neighbours into one, then drop the blanks.</p>
+<pre class="pseudo">a a _ a b b   →   a _ a b   →   a a b
+_ a a b b _   →   _ a b _   →   a b</pre>
+<p>The blank is necessary: without it "a a" could never be output, since two neighbouring a's would always merge. The order matters – drop blanks first, then merge, and "a _ a" would give a single a. Calling the mapping <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">B</mi></mrow><annotation encoding="application/x-tex">\mathcal B</annotation></semantics></math>,</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><mi>l</mi><mo>∣</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi mathvariant="normal">π</mi><mspace width="0.1667em"/><mo>:</mo><mspace width="0.1667em"/><mi mathvariant="normal">B</mi><mo stretchy="false">(</mo><mi mathvariant="normal">π</mi><mo stretchy="false">)</mo><mo>=</mo><mi>l</mi></mrow></munder><mspace width="0.3333em"/><munderover><mo largeop="true" movablelimits="true">∏</mo><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>T</mi></mrow></munderover><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">π</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>L</mi><mo>=</mo><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">(</mo><mi>l</mi><mo>∣</mo><mi>x</mi><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">P(l \mid x) = \sum_{\pi\,:\,\mathcal B(\pi) = l}\ \prod_{t=1}^{T} y_t(\pi_t), \qquad L = -\ln P(l \mid x).</annotation></semantics></math></p>
+<p>The product presupposes that the outputs of the windows are <b>mutually independent</b> given the input. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">K = 20</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>100</mn></mrow><annotation encoding="application/x-tex">T = 100</annotation></semantics></math> there are <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>20</mn><mrow><mn>100</mn></mrow></msup></mrow><annotation encoding="application/x-tex">20^{100}</annotation></semantics></math> paths; they cannot be enumerated, but they meet in few states.</p>
+
+<h2 id="spreizung">The extended sequence and the lattice</h2>
+<p>The target sequence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> is <b>extended</b>: a blank goes before, between and after every character, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>'</mo><mo>=</mo><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo>,</mo><msub><mrow><mi>l</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mi mathvariant="normal">ε</mi><mo>,</mo><msub><mrow><mi>l</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>l</mi></mrow><mrow><mi>L</mi></mrow></msub><mo>,</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">l' = (\varepsilon, l_1, \varepsilon, l_2, \dots, l_L, \varepsilon)</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>=</mo><mn>2</mn><mi>L</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">S = 2L + 1</annotation></semantics></math> positions. Every admissible path traverses <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mo>'</mo></mrow><annotation encoding="application/x-tex">l'</annotation></semantics></math> from left to right and may, per window,</p>
+<ul>
+  <li>stay on its position (the same character once more),</li>
+  <li>move one position on,</li>
+  <li>jump two positions – only if a blank is skipped and the characters before and after it are <b>different</b>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><msub><mrow><mo>'</mo></mrow><mrow><mi>s</mi></mrow></msub><mo>≠</mo><mi mathvariant="normal">ε</mi></mrow><annotation encoding="application/x-tex">l'_s \ne \varepsilon</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><msub><mrow><mo>'</mo></mrow><mrow><mi>s</mi></mrow></msub><mo>≠</mo><mi>l</mi><msub><mrow><mo>'</mo></mrow><mrow><mi>s</mi><mo>−</mo><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">l'_s \ne l'_{s-2}</annotation></semantics></math>.</li>
+</ul>
+<p>The last condition is the difference between a correct and an almost correct implementation: were the two characters equal, they would merge when collapsing, and the path would yield a different label. A path starts at position 0 or 1 and ends at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">S-1</annotation></semantics></math> or <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">S-2</annotation></semantics></math>.</p>
+
+<figure>
+<svg viewBox="0 0 620 260" width="620" font-family="sans-serif" font-size="13">
+  <line x1="110" y1="36" x2="190" y2="36" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="110" y1="36" x2="190" y2="62" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="110" y1="62" x2="190" y2="62" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="110" y1="62" x2="190" y2="88" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="190" y1="36" x2="270" y2="62" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="190" y1="62" x2="270" y2="62" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="190" y1="62" x2="270" y2="88" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="190" y1="88" x2="270" y2="88" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="190" y1="88" x2="270" y2="114" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="270" y1="62" x2="350" y2="88" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="270" y1="88" x2="350" y2="88" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="270" y1="88" x2="350" y2="114" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="270" y1="114" x2="350" y2="114" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="270" y1="114" x2="350" y2="140" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="270" y1="114" x2="350" y2="166" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="350" y1="88" x2="430" y2="114" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="350" y1="114" x2="430" y2="114" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="350" y1="114" x2="430" y2="140" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="350" y1="114" x2="430" y2="166" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="350" y1="140" x2="430" y2="140" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="350" y1="140" x2="430" y2="166" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="350" y1="166" x2="430" y2="166" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="350" y1="166" x2="430" y2="192" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="430" y1="114" x2="510" y2="166" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="430" y1="140" x2="510" y2="166" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="430" y1="166" x2="510" y2="166" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="430" y1="166" x2="510" y2="192" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="430" y1="192" x2="510" y2="192" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="190" y1="62" x2="270" y2="114" stroke="#9a6400" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="236.0" y="84.0" fill="#9a6400" font-size="15">×</text>
+  <line x1="110" y1="62" x2="190" y2="88" stroke="#1f5f8b" stroke-width="3"/>
+  <line x1="190" y1="88" x2="270" y2="114" stroke="#1f5f8b" stroke-width="3"/>
+  <line x1="270" y1="114" x2="350" y2="114" stroke="#1f5f8b" stroke-width="3"/>
+  <line x1="350" y1="114" x2="430" y2="166" stroke="#1f5f8b" stroke-width="3"/>
+  <line x1="430" y1="166" x2="510" y2="192" stroke="#1f5f8b" stroke-width="3"/>
+  <circle cx="110" cy="36" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="110" cy="62" r="7" fill="#1f5f8b" stroke="#1f5f8b"/>
+  <circle cx="110" cy="88" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="110" cy="114" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="110" cy="140" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="110" cy="166" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="110" cy="192" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="190" cy="36" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="190" cy="62" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="190" cy="88" r="7" fill="#1f5f8b" stroke="#1f5f8b"/>
+  <circle cx="190" cy="114" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="190" cy="140" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="190" cy="166" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="190" cy="192" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="270" cy="36" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="270" cy="62" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="270" cy="88" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="270" cy="114" r="7" fill="#1f5f8b" stroke="#1f5f8b"/>
+  <circle cx="270" cy="140" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="270" cy="166" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="270" cy="192" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="350" cy="36" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="350" cy="62" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="350" cy="88" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="350" cy="114" r="7" fill="#1f5f8b" stroke="#1f5f8b"/>
+  <circle cx="350" cy="140" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="350" cy="166" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="350" cy="192" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="430" cy="36" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="430" cy="62" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="430" cy="88" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="430" cy="114" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="430" cy="140" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="430" cy="166" r="7" fill="#1f5f8b" stroke="#1f5f8b"/>
+  <circle cx="430" cy="192" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="510" cy="36" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="510" cy="62" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="510" cy="88" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="510" cy="114" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="510" cy="140" r="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <circle cx="510" cy="166" r="7" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <circle cx="510" cy="192" r="7" fill="#1f5f8b" stroke="#1f5f8b"/>
+  <text x="70" y="41" fill="#5b6475" text-anchor="end">blank</text>
+  <text x="84" y="41" fill="#c9d1dc" text-anchor="middle" font-size="11">0</text>
+  <text x="70" y="67" fill="#5b6475" text-anchor="end">a</text>
+  <text x="84" y="67" fill="#c9d1dc" text-anchor="middle" font-size="11">1</text>
+  <text x="70" y="93" fill="#5b6475" text-anchor="end">blank</text>
+  <text x="84" y="93" fill="#c9d1dc" text-anchor="middle" font-size="11">2</text>
+  <text x="70" y="119" fill="#5b6475" text-anchor="end">a</text>
+  <text x="84" y="119" fill="#c9d1dc" text-anchor="middle" font-size="11">3</text>
+  <text x="70" y="145" fill="#5b6475" text-anchor="end">blank</text>
+  <text x="84" y="145" fill="#c9d1dc" text-anchor="middle" font-size="11">4</text>
+  <text x="70" y="171" fill="#5b6475" text-anchor="end">b</text>
+  <text x="84" y="171" fill="#c9d1dc" text-anchor="middle" font-size="11">5</text>
+  <text x="70" y="197" fill="#5b6475" text-anchor="end">blank</text>
+  <text x="84" y="197" fill="#c9d1dc" text-anchor="middle" font-size="11">6</text>
+  <text x="110" y="222" fill="#5b6475" text-anchor="middle">t = 1</text>
+  <text x="190" y="222" fill="#5b6475" text-anchor="middle">t = 2</text>
+  <text x="270" y="222" fill="#5b6475" text-anchor="middle">t = 3</text>
+  <text x="350" y="222" fill="#5b6475" text-anchor="middle">t = 4</text>
+  <text x="430" y="222" fill="#5b6475" text-anchor="middle">t = 5</text>
+  <text x="510" y="222" fill="#5b6475" text-anchor="middle">t = 6</text>
+  <text x="20" y="252" fill="#5b6475">blue: path  a _ a a b _  →  a a b · amber: forbidden jump from a to a</text>
+</svg>
+<figcaption>The lattice for the label "a a b" over six time windows: horizontally the windows, vertically the seven positions of the extended sequence. Filled nodes lie on at least one admissible path, grey lines are the permitted transitions. In blue a path that yields "a a b". The jump from one a to the next a (amber) is forbidden because both would merge when collapsing – between a and b it is permitted.</figcaption>
+</figure>
+
+<p>How many windows does a label need at least? One per character plus one between any two equal neighbours: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>≥</mo><mi>L</mi><mo>+</mo><mo>#</mo><mo stretchy="false">{</mo><mi>i</mi><mo>:</mo><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">T \ge L + \#\{i : l_i = l_{i-1}\}</annotation></semantics></math>. "a a b" needs four windows, "a b" two. <code>Ctc.darstellbar</code> checks exactly this.</p>
+
+<h2 id="vorwaerts">Forward and backward variables</h2>
+<p>The forward variable <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\alpha_t(s)</annotation></semantics></math> is the sum of the probabilities of all path beginnings up to window <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> that end at position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo><mo>=</mo><msub><mrow><mi>y</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo><mo>=</mo><msub><mrow><mi>y</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>l</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>+</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">[</mo><mtext>jump allowed</mtext><mo stretchy="false">]</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>l</mi><msub><mrow><mo>'</mo></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\alpha_1(0) = y_1(\varepsilon), \qquad \alpha_1(1) = y_1(l_1), \qquad \alpha_t(s) = \Bigl(\alpha_{t-1}(s) + \alpha_{t-1}(s-1) + [\text{jump allowed}]\,\alpha_{t-1}(s-2)\Bigr)\, y_t(l'_s).</annotation></semantics></math></p>
+<p>Mirror-inverted, the backward variable <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\beta_t(s)</annotation></semantics></math> is the sum over all path endings from window <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> that start at position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> – in this implementation <b>including</b> the emission <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>l</mi><msub><mrow><mo>'</mo></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y_t(l'_s)</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>T</mi></mrow></msub><mo stretchy="false">(</mo><mi>S</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>=</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>T</mi></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>T</mi></mrow></msub><mo stretchy="false">(</mo><mi>S</mi><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo><mo>=</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>T</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>l</mi></mrow><mrow><mi>L</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>+</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">[</mo><mtext>jump to </mtext><mi>s</mi><mo>+</mo><mn>2</mn><mtext> allowed</mtext><mo stretchy="false">]</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo>+</mo><mn>2</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>l</mi><msub><mrow><mo>'</mo></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\beta_T(S-1) = y_T(\varepsilon), \qquad \beta_T(S-2) = y_T(l_L), \qquad \beta_t(s) = \Bigl(\beta_{t+1}(s) + \beta_{t+1}(s+1) + [\text{jump to } s+2 \text{ allowed}]\,\beta_{t+1}(s+2)\Bigr)\, y_t(l'_s).</annotation></semantics></math></p>
+<p>The total probability is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><mi>l</mi><mo>∣</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>T</mi></mrow></msub><mo stretchy="false">(</mo><mi>S</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>+</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>T</mi></mrow></msub><mo stretchy="false">(</mo><mi>S</mi><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">P(l \mid x) = \alpha_T(S-1) + \alpha_T(S-2)</annotation></semantics></math>. The cost is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>T</mi><mo>⋅</mo><mi>S</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(T \cdot S)</annotation></semantics></math> instead of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><msup><mrow><mi>K</mi></mrow><mrow><mi>T</mi></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(K^T)</annotation></semantics></math>.</p>
+<p><b>In the logarithm.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math> is a product of up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> probabilities. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>100</mn></mrow><annotation encoding="application/x-tex">T = 100</annotation></semantics></math> and values around 0.1 that would be <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>100</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-100}</annotation></semantics></math> – still representable –, with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>400</mn></mrow><annotation encoding="application/x-tex">T = 400</annotation></semantics></math> no longer (the smallest positive <code>double</code> is about <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.9</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>324</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.9 \cdot 10^{-324}</annotation></semantics></math>). Everything is therefore computed in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">α</mi></mrow><annotation encoding="application/x-tex">\ln\alpha</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">β</mi></mrow><annotation encoding="application/x-tex">\ln\beta</annotation></semantics></math>; products become sums, sums the stable form</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mo stretchy="false">(</mo><msup><mrow><mi>e</mi></mrow><mrow><mi>a</mi></mrow></msup><mo>+</mo><msup><mrow><mi>e</mi></mrow><mrow><mi>b</mi></mrow></msup><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false">)</mo><mo>+</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msup><mrow><mi>e</mi></mrow><mrow><mo>−</mo><mo>|</mo><mi>a</mi><mo>−</mo><mi>b</mi><mo>|</mo></mrow></msup><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\ln(e^a + e^b) = \max(a, b) + \ln\bigl(1 + e^{-|a-b|}\bigr),</annotation></semantics></math></p>
+<p>with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>0</mn><mo>=</mo><mo>−</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">\ln 0 = -\infty</annotation></semantics></math> as the neutral element, passed through without NaN.</p>
+
+<h2 id="gradient">The gradient with respect to the logits</h2>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\alpha_t(s)\,\beta_t(s)</annotation></semantics></math> is the sum over all admissible paths that are at position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> in window <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> – with the emission <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>l</mi><msub><mrow><mo>'</mo></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y_t(l'_s)</annotation></semantics></math> counted twice, once from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math> and once from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">β</mi></mrow><annotation encoding="application/x-tex">\beta</annotation></semantics></math>. Dividing by it once and summing over all positions carrying character <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> gives the probability that the path emits character <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> in window <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math>, given the correct label:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">γ</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>P</mi><mo stretchy="false">(</mo><mi>l</mi><mo>∣</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>s</mi><mspace width="0.1667em"/><mo>:</mo><mspace width="0.1667em"/><mi>l</mi><msub><mrow><mo>'</mo></mrow><mrow><mi>s</mi></mrow></msub><mo>=</mo><mi>k</mi></mrow></munder><mfrac><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo></mrow><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">\gamma_t(k) = \frac{1}{P(l \mid x)} \sum_{s\,:\,l'_s = k} \frac{\alpha_t(s)\,\beta_t(s)}{y_t(k)} .</annotation></semantics></math></p>
+<p>Differentiating <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi></mrow><annotation encoding="application/x-tex">L = -\ln P</annotation></semantics></math> through the softmax with respect to the logits <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z_t(k)</annotation></semantics></math> leaves</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>z</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow></mfrac><mo>=</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo><mo>−</mo><msub><mrow><mi mathvariant="normal">γ</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\frac{\partial L}{\partial z_t(k)} = y_t(k) - \gamma_t(k).</annotation></semantics></math></p>
+<p>This has the same form as for softmax cross-entropy (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>−</mo><mi>y</mi></mrow><annotation encoding="application/x-tex">p - y</annotation></semantics></math>), except that the target is not a fixed class but the distribution <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">γ</mi></mrow><mrow><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\gamma_t</annotation></semantics></math>, which the network computes itself from the sum over all alignments. Because <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msub><mrow><mi>y</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msub><mrow><mi mathvariant="normal">γ</mi></mrow><mrow><mi>t</mi></mrow></msub><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum_k y_t(k) = \sum_k \gamma_t(k) = 1</annotation></semantics></math>, every row of the gradient sums to zero – one of the few properties that expose a sign or index error at once.</p>
+
+<h3>Pseudocode – <code>Ctc.rechne(logits, label)</code></h3>
+<pre class="pseudo"><b>check</b> T ≥ 1, K ≥ 2, all rows equally wide, label without blank, 0 &lt; character &lt; K
+lnY ← row-wise log-softmax of the logits              <i>subtracting the largest</i>
+g ← extend(label)                                     <i>S = 2L + 1</i>
+<b>if not</b> representable(label, T):
+    <b>return</b> (loss +∞, gradient 0)                          <i>no path leads to the target</i>
+lnα ← forward(lnY, g);   lnβ ← backward(lnY, g)
+lnP ← logsumexp(lnα[T][S−1], lnα[T][S−2])
+<b>for</b> t ← 1 <b>to</b> T:
+    lnγ[k] ← −∞ for all k
+    <b>for</b> s ← 0 <b>to</b> S−1:
+        lnγ[g[s]] ← logsumexp(lnγ[g[s]], lnα[t][s] + lnβ[t][s] − lnY[t][g[s]])
+    <b>for</b> k:  grad[t][k] ← exp(lnY[t][k]) − exp(lnγ[k] − lnP)
+<b>return</b> (−lnP, grad)
+
+<b>function</b> forward(lnY, g):
+    lnα ← −∞ everywhere;  lnα[1][0] ← lnY[1][g[0]];  lnα[1][1] ← lnY[1][g[1]]
+    <b>for</b> t ← 2 <b>to</b> T,  s ← 0 <b>to</b> S−1:
+        sum ← lnα[t−1][s]
+        <b>if</b> s ≥ 1:  sum ← logsumexp(sum, lnα[t−1][s−1])
+        <b>if</b> s ≥ 2 <b>and</b> g[s] ≠ blank <b>and</b> g[s] ≠ g[s−2]:  sum ← logsumexp(sum, lnα[t−1][s−2])
+        lnα[t][s] ← sum + lnY[t][g[s]]</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/seq/Ctc.java</code>. <code>backward</code> is the mirror image of <code>forward</code>. <code>verlust</code> computes the forward variables only; <code>gierig</code> and <code>falte</code> are the simple decoding and the collapsing.</p>
+<div class="hinweis"><b>Framework convention:</b> The blank is always index 0 (<code>Ctc.LEER</code>), so nothing needs to be agreed. The loss is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi></mrow><annotation encoding="application/x-tex">-\ln P</annotation></semantics></math> for the whole utterance, not per window; the logits are raw, <code>Ctc</code> computes the softmax itself. If a label cannot be represented with the given number of windows, the loss is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>+</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">+\infty</annotation></semantics></math> and the gradient zero – not NaN.</div>
+
+<h2 id="trainer">Sequence training with the existing network</h2>
+<p>Sequences seem to call for a network with memory. CTC, however, presupposes precisely that the outputs per window are independent. A model following this assumption needs no memory but <b>context</b>: an input in which the neighbouring windows are already contained. That is exactly what the context window of the feature chain in <a href="../audio/index.html">framework-audio</a> provides. Every time window is then an ordinary sample, and <code>NeuralNet</code> fits unchanged.</p>
+<p>The second building block was also already there: the layers <b>accumulate</b> their gradients (see <a href="netz.html#rueckwaerts">The network</a>). For an utterance this means: one backward pass per time window with the corresponding row of the CTC gradient, and at the end the gradient of the whole utterance sits in the layers.</p>
+
+<h3>Pseudocode – <code>SequenzTrainer.trainiere(net, training, valid, opt, settings)</code></h3>
+<pre class="pseudo"><b>check</b> training not empty, input width = feature width, ≥ 2 outputs, output layer LINEAR
+measure ← valid or, if none, training
+opt.init(net);  rnd ← Random(seed);  best ← net.snapshot();  bestRate ← +∞
+<b>for</b> epoch ← 1 <b>to</b> epochs:
+    shuffle the order of the utterances with rnd
+    net.zeroGrads();  inBatch ← 0;  windows ← 0
+    <b>for</b> each utterance b:
+        n ← oneStep(net, b)                              <i>0 if not representable: skip</i>
+        <b>if</b> n = 0:  <b>continue</b>
+        windows ← windows + n;  inBatch ← inBatch + 1
+        <b>if</b> inBatch ≥ batch:
+            net.scaleGrads(1 / windows);  opt.step(net, 1);  net.zeroGrads()
+            inBatch ← 0;  windows ← 0
+    <b>if</b> inBatch &gt; 0:  net.scaleGrads(1 / windows);  opt.step(net, 1);  net.zeroGrads()
+    rate ← error rate on measure (beam width from the settings, 0 = greedy)
+    loss ← mean CTC loss per time window on measure
+    <b>if</b> rate &lt; bestRate − 10⁻⁹:  remember rate, loss, epoch;  best ← net.snapshot()
+    <b>if</b> patience &gt; 0 <b>and</b> epoch − bestEpoch ≥ patience:
+        net.restore(best);  <b>return</b> (epoch, loss, rate, stopped early)
+net.restore(best);  <b>return</b> (epochs, loss, rate, not stopped)
+
+<b>function</b> oneStep(net, b):
+    logits ← net.run(b.input[t])  <b>for all</b> t
+    e ← Ctc.rechne(logits, b.label);   <b>if not</b> e.possible:  <b>return</b> 0
+    <b>for</b> t ← 1 <b>to</b> T:
+        net.forward(b.input[t])                           <i>once more: the network holds one sample only</i>
+        net.backward(e.gradient[t])                       <i>accumulates</i>
+    <b>return</b> T</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/seq/SequenzTrainer.java</code>. The gradient is divided by the number of <b>windows</b> in the batch, not by the number of utterances – long utterances weigh correspondingly more.</p>
+<p>The forward pass is computed twice – once for the logits, once per window immediately before the backward step, because a layer only holds the activations of the sample seen last. That costs roughly a third more computing time and saves keeping the activations of the whole sequence.</p>
+<div class="hinweis"><b>Framework convention:</b> The best network is selected by <b>error rate</b>, not by loss. A CTC model becomes sharper during training and puts its probability on fewer and fewer alignments; the loss, which sums over all of them, can rise while the decoded output improves. Recorded in the source comment: the validation loss rose from 0.058 to 0.133 while the error rate kept falling. <code>Einstellung.ueblich()</code>: 200 epochs, batch of 8 utterances, patience 25, seed 20260824, no reports, beam width 12 when rating. The output layer must be LINEAR – otherwise its derivative would be applied a second time; the trainer rejects such a network. Learning-rate schedules and dropout are not used here.</div>
+
+<h2 id="beispiel">Worked example</h2>
+<p>Two windows, two characters (blank and a), label "a". The logits are chosen so that <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0.25</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.75</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y_1 = (0.25,\ 0.75)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mstyle displaystyle="false"><mfrac><mrow><mn>2</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mstyle><mo>,</mo><mspace width="0.3333em"/><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mstyle><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y_2 = (\tfrac23,\ \tfrac13)</annotation></semantics></math>. Of the four paths, three yield "a":</p>
+<table>
+  <tr><th>Path</th><th>Output</th><th>Probability</th></tr>
+  <tr><td>a a</td><td>a</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.75</mn><mo>⋅</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mstyle><mo>=</mo><mn>0.25</mn></mrow><annotation encoding="application/x-tex">0.75 \cdot \tfrac13 = 0.25</annotation></semantics></math></td></tr>
+  <tr><td>a _</td><td>a</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.75</mn><mo>⋅</mo><mstyle displaystyle="false"><mfrac><mrow><mn>2</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mstyle><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">0.75 \cdot \tfrac23 = 0.5</annotation></semantics></math></td></tr>
+  <tr><td>_ a</td><td>a</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.25</mn><mo>⋅</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mstyle><mo>=</mo><mn>0.0833</mn></mrow><annotation encoding="application/x-tex">0.25 \cdot \tfrac13 = 0.0833</annotation></semantics></math></td></tr>
+  <tr><td>_ _</td><td>(empty)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.25</mn><mo>⋅</mo><mstyle displaystyle="false"><mfrac><mrow><mn>2</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mstyle><mo>=</mo><mn>0.1667</mn></mrow><annotation encoding="application/x-tex">0.25 \cdot \tfrac23 = 0.1667</annotation></semantics></math></td></tr>
+</table>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><mtext>a</mtext><mo stretchy="false">)</mo><mo>=</mo><mn>0.8333</mn></mrow><annotation encoding="application/x-tex">P(\text{a}) = 0.8333</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>0.8333</mn><mo>=</mo><mn>0.1823</mn></mrow><annotation encoding="application/x-tex">L = -\ln 0.8333 = 0.1823</annotation></semantics></math>. In window 1 the paths "a a" and "a _" emit an a: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">γ</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mtext>a</mtext><mo stretchy="false">)</mo><mo>=</mo><mn>0.75</mn><mo>/</mo><mn>0.8333</mn><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\gamma_1(\text{a}) = 0.75/0.8333 = 0.9</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">γ</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">\gamma_1(\varepsilon) = 0.1</annotation></semantics></math>. In window 2 "a a" and "_ a" emit an a: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">γ</mi></mrow><mrow><mn>2</mn></mrow></msub><mo stretchy="false">(</mo><mtext>a</mtext><mo stretchy="false">)</mo><mo>=</mo><mn>0.3333</mn><mo>/</mo><mn>0.8333</mn><mo>=</mo><mn>0.4</mn></mrow><annotation encoding="application/x-tex">\gamma_2(\text{a}) = 0.3333/0.8333 = 0.4</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">γ</mi></mrow><mrow><mn>2</mn></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">ε</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0.6</mn></mrow><annotation encoding="application/x-tex">\gamma_2(\varepsilon) = 0.6</annotation></semantics></math>. The gradient:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>z</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow></mfrac><mo>=</mo><mo stretchy="false">(</mo><mn>0.25</mn><mo>−</mo><mn>0.1</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.75</mn><mo>−</mo><mn>0.9</mn><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mn>0.15</mn><mo>,</mo><mspace width="0.3333em"/><mo>−</mo><mn>0.15</mn><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>z</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow></mfrac><mo>=</mo><mo stretchy="false">(</mo><mn>0.6667</mn><mo>−</mo><mn>0.6</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.3333</mn><mo>−</mo><mn>0.4</mn><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mn>0.0667</mn><mo>,</mo><mspace width="0.3333em"/><mo>−</mo><mn>0.0667</mn><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\frac{\partial L}{\partial z_1} = (0.25 - 0.1,\ 0.75 - 0.9) = (0.15,\ -0.15), \qquad \frac{\partial L}{\partial z_2} = (0.6667 - 0.6,\ 0.3333 - 0.4) = (0.0667,\ -0.0667).</annotation></semantics></math></p>
+<p><code>Ctc.rechne</code> delivers exactly these values, <code>Ctc.verlust</code> gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>0.1667</mn></mrow><annotation encoding="application/x-tex">-\ln 0.1667</annotation></semantics></math> for the empty label; both probabilities add up to 1. The gradient pushes more strongly towards a in window 1 than in window 2 – there the a is already likely, but the blank carries more alignments.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>Against enumeration</b> (<code>CtcSelfTest</code>): with a small alphabet all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>K</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">K^T</annotation></semantics></math> paths can be enumerated – an independent truth that shares nothing with the dynamic programming except the collapsing. For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mn>2</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">K = 2, 3, 4</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>2</mn><mo>…</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">T = 2 \dots 6</annotation></semantics></math> and nine labels (85 cases in the run) the loss must agree to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>; measured <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.8</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.8 \cdot 10^{-15}</annotation></semantics></math>.</li>
+  <li><b>Distribution</b>: the probabilities of all reachable outputs sum to 1, and each individual one agrees with <code>Ctc</code>, to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>.</li>
+  <li><b>Gradient</b>: 30 cases against the central difference quotient with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">h = 10^{-4}</annotation></semantics></math> (for this function the minimum of truncation and rounding error; with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math> the derivative was demonstrably worse). Relative below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math>, absolute below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-8}</annotation></semantics></math>, every row sums to zero within <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>. Measured: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3.6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3.6 \cdot 10^{-8}</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3.2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3.2 \cdot 10^{-10}</annotation></semantics></math>.</li>
+  <li><b>Edge cases</b>: "aa" needs three windows, "ab" two; an impossible label gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>+</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">+\infty</annotation></semantics></math> instead of NaN; the empty label is the pure blank path; a blank in the label, characters outside the alphabet and an alphabet of only one character are rejected. 22 checks in total.</li>
+  <li><b>Parameter gradient</b> (<code>SequenzSelfTest</code>): the gradient with respect to the <b>weights</b>, as it sits in the network after <code>einSchritt</code>, against the numerical derivative of the CTC loss – relative below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>, measured <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.0</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.0 \cdot 10^{-7}</annotation></semantics></math>. This covers whether the right gradient row belongs to the right window.</li>
+  <li><b>The trainer learns the alignment</b>: an artificial task with five characters as points in an eight-dimensional feature space, four windows with noise per character, silence in between, a label without any timing; network 8–24–6. The error rate on held-back utterances must fall below 0.35 and drop by more than a factor of five. Measured: 1.678 before, 0.222 after (greedy 0.267), 139 epochs. With varying durations and repetitions: 0.275 (greedy 0.482), required below 0.5. An impossible label in the training set must not abort training.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The outputs of the windows count as independent. What came before and after a window must be contained in the input (context window); knowledge about admissible sound sequences only enters at decoding.</li>
+  <li>A label longer than the number of windows allows is skipped in training.</li>
+  <li>The forward pass runs twice per utterance; for very long utterances keeping the activations would be cheaper.</li>
+  <li>Selection by error rate decodes the whole measuring set in every epoch, with beam search – more expensive than a loss computation.</li>
+  <li>The package is checked, but has no callers outside the checks yet.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>A. Graves, S. Fernández, F. Gomez, J. Schmidhuber: Connectionist Temporal Classification: Labelling Unsegmented Sequence Data with Recurrent Neural Networks. ICML 2006.</li>
+  <li>A. Graves: Supervised Sequence Labelling with Recurrent Neural Networks. Springer, 2012.</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Background to <a href="index.html#seq">Sequences without alignment: CTC</a> · Checks: <code>CtcSelfTest</code>, <code>SequenzSelfTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

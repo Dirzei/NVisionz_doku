@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training – batches, loss functions, learning-rate schedules, early stopping – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#core">The network</a>
+<a class="unterseite" href="netz.html">Network</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimisers</a>
+<a class="unterseite aktiv" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Data, normalisation, metrics</a>
+<a class="unterseite" href="daten.html">Data and metrics</a>
+<a class="rubrik" href="index.html#model">Surrogate model, ensemble, storage</a>
+<a class="unterseite" href="ersatzmodell.html">Surrogate model</a>
+<a class="rubrik" href="index.html#search">Model search</a>
+<a class="unterseite" href="modellsuche.html">Model search</a>
+<a class="rubrik" href="index.html#analysis">Sensitivity analysis</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivity</a>
+<a class="rubrik" href="index.html#api">Interface for other applications</a>
+<a class="rubrik" href="index.html#ocr">Character recognition without Tesseract</a>
+<a class="unterseite" href="ocr.html">Glyph recognition</a>
+<a class="rubrik" href="index.html#seq">Sequences without alignment: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Beam search</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-neural</a> › Training – batches, loss functions, learning-rate schedules, early stopping</span><a class="sprachwahl" href="../../de/neural/training.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.train</div>
+  <h1>Training – batches, loss functions, learning-rate schedules, early stopping</h1>
+  <p class="unter">The computation behind <code>Trainer</code>, <code>TrainConfig</code>, <code>LrSchedule</code>, <code>MseLoss</code>, <code>SoftmaxCrossEntropyLoss</code> and <code>QuantileLoss</code>: how an epoch runs, which losses exist and where their gradients come from, how the learning rate is steered over the epochs and when training stops – with pseudocode following the source, numerical examples, checks and limits. The step rules themselves (SGD, Adam, L-BFGS) are on the page <a href="optimierer.html">Optimisers</a>.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>Training looks for weights <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi></mrow><annotation encoding="application/x-tex">\theta</annotation></semantics></math> that make the mean loss over the training data small:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>J</mi><mo stretchy="false">(</mo><mi mathvariant="normal">θ</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>s</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>N</mi></mrow></munderover><mi>L</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>;</mo><mi mathvariant="normal">θ</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="0.1667em"/><msub><mrow><mi>t</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">J(\theta) = \frac{1}{N} \sum_{s=1}^{N} L\bigl(y(x_s;\theta),\, t_s\bigr).</annotation></semantics></math></p>
+<p>Computing the gradient over all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> samples is expensive for large data and not necessary for most optimisers. The <code>Trainer</code> therefore splits the data in each <b>epoch</b> (one pass through all data) into <b>mini-batches</b> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> samples, averages the gradient over the batch and lets the optimiser take one step. The order is reshuffled before every epoch so that the batches are not always the same.</p>
+<p>A second, held-back data set runs alongside: the <b>validation set</b>. After each epoch the trainer measures on it whether the network also improves on unseen data. When it no longer does, training stops and returns to the best state.</p>
+
+<h2 id="ablauf">The course of an epoch</h2>
+<p>Per batch: gradients to zero, forward per sample, loss and gradient at the output, backward (the layers accumulate), then divide by the batch size and take one optimiser step with the epoch's learning-rate factor. Shuffling uses Fisher-Yates: from the back to the front, each element is swapped with a random one from the part not yet fixed – every order is equally likely.</p>
+
+<h3>Pseudocode – <code>Trainer.train(net, train, valid, loss, opt, cfg, listener, stop)</code></h3>
+<pre class="pseudo"><b>check</b> dimensions of train match the network          <i>otherwise exception</i>
+<b>check</b> early stopping ⇒ valid ≠ none                  <i>otherwise exception</i>
+opt.init(net)
+idx ← 0 … n−1;   rnd ← Random(cfg.shuffleSeed)
+dropRnd ← Random(cfg.shuffleSeed xor 0x64726f70), only if the network has dropout
+best ← +∞;  bestEpoch ← 0;  wait ← 0;  snapshot ← none
+
+<b>for</b> epoch ← 1, 2, … <b>to</b> cfg.epochs:
+    Fisher-Yates shuffle of idx with rnd
+    factor ← cfg.lrSchedule.scale(epoch, cfg.epochs)
+    sum ← 0
+    <b>for</b> each batch idx[pos … pos+bs−1],  bs = min(B, n − pos):
+        net.zeroGrads()
+        <b>for</b> each sample s in the batch:
+            <b>if</b> dropout:  net.resampleDropout(dropRnd)
+            y ← net.forward(x_s)
+            sum ← sum + loss.value(y, t_s)
+            g ← loss.gradient(y, t_s);   net.backward(g)
+        net.scaleGrads(1 / bs)
+        opt.step(net, factor)
+    trainLoss ← sum / n                         <i>mean over the epoch, with changing weights</i>
+    <b>if</b> dropout:  net.clearDropout()
+    valLoss ← (valid ≠ none) ? mean of loss over valid : NaN
+
+    <b>if</b> early stopping is on:
+        <b>if</b> valLoss &lt; best − minDelta:
+            best ← valLoss;  bestEpoch ← epoch
+            snapshot ← net.snapshot();  wait ← 0
+        <b>else</b>:
+            wait ← wait + 1
+            <b>if</b> wait ≥ patience:  stopped ← true
+    <b>if</b> listener ≠ none <b>and</b> (epoch mod logEvery = 0 <b>or</b> last epoch <b>or</b> stopped):
+        listener.onEpoch(epoch, trainLoss, valLoss)
+    <b>if</b> stopped:  <b>break</b>
+    <b>if</b> stop():  cancelled ← true;  <b>break</b>
+
+<b>if</b> snapshot ≠ none:  net.restore(snapshot)
+<b>else</b>:  bestEpoch ← epoch
+<b>return</b> (epoch, bestEpoch, trainLoss, loss on valid after restoring, stopped, cancelled)</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/train/Trainer.java</code>. The cancel request is polled after each epoch, not within one; a running epoch is computed to its end.</p>
+
+<div class="hinweis"><b>Framework convention:</b> Defaults of <code>TrainConfig</code>: 1000 epochs, batch size 32, shuffle seed 42, report every 100 epochs, <code>lrDecay</code> 1.0 (constant learning rate), early stopping off (patience 0), <code>minDelta</code> 0. The last batch of an epoch is smaller when <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> does not divide the number of samples; it is divided by its own size. The <code>TrainListener</code> is called in the computing thread – a user interface must hand the display over to its event thread itself.</div>
+
+<h2 id="verluste">Loss functions</h2>
+<p>A loss function rates <b>one</b> sample: <code>value(pred, target)</code> returns the value, <code>gradient(pred, target, grad)</code> the derivative with respect to the network output into a preallocated buffer. The backward pass starts there.</p>
+
+<h3>Mean squared error</h3>
+<p>For regression, averaged over the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> outputs:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>L</mi><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>m</mi></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>m</mi></mrow></munderover><mo stretchy="false">(</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mi>t</mi></mrow><mrow><mi>j</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>,</mo><mspace width="2em"/><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow></mfrac><mo>=</mo><mfrac><mrow><mn>2</mn></mrow><mrow><mi>m</mi></mrow></mfrac><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mi>t</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">L = \frac{1}{m}\sum_{j=1}^{m} (y_j - t_j)^2, \qquad \frac{\partial L}{\partial y_j} = \frac{2}{m}\,(y_j - t_j).</annotation></semantics></math></p>
+<p>Because the targets in the surrogate model are normalised, all outputs contribute on the same scale – a pressure ratio around 3 and an efficiency around 0.85 are weighted equally after normalisation.</p>
+
+<h3>Softmax cross-entropy</h3>
+<p>For classification the network delivers raw values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">z_j</annotation></semantics></math>, the <b>logits</b> (output layer LINEAR). The softmax turns them into probabilities, the cross-entropy measures the distance to the target <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math> (one-hot or a soft distribution with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum_j y_j = 1</annotation></semantics></math>):</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mfrac><mrow><msup><mrow><mi>e</mi></mrow><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow></msup></mrow><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msup><mrow><mi>e</mi></mrow><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></msup></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>L</mi><mo>=</mo><mo>−</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msup><mrow><mi>e</mi></mrow><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></msup><mo>−</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><msub><mrow><mi>z</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">p_j = \frac{e^{z_j}}{\sum_k e^{z_k}}, \qquad L = -\sum_j y_j \ln p_j = \ln\sum_k e^{z_k} - \sum_j y_j z_j .</annotation></semantics></math></p>
+<p>The right-hand form follows from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msup><mrow><mi>e</mi></mrow><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></msup></mrow><annotation encoding="application/x-tex">\ln p_j = z_j - \ln\sum_k e^{z_k}</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum_j y_j = 1</annotation></semantics></math>. Differentiated with respect to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">z_i</annotation></semantics></math>, the first term gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></msup><mo>/</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msup><mrow><mi>e</mi></mrow><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></msup><mo>=</mo><msub><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">e^{z_i}/\sum_k e^{z_k} = p_i</annotation></semantics></math>, the second <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">y_i</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi>∂</mi><mi>L</mi></mrow><mrow><mi>∂</mi><msub><mrow><mi>z</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></mfrac><mo>=</mo><msub><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>−</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\frac{\partial L}{\partial z_i} = p_i - y_i .</annotation></semantics></math></p>
+<p>That is why softmax and cross-entropy are fused in one class: computed separately one would have to divide by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">p_j</annotation></semantics></math>, which becomes tiny for confident networks; together only the difference remains. Against overflow, the logarithm of the sum is shifted by the largest value:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msup><mrow><mi>e</mi></mrow><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></msup><mo>=</mo><mi>m</mi><mo>+</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msup><mrow><mi>e</mi></mrow><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><mi>m</mi></mrow></msup><mo>,</mo><mspace width="2em"/><mi>m</mi><mo>=</mo><mspace width="0.1667em"/><msub><mi>max</mi><mrow><mi>k</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\ln\sum_k e^{z_k} = m + \ln\sum_k e^{z_k - m}, \qquad m = \max_k z_k .</annotation></semantics></math></p>
+<p>Example with three classes, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mo stretchy="false">(</mo><mn>2</mn><mo>,</mo><mspace width="0.3333em"/><mn>1</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z = (2,\ 1,\ 0.1)</annotation></semantics></math>, correct class 0: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mo stretchy="false">(</mo><mn>0.6590</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.2424</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.0986</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p = (0.6590,\ 0.2424,\ 0.0986)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>0.6590</mn><mo>=</mo><mn>0.4170</mn></mrow><annotation encoding="application/x-tex">L = -\ln 0.6590 = 0.4170</annotation></semantics></math>, gradient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>0.3410</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.2424</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.0986</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(-0.3410,\ 0.2424,\ 0.0986)</annotation></semantics></math> – recomputed with <code>SoftmaxCrossEntropyLoss</code> and <code>Metrics.softmax</code>. The gradient sums to zero, as it must.</p>
+
+<h3>Quantile loss (pinball)</h3>
+<p>The mean squared error makes the network learn the conditional <b>mean</b>. Whoever wants a band around the prediction – "with 90 % probability the efficiency lies below this" – needs <b>quantiles</b>. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo>=</mo><mi>t</mi><mo>−</mo><mi>y</mi></mrow><annotation encoding="application/x-tex">e = t - y</annotation></semantics></math> (positive: underestimated) the quantile loss is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>L</mi></mrow><mrow><mi mathvariant="normal">τ</mi></mrow></msub><mo stretchy="false">(</mo><mi>e</mi><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi mathvariant="normal">τ</mi><mspace width="0.1667em"/><mi>e</mi><mo>,</mo><mspace width="0.3333em"/><mo stretchy="false">(</mo><mi mathvariant="normal">τ</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>e</mi><mo stretchy="false">)</mo><mo>=</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><mi mathvariant="normal">τ</mi><mspace width="0.1667em"/><mi>e</mi></mtd><mtd style="text-align:left"><mi>e</mi><mo>≥</mo><mn>0</mn></mtd></mtr><mtr><mtd style="text-align:left"><mo stretchy="false">(</mo><mi mathvariant="normal">τ</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>e</mi></mtd><mtd style="text-align:left"><mi>e</mi><mo>&lt;</mo><mn>0</mn></mtd></mtr></mtable></mrow><mo>,</mo><mspace width="2em"/><mfrac><mrow><mi>∂</mi><msub><mrow><mi>L</mi></mrow><mrow><mi mathvariant="normal">τ</mi></mrow></msub></mrow><mrow><mi>∂</mi><mi>y</mi></mrow></mfrac><mo>=</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><mo>−</mo><mi mathvariant="normal">τ</mi></mtd><mtd style="text-align:left"><mi>e</mi><mo>&gt;</mo><mn>0</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>1</mn><mo>−</mo><mi mathvariant="normal">τ</mi></mtd><mtd style="text-align:left"><mi>e</mi><mo>&lt;</mo><mn>0</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>0</mn></mtd><mtd style="text-align:left"><mi>e</mi><mo>=</mo><mn>0</mn></mtd></mtr></mtable></mrow><mo>.</mo></mrow><annotation encoding="application/x-tex">L_\tau(e) = \max\bigl(\tau\, e,\ (\tau - 1)\, e\bigr) = \begin{cases} \tau\, e &amp; e \ge 0 \\ (\tau - 1)\, e &amp; e &lt; 0 \end{cases}, \qquad \frac{\partial L_\tau}{\partial y} = \begin{cases} -\tau &amp; e &gt; 0 \\ 1 - \tau &amp; e &lt; 0 \\ 0 &amp; e = 0 \end{cases}.</annotation></semantics></math></p>
+<p>Why does this yield the quantile? Minimising <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">E</mi><mo stretchy="false">[</mo><msub><mrow><mi>L</mi></mrow><mrow><mi mathvariant="normal">τ</mi></mrow></msub><mo stretchy="false">(</mo><mi>T</mi><mo>−</mo><mi>y</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">\mathrm{E}[L_\tau(T - y)]</annotation></semantics></math> over a constant <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math>, the derivative is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mi mathvariant="normal">τ</mi><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">(</mo><mi>T</mi><mo>&gt;</mo><mi>y</mi><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">τ</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">(</mo><mi>T</mi><mo>&lt;</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">-\tau\,P(T &gt; y) + (1-\tau)\,P(T &lt; y)</annotation></semantics></math>; it vanishes at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><mi>T</mi><mo>&lt;</mo><mi>y</mi><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">τ</mi></mrow><annotation encoding="application/x-tex">P(T &lt; y) = \tau</annotation></semantics></math>. At <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\tau = 0.9</annotation></semantics></math> an underestimate costs nine times as much as an overestimate of the same size; the minimum lies where 90 % of the values are below. At <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">\tau = 0.5</annotation></semantics></math> the loss is half the mean absolute error, its minimum the median.</p>
+
+<figure>
+<svg viewBox="0 0 520 230" width="520" font-family="sans-serif" font-size="13">
+  <line x1="60" y1="190" x2="480" y2="190" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="270" y1="20" x2="270" y2="196" stroke="#c9d1dc" stroke-width="1"/>
+  <line x1="60" y1="190" x2="60" y2="196" stroke="#c9d1dc"/><line x1="165" y1="190" x2="165" y2="196" stroke="#c9d1dc"/><line x1="375" y1="190" x2="375" y2="196" stroke="#c9d1dc"/><line x1="480" y1="190" x2="480" y2="196" stroke="#c9d1dc"/>
+  <text x="60" y="212" fill="#5b6475" text-anchor="middle">−2</text><text x="165" y="212" fill="#5b6475" text-anchor="middle">−1</text><text x="270" y="212" fill="#5b6475" text-anchor="middle">0</text><text x="375" y="212" fill="#5b6475" text-anchor="middle">1</text><text x="480" y="212" fill="#5b6475" text-anchor="middle">2</text>
+  <line x1="264" y1="100" x2="270" y2="100" stroke="#c9d1dc"/><text x="258" y="104" fill="#5b6475" text-anchor="end">1</text>
+  <polyline points="60,172 270,190 480,28" fill="none" stroke="#9a6400" stroke-width="2"/>
+  <polyline points="60,100 270,190 480,100" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+  <polyline points="60,28 270,190 480,172" fill="none" stroke="#5b6475" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="430" y="36" fill="#9a6400" text-anchor="end">τ = 0.9</text>
+  <text x="474" y="92" fill="#1f5f8b" text-anchor="end">τ = 0.5</text>
+  <text x="100" y="36" fill="#5b6475">τ = 0.1</text>
+  <text x="480" y="226" fill="#5b6475" text-anchor="end">e = t − y (underestimated →)</text>
+  <text x="66" y="226" fill="#5b6475">← overestimated</text>
+</svg>
+<figcaption>Quantile loss over the error e = t − y. At τ = 0.9 (amber) the right branch, the underestimate, rises nine times as steeply as the left; a network minimising this loss therefore places its prediction so high that only 10 % of the values lie above it. τ = 0.5 (blue) is symmetric and yields the median.</figcaption>
+</figure>
+
+<div class="hinweis"><b>Framework convention:</b> All three losses average over the outputs (factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mi>m</mi></mrow><annotation encoding="application/x-tex">1/m</annotation></semantics></math>), the quantile loss included. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi></mrow><annotation encoding="application/x-tex">\tau</annotation></semantics></math> must lie in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0, 1)</annotation></semantics></math>. At the kink <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">e = 0</annotation></semantics></math> the gradient is set to 0. The cross-entropy does not check <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>y</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum_j y_j = 1</annotation></semantics></math> in the training loop – for speed; <code>DataSet.oneHot</code> ensures it on the usual path. For an uncertainty band, app-neural trains three models with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">\tau = 0.1</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.5</mn></mrow><annotation encoding="application/x-tex">0.5</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.9</mn></mrow><annotation encoding="application/x-tex">0.9</annotation></semantics></math>.</div>
+
+<h2 id="lernrate">Learning-rate schedules</h2>
+<p>A schedule delivers a factor per epoch by which the trainer multiplies the optimiser's learning rate. The optimiser thus stays free of any knowledge of epochs. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi></mrow><annotation encoding="application/x-tex">e</annotation></semantics></math> the epoch (from 1), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> the number of epochs and the progress <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mo stretchy="false">(</mo><mi>e</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mi>T</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p = \min\bigl(1, (e-1)/(T-1)\bigr)</annotation></semantics></math>:</p>
+<table>
+  <tr><th>Schedule</th><th>Factor</th><th>Parameters</th></tr>
+  <tr><td><code>constant()</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">1</annotation></semantics></math></td><td>–</td></tr>
+  <tr><td><code>exponential(decay)</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> = decay</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>d</mi></mrow><mrow><mspace width="0.1667em"/><mi>e</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">d^{\,e-1}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>∈</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">d \in (0, 1]</annotation></semantics></math>, otherwise exception</td></tr>
+  <tr><td><code>cosine(minScale)</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">s_{\min}</annotation></semantics></math> = minScale</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">π</mi><mi>p</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">s_{\min} + (1 - s_{\min})\,\tfrac12\bigl(1 + \cos \pi p\bigr)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">s_{\min}</annotation></semantics></math> clamped to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math></td></tr>
+  <tr><td><code>oneCycle(warmupFrac, startScale, minScale)</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">s_0</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">s_{\min}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≤</mo><mi>w</mi></mrow><annotation encoding="application/x-tex">p \le w</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>p</mi><mo>/</mo><mi>w</mi></mrow><annotation encoding="application/x-tex">s_0 + (1 - s_0)\,p/w</annotation></semantics></math>; otherwise cosine from 1 to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">s_{\min}</annotation></semantics></math> over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mo stretchy="false">(</mo><mi>p</mi><mo>−</mo><mi>w</mi><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>w</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">u = (p - w)/(1 - w)</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math> clamped to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>0.9</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 0.9]</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">s_0</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">s_{\min}</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math></td></tr>
+</table>
+<figure>
+<svg viewBox="0 0 580 250" width="580" font-family="sans-serif" font-size="13">
+  <line x1="50" y1="215" x2="500" y2="215" stroke="#c9d1dc"/>
+  <line x1="50" y1="15" x2="50" y2="215" stroke="#c9d1dc"/>
+  <line x1="44" y1="15" x2="50" y2="15" stroke="#c9d1dc"/><text x="40" y="19" fill="#5b6475" text-anchor="end">1</text>
+  <line x1="44" y1="115" x2="50" y2="115" stroke="#c9d1dc"/><text x="40" y="119" fill="#5b6475" text-anchor="end">0.5</text>
+  <text x="40" y="219" fill="#5b6475" text-anchor="end">0</text>
+  <line x1="50" y1="215" x2="50" y2="221" stroke="#c9d1dc"/><text x="50" y="235" fill="#5b6475" text-anchor="middle">1</text>
+  <line x1="272.7" y1="215" x2="272.7" y2="221" stroke="#c9d1dc"/><text x="272.7" y="235" fill="#5b6475" text-anchor="middle">50</text>
+  <line x1="500" y1="215" x2="500" y2="221" stroke="#c9d1dc"/><text x="500" y="235" fill="#5b6475" text-anchor="middle">100</text>
+  <text x="275" y="249" fill="#5b6475" text-anchor="middle">epoch</text>
+<polyline points="50.0,15.0 54.5,15.0 59.1,15.0 63.6,15.0 68.2,15.0 72.7,15.0 77.3,15.0 81.8,15.0 86.4,15.0 90.9,15.0 95.5,15.0 100.0,15.0 104.5,15.0 109.1,15.0 113.6,15.0 118.2,15.0 122.7,15.0 127.3,15.0 131.8,15.0 136.4,15.0 140.9,15.0 145.5,15.0 150.0,15.0 154.5,15.0 159.1,15.0 163.6,15.0 168.2,15.0 172.7,15.0 177.3,15.0 181.8,15.0 186.4,15.0 190.9,15.0 195.5,15.0 200.0,15.0 204.5,15.0 209.1,15.0 213.6,15.0 218.2,15.0 222.7,15.0 227.3,15.0 231.8,15.0 236.4,15.0 240.9,15.0 245.5,15.0 250.0,15.0 254.5,15.0 259.1,15.0 263.6,15.0 268.2,15.0 272.7,15.0 277.3,15.0 281.8,15.0 286.4,15.0 290.9,15.0 295.5,15.0 300.0,15.0 304.5,15.0 309.1,15.0 313.6,15.0 318.2,15.0 322.7,15.0 327.3,15.0 331.8,15.0 336.4,15.0 340.9,15.0 345.5,15.0 350.0,15.0 354.5,15.0 359.1,15.0 363.6,15.0 368.2,15.0 372.7,15.0 377.3,15.0 381.8,15.0 386.4,15.0 390.9,15.0 395.5,15.0 400.0,15.0 404.5,15.0 409.1,15.0 413.6,15.0 418.2,15.0 422.7,15.0 427.3,15.0 431.8,15.0 436.4,15.0 440.9,15.0 445.5,15.0 450.0,15.0 454.5,15.0 459.1,15.0 463.6,15.0 468.2,15.0 472.7,15.0 477.3,15.0 481.8,15.0 486.4,15.0 490.9,15.0 495.5,15.0 500.0,15.0" fill="none" stroke="#c9d1dc" stroke-width="2"/>
+<polyline points="50.0,15.0 54.5,21.0 59.1,26.8 63.6,32.5 68.2,37.9 72.7,43.3 77.3,48.4 81.8,53.4 86.4,58.3 90.9,63.0 95.5,67.5 100.0,71.9 104.5,76.2 109.1,80.4 113.6,84.4 118.2,88.3 122.7,92.1 127.3,95.8 131.8,99.4 136.4,102.9 140.9,106.2 145.5,109.5 150.0,112.7 154.5,115.7 159.1,118.7 163.6,121.6 168.2,124.4 172.7,127.1 177.3,129.8 181.8,132.3 186.4,134.8 190.9,137.2 195.5,139.5 200.0,141.8 204.5,144.0 209.1,146.1 213.6,148.2 218.2,150.2 222.7,152.1 227.3,154.0 231.8,155.9 236.4,157.6 240.9,159.4 245.5,161.0 250.0,162.6 254.5,164.2 259.1,165.7 263.6,167.2 268.2,168.6 272.7,170.0 277.3,171.4 281.8,172.7 286.4,174.0 290.9,175.2 295.5,176.4 300.0,177.5 304.5,178.7 309.1,179.8 313.6,180.8 318.2,181.8 322.7,182.8 327.3,183.8 331.8,184.7 336.4,185.6 340.9,186.5 345.5,187.4 350.0,188.2 354.5,189.0 359.1,189.8 363.6,190.5 368.2,191.3 372.7,192.0 377.3,192.7 381.8,193.4 386.4,194.0 390.9,194.6 395.5,195.2 400.0,195.8 404.5,196.4 409.1,197.0 413.6,197.5 418.2,198.0 422.7,198.5 427.3,199.0 431.8,199.5 436.4,200.0 440.9,200.4 445.5,200.9 450.0,201.3 454.5,201.7 459.1,202.1 463.6,202.5 468.2,202.9 472.7,203.2 477.3,203.6 481.8,203.9 486.4,204.3 490.9,204.6 495.5,204.9 500.0,205.2" fill="none" stroke="#5b6475" stroke-width="2" stroke-dasharray="5,3"/>
+<polyline points="50.0,15.0 54.5,15.1 59.1,15.2 63.6,15.5 68.2,15.8 72.7,16.3 77.3,16.8 81.8,17.5 86.4,18.2 90.9,19.1 95.5,20.0 100.0,21.0 104.5,22.2 109.1,23.4 113.6,24.7 118.2,26.1 122.7,27.6 127.3,29.2 131.8,30.9 136.4,32.6 140.9,34.5 145.5,36.4 150.0,38.4 154.5,40.5 159.1,42.6 163.6,44.9 168.2,47.1 172.7,49.5 177.3,51.9 181.8,54.4 186.4,57.0 190.9,59.6 195.5,62.3 200.0,65.0 204.5,67.8 209.1,70.6 213.6,73.5 218.2,76.4 222.7,79.3 227.3,82.3 231.8,85.3 236.4,88.4 240.9,91.4 245.5,94.5 250.0,97.6 254.5,100.8 259.1,103.9 263.6,107.1 268.2,110.2 272.7,113.4 277.3,116.6 281.8,119.8 286.4,122.9 290.9,126.1 295.5,129.2 300.0,132.4 304.5,135.5 309.1,138.6 313.6,141.6 318.2,144.7 322.7,147.7 327.3,150.7 331.8,153.6 336.4,156.5 340.9,159.4 345.5,162.2 350.0,165.0 354.5,167.7 359.1,170.4 363.6,173.0 368.2,175.6 372.7,178.1 377.3,180.5 381.8,182.9 386.4,185.1 390.9,187.4 395.5,189.5 400.0,191.6 404.5,193.6 409.1,195.5 413.6,197.4 418.2,199.1 422.7,200.8 427.3,202.4 431.8,203.9 436.4,205.3 440.9,206.6 445.5,207.8 450.0,209.0 454.5,210.0 459.1,210.9 463.6,211.8 468.2,212.5 472.7,213.2 477.3,213.7 481.8,214.2 486.4,214.5 490.9,214.8 495.5,214.9 500.0,215.0" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+<polyline points="50.0,195.0 54.5,188.9 59.1,182.9 63.6,176.8 68.2,170.8 72.7,164.7 77.3,158.6 81.8,152.6 86.4,146.5 90.9,140.5 95.5,134.4 100.0,128.3 104.5,122.3 109.1,116.2 113.6,110.2 118.2,104.1 122.7,98.0 127.3,92.0 131.8,85.9 136.4,79.8 140.9,73.8 145.5,67.7 150.0,61.7 154.5,55.6 159.1,49.5 163.6,43.5 168.2,37.4 172.7,31.4 177.3,25.3 181.8,19.2 186.4,15.0 190.9,15.2 195.5,15.5 200.0,16.1 204.5,16.9 209.1,17.8 213.6,19.0 218.2,20.4 222.7,21.9 227.3,23.7 231.8,25.6 236.4,27.7 240.9,30.0 245.5,32.5 250.0,35.1 254.5,37.9 259.1,40.8 263.6,43.9 268.2,47.2 272.7,50.5 277.3,54.0 281.8,57.7 286.4,61.4 290.9,65.3 295.5,69.2 300.0,73.3 304.5,77.4 309.1,81.6 313.6,85.9 318.2,90.2 322.7,94.6 327.3,99.0 331.8,103.5 336.4,107.9 340.9,112.4 345.5,116.9 350.0,121.4 354.5,125.9 359.1,130.3 363.6,134.7 368.2,139.1 372.7,143.4 377.3,147.6 381.8,151.8 386.4,155.9 390.9,160.0 395.5,163.9 400.0,167.7 404.5,171.4 409.1,175.0 413.6,178.5 418.2,181.8 422.7,185.0 427.3,188.1 431.8,191.0 436.4,193.7 440.9,196.3 445.5,198.7 450.0,200.9 454.5,203.0 459.1,204.9 463.6,206.6 468.2,208.1 472.7,209.4 477.3,210.5 481.8,211.4 486.4,212.1 490.9,212.6 495.5,212.9 500.0,213.0" fill="none" stroke="#9a6400" stroke-width="2"/>
+  <text x="508" y="19" fill="#5b6475">constant</text>
+  <text x="508" y="204" fill="#5b6475">exp.</text>
+  <text x="508" y="222" fill="#1f5f8b">cosine</text>
+  <text x="96" y="198" fill="#9a6400">one-cycle</text>
+</svg>
+<figcaption>The four schedules over 100 epochs, computed with <code>LrSchedule</code>: constant, exponential with d = 0.97 (grey dashed), cosine to 0 (blue) and one-cycle with 30 % warm-up from 0.1 to 1 and descent to 0.01 (amber). The cosine stays high for a long time and lowers the learning rate strongly only towards the end – where fine steps matter.</figcaption>
+</figure>
+<p>Why lower the learning rate at all? With a fixed learning rate a stochastic optimiser keeps jumping around the minimum at the end, because every batch delivers a slightly different gradient. Smaller steps towards the end average this noise out. The warm-up of one-cycle serves the opposite purpose: at the start the gradients are large and Adam's moment estimates still uncertain; small first steps keep the network from being thrown into an unfavourable region right away.</p>
+<div class="hinweis"><b>Framework convention:</b> Without an explicit schedule, <code>exponential(lrDecay)</code> applies – with the default <code>lrDecay</code> = 1.0, i.e. constant. A schedule that is set overrides <code>lrDecay</code>. With only one epoch, cosine and one-cycle return the factor 1. The schedule acts on all three optimisers alike, for L-BFGS on its fixed step length.</div>
+
+<h2 id="abbruch">Early stopping and cancellation</h2>
+<p>A large network on few, noisy data first learns the relationship and then the noise. The training loss keeps falling, the validation loss rises again. Early stopping watches the validation loss: if it does not improve by more than <code>minDelta</code> for <code>patience</code> epochs, training ends and the weights of the best epoch are written back.</p>
+<p>Precisely: an epoch counts as an improvement if <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>e</mi></mrow></msub><mo>&lt;</mo><msub><mrow><mi>V</mi></mrow><mrow><mtext>best</mtext></mrow></msub><mo>−</mo><msub><mrow><mi mathvariant="normal">Δ</mi></mrow><mrow><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><annotation encoding="application/x-tex">V_e &lt; V_\text{best} - \Delta_\min</annotation></semantics></math>. Then a snapshot is taken and the counter reset; otherwise the counter is incremented. When it reaches the patience, the run stops. The result <code>TrainResult</code> reports the epochs run and the best epoch, the training loss of the last epoch, the validation loss of the restored network and whether it stopped early or was cancelled.</p>
+<p>Cancellation from outside (a stop button in the user interface) goes through a function the trainer polls after each epoch. If a snapshot exists – i.e. early stopping is on and at least one improvement was seen – cancellation also returns to the best state.</p>
+
+<h2 id="beispiel">Worked example</h2>
+<p>The case from <code>TestMain</code> [6]: 80 points of the test function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>sin</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>3</mn><mi>x</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2</mn><mi>y</mi><mo stretchy="false">)</mo><mo>+</mo><mn>0.5</mn><mi>x</mi></mrow><annotation encoding="application/x-tex">\sin(3x)\cos(2y) + 0.5x</annotation></semantics></math> with noise (standard deviation 0.15), split 70 : 30, a deliberately oversized network 2–64–64–1 (SILU), Adam with learning rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2\cdot10^{-3}</annotation></semantics></math>, batch 16, patience 100, at most 5000 epochs.</p>
+<table>
+  <tr><th>Quantity</th><th>Value</th></tr>
+  <tr><td>epochs run</td><td>316</td></tr>
+  <tr><td>best epoch</td><td>216</td></tr>
+  <tr><td>validation loss of the restored network</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6.8687</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">6.8687 \cdot 10^{-2}</annotation></semantics></math></td></tr>
+</table>
+<p>After the best epoch 216 came exactly 100 epochs without improvement, then the patience took effect. The network returned is the one from epoch 216, not the one from epoch 316. The same figures appear in the module's status document and came out again in a fresh run; with fixed seeds the result is bit-identically repeatable.</p>
+<p>On the schedules: <code>cosine(0.1)</code> over 11 epochs yields the factors 1, 0.55 and 0.1 in epochs 1, 6 and 11 (at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">p = 0.5</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mstyle displaystyle="false"><mfrac><mrow><mi mathvariant="normal">π</mi></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">)</mo><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">\tfrac12(1 + \cos\tfrac\pi2) = 0.5</annotation></semantics></math>, hence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.1</mn><mo>+</mo><mn>0.9</mn><mo>⋅</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">0.1 + 0.9\cdot0.5</annotation></semantics></math>). <code>oneCycle(0.3, 0.1, 0.01)</code> over 11 epochs yields 0.1 at the start, 0.4 in epoch 2 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">p = 0.1</annotation></semantics></math>, one third of the warm-up), 1 in epoch 4 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0.3</mn></mrow><annotation encoding="application/x-tex">p = 0.3</annotation></semantics></math>) and 0.01 at the end.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>Learning-rate schedules</b> (<code>Optimiererprobe</code>): the values above for cosine and one-cycle, <code>exponential(0.5)</code> gives 1 in epoch 1 and 0.25 in epoch 3, the cosine falls monotonically, the clamps of one-cycle (fraction 0.9, start 0, end 1) take effect, <code>exponential</code> rejects 0 and 1.5. Comparison to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math> relative.</li>
+  <li><b>Quantile loss</b> (<code>Optimiererprobe</code>): <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\tau = 0.9</annotation></semantics></math> with errors +2 and −2 costs 1.8 and 0.2, on average 1; gradient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mi mathvariant="normal">τ</mi><mo>/</mo><mi>m</mi></mrow><annotation encoding="application/x-tex">-\tau/m</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">τ</mi><mo stretchy="false">)</mo><mo>/</mo><mi>m</mi></mrow><annotation encoding="application/x-tex">(1-\tau)/m</annotation></semantics></math>; 0 at the kink; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">\tau = 0.5</annotation></semantics></math> equals half the MAE; away from the kink the gradient matches the central difference quotient to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-8}</annotation></semantics></math> for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>0.1</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.5</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\tau = 0.1,\ 0.5,\ 0.9</annotation></semantics></math>.</li>
+  <li><b>Cross-entropy</b>: gradient check in <code>GradientCheck</code> (relative error below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>) and <code>TestMain</code> [10]: three operating regions of a compressor (stable, surge, choke) over mass flow and speed, network 2–16–16–3, accuracy on the validation set above 0.95, softmax sum 1 to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math>.</li>
+  <li><b>Early stopping</b> (<code>TestMain</code> [6]): must stop before the epoch limit, the best epoch must precede the last, and the reported validation loss must not exceed the smallest one observed.</li>
+  <li><b>Listener</b> (<code>Optimiererprobe</code>): with 200 epochs and <code>logEvery</code> 50, exactly the calls 50, 100, 150, 200.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The reported training loss is the mean over the epoch, computed with the changing weights and with dropout masks – not the loss of the network at the end of the epoch.</li>
+  <li>Early stopping needs a validation set; without one the trainer throws an exception. The validation set is evaluated in full every epoch – for large sets that costs time.</li>
+  <li>Each improvement allocates a new snapshot. Irrelevant at surrogate sizes.</li>
+  <li>A cancel request only takes effect after the running epoch.</li>
+  <li>The batch is computed sample by sample, not as a matrix product. Large batches therefore do not make a step cheaper per sample, only less frequent.</li>
+  <li>Cross-entropy presupposes a linear output layer; with an activation in front, its derivative would act a second time.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>R. Koenker, G. Bassett: Regression Quantiles. Econometrica 46 (1978).</li>
+  <li>I. Loshchilov, F. Hutter: SGDR: Stochastic Gradient Descent with Warm Restarts. ICLR 2017.</li>
+  <li>I. Goodfellow, Y. Bengio, A. Courville: Deep Learning. MIT Press, 2016 (chapters 7 and 8).</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Background to <a href="index.html#train">Training</a> · Checks: <code>TestMain</code>, <code>Optimiererprobe</code>, <code>GradientCheck</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

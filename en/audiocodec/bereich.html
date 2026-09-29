@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entropy coding – range coder and context model – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag aktiv" href="index.html">framework-audiocodec</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kodierer">Encoder and decoder</a>
+<a class="unterseite" href="rahmen.html">Frames and subframes</a>
+<a class="rubrik" href="index.html#strom">Stream format EVAS</a>
+<a class="unterseite" href="evas.html">Layout and checksums</a>
+<a class="rubrik" href="index.html#praediktion">Prediction and stereo</a>
+<a class="unterseite" href="fest.html">Fixed predictors</a>
+<a class="unterseite" href="lpc.html">LPC</a>
+<a class="unterseite" href="stereo.html">Stereo decomposition</a>
+<a class="rubrik" href="index.html#entropie">Entropy coding</a>
+<a class="unterseite aktiv" href="bereich.html">Range coder</a>
+<a class="unterseite" href="rice.html">Golomb-Rice</a>
+<a class="rubrik" href="index.html#stapel">Batch run</a>
+<a class="unterseite" href="bilanz.html">Overall balance</a>
+<a class="rubrik" href="index.html#mdct">MDCT and filter bank</a>
+<a class="unterseite" href="fensterbank.html">Windows and block switching</a>
+<a class="unterseite" href="mdct.html">MDCT and TDAC</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-audiocodec</a> › Entropy coding – range coder and context model</span><a class="sprachwahl" href="../../de/audiocodec/bereich.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-audiocodec · envisionz.audiocodec</div>
+  <h1>Entropy coding – range coder and context model</h1>
+  <p class="unter">The computation behind method 2: arithmetic coding as nested intervals, the carry-less range coder after Subbotin in <code>Bereichskodierer</code> and <code>Bereichsdekodierer</code>, the adaptive <code>Haeufigkeitsmodell</code> and the <code>Restmodell</code> with size classes, predecessor context, preset and top bit. With pseudocode following the source, worked examples, measurements from the probes and limits.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>A prefix code such as Huffman or Rice gives each symbol a whole number of bits. If a symbol is very likely, that wastes a lot: at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0.99</mn></mrow><annotation encoding="application/x-tex">p = 0.99</annotation></semantics></math> it carries only <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mn>0.99</mn><mo>=</mo><mn>0.0145</mn></mrow><annotation encoding="application/x-tex">-\log_2 0.99 = 0.0145</annotation></semantics></math> bits of information but costs at least one bit. <b>Arithmetic coding</b> removes this bound. It does not code symbol by symbol into bit patterns but the whole sequence into <b>one</b> number, and each symbol narrows an interval in proportion to its probability. The length of the result comes within a few bits of the information content of the sequence:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>L</mi><mo>≈</mo><mo>−</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>p</mi><mo stretchy="false">(</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">)</mo><mo>+</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">L \approx -\sum_{i} \log_2 p(s_i) + 2</annotation></semantics></math></p>
+<p>The second half of the idea is the <b>model</b>. Whoever estimates the probabilities well codes short. Because encoder and decoder update the model by the same rules from the symbols already seen, nothing of it has to be transmitted.</p>
+
+<figure>
+<svg viewBox="0 0 620 186" width="620" font-family="sans-serif" font-size="13">
+  <line x1="110" y1="30" x2="600" y2="30" stroke="#c9d1dc"/>
+  <rect x="110.0" y="18" width="367.5" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="477.5" y="18" width="122.5" height="24" fill="white" stroke="#1f5f8b"/>
+  <text x="293.8" y="35" text-anchor="middle" fill="#1f5f8b" font-size="12">0 (3/4)</text>
+  <text x="538.8" y="35" text-anchor="middle" fill="#1f5f8b" font-size="12">1 (1/4)</text>
+  <text x="102" y="35" text-anchor="end" fill="#5b6475" font-size="12">start</text>
+  <line x1="110" y1="70" x2="600" y2="70" stroke="#c9d1dc"/>
+  <rect x="110.0" y="58" width="275.6" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="385.6" y="58" width="91.9" height="24" fill="white" stroke="#1f5f8b"/>
+  <text x="247.8" y="75" text-anchor="middle" fill="#1f5f8b" font-size="12">0 (3/4)</text>
+  <text x="431.6" y="75" text-anchor="middle" fill="#1f5f8b" font-size="12">1 (1/4)</text>
+  <text x="102" y="75" text-anchor="end" fill="#5b6475" font-size="12">after “0”</text>
+  <line x1="110" y1="110" x2="600" y2="110" stroke="#c9d1dc"/>
+  <rect x="110.0" y="98" width="206.7" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="316.7" y="98" width="68.9" height="24" fill="white" stroke="#1f5f8b"/>
+  <text x="213.4" y="115" text-anchor="middle" fill="#1f5f8b" font-size="12">0 (3/4)</text>
+  <text x="351.2" y="115" text-anchor="middle" fill="#1f5f8b" font-size="12">1 (1/4)</text>
+  <text x="102" y="115" text-anchor="end" fill="#5b6475" font-size="12">after “0 0”</text>
+  <line x1="110" y1="150" x2="600" y2="150" stroke="#c9d1dc"/>
+  <rect x="316.7" y="138" width="68.9" height="24" fill="#9a6400" fill-opacity="0.25" stroke="#9a6400"/>
+  <text x="393.6" y="155" fill="#9a6400" font-size="12">width 9/64 → 2.83 bits</text>
+  <text x="102" y="155" text-anchor="end" fill="#5b6475" font-size="12">after “0 0 1”</text>
+  <text x="110.0" y="180" text-anchor="middle" fill="#5b6475" font-size="11">0</text>
+  <text x="355.0" y="180" text-anchor="middle" fill="#5b6475" font-size="11">1/2</text>
+  <text x="600.0" y="180" text-anchor="middle" fill="#5b6475" font-size="11">1</text>
+</svg>
+<figcaption>Nested intervals with fixed probabilities 3/4 for “0” and 1/4 for “1”. Each symbol selects its part of the current interval; after “0 0 1” the width <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>3</mn></mrow><mrow><mn>4</mn></mrow></mfrac></mstyle><mo>⋅</mo><mstyle displaystyle="false"><mfrac><mrow><mn>3</mn></mrow><mrow><mn>4</mn></mrow></mfrac></mstyle><mo>⋅</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn></mrow></mfrac></mstyle><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>9</mn></mrow><mrow><mn>64</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">\tfrac34 \cdot \tfrac34 \cdot \tfrac14 = \tfrac{9}{64}</annotation></semantics></math> remains, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mstyle displaystyle="false"><mfrac><mrow><mn>9</mn></mrow><mrow><mn>64</mn></mrow></mfrac></mstyle><mo>=</mo><mn>2.83</mn></mrow><annotation encoding="application/x-tex">-\log_2 \tfrac{9}{64} = 2.83</annotation></semantics></math> bits.</figcaption>
+</figure>
+
+<h2 id="bereich">The range coder</h2>
+<p>A range coder is arithmetic coding with integers and byte-wise output. The state consists of the lower bound <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>low</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{low}</annotation></semantics></math> and the width <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>range</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{range}</annotation></semantics></math>, both 32 bits. A symbol with frequency <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math>, cumulative frequency <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> of all smaller symbols and total frequency <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> narrows the interval:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>r</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>range</mi><mo>⁡</mo></mrow><mrow><mi>T</mi></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>,</mo><mspace width="2em"/><mspace width="0.1667em"/><mi>low</mi><mo>⁡</mo><mspace width="0.1667em"/><mo>←</mo><mspace width="0.1667em"/><mi>low</mi><mo>⁡</mo><mo>+</mo><mi>r</mi><mspace width="0.1667em"/><mi>c</mi><mo>,</mo><mspace width="2em"/><mspace width="0.1667em"/><mi>range</mi><mo>⁡</mo><mspace width="0.1667em"/><mo>←</mo><mi>r</mi><mspace width="0.1667em"/><mi>f</mi></mrow><annotation encoding="application/x-tex">r = \left\lfloor \frac{\mathrm{range}}{T} \right\rfloor, \qquad \mathrm{low} \leftarrow \mathrm{low} + r\,c, \qquad \mathrm{range} \leftarrow r\,f</annotation></semantics></math></p>
+<p>Rounding <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math> down loses part of the interval, at most the fraction <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>T</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mspace width="0.1667em"/><mi>range</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">(T-1)/\mathrm{range}</annotation></semantics></math>; the larger <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>range</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{range}</annotation></semantics></math> compared with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math>, the less. The codec's models keep <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> below 8192, and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>range</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{range}</annotation></semantics></math> moves between <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{16}</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{32}</annotation></semantics></math>. So that <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>range</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{range}</annotation></semantics></math> does not become too small, it is <b>normalised</b>: once the upper eight bits of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>low</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{low}</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>low</mi><mo>⁡</mo><mo>+</mo><mspace width="0.1667em"/><mi>range</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{low} + \mathrm{range}</annotation></semantics></math> are settled, this byte is output and both are shifted left by eight places.</p>
+<h3>Carry-less after Subbotin</h3>
+<p>The problem of every arithmetic coder is the <b>carry</b>: the addition <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>low</mi><mo>⁡</mo><mo>+</mo><mi>r</mi><mspace width="0.1667em"/><mi>c</mi></mrow><annotation encoding="application/x-tex">\mathrm{low} + r\,c</annotation></semantics></math> can produce a carry into bytes already output, which would have to be propagated back. Subbotin's variant prevents this by trimming the range beforehand. If <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>range</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{range}</annotation></semantics></math> becomes smaller than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{16}</annotation></semantics></math> without the top byte being settled, it sets</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>range</mi><mo>⁡</mo><mspace width="0.1667em"/><mo>←</mo><mo stretchy="false">(</mo><mo>−</mo><mspace width="0.1667em"/><mi>low</mi><mo>⁡</mo><mo stretchy="false">)</mo><mo>mod</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\mathrm{range} \leftarrow (-\mathrm{low}) \bmod 2^{16}</annotation></semantics></math></p>
+<p>Then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>low</mi><mo>⁡</mo><mo>+</mo><mspace width="0.1667em"/><mi>range</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\mathrm{low} + \mathrm{range}</annotation></semantics></math> is a multiple of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{16}</annotation></semantics></math>, the interval no longer extends across the next <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{16}</annotation></semantics></math> boundary, and all future additions stay below it. This costs some rate but spares the most error-prone spot of arithmetic coding.</p>
+
+<h3>Pseudocode – <code>Bereichskodierer</code></h3>
+<pre class="pseudo">TOP ← 2^24;  BOTTOM ← 2^16;  low ← 0;  range ← 2^32 − 1        <i>everything mod 2^32</i>
+
+<b>function</b> kodiere(c, f, T):                              <i>1 ≤ T ≤ 2^16, f ≥ 1</i>
+    range ← range / T
+    low ← low + range·c
+    range ← range·f
+    normalise()
+
+<b>function</b> normalise():
+    <b>while</b> (low xor (low + range)) &lt; TOP                    <i>top byte settled</i>
+          <b>or</b> (range &lt; BOTTOM <b>and</b> [range ← (−low) and (BOTTOM − 1)]):   <i>Subbotin</i>
+        output byte (low ≫ 24)
+        range ← range ≪ 8;  low ← low ≪ 8
+
+<b>function</b> kodiereRoh(value, n):                          <i>uniform, in pieces of 15 bits</i>
+    <b>while</b> n > 0:  t ← min(15, n);  n ← n − t
+        kodiere((value ≫ n) and (2^t − 1), 1, 2^t)
+
+<b>function</b> abschluss():  4 times: output byte (low ≫ 24);  low ← low ≪ 8</pre>
+<h3>Pseudocode – <code>Bereichsdekodierer</code></h3>
+<pre class="pseudo">code ← the first 4 bytes;  low ← 0;  range ← 2^32 − 1      <i>past the end: zeros</i>
+
+<b>function</b> hole(T):
+    range ← range / T
+    v ← ((code − low) mod 2^32) / range
+    <b>if</b> v ≥ T:  exception “out of step”
+    <b>return</b> v                                            <i>the model looks up the symbol for v</i>
+
+<b>function</b> uebernimm(c, f, T):
+    low ← low + range·c;  range ← range·f
+    normalise()                                          <i>word for word, plus code ← code ≪ 8 + next byte</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-audiocodec/src/envisionz/audiocodec/Bereichskodierer.java</code> and <code>Bereichsdekodierer.java</code>. The normalisation condition is identical word for word on both sides; if it differed in even one special case, the state would drift apart.</p>
+
+<h2 id="modell">The adaptive frequency model</h2>
+<p>A <code>Haeufigkeitsmodell</code> keeps a frequency for each symbol, initially 1 (uniform) or a given preset. After each symbol its frequency grows by 24. If the total frequency exceeds <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>13</mn></mrow></msup><mo>=</mo><mn>8192</mn></mrow><annotation encoding="application/x-tex">2^{13} = 8192</annotation></semantics></math>, all frequencies are halved, rounding up:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>←</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>+</mo><mn>24</mn><mo>,</mo><mspace width="2em"/><mi>T</mi><mo>&gt;</mo><mn>8192</mn><mspace width="0.2778em"/><mo>⇒</mo><mspace width="0.2778em"/><msub><mrow><mi>f</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>←</mo><mrow><mo fence="true" stretchy="true">⌈</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>/</mo><mn>2</mn><mo fence="true" stretchy="true">⌉</mo></mrow><mtext> for all </mtext><mi>i</mi></mrow><annotation encoding="application/x-tex">f_s \leftarrow f_s + 24, \qquad T &gt; 8192 \;\Rightarrow\; f_i \leftarrow \left\lceil f_i / 2 \right\rceil \text{ for all } i</annotation></semantics></math></p>
+<p>This keeps the denominator small and lets older observations fade: the model follows a distribution that changes in the course of a piece. Rounding is upward so that no frequency drops to zero – a symbol with frequency zero could no longer be coded. Encoder and decoder use <b>the same</b> class: they start identically, see the same symbols and update by the same rule.</p>
+
+<h2 id="restmodell">The residual model</h2>
+<p>The residual has too many possible values for one model per value. The <code>Restmodell</code> therefore splits each value. After the zigzag mapping <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math> (as with <a href="rice.html#zickzack">Rice</a>) the <b>size class</b> is the bit length of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>k</mi><mo>=</mo><mo stretchy="false">⌊</mo><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>u</mi><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn><mtext> for </mtext><mi>u</mi><mo>&gt;</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>=</mo><mn>0</mn><mtext> for </mtext><mi>u</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">k = \lfloor \log_2 u \rfloor + 1 \text{ for } u &gt; 0, \qquad k = 0 \text{ for } u = 0</annotation></semantics></math></p>
+<p>What is coded:</p>
+<ol>
+  <li>the class <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> in the model of the <b>context</b> – that is the class of the previous value (34 models, one per context);</li>
+  <li>from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>≥</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k \ge 2</annotation></semantics></math> the bit below the leading one, the <b>top bit</b>, in a model of its own per class;</li>
+  <li>from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>≥</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">k \ge 3</annotation></semantics></math> the remaining <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k - 2</annotation></semantics></math> bits uniformly with <code>kodiereRoh</code>.</li>
+</ol>
+<p>The leading one is known from the class. The classes are very unevenly distributed, and that is exactly where the fractional bit count of the range coder helps. The context exploits the fact that residual magnitudes change slowly: after a large value another large one is more likely.</p>
+<h3>The preset</h3>
+<p>The models restart in every frame – the price for every frame being readable on its own. In short frames the model therefore spent much of its time warming up. Two presets largely remove this, <b>without a single transmitted bit</b>, because both sides produce them identically:</p>
+<ul>
+  <li><b>Class models</b> centred on the context: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mn>1</mn><mo>+</mo><mo stretchy="false">⌊</mo><mn>48</mn><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mo>|</mo><mi>k</mi><mo>−</mo><mi>c</mi><mo>|</mo></mrow></msup><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">f_k = 1 + \lfloor 48 / 2^{|k - c|} \rfloor</annotation></semantics></math> for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><mi>k</mi><mo>−</mo><mi>c</mi><mo>|</mo><mo>≤</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">|k-c| \le 6</annotation></semantics></math>, otherwise 1. For context 10 this gives in classes 4 to 16 the frequencies 1, 2, 4, 7, 13, 25, <b>49</b>, 25, 13, 7, 4, 2, 1, total over all 34 classes 174.</li>
+  <li><b>Top bit</b> with 20 : 12 towards zero: within a class the smaller values are more frequent.</li>
+</ul>
+<p>The initial context is 10, the middle of the usual size classes for audio. Both sub-channels of a frame run through <b>one</b> residual model; the context carries over from the first to the second.</p>
+
+<h3>Pseudocode – <code>Restmodell.kodiere(bk, rest)</code></h3>
+<pre class="pseudo"><b>for each</b> value <b>in</b> rest:
+    u ← zigzag(value);  k ← bitlength(u)                  <i>0 … 32</i>
+    classModel[context].kodiere(bk, k)
+    <b>if</b> k ≥ 2:
+        topBit[k].kodiere(bk, (u ≫ (k−2)) and 1)
+        <b>if</b> k ≥ 3:  bk.kodiereRoh(u and (2^(k−2) − 1), k−2)
+    context ← k
+
+<i>// decoding mirrors this</i>
+k ← classModel[context].dekodiere(bd)
+u ← 0 (k = 0);  1 (k = 1);  otherwise 2^(k−1) or (top ≪ (k−2)) or raw(k−2)
+value ← zigzagBack(u);  context ← k</pre>
+<p class="quelle">Source: <code>Restmodell.java</code> and <code>Haeufigkeitsmodell.java</code>. <code>Haeufigkeitsmodell.kodiere</code> calls <code>bk.kodiere(kumuliert(s), f[s], T)</code> and then <code>aktualisiere(s)</code>; the decoder gets the cumulative value, looks up the symbol linearly and updates the same way.</p>
+
+<div class="hinweis"><b>Convention in the framework:</b> Increment 24, halving limit 8192, preset weight 48, top bit 20 : 12, initial context 10, 34 class models. With method 2 the frame first holds both subframe headers bit-packed, then from the next byte boundary the shared range stream with its 4-byte termination.</div>
+
+<h2 id="beispiel">Worked examples</h2>
+<p><b>One residual value.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">x = 5</annotation></semantics></math>, so <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mn>10</mn><mo>=</mo><msub><mn>1010</mn><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">u = 10 = 1010_2</annotation></semantics></math>, class <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">k = 4</annotation></semantics></math>. Coded are class 4 in the model of the predecessor context, the top bit <code>0</code> (the second bit of <code>1010</code>) and the two raw bits <code>10</code>. Back: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>3</mn></mrow></msup><mo>+</mo><mn>0</mn><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mn>2</mn><mo>=</mo><mn>10</mn></mrow><annotation encoding="application/x-tex">u = 2^3 + 0 \cdot 2^2 + 2 = 10</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">x = 5</annotation></semantics></math>. The next value is coded in context 4.</p>
+<p><b>The Huffman bound.</b> From the <code>Bereichsprobe</code>: 200,000 symbols from two values, the first with probability 0.99, modelled adaptively. The entropy is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>H</mi><mo>=</mo><mo>−</mo><mn>0.99</mn><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mn>0.99</mn><mo>−</mo><mn>0.01</mn><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mn>0.01</mn><mo>=</mo><mn>0.0808</mn><mtext> bits</mtext></mrow><annotation encoding="application/x-tex">H = -0.99 \log_2 0.99 - 0.01 \log_2 0.01 = 0.0808 \text{ bits}</annotation></semantics></math></p>
+<p>and 0.0847 bits per symbol were measured. A Huffman code cannot go below one bit per symbol.</p>
+<p><b>The preset.</b> Also from the <code>Bereichsprobe</code>: 600 residual values (uniform in ±400) cost 771 bytes starting from a uniform distribution and 762 bytes with the preset. For the complete codec, measured against Rice (negative means smaller than Rice), the module documentation gives:</p>
+<table>
+  <tr><th>Block</th><th>before</th><th>preset only</th><th>with top bit</th></tr>
+  <tr><td>1024</td><td>+2.70 %</td><td>+2.16 %</td><td>+1.62 %</td></tr>
+  <tr><td>4096</td><td>+0.38 %</td><td>+0.18 %</td><td>−0.53 %</td></tr>
+  <tr><td>16,384</td><td>−0.82 %</td><td>−1.09 %</td><td>−1.89 %</td></tr>
+</table>
+
+<h2 id="pruefung">How it is tested</h2>
+<p>The <code>Bereichsprobe</code> (12 checks) mainly tests that encoder and decoder stay in step – a single difference in state would destroy the whole rest:</p>
+<ul>
+  <li>2000 raw values with random widths from 1 to 32 bits come back.</li>
+  <li>Five model runs with a wandering favourite symbol (it changes every 5000 symbols): uniform (16 symbols, 200,000 times, measured 4.025 bits/symbol), strongly skewed (0.92; 0.800 bits), two symbols (0.98; 500,000 times; 0.187 bits), 34 symbols (0.5; 3.553 bits), only one symbol (0.115 bits).</li>
+  <li>Residual model with 100,000 values including the outliers <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>±</mo><mo stretchy="false">⌊</mo><mo stretchy="false">(</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\pm\lfloor(2^{31}-1)/2\rfloor</annotation></semantics></math> comes back unchanged (measured 9.489 bits/value).</li>
+  <li>Preset: both presets lossless, the preset one cheaper on 600 values; every initial preset valid and centred on its context.</li>
+  <li>Huffman bound: at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0.99</mn></mrow><annotation encoding="application/x-tex">p = 0.99</annotation></semantics></math> below 0.30 bits per symbol (measured 0.0847).</li>
+</ul>
+<p>In the complete codec every case of the <code>Umlaufprobe</code> also runs with method 2.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>Not yet ahead on real music.</b> According to the overview, method 2 was 0.1 to 1.5 % larger than Rice in 26 of 27 tracks (MP3, decoded to 16 bits); the point is open. With very small blocks Rice stays ahead, because the fixed overhead per frame dominates there and Rice picks its parameters per partition optimally from the start.</li>
+  <li><b>Computing time.</b> The symbol search in the model is linear over up to 34 symbols, and the raw bits pass through the range coder one piece at a time.</li>
+  <li><b>No model across frame boundaries.</b> That is intended (resynchronisation) but costs a warm-up phase in every frame.</li>
+  <li>The subframe choice uses the Rice cost for method 2 as well; a subframe that would be cheapest in a different way with the range coder is not recognised.</li>
+  <li>The range coder rejects total frequencies above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{16}</annotation></semantics></math>; the model stays far below at 8192.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>I. H. Witten, R. M. Neal, J. G. Cleary: Arithmetic Coding for Data Compression. Communications of the ACM 30 (1987).</li>
+  <li>G. N. N. Martin: Range encoding: an algorithm for removing redundancy from a digitised message. Video &amp; Data Recording Conference, Southampton (1979).</li>
+</ul>
+
+<footer>
+envisionz-framework-audiocodec · background to <a href="index.html#entropie">Entropy coding</a> · back: <a href="rice.html">Golomb-Rice</a> · probes: <code>Bereichsprobe</code>, <code>Umlaufprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

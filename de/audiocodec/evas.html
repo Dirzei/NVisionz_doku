@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stromformat EVAS – Aufbau, Prüfsummen, Wiederaufsetzen – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag aktiv" href="index.html">framework-audiocodec</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#kodierer">Kodierer und Dekodierer</a>
+<a class="unterseite" href="rahmen.html">Rahmen und Teilrahmen</a>
+<a class="rubrik" href="index.html#strom">Stromformat EVAS</a>
+<a class="unterseite aktiv" href="evas.html">Aufbau und Prüfsummen</a>
+<a class="rubrik" href="index.html#praediktion">Prädiktion und Stereo</a>
+<a class="unterseite" href="fest.html">Feste Prädiktoren</a>
+<a class="unterseite" href="lpc.html">LPC</a>
+<a class="unterseite" href="stereo.html">Stereozerlegung</a>
+<a class="rubrik" href="index.html#entropie">Entropiekodierung</a>
+<a class="unterseite" href="bereich.html">Bereichskodierer</a>
+<a class="unterseite" href="rice.html">Golomb-Rice</a>
+<a class="rubrik" href="index.html#stapel">Stapellauf</a>
+<a class="unterseite" href="bilanz.html">Sammelbilanz</a>
+<a class="rubrik" href="index.html#mdct">MDCT und Fensterbank</a>
+<a class="unterseite" href="fensterbank.html">Fenster und Blockumschaltung</a>
+<a class="unterseite" href="mdct.html">MDCT und TDAC</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-audiocodec</a> › Stromformat EVAS – Aufbau, Prüfsummen, Wiederaufsetzen</span><a class="sprachwahl" href="../../en/audiocodec/evas.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-audiocodec · envisionz.audiocodec</div>
+  <h1>Stromformat EVAS – Aufbau, Prüfsummen, Wiederaufsetzen</h1>
+  <p class="unter">Was im Kopf eines EVAS-Stroms steht und warum, wie ein Rahmen gebaut ist, wie die beiden Prüfsummen rechnen (CRC-16 je Rahmen und Kopf, FNV-1a über alle Abtastwerte) und wie der Dekodierer nach einem beschädigten Rahmen an der richtigen Stelle wieder aufsetzt. Mit Byte-für-Byte-Beispiel, Pseudocode nach dem Quelltext, Proben und Grenzen.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Ein Stromformat muss drei Dinge leisten, die mit der eigentlichen Verdichtung nichts zu tun haben. Es muss sagen, <b>wie</b> der Inhalt zu lesen ist (Abtastrate, Kanäle, Wortbreite, Verfahren), es muss <b>genau</b> sagen, wie viele Werte am Ende herauskommen, und es muss Beschädigungen <b>erkennen und eingrenzen</b>, damit ein verdorbenes Byte nicht den ganzen Rest unbrauchbar macht.</p>
+<p>Die Felder des Kopfes sind so gewählt, dass die bekannten Lücken älterer Formate gar nicht erst entstehen. MP3 etwa hat keine Angabe über die Gesamtzahl der Werte und über den Vor- und Nachlauf des Kodierers; lückenloses Abspielen zweier aufeinanderfolgender Stücke war deshalb nur über nachträgliche Zusatzkennungen möglich. Und ein Format ohne <b>Verfahrenskennung</b> kann nie mehr als den einen Codec tragen, für den es gebaut wurde. EVAS führt beides von Anfang an.</p>
+
+<figure>
+<svg viewBox="0 0 620 172" width="620" font-family="sans-serif" font-size="13">
+  <text x="4" y="16" fill="#5b6475" font-size="12">Stromkopf, 36 Byte (1 Kästchen = 1 Byte)</text>
+  <rect x="4.0" y="26" width="68.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <line x1="21.0" y1="50" x2="21.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="38.0" y1="50" x2="38.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="55.0" y1="50" x2="55.0" y2="56" stroke="#c9d1dc"/>
+  <text x="38.0" y="45" text-anchor="middle" fill="#1f5f8b" font-size="12">EVAS</text>
+  <rect x="72.0" y="26" width="17.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="80.5" y="45" text-anchor="middle" fill="#1f5f8b" font-size="11">F</text>
+  <rect x="89.0" y="26" width="17.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="97.5" y="45" text-anchor="middle" fill="#1f5f8b" font-size="11">V</text>
+  <rect x="106.0" y="26" width="68.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <line x1="123.0" y1="50" x2="123.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="140.0" y1="50" x2="140.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="157.0" y1="50" x2="157.0" y2="56" stroke="#c9d1dc"/>
+  <text x="140.0" y="45" text-anchor="middle" fill="#1f5f8b" font-size="12">Rate</text>
+  <rect x="174.0" y="26" width="17.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="182.5" y="45" text-anchor="middle" fill="#1f5f8b" font-size="11">K</text>
+  <rect x="191.0" y="26" width="17.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="199.5" y="45" text-anchor="middle" fill="#1f5f8b" font-size="11">B</text>
+  <rect x="208.0" y="26" width="136.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <line x1="225.0" y1="50" x2="225.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="242.0" y1="50" x2="242.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="259.0" y1="50" x2="259.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="276.0" y1="50" x2="276.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="293.0" y1="50" x2="293.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="310.0" y1="50" x2="310.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="327.0" y1="50" x2="327.0" y2="56" stroke="#c9d1dc"/>
+  <text x="276.0" y="45" text-anchor="middle" fill="#1f5f8b" font-size="12">Gesamtwerte</text>
+  <rect x="344.0" y="26" width="34.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <line x1="361.0" y1="50" x2="361.0" y2="56" stroke="#c9d1dc"/>
+  <text x="361.0" y="45" text-anchor="middle" fill="#1f5f8b" font-size="11">Vor</text>
+  <rect x="378.0" y="26" width="34.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <line x1="395.0" y1="50" x2="395.0" y2="56" stroke="#c9d1dc"/>
+  <text x="395.0" y="45" text-anchor="middle" fill="#1f5f8b" font-size="11">Nach</text>
+  <rect x="412.0" y="26" width="34.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <line x1="429.0" y1="50" x2="429.0" y2="56" stroke="#c9d1dc"/>
+  <text x="429.0" y="45" text-anchor="middle" fill="#1f5f8b" font-size="11">Blk</text>
+  <rect x="446.0" y="26" width="136.0" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <line x1="463.0" y1="50" x2="463.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="480.0" y1="50" x2="480.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="497.0" y1="50" x2="497.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="514.0" y1="50" x2="514.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="531.0" y1="50" x2="531.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="548.0" y1="50" x2="548.0" y2="56" stroke="#c9d1dc"/>
+  <line x1="565.0" y1="50" x2="565.0" y2="56" stroke="#c9d1dc"/>
+  <text x="514.0" y="45" text-anchor="middle" fill="#1f5f8b" font-size="12">Prüfsumme FNV-1a</text>
+  <rect x="582.0" y="26" width="34.0" height="30" fill="white" stroke="#1f5f8b"/>
+  <line x1="599.0" y1="50" x2="599.0" y2="56" stroke="#c9d1dc"/>
+  <text x="599.0" y="45" text-anchor="middle" fill="#1f5f8b" font-size="11">CRC</text>
+  <text x="4" y="78" fill="#5b6475" font-size="12">F Fassung · V Verfahren · K Kanäle · B Bit je Wert · Blk Nennblockgröße</text>
+  <text x="4" y="102" fill="#5b6475" font-size="12">Rahmen (Byte-Felder, Rumpf bitweise)</text>
+  <rect x="4" y="110" width="60" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="34.0" y="129" text-anchor="middle" fill="#1f5f8b" font-size="12">FF 5A</text>
+  <rect x="64" y="110" width="100" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="114.0" y="129" text-anchor="middle" fill="#1f5f8b" font-size="12">Rumpflänge</text>
+  <rect x="164" y="110" width="84" height="30" fill="white" stroke="#1f5f8b"/>
+  <text x="206.0" y="129" text-anchor="middle" fill="#1f5f8b" font-size="12">Nr. 32 Bit</text>
+  <rect x="248" y="110" width="62" height="30" fill="white" stroke="#1f5f8b"/>
+  <text x="279.0" y="129" text-anchor="middle" fill="#1f5f8b" font-size="12">Länge 16</text>
+  <rect x="310" y="110" width="62" height="30" fill="white" stroke="#1f5f8b"/>
+  <text x="341.0" y="129" text-anchor="middle" fill="#1f5f8b" font-size="12">Modus 8</text>
+  <rect x="372" y="110" width="168" height="30" fill="white" stroke="#1f5f8b"/>
+  <text x="456.0" y="129" text-anchor="middle" fill="#1f5f8b" font-size="12">Teilrahmen A, B</text>
+  <rect x="540" y="110" width="60" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="570.0" y="129" text-anchor="middle" fill="#1f5f8b" font-size="12">CRC-16</text>
+  <path d="M164,146 v6 h376 v-6" fill="none" stroke="#9a6400"/>
+  <text x="352" y="166" text-anchor="middle" fill="#9a6400" font-size="12">Rumpf – seine Länge steht davor</text>
+  <path d="M4,108 v-0" fill="none"/>
+  <text x="604" y="166" text-anchor="end" fill="#5b6475" font-size="11">CRC über alles davor</text>
+</svg>
+<figcaption>Oben der 36 Byte lange Stromkopf, jedes Kästchen ein Byte; unten ein Rahmen. Die Rumpflänge steht vor dem Rumpf, die CRC-16 dahinter deckt alles vom Synchronwort an.</figcaption>
+</figure>
+
+<h2 id="kopf">Der Stromkopf</h2>
+<p>Alle Zahlenfelder stehen mit dem höchstwertigen Byte zuerst (Big Endian).</p>
+<table>
+  <tr><th>Byte</th><th>Länge</th><th>Feld</th><th>Bedeutung</th></tr>
+  <tr><td>0</td><td>4</td><td>Kennung</td><td><code>45 56 41 53</code> = „EVAS“</td></tr>
+  <tr><td>4</td><td>1</td><td>Fassung</td><td>1; eine andere Fassung wird abgewiesen</td></tr>
+  <tr><td>5</td><td>1</td><td>Verfahren</td><td>1 = verlustfrei/Rice, 2 = verlustfrei/Bereich</td></tr>
+  <tr><td>6</td><td>4</td><td>Abtastrate</td><td>Werte je Sekunde und Kanal</td></tr>
+  <tr><td>10</td><td>1</td><td>Kanäle</td><td>Anzahl</td></tr>
+  <tr><td>11</td><td>1</td><td>Bit je Wert</td><td>Wortbreite des Ausgangsmaterials</td></tr>
+  <tr><td>12</td><td>8</td><td>Gesamtwerte</td><td>Werte je Kanal; mit der Abtastrate die Dauer, ohne den Strom zu durchlaufen</td></tr>
+  <tr><td>20</td><td>2</td><td>Vorlauf</td><td>Werte am Anfang, die beim Abspielen zu verwerfen sind</td></tr>
+  <tr><td>22</td><td>2</td><td>Nachlauf</td><td>Werte am Ende, die zu verwerfen sind</td></tr>
+  <tr><td>24</td><td>2</td><td>Nennblockgröße</td><td>Werte je Rahmen im Regelfall; daraus folgt die Stelle jedes Rahmens</td></tr>
+  <tr><td>26</td><td>8</td><td>Prüfsumme</td><td>FNV-1a, 64 Bit, über alle Abtastwerte</td></tr>
+  <tr><td>34</td><td>2</td><td>CRC-16</td><td>über die Bytes 0 bis 33</td></tr>
+</table>
+<p>Die Dauer ergibt sich ohne Durchlauf als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mtext>Gesamtwerte</mtext><mo>/</mo><mtext>Abtastrate</mtext></mrow><annotation encoding="application/x-tex">T = \text{Gesamtwerte} / \text{Abtastrate}</annotation></semantics></math> (<code>dauerSekunden</code>). Der Vorlauf ist für verlustbehaftete Verfahren gedacht, deren Filterbank am Anfang Werte vorausschickt (<a href="fensterbank.html#raster">Fensterbank</a>); der verlustfreie Kodierer schreibt Vor- und Nachlauf als null.</p>
+
+<div class="hinweis"><b>Festlegung im Framework:</b> <code>Stromkopf.lies</code> prüft in dieser Reihenfolge: Restlänge, Kennung, <b>CRC-16</b>, erst danach die Fassung und die Felder. Die Prüfsumme steht bewusst vor der Deutung, damit aus einem verfälschten Byte keine sinnlose Abtastrate oder Wertezahl wird. Die Gesamtprüfsumme über die Werte wird dabei nur übernommen, geprüft wird sie nach dem Dekodieren.</div>
+
+<h2 id="rahmen">Der Rahmen</h2>
+<p>Jeder Rahmen ist in sich abgeschlossen. Er beginnt mit dem Synchronwort <code>FF 5A</code>, dann folgt die Länge des Rumpfes in Byte (32 Bit), dann der Rumpf und zuletzt eine CRC-16 über alles ab dem Synchronwort. Der Rumpf beginnt bitweise mit Rahmennummer (32 Bit), Anzahl der Werte in diesem Rahmen (16 Bit) und Stereomodus (8 Bit); danach kommen die Teilrahmen (<a href="rahmen.html#rahmen">Rahmen von innen</a>).</p>
+<p>Es gibt <b>kein Bit-Reservoir und keinen Rückwärtszeiger</b>. In MP3 darf ein Rahmen Bits in freien Platz vorangehender Rahmen auslagern; wer mitten im Strom einsetzt oder einen Rahmen verliert, verliert dann auch Teile der folgenden. In EVAS hängt ein Rahmen von nichts außer dem Kopf ab: von der Wortbreite, dem Verfahren und der Nennblockgröße.</p>
+
+<h2 id="crc">CRC-16 als Rahmenschutz</h2>
+<p>Eine CRC liest die Daten als Polynom über GF(2) – Addition ist <code>xor</code>, ohne Übertrag – und bildet den Rest der Division durch ein festes Generatorpolynom. Hier ist es</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>G</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>16</mn></mrow></msup><mo>+</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>15</mn></mrow></msup><mo>+</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mn>1</mn><mspace width="1em"/><mo stretchy="false">(</mo><mi>0x8005</mi><mo>⁡</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>R</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>M</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><msup><mrow><mi>x</mi></mrow><mrow><mn>16</mn></mrow></msup><mo>mod</mo><mi>G</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">G(x) = x^{16} + x^{15} + x^{2} + 1 \quad (\mathrm{0x8005}), \qquad R(x) = M(x)\, x^{16} \bmod G(x)</annotation></semantics></math></p>
+<p>mit Anfangswert null, ohne Spiegelung der Bits und ohne abschließendes <code>xor</code>. In Katalogen heißt diese Variante <b>CRC-16/BUYPASS</b>; ihr veröffentlichter Prüfwert über die ASCII-Zeichen „123456789“ ist <code>FEE8</code>. Weil <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mi>x</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>15</mn></mrow></msup><mo>+</mo><mi>x</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">G(x) = (x+1)(x^{15}+x+1)</annotation></semantics></math> den Faktor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">x+1</annotation></semantics></math> enthält, erkennt die CRC jede ungerade Zahl gekippter Bits, und weil <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> den Grad 16 hat, jedes Fehlerbündel bis 16 Bit Länge. Die allgemeine Rechnung mit einem durchgeschriebenen Divisionsbeispiel steht in der Theorie der Prüfsummen von <a href="../compress/index.html#pruef">framework-compress</a>.</p>
+<p>Gerechnet wird byteweise über eine Tafel von 256 Einträgen: Eintrag <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> ist der Rest von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>⋅</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">i(x) \cdot x^{16}</annotation></semantics></math> modulo <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>, also das Ergebnis von acht Schiebe-und-xor-Schritten auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">i \cdot 2^{8}</annotation></semantics></math>. Je Byte wird so ein ganzer Divisionsschritt von acht Bit auf einmal getan.</p>
+<h3>Pseudocode – <code>Pruefsumme.crc16(daten, von, bis)</code></h3>
+<pre class="pseudo"><i>// einmal beim Laden der Klasse</i>
+<b>für</b> i ← 0 <b>bis</b> 255:
+    w ← i ≪ 8
+    <b>8-mal</b>:  <b>wenn</b> Bit 15 von w gesetzt:  w ← ((w ≪ 1) xor 0x8005) und 0xFFFF
+             <b>sonst</b>:                   w ← (w ≪ 1) und 0xFFFF
+    TAFEL[i] ← w
+
+<i>// je Aufruf</i>
+crc ← 0
+<b>für</b> i ← von <b>bis</b> bis−1:
+    crc ← ((crc ≪ 8) xor TAFEL[((crc ≫ 8) xor daten[i]) und 0xFF]) und 0xFFFF
+<b>gib</b> crc <b>zurück</b></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-audiocodec/src/envisionz/audiocodec/Pruefsumme.java</code>.</p>
+<p><b>Rechenbeispiel.</b> Das einzelne Byte <code>A5</code>: Der Anfangswert ist null, also ist das Ergebnis genau der Tafeleintrag <code>TAFEL[0xA5]</code>. Bit für Bit, beginnend mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>=</mo><mspace width="0.1667em"/><mi>A500</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">w = \mathrm{A500}</annotation></semantics></math>:</p>
+<table>
+  <tr><th>Schritt</th><th>Bit 15 vorher</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math> danach</th></tr>
+  <tr><td>1</td><td>1</td><td><code>CA05</code></td></tr>
+  <tr><td>2</td><td>1</td><td><code>140F</code></td></tr>
+  <tr><td>3</td><td>0</td><td><code>281E</code></td></tr>
+  <tr><td>4</td><td>0</td><td><code>503C</code></td></tr>
+  <tr><td>5</td><td>0</td><td><code>A078</code></td></tr>
+  <tr><td>6</td><td>1</td><td><code>C0F5</code></td></tr>
+  <tr><td>7</td><td>1</td><td><code>01EF</code></td></tr>
+  <tr><td>8</td><td>0</td><td><code>03DE</code></td></tr>
+</table>
+<p>Die <code>Summenprobe</code> prüft genau diesen Wert (<code>03DE</code>) und den Katalogwert <code>FEE8</code>.</p>
+
+<h2 id="fnv">Die Gesamtprüfsumme FNV-1a</h2>
+<p>Die CRC sagt, ob ein Rahmen unterwegs verdorben wurde. Ob der <b>Kodierer</b> richtig gerechnet hat, kann sie nicht sagen: ein falsch kodierter Rahmen hat eine richtige CRC. Dafür steht im Kopf eine zweite Summe über die Abtastwerte selbst. Der Dekodierer rechnet sie über das Wiederhergestellte nach; stimmt sie, ist der Umlauf belegt. Verwendet wird FNV-1a mit 64 Bit:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>CBF29CE484222325</mi><mo>⁡</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi>h</mi></mrow><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>h</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>⊕</mo><msub><mrow><mi>o</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mo>⋅</mo><mspace width="0.1667em"/><mi>100000001B3</mi><mo>⁡</mo><mo>mod</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>64</mn></mrow></msup></mrow><annotation encoding="application/x-tex">h_0 = \mathrm{CBF29CE484222325}, \qquad h_{j+1} = (h_j \oplus o_j) \cdot \mathrm{100000001B3} \bmod 2^{64}</annotation></semantics></math></p>
+<p>Die Bytes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>o</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">o_j</annotation></semantics></math> sind die Abtastwerte, <b>verschränkt</b> – je Zeitpunkt alle Kanäle nacheinander – und jeder Wert mit seinen vier Bytes vom niederwertigsten her. Die Summe hängt damit auch an der Reihenfolge der Kanäle: Vertauschte Kanäle ergeben eine andere Summe.</p>
+<h3>Pseudocode – <code>Pruefsumme.ueberWerte(kanäle)</code></h3>
+<pre class="pseudo">h ← 0xCBF29CE484222325
+<b>für</b> i ← 0 <b>bis</b> Länge(kanäle[0]) − 1:          <i>Länge aus dem ersten Kanal</i>
+    <b>für jeden</b> kanal:
+        w ← kanal[i]
+        <b>für</b> b ← 0 <b>bis</b> 3:
+            h ← h xor ((w ≫ 8b) und 0xFF)            <i>vorzeichenlos geschoben</i>
+            h ← h · 0x100000001B3                   <i>Überlauf gewollt, mod 2^64</i>
+<b>gib</b> h <b>zurück</b></pre>
+<div class="hinweis"><b>Festlegung im Framework:</b> Bewusst keine kryptografische Summe. Es geht um das Erkennen von Fehlern im eigenen Kodierer, nicht um Schutz vor absichtlicher Veränderung. Über gar keine Werte gerechnet, ist die Summe der Anfangswert <code>CBF29CE484222325</code>.</div>
+
+<h2 id="aufsetzen">Wiederaufsetzen nach einer Beschädigung</h2>
+<p>Der Dekodierer geht den Strom Rahmen für Rahmen durch. Findet er an der erwarteten Stelle kein Synchronwort oder eine unmögliche Rumpflänge, sucht er Byte für Byte das nächste <code>FF 5A</code>. Passt die CRC eines Rahmens nicht, bricht er im strengen Betrieb ab; im <b>nachsichtigen</b> Betrieb zählt er den Rahmen als übersprungen und macht hinter dessen angegebenem Ende weiter.</p>
+<h3>Pseudocode – <code>Dekodierer.dekodiere(strom)</code></h3>
+<pre class="pseudo">kopf ← Stromkopf.lies(strom, 0)                       <i>prüft Kennung, CRC, Fassung</i>
+<b>prüfe</b> kopf.verfahren ∈ {1, 2}
+ziel ← Nullen [Kanäle][Gesamtwerte];  erreicht ← 0;  pos ← 36
+<b>solange</b> pos + 6 ≤ Länge(strom) <b>und</b> erreicht &lt; Gesamtwerte:
+    <b>wenn</b> u16(pos) ≠ 0xFF5A:
+        pos ← nächstes 0xFF5A ab pos+1;  <b>wenn</b> keins: <b>Schluss</b>;  <b>weiter</b>
+    L ← u32(pos+2);  ende ← pos + 6 + L + 2
+    <b>wenn</b> L ≤ 0 <b>oder</b> ende > Länge(strom):
+        pos ← nächstes 0xFF5A ab pos+1;  <b>wenn</b> keins: <b>Schluss</b>;  <b>weiter</b>
+    <b>wenn</b> crc16(strom, pos, ende−2) ≠ u16(ende−2):
+        <b>wenn</b> streng:  Ausnahme „Rahmen beschädigt“
+        übersprungen ← übersprungen + 1;  pos ← ende;  <b>weiter</b>
+    bis ← liesRahmen(strom, pos+6, ende−2)              <i>schreibt ab Nummer · Nennblockgröße</i>
+    erreicht ← max(erreicht, bis);  pos ← ende
+<b>wenn</b> erreicht &lt; Gesamtwerte <b>und</b> streng:  Ausnahme „Strom zu kurz“
+<b>wenn</b> FNV-1a(ziel) ≠ kopf.prüfsumme <b>und</b> streng:  Ausnahme „nicht verlustfrei“
+<b>gib</b> ziel <b>zurück</b></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-audiocodec/src/envisionz/audiocodec/Dekodierer.java</code>, <code>dekodiere</code> und <code>sucheSynchronwort</code>.</p>
+<p>Ein übersprungener Rahmen hinterlässt Nullen an seiner Stelle; alle folgenden Rahmen landen an ihrer richtigen Stelle, weil die Stelle aus der Rahmennummer folgt. Ein zufällig im Rumpf stehendes <code>FF 5A</code> kann das Suchen täuschen, fällt aber an der CRC durch: Für zufällige Daten passt eine 16-Bit-Prüfsumme mit der Wahrscheinlichkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-16}</annotation></semantics></math>.</p>
+
+<h2 id="beispiel">Rechenbeispiel: ein Kopf Byte für Byte</h2>
+<p>Das Stereosignal aus dem <a href="rahmen.html#beispiel">Beispiel der Rahmenseite</a> (8192 Werte je Kanal, 48 kHz, 16 Bit, Rice, Blockgröße 4096) ergibt diesen Kopf, gelesen aus dem Strom des Kodierers:</p>
+<pre><code>45 56 41 53  01  01  00 00 BB 80  02  10  00 00 00 00 00 00 20 00
+00 00  00 00  10 00  19 19 14 39 78 3E 7B E7  34 0F</code></pre>
+<table>
+  <tr><th>Bytes</th><th>Wert</th><th>Bedeutung</th></tr>
+  <tr><td><code>45 56 41 53</code></td><td>EVAS</td><td>Kennung</td></tr>
+  <tr><td><code>01</code> <code>01</code></td><td>1, 1</td><td>Fassung 1, Verfahren Rice</td></tr>
+  <tr><td><code>00 00 BB 80</code></td><td>48 000</td><td>Abtastrate</td></tr>
+  <tr><td><code>02</code> <code>10</code></td><td>2, 16</td><td>Kanäle, Bit je Wert</td></tr>
+  <tr><td><code>00 … 20 00</code></td><td>8192</td><td>Gesamtwerte je Kanal</td></tr>
+  <tr><td><code>00 00</code> <code>00 00</code></td><td>0, 0</td><td>Vorlauf, Nachlauf</td></tr>
+  <tr><td><code>10 00</code></td><td>4096</td><td>Nennblockgröße</td></tr>
+  <tr><td><code>19 19 … 7B E7</code></td><td></td><td>FNV-1a über alle 16 384 Werte</td></tr>
+  <tr><td><code>34 0F</code></td><td></td><td>CRC-16 über die Bytes 0 bis 33</td></tr>
+</table>
+<p>Dauer: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8192</mn><mo>/</mo><mn>48</mn><mspace width="0.1667em"/><mn>000</mn><mo>=</mo><mn>0,171</mn></mrow><annotation encoding="application/x-tex">8192 / 48\,000 = 0{,}171</annotation></semantics></math> s. Unmittelbar dahinter beginnt Rahmen 0 mit <code>FF 5A 00 00 1B F6</code>: Synchronwort und eine Rumpflänge von 7158 Byte. Der zweite Rahmen beginnt also bei Byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>36</mn><mo>+</mo><mn>6</mn><mo>+</mo><mn>7158</mn><mo>+</mo><mn>2</mn><mo>=</mo><mn>7202</mn></mrow><annotation encoding="application/x-tex">36 + 6 + 7158 + 2 = 7202</annotation></semantics></math>.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><code>Summenprobe</code> (30 Prüfungen): CRC-16/BUYPASS über „123456789“ ist <code>FEE8</code>; über nichts null; ein einzelnes Nullbyte bleibt null (das wäre bei einer gespiegelten Variante anders); <code>A5</code> gibt <code>03DE</code>. Die Tafelrechnung wird gegen eine Bit-für-Bit-Rechnung ohne Tafel verglichen, für die Längen 0 bis 40 und für Abschnitte mitten in den Daten – eine falsch aufgebaute Tafel ist in sich schlüssig und fällt nur so auf. Jedes einzelne gekippte Bit eines 8-Byte-Blocks ändert die Summe, zwei vertauschte Bytes ebenso.</li>
+  <li>Dieselbe Probe für FNV-1a: über nichts der Anfangswert; ein, zwei und fünf Kanäle gegen eine geradeheraus geschriebene Fassung; vertauschte Kanäle, verschränkt gegen hintereinander, jeder einzelne geänderte Wert, das höchste Byte und negative Werte ändern die Summe.</li>
+  <li><code>Umlaufprobe</code>: ein verfälschtes Byte im Kopf (Byte 8) wird erkannt; ein verfälschtes Byte in einem Rahmen führt im strengen Betrieb zum Abbruch, im nachsichtigen zum Überspringen, und die Werte ab Index 12 000 stimmen danach wieder.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li><b>Feldbreiten:</b> Kanalzahl und Wortbreite je ein Byte, Nennblockgröße, Vor- und Nachlauf je 16 Bit. Der Kodierer lässt Blockgrößen von 16 bis 65 535 zu.</li>
+  <li><b>Gesamtwerte</b> stehen mit 64 Bit im Kopf, der Dekodierer rechnet aber mit <code>int</code>; mehr als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{31}-1</annotation></semantics></math> Werte je Kanal liest er nicht.</li>
+  <li><b>Ungleich lange Kanäle</b> (Befund der <code>Summenprobe</code>): <code>ueberWerte</code> nimmt die Länge aus dem ersten Kanal. Ein kürzerer zweiter Kanal führt zu einem Zugriff ins Leere, ein längerer wird stillschweigend abgeschnitten. Aus dem Kodierer kommen immer gleich lange Kanäle.</li>
+  <li><b>Im nachsichtigen Betrieb</b> wird eine nicht passende Gesamtprüfsumme nicht gemeldet; Auskunft gibt nur <code>uebersprungeneRahmen()</code> oder ein Nachrechnen mit <code>pruefsummePasst</code>.</li>
+  <li>Eine CRC-16 erkennt nicht jede Verfälschung: Für ein zufälliges Fehlermuster passt sie mit der Wahrscheinlichkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-16}</annotation></semantics></math> trotzdem. Die Gesamtprüfsumme fängt einen solchen Fall im strengen Betrieb noch ab.</li>
+  <li>Bisher gibt es nur die Verfahren 1 und 2. Andere Kennungen weist der Dekodierer ab; ein verlustbehaftetes Verfahren mit MDCT-Koeffizienten ist im Format noch nicht vorgesehen.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>W. W. Peterson, D. T. Brown: Cyclic Codes for Error Detection. Proceedings of the IRE 49 (1961).</li>
+</ul>
+
+<footer>
+envisionz-framework-audiocodec · Hintergrund zu <a href="index.html#strom">Stromformat EVAS</a> · zurück: <a href="rahmen.html">Rahmen und Teilrahmen</a> · Proben: <code>Summenprobe</code>, <code>Umlaufprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model search – grid, random search and k-fold cross-validation – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#core">The network</a>
+<a class="unterseite" href="netz.html">Network</a>
+<a class="rubrik" href="index.html#train">Training</a>
+<a class="unterseite" href="optimierer.html">Optimisers</a>
+<a class="unterseite" href="training.html">Training</a>
+<a class="rubrik" href="index.html#data">Data, normalisation, metrics</a>
+<a class="unterseite" href="daten.html">Data and metrics</a>
+<a class="rubrik" href="index.html#model">Surrogate model, ensemble, storage</a>
+<a class="unterseite" href="ersatzmodell.html">Surrogate model</a>
+<a class="rubrik" href="index.html#search">Model search</a>
+<a class="unterseite aktiv" href="modellsuche.html">Model search</a>
+<a class="rubrik" href="index.html#analysis">Sensitivity analysis</a>
+<a class="unterseite" href="sensitivitaet.html">Sensitivity</a>
+<a class="rubrik" href="index.html#api">Interface for other applications</a>
+<a class="rubrik" href="index.html#ocr">Character recognition without Tesseract</a>
+<a class="unterseite" href="ocr.html">Glyph recognition</a>
+<a class="rubrik" href="index.html#seq">Sequences without alignment: CTC</a>
+<a class="unterseite" href="ctc.html">CTC</a>
+<a class="unterseite" href="strahlsuche.html">Beam search</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-neural</a> › Model search – grid, random search and k-fold cross-validation</span><a class="sprachwahl" href="../../de/neural/modellsuche.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural · de.envisionz.neural.search</div>
+  <h1>Model search – grid, random search and k-fold cross-validation</h1>
+  <p class="unter">The computation behind <code>ModelSearch</code>: how candidates arise from layer widths, activations, learning rates and weight decay, how each is rated with cross-validation and the candidates are computed in parallel, and how the best one becomes the finished surrogate model – with pseudocode following the source, a recomputed run, checks and limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>How many layers, how wide, which activation, which learning rate? A network that is too small cannot represent the map, one that is too large learns the measurement noise as well, and an unsuitable learning rate spoils both. The answer is not to be guessed but measured: train each candidate and rate it on data it has not seen. The model FANN chose the network size with cascade training, which adds neurons one by one; <code>ModelSearch</code> replaces that with today's usual procedure – a list of candidates, each rated with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>-fold cross-validation, the result sorted by mean validation loss.</p>
+<p>A candidate (<code>ModelSpec</code>) consists of the widths of the hidden layers, one activation for all hidden layers, a learning rate and a weight decay. The output layer is always LINEAR, the optimiser always AdamW.</p>
+
+<h2 id="kandidaten">Candidates: grid and random search</h2>
+<p><code>grid</code> forms the Cartesian product of all options; with three topologies, two activations, three learning rates and two decay values that makes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>⋅</mo><mn>2</mn><mo>⋅</mo><mn>3</mn><mo>⋅</mo><mn>2</mn><mo>=</mo><mn>36</mn></mrow><annotation encoding="application/x-tex">3 \cdot 2 \cdot 3 \cdot 2 = 36</annotation></semantics></math> candidates, each with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> training runs. <code>randomSearch</code> instead draws a fixed number of candidates: topology and activation uniformly from the options, learning rate and weight decay <b>log-uniformly</b> between the smallest and the largest value given,</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">η</mi><mo>=</mo><mspace width="0.1667em"/><mi>exp</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">η</mi></mrow><mrow><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo></mrow></msub><mo>+</mo><mi>u</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">η</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo></mrow></msub><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">η</mi></mrow><mrow><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>u</mi><mo>∼</mo><mi>U</mi><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\eta = \exp\bigl(\ln \eta_\min + u\,(\ln \eta_\max - \ln \eta_\min)\bigr), \qquad u \sim U(0, 1).</annotation></semantics></math></p>
+<p>Logarithmically, because for learning rates the step from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-4}</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math> matters as much as the one from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-2}</annotation></semantics></math>. The advantage of random search shows when only a few quantities really matter: a grid with nine candidates tries only three different learning rates, nine random candidates try nine.</p>
+
+<figure>
+<svg viewBox="0 0 600 250" width="600" font-family="sans-serif" font-size="13">
+  <rect x="50" y="34" width="220" height="166" fill="none" stroke="#c9d1dc"/>
+  <text x="160.0" y="20" fill="#1f5f8b" text-anchor="middle">grid 3 × 3</text>
+  <line x1="50.0" y1="200" x2="50.0" y2="205" stroke="#c9d1dc"/><text x="50.0" y="219" fill="#5b6475" text-anchor="middle">10⁻⁴</text>
+  <line x1="160.0" y1="200" x2="160.0" y2="205" stroke="#c9d1dc"/><text x="160.0" y="219" fill="#5b6475" text-anchor="middle">10⁻³</text>
+  <line x1="270.0" y1="200" x2="270.0" y2="205" stroke="#c9d1dc"/><text x="270.0" y="219" fill="#5b6475" text-anchor="middle">10⁻²</text>
+  <line x1="45" y1="200.0" x2="50" y2="200.0" stroke="#c9d1dc"/><text x="42" y="204.0" fill="#5b6475" text-anchor="end">10⁻⁵</text>
+  <line x1="45" y1="144.7" x2="50" y2="144.7" stroke="#c9d1dc"/><text x="42" y="148.7" fill="#5b6475" text-anchor="end">10⁻⁴</text>
+  <line x1="45" y1="89.3" x2="50" y2="89.3" stroke="#c9d1dc"/><text x="42" y="93.3" fill="#5b6475" text-anchor="end">10⁻³</text>
+  <line x1="45" y1="34.0" x2="50" y2="34.0" stroke="#c9d1dc"/><text x="42" y="38.0" fill="#5b6475" text-anchor="end">10⁻²</text>
+  <text x="160.0" y="238" fill="#5b6475" text-anchor="middle">learning rate</text>
+  <circle cx="50.0" cy="200.0" r="4.5" fill="#1f5f8b"/>
+  <circle cx="50.0" cy="117.0" r="4.5" fill="#1f5f8b"/>
+  <circle cx="50.0" cy="34.0" r="4.5" fill="#1f5f8b"/>
+  <line x1="50.0" y1="192" x2="50.0" y2="200" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="160.0" cy="200.0" r="4.5" fill="#1f5f8b"/>
+  <circle cx="160.0" cy="117.0" r="4.5" fill="#1f5f8b"/>
+  <circle cx="160.0" cy="34.0" r="4.5" fill="#1f5f8b"/>
+  <line x1="160.0" y1="192" x2="160.0" y2="200" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="270.0" cy="200.0" r="4.5" fill="#1f5f8b"/>
+  <circle cx="270.0" cy="117.0" r="4.5" fill="#1f5f8b"/>
+  <circle cx="270.0" cy="34.0" r="4.5" fill="#1f5f8b"/>
+  <line x1="270.0" y1="192" x2="270.0" y2="200" stroke="#1f5f8b" stroke-width="2"/>
+  <rect x="350" y="34" width="220" height="166" fill="none" stroke="#c9d1dc"/>
+  <text x="460.0" y="20" fill="#1f5f8b" text-anchor="middle">random search, 9 candidates</text>
+  <line x1="350.0" y1="200" x2="350.0" y2="205" stroke="#c9d1dc"/><text x="350.0" y="219" fill="#5b6475" text-anchor="middle">10⁻⁴</text>
+  <line x1="460.0" y1="200" x2="460.0" y2="205" stroke="#c9d1dc"/><text x="460.0" y="219" fill="#5b6475" text-anchor="middle">10⁻³</text>
+  <line x1="570.0" y1="200" x2="570.0" y2="205" stroke="#c9d1dc"/><text x="570.0" y="219" fill="#5b6475" text-anchor="middle">10⁻²</text>
+  <line x1="345" y1="200.0" x2="350" y2="200.0" stroke="#c9d1dc"/><text x="342" y="204.0" fill="#5b6475" text-anchor="end">10⁻⁵</text>
+  <line x1="345" y1="144.7" x2="350" y2="144.7" stroke="#c9d1dc"/><text x="342" y="148.7" fill="#5b6475" text-anchor="end">10⁻⁴</text>
+  <line x1="345" y1="89.3" x2="350" y2="89.3" stroke="#c9d1dc"/><text x="342" y="93.3" fill="#5b6475" text-anchor="end">10⁻³</text>
+  <line x1="345" y1="34.0" x2="350" y2="34.0" stroke="#c9d1dc"/><text x="342" y="38.0" fill="#5b6475" text-anchor="end">10⁻²</text>
+  <text x="460.0" y="238" fill="#5b6475" text-anchor="middle">learning rate</text>
+  <circle cx="440.2" cy="165.5" r="4.5" fill="#9a6400"/>
+  <line x1="440.2" y1="192" x2="440.2" y2="200" stroke="#9a6400" stroke-width="2"/>
+  <circle cx="562.9" cy="199.0" r="4.5" fill="#9a6400"/>
+  <line x1="562.9" y1="192" x2="562.9" y2="200" stroke="#9a6400" stroke-width="2"/>
+  <circle cx="556.8" cy="42.8" r="4.5" fill="#9a6400"/>
+  <line x1="556.8" y1="192" x2="556.8" y2="200" stroke="#9a6400" stroke-width="2"/>
+  <circle cx="437.4" cy="142.3" r="4.5" fill="#9a6400"/>
+  <line x1="437.4" y1="192" x2="437.4" y2="200" stroke="#9a6400" stroke-width="2"/>
+  <circle cx="461.4" cy="180.7" r="4.5" fill="#9a6400"/>
+  <line x1="461.4" y1="192" x2="461.4" y2="200" stroke="#9a6400" stroke-width="2"/>
+  <circle cx="495.2" cy="174.0" r="4.5" fill="#9a6400"/>
+  <line x1="495.2" y1="192" x2="495.2" y2="200" stroke="#9a6400" stroke-width="2"/>
+  <circle cx="380.7" cy="84.6" r="4.5" fill="#9a6400"/>
+  <line x1="380.7" y1="192" x2="380.7" y2="200" stroke="#9a6400" stroke-width="2"/>
+  <circle cx="351.1" cy="113.2" r="4.5" fill="#9a6400"/>
+  <line x1="351.1" y1="192" x2="351.1" y2="200" stroke="#9a6400" stroke-width="2"/>
+  <circle cx="381.2" cy="120.0" r="4.5" fill="#9a6400"/>
+  <line x1="381.2" y1="192" x2="381.2" y2="200" stroke="#9a6400" stroke-width="2"/>
+</svg>
+<figcaption>Nine candidates in the plane learning rate × weight decay (both logarithmic, vertically the weight decay from 10⁻⁵ to 10⁻²). Left the 3 × 3 grid, right nine candidates from <code>ModelSearch.randomSearch</code> with seed 1. The ticks at the bottom edge show how many different learning rates are tried: three versus nine.</figcaption>
+</figure>
+
+<div class="hinweis"><b>Framework convention:</b> Random search draws with replacement and skips duplicates; it stops after at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>20</mn><mo>⋅</mo><mtext>count</mtext><mo>,</mo><mn>100</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(20 \cdot \text{count}, 100)</annotation></semantics></math> attempts, even if fewer candidates were found. If the largest decay value is at most 0, the decay is always 0. If the smallest is at most 0, the drawn value is replaced by 0 with probability ½ – training without decay thus remains a separate option that would otherwise not occur on a logarithmic axis. The initial values follow the activation: Xavier for TANH and SIGMOID, He otherwise.</div>
+
+<h2 id="kreuzvalidierung">Rating with k-fold cross-validation</h2>
+<p>The (already normalised) data are split once into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> folds, the same for all candidates (see <a href="daten.html#aufteilung">Data</a>). For every candidate and every fold <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math>, a fresh network is built, trained on the other <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k-1</annotation></semantics></math> folds and rated on fold <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math>. From the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> validation losses <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><annotation encoding="application/x-tex">V_f</annotation></semantics></math> follow</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>V</mi></mrow><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>k</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>f</mi></mrow></munder><msub><mrow><mi>V</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>V</mi></mrow></msub><mo>=</mo><msqrt><mfrac><mrow><mn>1</mn></mrow><mrow><mi>k</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>f</mi></mrow></munder><mo stretchy="false">(</mo><msub><mrow><mi>V</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>−</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>V</mi></mrow><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></msqrt><mo>,</mo><mspace width="2em"/><mi>Q</mi><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>k</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>f</mi></mrow></munder><msub><mrow><mi>q</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">\bar V = \frac1k \sum_f V_f, \qquad \sigma_V = \sqrt{\frac1k \sum_f (V_f - \bar V)^2}, \qquad Q = \frac1k \sum_f q_f ,</annotation></semantics></math></p>
+<p>with the quality <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>q</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><annotation encoding="application/x-tex">q_f</annotation></semantics></math>: for regression the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">R^2</annotation></semantics></math> on the fold averaged over the outputs, for classification the accuracy. Sorting is ascending by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>V</mi></mrow></mrow><annotation encoding="application/x-tex">\bar V</annotation></semantics></math> – the best model first. The spread <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>V</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_V</annotation></semantics></math> shows how much the verdict depends on the split; if two candidates lie within one spread of each other, their order is chance.</p>
+
+<h3>Pseudocode – <code>ModelSearch.kFoldSearch(data, specs, k, cfg, seed, threads, listener, stop, classification)</code></h3>
+<pre class="pseudo"><b>check</b> specs not empty
+folds ← data.kFolds(k, seed)                           <i>the same for all candidates</i>
+pool ← thread pool with max(1, threads) threads
+<b>for</b> each candidate s (index i), as a separate task:
+    <b>if</b> stop():  <b>return</b> none                              <i>do not even start</i>
+    specSeed ← seed · 31 + i · 7919
+    <b>for</b> f ← 0 <b>to</b> k−1:
+        net ← build(s, seed specSeed + f)              <i>Xavier/He by activation, output LINEAR</i>
+        loss ← classification ? softmax cross-entropy : MSE
+        r ← Trainer.train(net, folds[f].training, folds[f].validation,
+                          loss, AdamW(s.learningRate, s.decay), cfg, stop)
+        <b>if</b> r.cancelled:  <b>return</b> none                    <i>incomplete: discard</i>
+        V[f] ← r.valLoss
+        q[f] ← classification ? accuracy : mean of R² per output
+    result ← (s, mean(V), spread(V) with divisor k, mean(q))
+    listener.done(finished + 1, total, result)         <i>from the worker thread</i>
+collect all results ≠ none
+sort ascending by mean(V)
+<b>return</b> list</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/search/ModelSearch.java</code>. <code>stop</code> is polled before each candidate and – through the trainer – after each epoch. On cancellation, the candidates fully rated so far come back sorted.</p>
+<div class="hinweis"><b>Framework convention:</b> Parallelism runs over the <b>candidates</b>, not over the folds: each task computes its <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> folds one after the other with its own networks. That keeps thread safety simple – no network is shared, the folds are only read. Each candidate has its own seed computed from seed and index; the result therefore does not depend on the number of threads or on the order in which they finish. With early stopping on, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><annotation encoding="application/x-tex">V_f</annotation></semantics></math> is the loss of the restored best network.</div>
+
+<h2 id="abschluss">From the best candidate to the surrogate model</h2>
+<p><code>trainFinal(rawIn, rawTarget, kind, spec, cfg, fraction, seed)</code> trains the chosen candidate one last time on raw data and returns a finished <a href="ersatzmodell.html">surrogate model</a>:</p>
+<pre class="pseudo">normIn ← Normalizer.fit(kind, rawIn);   normTarget ← Normalizer.fit(kind, rawTarget)
+all ← DataSet.of(normIn.transform(rawIn), normTarget.transform(rawTarget))
+<b>if</b> fraction ≥ 1:
+    <b>check</b> no early stopping requested                   <i>otherwise exception</i>
+    training ← all;  validation ← none
+<b>else</b>:  (training, validation) ← all.split(fraction, seed)
+net ← build(spec, seed);  Trainer.train(…, MSE, AdamW(spec.learningRate, spec.decay), cfg)
+model ← SurrogateModel.of(net, normIn, normTarget)
+metadata: created, spec, epochs_run, train_loss; with validation also val_loss, r2_val
+<b>return</b> model</pre>
+<p class="quelle">Source: <code>envisionz-framework-neural/src/de/envisionz/neural/search/ModelSearch.java</code>, method <code>trainFinal</code>. Numbers in the metadata use a point as decimal separator regardless of the locale.</p>
+
+<h2 id="beispiel">Worked example</h2>
+<p>The run from <code>TestMain</code> [8]: 400 points of the map function <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>sin</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>3</mn><mi>x</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2</mn><mi>y</mi><mo stretchy="false">)</mo><mo>+</mo><mn>0.5</mn><mi>x</mi></mrow><annotation encoding="application/x-tex">\sin(3x)\cos(2y) + 0.5x</annotation></semantics></math> with noise 0.02, normalised; two candidates – one hidden layer of 4 neurons against two of 32 each –, both SILU, learning rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2 \cdot 10^{-3}</annotation></semantics></math>, no decay; 3 folds, 150 epochs, batch 32, 4 threads.</p>
+<table>
+  <tr><th>Candidate</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>V</mi></mrow></mrow><annotation encoding="application/x-tex">\bar V</annotation></semantics></math> (MSE, normalised)</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>V</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_V</annotation></semantics></math></th><th>mean <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">R^2</annotation></semantics></math></th></tr>
+  <tr><td>[32, 32] SILU</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3.989</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3.989 \cdot 10^{-3}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>9.3</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">9.3 \cdot 10^{-4}</annotation></semantics></math></td><td>0.9960</td></tr>
+  <tr><td>[4] SILU</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.837</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.837 \cdot 10^{-1}</annotation></semantics></math></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.3</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.3 \cdot 10^{-2}</annotation></semantics></math></td><td>0.7166</td></tr>
+</table>
+<p>The small network has <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>⋅</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn>17</mn></mrow><annotation encoding="application/x-tex">2\cdot4+4+4+1 = 17</annotation></semantics></math> parameters and cannot represent the two waves in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math>; it stays at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>≈</mo><mn>0.72</mn></mrow><annotation encoding="application/x-tex">R^2 \approx 0.72</annotation></semantics></math>. The result is sorted, [32, 32] comes first. The six training runs took 0.6 s together. The second search of the test – classification of two classes separated by the diagonal <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">x_1 + x_2 = 1</annotation></semantics></math>, with 300 points – yielded [16, 16] SILU as the best candidate with an accuracy of 0.9867 over the folds.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>Search</b> (<code>TestMain</code> [8]): the result must be sorted ascending by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>V</mi></mrow></mrow><annotation encoding="application/x-tex">\bar V</annotation></semantics></math>, the best candidate must reach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo>&gt;</mo><mn>0.98</mn></mrow><annotation encoding="application/x-tex">Q &gt; 0.98</annotation></semantics></math> and be the two-layer topology.</li>
+  <li><b>Cancellation</b>: with a cancel request set immediately, the search must return an empty list, without exception and without hanging.</li>
+  <li><b>Classification</b>: the search with cross-entropy and accuracy must rate both candidates, and the best must be above 0.9.</li>
+  <li><b>Final training</b> (<code>TestMain</code> [7] and [9]): <code>trainFinal</code> delivers a model with <code>r2_val</code> in the metadata that computes bit-identically after saving and loading; from database data it reaches <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>&gt;</mo><mn>0.98</mn></mrow><annotation encoding="application/x-tex">R^2 &gt; 0.98</annotation></semantics></math>.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Parallel over candidates only. With few candidates and many folds, threads stay idle.</li>
+  <li>All candidates run with the same <code>TrainConfig</code> – same number of epochs, same batch. A candidate that would need more epochs is disadvantaged; early stopping mitigates this.</li>
+  <li>The cross-validation quality of the best candidate is slightly optimistic: it was chosen precisely because it did well on these folds. An independent test set not involved in the search gives a more honest picture.</li>
+  <li>With grid data, random folding flatters the model (see <a href="daten.html#grenzen">Data</a>).</li>
+  <li>Only one activation for all hidden layers is searched, no batch size, no dropout.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>J. Bergstra, Y. Bengio: Random Search for Hyper-Parameter Optimization. JMLR 13 (2012).</li>
+  <li>T. Hastie, R. Tibshirani, J. Friedman: The Elements of Statistical Learning. 2nd edition, Springer, 2009 (section 7.10, cross-validation).</li>
+</ul>
+
+<footer>
+envisionz-framework-neural · Background to <a href="index.html#search">Model search</a> · Checks: <code>TestMain</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge-preserving denoising – bilateral filter and Perona-Malik – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag aktiv" href="index.html">framework-image</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#schnittstelle">The common interface</a>
+<a class="rubrik" href="index.html#entrauschen">Edge-preserving denoising</a>
+<a class="unterseite aktiv" href="bilateral-diffusion.html">Bilateral, Perona-Malik</a>
+<a class="unterseite" href="totalvariation.html">Total variation</a>
+<a class="rubrik" href="index.html#stoerungen">Removing defects</a>
+<a class="unterseite" href="kerbfilter.html">Notch filter</a>
+<a class="unterseite" href="median-sprenkel.html">Median, speckle</a>
+<a class="rubrik" href="index.html#morphologie">Morphology</a>
+<a class="unterseite" href="morphologie.html">Background</a>
+<a class="rubrik" href="index.html#struktur">Texture and direction</a>
+<a class="unterseite" href="cartoon-textur.html">Cartoon-texture</a>
+<a class="unterseite" href="strukturtensor.html">Orientation field</a>
+<a class="rubrik" href="index.html#stabilisierung">Image stabilisation</a>
+<a class="unterseite" href="glaettung.html">Background</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-image</a> › Edge-preserving denoising – bilateral filter and Perona-Malik</span><a class="sprachwahl" href="../../de/image/bilateral-diffusion.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-image · envisionz.image</div>
+  <h1>Edge-preserving denoising – bilateral filter and Perona-Malik</h1>
+  <p class="unter">The computation behind <code>Bilateral</code> and <code>PeronaMalik</code>: why an ordinary mean smears edges, how a second weighting by brightness difference prevents this, how heat conduction that is inhibited at edges achieves the same step by step, pseudocode following the source, worked example, testing and limits.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>An image from an old video tape or a scan carries noise: every pixel deviates randomly by a few levels from its true value. The obvious counter-measure is averaging over the neighbourhood. For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> independent values the spread of the mean drops by the factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi>m</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{m}</annotation></semantics></math> – over a 7×7 window, to one seventh.</p>
+<p>The ordinary mean has a price, though: it also averages <b>across edges</b>. If a pixel lies just beside the boundary of a bright object, the bright neighbours enter its mean; a sharp jump becomes a ramp as wide as the window. Yet that is exactly where the information that matters sits – outlines, lettering, the lines of a chart.</p>
+<p>Both methods on this page solve this with the same basic idea: <b>exchange only between points that look alike.</b> A difference of a few levels is probably noise and is evened out; a difference of a hundred levels is probably an edge and is left alone. The bilateral filter implements this in a single pass as a weighting, Perona-Malik as a sequence of small exchange steps.</p>
+<p>The third method of this section, total-variation denoising, is based on an optimisation problem and has its own page: <a href="totalvariation.html">Total variation after Chambolle</a>.</p>
+
+<h2 id="bilateral">The bilateral filter</h2>
+<h3>Definition</h3>
+<p>For a pixel <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> with value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>p</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_p</annotation></semantics></math> a weighted mean is formed over the square window <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>N</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">(</mo><mi>p</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">N_r(p)</annotation></semantics></math> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mi>r</mi><mo>+</mo><mn>1</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">(2r+1)^2</annotation></semantics></math> points. Each neighbour <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math> receives two weights: one by <b>position</b>, one by <b>value</b>.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>u</mi></mrow><mrow><mi>p</mi></mrow></msub><mo>=</mo><mfrac><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>q</mi><mo>∈</mo><msub><mrow><mi>N</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">(</mo><mi>p</mi><mo stretchy="false">)</mo></mrow></munder><msub><mrow><mi>w</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">(</mo><mi>q</mi><mo>−</mo><mi>p</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>w</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>q</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>p</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>f</mi></mrow><mrow><mi>q</mi></mrow></msub></mrow><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>q</mi><mo>∈</mo><msub><mrow><mi>N</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">(</mo><mi>p</mi><mo stretchy="false">)</mo></mrow></munder><msub><mrow><mi>w</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">(</mo><mi>q</mi><mo>−</mo><mi>p</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>w</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>q</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>p</mi></mrow></msub><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex">u_p = \frac{\sum_{q \in N_r(p)} w_s(q-p)\, w_r(f_q - f_p)\, f_q}{\sum_{q \in N_r(p)} w_s(q-p)\, w_r(f_q - f_p)}</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">Δ</mi><mi>x</mi><mo>,</mo><mi mathvariant="normal">Δ</mi><mi>z</mi><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>exp</mi><mo>⁡</mo><mspace width="0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mo>−</mo><mfrac><mrow><mi mathvariant="normal">Δ</mi><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mi mathvariant="normal">Δ</mi><msup><mrow><mi>z</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mn>2</mn><msubsup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>s</mi></mrow><mrow><mn>2</mn></mrow></msubsup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="2em"/><msub><mrow><mi>w</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>exp</mi><mo>⁡</mo><mspace width="0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mo>−</mo><mfrac><mrow><msup><mrow><mi>d</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mn>2</mn><msubsup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msubsup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">w_s(\Delta x, \Delta z) = \exp\left(-\frac{\Delta x^2 + \Delta z^2}{2\sigma_s^2}\right), \qquad w_r(d) = \exp\left(-\frac{d^2}{2\sigma_r^2}\right)</annotation></semantics></math></p>
+<p>Here <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_s</annotation></semantics></math> is the width of the spatial weighting in pixels (<code>sigmaOrt</code>) and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_r</annotation></semantics></math> the width of the brightness weighting in grey levels (<code>sigmaWert</code>). If <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>r</mi></mrow></msub></mrow><annotation encoding="application/x-tex">w_r</annotation></semantics></math> were one everywhere, an ordinary Gaussian mean would remain. The range weighting makes the filter <b>non-linear</b>: the weight of a neighbour depends on the image itself.</p>
+<p>How strongly the range weighting separates is shown by a small table with the defaults <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">\sigma_r = 12</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\sigma_s = 3</annotation></semantics></math>:</p>
+<table>
+  <tr><th>Brightness difference <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">w_r(d)</annotation></semantics></math></th><th>Distance² <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mi mathvariant="normal">Δ</mi><msup><mrow><mi>z</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\Delta x^2+\Delta z^2</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">w_s</annotation></semantics></math></th></tr>
+  <tr><td>0</td><td>1.000</td><td>1 (direct neighbour)</td><td>0.946</td></tr>
+  <tr><td>5</td><td>0.917</td><td>2 (diagonal)</td><td>0.895</td></tr>
+  <tr><td>12</td><td>0.607</td><td>9 (three points away)</td><td>0.607</td></tr>
+  <tr><td>24</td><td>0.135</td><td>18 (window corner at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">r = 3</annotation></semantics></math>)</td><td>0.368</td></tr>
+  <tr><td>60</td><td>0.000004</td><td></td><td></td></tr>
+</table>
+<p>A neighbour on the other side of an edge of 60 levels thus counts roughly two hundred thousand times less than one on the same side – it practically drops out. Conversely, noise with a spread of 5 levels is evened out almost as by an ordinary mean.</p>
+<div class="hinweis"><b>Convention in the framework:</b> The window is a square of radius <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math>, not a circle; the spatial weighting is not truncated, the window limits it. With the defaults <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">r = 3</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\sigma_s = 3</annotation></semantics></math> the window corner still has the weight 0.37 – here the radius determines the reach more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_s</annotation></semantics></math>. At the image border the edge value is continued (index clamped to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mi>w</mi><mo>−</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, w-1]</annotation></semantics></math> or <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mi>h</mi><mo>−</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, h-1]</annotation></semantics></math>). The constructor enforces <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>≥</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r \ge 1</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>≥</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">\sigma_s \ge 0.1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub><mo>≥</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">\sigma_r \ge 0.1</annotation></semantics></math>.</div>
+
+<h3>Pseudocode – <code>Bilateral.anwenden(e, w, h)</code></h3>
+<pre class="pseudo"><i>// spatial weights once in advance, for the whole window</i>
+<b>for</b> dz ← −r <b>to</b> r, dx ← −r <b>to</b> r:
+    pos[dz, dx] ← exp(−(dx² + dz²) / (2·σs²))
+denominator ← 2·σr²
+
+<b>for</b> each pixel (x, z):
+    centre ← e[z, x];  sum ← 0;  weight ← 0
+    <b>for</b> dz ← −r <b>to</b> r:
+        zz ← clamp(z + dz, 0, h−1)             <i>continue the edge value</i>
+        <b>for</b> dx ← −r <b>to</b> r:
+            xx ← clamp(x + dx, 0, w−1)
+            v ← e[zz, xx];  d ← v − centre
+            g ← pos[dz, dx] · exp(−d² / denominator)
+            sum ← sum + g·v;  weight ← weight + g
+    out[z, x] ← <b>if</b> weight &gt; 0 <b>then</b> sum/weight <b>else</b> centre
+<b>return</b> out                                     <i>input stays unchanged</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-image/src/envisionz/image/Bilateral.java</code>. The point itself is always in the window with weight one; the denominator is therefore never zero and the fallback does not apply in practice.</p>
+<p>Because all weights are positive, the result is a <b>convex combination</b> of the neighbour values: it always lies between the smallest and the largest value in the window. No new extreme values, overshoots or halos at edges arise.</p>
+
+<h2 id="perona-malik">Anisotropic diffusion after Perona and Malik</h2>
+<h3>From heat conduction to inhibited heat conduction</h3>
+<p>If brightness is thought of as temperature, an ordinary Gaussian mean is nothing but heat conduction: after the time <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> the heat equation</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi>∂</mi><mi>u</mi></mrow><mrow><mi>∂</mi><mi>t</mi></mrow></mfrac><mo>=</mo><mi>∇</mi><mo>⋅</mo><mo stretchy="false">(</mo><mi>∇</mi><mi>u</mi><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">Δ</mi><mi>u</mi></mrow><annotation encoding="application/x-tex">\frac{\partial u}{\partial t} = \nabla \cdot (\nabla u) = \Delta u</annotation></semantics></math></p>
+<p>has convolved the initial image exactly with a Gaussian of width <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mn>2</mn><mi>t</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{2t}</annotation></semantics></math>. Heat flows from warm to cold, proportional to the gradient, and equally well everywhere – across edges too.</p>
+<p>Perona and Malik make the conductivity depend on the gradient itself:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi>∂</mi><mi>u</mi></mrow><mrow><mi>∂</mi><mi>t</mi></mrow></mfrac><mo>=</mo><mi>∇</mi><mo>⋅</mo><mo stretchy="false">(</mo><mi>g</mi><mo stretchy="false">(</mo><mo>|</mo><mi>∇</mi><mi>u</mi><mo>|</mo><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>∇</mi><mi>u</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>g</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>1</mn><mo>+</mo><msup><mrow><mi>s</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>/</mo><msup><mrow><mi>K</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex">\frac{\partial u}{\partial t} = \nabla \cdot \big(g(|\nabla u|)\, \nabla u\big), \qquad g(s) = \frac{1}{1 + s^2/K^2}</annotation></semantics></math></p>
+<p>For a small gradient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>≈</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">g \approx 1</annotation></semantics></math> and the equation behaves like heat conduction. For a gradient far above the threshold <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi></mrow><annotation encoding="application/x-tex">g</annotation></semantics></math> goes to zero – hardly anything flows across an edge. What matters is the <b>flux</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>=</mo><mi>g</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>s</mi></mrow><annotation encoding="application/x-tex">\Phi(s) = g(s)\,s</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mi>d</mi></mrow><mrow><mn>1</mn><mo>+</mo><msup><mrow><mi>d</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>/</mo><msup><mrow><mi>K</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">Φ</mi><mo>'</mo><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mn>1</mn><mo>−</mo><msup><mrow><mi>d</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>/</mo><msup><mrow><mi>K</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msup><mrow><mi>d</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>/</mo><msup><mrow><mi>K</mi></mrow><mrow><mn>2</mn></mrow></msup><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex">\Phi(d) = \frac{d}{1 + d^2/K^2}, \qquad \Phi'(d) = \frac{1 - d^2/K^2}{(1 + d^2/K^2)^2}</annotation></semantics></math></p>
+
+<figure>
+<svg viewBox="0 0 600 245" width="600" font-family="sans-serif" font-size="13">
+  <line x1="60" y1="157.5" x2="560" y2="157.5" stroke="#c9d1dc"/>
+  <text x="52" y="161.5" fill="#5b6475" text-anchor="end">3</text>
+  <line x1="60" y1="115.0" x2="560" y2="115.0" stroke="#c9d1dc"/>
+  <text x="52" y="119.0" fill="#5b6475" text-anchor="end">6</text>
+  <line x1="60" y1="72.5" x2="560" y2="72.5" stroke="#c9d1dc"/>
+  <text x="52" y="76.5" fill="#5b6475" text-anchor="end">9</text>
+  <line x1="60" y1="30.0" x2="560" y2="30.0" stroke="#c9d1dc"/>
+  <text x="52" y="34.0" fill="#5b6475" text-anchor="end">12</text>
+  <text x="60.0" y="218" fill="#5b6475" text-anchor="middle">0</text>
+  <text x="160.0" y="218" fill="#5b6475" text-anchor="middle">12</text>
+  <text x="260.0" y="218" fill="#5b6475" text-anchor="middle">24</text>
+  <text x="360.0" y="218" fill="#5b6475" text-anchor="middle">36</text>
+  <text x="460.0" y="218" fill="#5b6475" text-anchor="middle">48</text>
+  <text x="560.0" y="218" fill="#5b6475" text-anchor="middle">60</text>
+  <line x1="60" y1="200" x2="560" y2="200" stroke="#5b6475"/>
+  <line x1="60" y1="200" x2="60" y2="22" stroke="#5b6475"/>
+  <line x1="60.0" y1="200.0" x2="160.0" y2="30.0" stroke="#5b6475" stroke-dasharray="5,4"/>
+  <polyline points="60.0,200.0 64.2,192.9 68.3,185.9 72.5,179.1 76.7,172.4 80.8,166.1 85.0,160.0 89.2,154.3 93.3,149.0 97.5,144.1 101.7,139.6 105.8,135.6 110.0,132.0 114.2,128.8 118.3,126.0 122.5,123.6 126.7,121.5 130.8,119.8 135.0,118.4 139.2,117.3 143.3,116.4 147.5,115.8 151.7,115.3 155.8,115.1 160.0,115.0 164.2,115.1 168.3,115.3 172.5,115.6 176.7,116.0 180.8,116.5 185.0,117.1 189.2,117.7 193.3,118.4 197.5,119.1 201.7,119.9 205.8,120.7 210.0,121.5 214.2,122.4 218.3,123.2 222.5,124.1 226.7,125.0 230.8,125.9 235.0,126.8 239.2,127.7 243.3,128.5 247.5,129.4 251.7,130.3 255.8,131.1 260.0,132.0 264.2,132.8 268.3,133.7 272.5,134.5 276.7,135.3 280.8,136.1 285.0,136.9 289.2,137.7 293.3,138.4 297.5,139.2 301.7,139.9 305.8,140.7 310.0,141.4 314.2,142.1 318.3,142.8 322.5,143.4 326.7,144.1 330.8,144.8 335.0,145.4 339.2,146.0 343.3,146.6 347.5,147.3 351.7,147.8 355.8,148.4 360.0,149.0 364.2,149.6 368.3,150.1 372.5,150.7 376.7,151.2 380.8,151.7 385.0,152.2 389.2,152.7 393.3,153.2 397.5,153.7 401.7,154.2 405.8,154.6 410.0,155.1 414.2,155.5 418.3,156.0 422.5,156.4 426.7,156.8 430.8,157.3 435.0,157.7 439.2,158.1 443.3,158.5 447.5,158.9 451.7,159.3 455.8,159.6 460.0,160.0 464.2,160.4 468.3,160.7 472.5,161.1 476.7,161.4 480.8,161.8 485.0,162.1 489.2,162.4 493.3,162.8 497.5,163.1 501.7,163.4 505.8,163.7 510.0,164.0 514.2,164.3 518.3,164.6 522.5,164.9 526.7,165.2 530.8,165.5 535.0,165.7 539.2,166.0 543.3,166.3 547.5,166.5 551.7,166.8 555.8,167.1 560.0,167.3" fill="none" stroke="#1f5f8b" stroke-width="2.2"/>
+  <line x1="160.0" y1="115.0" x2="160.0" y2="200" stroke="#9a6400" stroke-dasharray="3,3"/>
+  <circle cx="160.0" cy="115.0" r="4" fill="#9a6400"/>
+  <text x="172.5" y="107.0" fill="#9a6400">maximum K/2 at d = K = 12</text>
+  <text x="166.7" y="41.3" fill="#5b6475">linear heat flow: Φ = d</text>
+  <text x="343.3" y="140.5" fill="#1f5f8b">Φ(d) = d / (1 + d²/K²)</text>
+  <text x="560" y="236" fill="#5b6475" text-anchor="end">brightness difference d to the neighbour</text>
+  <text x="16" y="16" fill="#5b6475">flux Φ</text>
+</svg>
+<figcaption>The flux between two neighbours at the default threshold <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">K = 12</annotation></semantics></math>, computed from the formula in the code. Up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mi>K</mi></mrow><annotation encoding="application/x-tex">d = K</annotation></semantics></math> it grows as in ordinary heat conduction, beyond that it falls again: a large jump – an edge – exchanges less than a small one.</figcaption>
+</figure>
+
+<p>The flux has its maximum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">K/2</annotation></semantics></math> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mi>K</mi></mrow><annotation encoding="application/x-tex">d = K</annotation></semantics></math> and decreases beyond. This has a remarkable consequence: for differences below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> the method smooths; above it, a steeper step exchanges <em>less</em> than a flat one – an edge is not only spared, it can even sharpen slightly. The threshold <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> is thus the boundary between "still noise" and "already an edge" and belongs in the order of magnitude of the noise, not of the edges.</p>
+<table>
+  <tr><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">K = 12</annotation></semantics></math></th><th>Conductivity <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi></mrow><annotation encoding="application/x-tex">g</annotation></semantics></math></th><th>Flux <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Φ</mi></mrow><annotation encoding="application/x-tex">\Phi</annotation></semantics></math></th></tr>
+  <tr><td>2</td><td>0.973</td><td>1.95</td></tr>
+  <tr><td>5</td><td>0.852</td><td>4.26</td></tr>
+  <tr><td>12</td><td>0.500</td><td>6.00</td></tr>
+  <tr><td>24</td><td>0.200</td><td>4.80</td></tr>
+  <tr><td>60</td><td>0.038</td><td>2.31</td></tr>
+  <tr><td>120</td><td>0.010</td><td>1.19</td></tr>
+</table>
+
+<h3>The discretisation</h3>
+<p>The equation is implemented as by Perona and Malik themselves: explicit in time, with the differences to the four direct neighbours instead of a gradient magnitude. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>d</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msub><mrow><mi>u</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><msub><mrow><mi>u</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">d_j = u_j - u_i</annotation></semantics></math> for the neighbours left, right, above and below, one step reads</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msubsup><mrow><mi>u</mi></mrow><mrow><mi>i</mi></mrow><mrow><mo stretchy="false">(</mo><mi>n</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mo>=</mo><msubsup><mrow><mi>u</mi></mrow><mrow><mi>i</mi></mrow><mrow><mo stretchy="false">(</mo><mi>n</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>+</mo><mi mathvariant="normal">λ</mi><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mn>4</mn></mrow></munderover><mfrac><mrow><msub><mrow><mi>d</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><mrow><mn>1</mn><mo>+</mo><msubsup><mrow><mi>d</mi></mrow><mrow><mi>j</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>/</mo><msup><mrow><mi>K</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex">u_i^{(n+1)} = u_i^{(n)} + \lambda \sum_{j=1}^{4} \frac{d_j}{1 + d_j^2/K^2}</annotation></semantics></math></p>
+<p>Two properties follow directly:</p>
+<ul>
+  <li><b>The sum is conserved.</b> The flux is odd, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mo>−</mo><mi>d</mi><mo stretchy="false">)</mo><mo>=</mo><mo>−</mo><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\Phi(-d) = -\Phi(d)</annotation></semantics></math>: what one neighbour gives, the other receives. At the border the access points, through the edge continuation, to the point itself; there <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">d = 0</annotation></semantics></math> and nothing flows out. Brightness is redistributed, but neither created nor destroyed.</li>
+  <li><b>No new extreme values as long as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>≤</mo><mn>1</mn><mo>/</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">\lambda \le 1/4</annotation></semantics></math>.</b> Writing the step as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>u</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>+</mo><mi mathvariant="normal">λ</mi><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow></msub><msub><mrow><mi>d</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">λ</mi><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>u</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>+</mo><mi mathvariant="normal">λ</mi><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow></msub><msub><mrow><mi>u</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">u_i + \lambda \sum_j g_j d_j = (1 - \lambda\sum_j g_j)\,u_i + \lambda \sum_j g_j u_j</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>&lt;</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>≤</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">0 &lt; g_j \le 1</annotation></semantics></math>, for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>≤</mo><mn>1</mn><mo>/</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">\lambda \le 1/4</annotation></semantics></math> all coefficients are non-negative and sum to one. The new <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>u</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">u_i</annotation></semantics></math> is again a convex combination – the discrete maximum principle. With larger <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> the exchange overshoots and builds up.</li>
+</ul>
+<div class="hinweis"><b>Convention in the framework:</b> Default <code>new PeronaMalik()</code> = 10 steps, threshold <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">K = 12</annotation></semantics></math>, step size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>0.20</mn></mrow><annotation encoding="application/x-tex">\lambda = 0.20</annotation></semantics></math>. The constructor limits <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> to the interval <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0.01</mn><mo>,</mo><mn>0.25</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0.01, 0.25]</annotation></semantics></math>, the number of steps to at least 1 and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> to at least 0.1. The threshold is a fixed number in grey levels, not estimated from the image; it refers to the value range of the material (usually 16 to 235 for luminance).</div>
+
+<h3>Pseudocode – <code>PeronaMalik.anwenden(e, w, h)</code></h3>
+<pre class="pseudo">a ← copy of e;  k2 ← K²
+<b>repeat</b> steps times:
+    <b>for</b> each pixel i = (x, z):
+        centre ← a[i];  sum ← 0
+        <b>for</b> the four neighbours (x−1,z), (x+1,z), (x,z−1), (x,z+1):
+            (xx, zz) ← clamped to the image       <i>at the border: the point itself, d = 0</i>
+            d ← a[zz, xx] − centre
+            sum ← sum + d / (1 + d²/k2)            <i>conductivity falls with d²</i>
+        b[i] ← centre + λ · sum
+    a ← b                                        <i>all points simultaneously: explicit</i>
+<b>return</b> a</pre>
+<p class="quelle">Source: <code>envisionz-framework-image/src/envisionz/image/PeronaMalik.java</code>. Each step reads only the result of the previous one; the order in which points are visited therefore does not matter.</p>
+
+<h2 id="beispiel">Worked example</h2>
+<p>The test image has 128 × 128 pixels: a horizontal ramp <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>60</mn><mo>+</mo><mn>0.5</mn><mspace width="0.1667em"/><mi>x</mi></mrow><annotation encoding="application/x-tex">60 + 0.5\,x</annotation></semantics></math> as background, with a circle of radius 35 and value 180 in it. Normally distributed noise with standard deviation 14 is added (fixed random seed). The distance to the noise-free image is measured as peak signal-to-noise ratio</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>PSNR</mi><mo>⁡</mo><mspace width="0.1667em"/><mo>=</mo><mn>10</mn><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><msup><mn>255</mn><mrow><mn>2</mn></mrow></msup></mrow><mrow><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><mo stretchy="false">(</mo><msub><mrow><mi>u</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>i</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow></mfrac><mspace width="0.3333em"/><mtext>dB</mtext></mrow><annotation encoding="application/x-tex">\mathrm{PSNR} = 10 \log_{10} \frac{255^2}{\frac{1}{N}\sum_i (u_i - f_i)^2}\ \text{dB}</annotation></semantics></math></p>
+<p>Computed with the classes of the module:</p>
+<table>
+  <tr><th>Method and setting</th><th>PSNR</th></tr>
+  <tr><td>noisy image</td><td>25.20 dB</td></tr>
+  <tr><td><code>Bilateral()</code> – <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">r = 3</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\sigma_s = 3</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">\sigma_r = 12</annotation></semantics></math></td><td>29.11 dB</td></tr>
+  <tr><td><code>Bilateral(3, 3, 24)</code></td><td>34.88 dB</td></tr>
+  <tr><td><code>Bilateral(3, 3, 48)</code></td><td>37.16 dB</td></tr>
+  <tr><td><code>PeronaMalik(1, 12, 0.2)</code></td><td>26.48 dB</td></tr>
+  <tr><td><code>PeronaMalik(5, 12, 0.2)</code></td><td>32.33 dB</td></tr>
+  <tr><td><code>PeronaMalik()</code> – 10 steps</td><td>38.50 dB</td></tr>
+  <tr><td><code>PeronaMalik(20, 12, 0.2)</code></td><td>42.34 dB</td></tr>
+  <tr><td><code>PeronaMalik(50, 12, 0.2)</code></td><td>41.44 dB</td></tr>
+</table>
+<p>Two things can be read from this. First: with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">\sigma_r = 12</annotation></semantics></math>, the bilateral filter falls well short of its potential for noise with a spread of 14. The difference between two noisy points of the same area has the standard deviation <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mn>2</mn></msqrt><mo>⋅</mo><mn>14</mn><mo>≈</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">\sqrt{2}\cdot 14 \approx 20</annotation></semantics></math> levels; many neighbours therefore receive only a small range weight, and outliers stand almost alone. Only with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_r</annotation></semantics></math> above the noise does it work fully. Second: Perona-Malik first improves with the number of steps and then gets worse again – after 50 steps the flatter parts of the image are attacked as well.</p>
+
+<figure>
+<svg viewBox="0 0 640 260" width="640" font-family="sans-serif" font-size="13">
+  <line x1="60" y1="183.3" x2="400" y2="183.3" stroke="#c9d1dc"/>
+  <text x="52" y="187.3" fill="#5b6475" text-anchor="end">50</text>
+  <line x1="60" y1="130.6" x2="400" y2="130.6" stroke="#c9d1dc"/>
+  <text x="52" y="134.6" fill="#5b6475" text-anchor="end">100</text>
+  <line x1="60" y1="77.8" x2="400" y2="77.8" stroke="#c9d1dc"/>
+  <text x="52" y="81.8" fill="#5b6475" text-anchor="end">150</text>
+  <line x1="60" y1="25.0" x2="400" y2="25.0" stroke="#c9d1dc"/>
+  <text x="52" y="29.0" fill="#5b6475" text-anchor="end">200</text>
+  <text x="60.0" y="233" fill="#5b6475" text-anchor="middle">22</text>
+  <text x="145.0" y="233" fill="#5b6475" text-anchor="middle">26</text>
+  <text x="230.0" y="233" fill="#5b6475" text-anchor="middle">30</text>
+  <text x="315.0" y="233" fill="#5b6475" text-anchor="middle">34</text>
+  <text x="400.0" y="233" fill="#5b6475" text-anchor="middle">38</text>
+  <line x1="60" y1="215" x2="400" y2="215" stroke="#5b6475"/>
+  <polyline points="60.0,161.2 81.2,160.6 102.5,160.1 123.8,159.6 145.0,159.1 166.2,158.5 187.5,158.0 208.8,157.5 230.0,46.1 251.2,46.1 272.5,46.1 293.8,46.1 315.0,46.1 336.2,46.1 357.5,46.1 378.8,46.1 400.0,46.1" fill="none" stroke="#c9d1dc" stroke-width="5"/>
+  <polyline points="60.0,155.4 81.2,151.0 102.5,161.4 123.8,199.2 145.0,140.6 166.2,161.3 187.5,176.3 208.8,143.6 230.0,34.8 251.2,40.7 272.5,37.2 293.8,50.7 315.0,41.9 336.2,55.2 357.5,45.7 378.8,41.9 400.0,46.8" fill="none" stroke="#5b6475" stroke-width="1" stroke-dasharray="3,3"/>
+  <circle cx="60.0" cy="155.4" r="2.5" fill="#5b6475"/>
+  <circle cx="81.2" cy="151.0" r="2.5" fill="#5b6475"/>
+  <circle cx="102.5" cy="161.4" r="2.5" fill="#5b6475"/>
+  <circle cx="123.8" cy="199.2" r="2.5" fill="#5b6475"/>
+  <circle cx="145.0" cy="140.6" r="2.5" fill="#5b6475"/>
+  <circle cx="166.2" cy="161.3" r="2.5" fill="#5b6475"/>
+  <circle cx="187.5" cy="176.3" r="2.5" fill="#5b6475"/>
+  <circle cx="208.8" cy="143.6" r="2.5" fill="#5b6475"/>
+  <circle cx="230.0" cy="34.8" r="2.5" fill="#5b6475"/>
+  <circle cx="251.2" cy="40.7" r="2.5" fill="#5b6475"/>
+  <circle cx="272.5" cy="37.2" r="2.5" fill="#5b6475"/>
+  <circle cx="293.8" cy="50.7" r="2.5" fill="#5b6475"/>
+  <circle cx="315.0" cy="41.9" r="2.5" fill="#5b6475"/>
+  <circle cx="336.2" cy="55.2" r="2.5" fill="#5b6475"/>
+  <circle cx="357.5" cy="45.7" r="2.5" fill="#5b6475"/>
+  <circle cx="378.8" cy="41.9" r="2.5" fill="#5b6475"/>
+  <circle cx="400.0" cy="46.8" r="2.5" fill="#5b6475"/>
+  <polyline points="60.0,158.5 81.2,155.9 102.5,161.4 123.8,183.9 145.0,149.3 166.2,160.4 187.5,167.6 208.8,149.3 230.0,40.3 251.2,43.1 272.5,42.1 293.8,49.1 315.0,44.8 336.2,50.0 357.5,46.7 378.8,45.5 400.0,47.0" fill="none" stroke="#9a6400" stroke-width="1.8"/>
+  <polyline points="60.0,160.7 81.2,162.0 102.5,163.5 123.8,163.7 145.0,162.1 166.2,159.3 187.5,156.2 208.8,153.4 230.0,54.4 251.2,51.5 272.5,48.5 293.8,47.0 315.0,46.3 336.2,45.5 357.5,44.4 378.8,44.5 400.0,45.8" fill="none" stroke="#1f5f8b" stroke-width="2.2"/>
+  <line x1="418" y1="60" x2="440" y2="60" stroke="#c9d1dc" stroke-width="5"/>
+  <text x="446" y="64" fill="#5b6475">noise-free</text>
+  <line x1="418" y1="86" x2="440" y2="86" stroke="#5b6475" stroke-dasharray="3,3"/>
+  <text x="446" y="90" fill="#5b6475">noisy, σ = 14</text>
+  <line x1="418" y1="112" x2="440" y2="112" stroke="#9a6400" stroke-width="1.8"/>
+  <text x="446" y="116" fill="#5b6475">Bilateral (default)</text>
+  <line x1="418" y1="138" x2="440" y2="138" stroke="#1f5f8b" stroke-width="2.2"/>
+  <text x="446" y="142" fill="#5b6475">Perona-Malik (default)</text>
+  <text x="400" y="251" fill="#5b6475" text-anchor="end">column x in row 64</text>
+</svg>
+<figcaption>A cut across the circle boundary of the worked example (128 × 128, noise σ = 14). Both methods keep the jump from about 75 to 180. Perona-Malik smooths the areas beside it almost completely; the bilateral filter corrects the outlier at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>25</mn></mrow><annotation encoding="application/x-tex">x = 25</annotation></semantics></math> only partly – it lies further from its neighbours than the range width 12.</figcaption>
+</figure>
+
+<p>On a small scale it is shown by a single row of eight values with a jump of about a hundred levels, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>50</mn><mo>,</mo><mn>54</mn><mo>,</mo><mn>47</mn><mo>,</mo><mn>52</mn><mo>,</mo><mn>150</mn><mo>,</mo><mn>146</mn><mo>,</mo><mn>153</mn><mo>,</mo><mn>149</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(50, 54, 47, 52, 150, 146, 153, 149)</annotation></semantics></math>, computed as an image of height one:</p>
+<table>
+  <tr><th>Method</th><th>Result (rounded)</th></tr>
+  <tr><td><code>Bilateral(3, 3, 12)</code></td><td>50.44 · 50.66 · 50.48 · 50.79 | 149.43 · 149.27 · 149.50 · 149.33</td></tr>
+  <tr><td><code>PeronaMalik(10, 12, 0.25)</code></td><td>51.07 · 51.25 · 51.72 · 52.65 | 147.30 · 148.41 · 149.13 · 149.48</td></tr>
+  <tr><td><code>PeronaMalik(100, 12, 0.25)</code></td><td>59.89 · 60.34 · 61.26 · 62.67 | 137.58 · 138.99 · 139.91 · 140.36</td></tr>
+</table>
+<p>The bilateral filter smooths each side on its own; the weights across the jump (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>≥</mo><mn>96</mn></mrow><annotation encoding="application/x-tex">d \ge 96</annotation></semantics></math>) are below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>13</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-13}</annotation></semantics></math>. Perona-Malik exchanges a small but non-vanishing flux across the jump (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mn>100</mn><mo stretchy="false">)</mo><mo>≈</mo><mn>1.4</mn></mrow><annotation encoding="application/x-tex">\Phi(100) \approx 1.4</annotation></semantics></math>). After 100 steps the jump has shrunk from 98 to 75 levels – the edge is spared, but not frozen. With Perona-Malik the sum of the eight values is the same in both rows as at the start, 801 (to the rounding of the table); the bilateral filter does not conserve it.</p>
+
+<h2 id="pruefung">How it is tested</h2>
+<p>The probe <code>Filterprobe</code> generates its own test images and uses only target values that follow from the mathematics:</p>
+<ul>
+  <li><b>Bilateral, fixed point:</b> a constant image stays constant (deviation at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>).</li>
+  <li><b>Bilateral, bound:</b> the result lies within the value range of the input – a consequence of the convex combination.</li>
+  <li><b>Bilateral, edge:</b> a step of height 1000 at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sigma_r = 1</annotation></semantics></math> stays exactly: the weight of the other side is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><mo>−</mo><mn>500000</mn></mrow></msup></mrow><annotation encoding="application/x-tex">e^{-500000}</annotation></semantics></math>, exactly zero in <code>double</code>.</li>
+  <li><b>Bilateral, linear reproduction:</b> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub><mo>=</mo><msup><mn>10</mn><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\sigma_r = 10^9</annotation></semantics></math> a symmetric Gaussian mean remains; it reproduces a linear ramp <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mi>x</mi><mo>+</mo><mn>2</mn><mi>z</mi></mrow><annotation encoding="application/x-tex">3x + 2z</annotation></semantics></math> in the interior (deviation below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>).</li>
+  <li><b>Perona-Malik, fixed point:</b> constant image unchanged after 25 steps at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>0.25</mn></mrow><annotation encoding="application/x-tex">\lambda = 0.25</annotation></semantics></math>, without any tolerance.</li>
+  <li><b>Perona-Malik, conservation:</b> the sum over the image is conserved after 20 steps (relative <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-8}</annotation></semantics></math>).</li>
+  <li><b>Perona-Malik, maximum principle:</b> no new extreme values – not even when <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">\lambda = 5</annotation></semantics></math> is requested; the constructor must limit it to 0.25.</li>
+  <li><b>Perona-Malik, flux bound:</b> since <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><mi mathvariant="normal">Φ</mi><mo>|</mo><mo>≤</mo><mi>K</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">|\Phi| \le K/2</annotation></semantics></math>, a point changes in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> steps by at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi mathvariant="normal">λ</mi><mo>⋅</mo><mi>K</mi><mo>/</mo><mn>2</mn><mo>⋅</mo><mi>n</mi><mo>=</mo><mn>2</mn><mi>n</mi><mi mathvariant="normal">λ</mi><mi>K</mi></mrow><annotation encoding="application/x-tex">4\lambda \cdot K/2 \cdot n = 2 n \lambda K</annotation></semantics></math>; tested on a step of height 500.</li>
+  <li><b>For both:</b> input unchanged, result length, 1×1 image, images narrower than the kernel, shift equivariance (a constant added to the image shifts the result by the same constant, deviation below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-8}</annotation></semantics></math>) and extreme values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>±</mo><msup><mn>10</mn><mrow><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\pm 10^6</annotation></semantics></math> within the value range.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>Single outliers</b> largely survive the bilateral filter: a point that differs from all neighbours by far more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_r</annotation></semantics></math> receives hardly any weight from them and stays with itself. For impulse noise a <a href="median-sprenkel.html">median</a> belongs before the denoising.</li>
+  <li><b>Cost:</b> the bilateral filter computes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mi>r</mi><mo>+</mo><mn>1</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">(2r+1)^2</annotation></semantics></math> exponential functions per pixel, 49 at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">r = 3</annotation></semantics></math>; there is no fast approximation (grid, decomposition). Large radii become correspondingly expensive.</li>
+  <li><b>One fixed threshold for the whole image:</b> neither <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mi>r</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sigma_r</annotation></semantics></math> nor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> adapts. In dark and bright regions with noise of different strength, one number does not suit both.</li>
+  <li><b>Perona-Malik does not stop by itself.</b> The flux across an edge is small, but not zero; with many steps edges shrink too. The number of steps is the real control variable. Many steps also produce a "painted" look: areas become completely smooth, fine texture disappears.</li>
+  <li><b>Staircasing:</b> in gentle ramps whose gradient lies near <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math>, the backward diffusion beyond <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> tends to form steps.</li>
+  <li><b>Direction dependence:</b> Perona-Malik computes with the four axis-parallel neighbours; diagonal edges are treated somewhat differently from horizontal and vertical ones.</li>
+  <li><b>Value range:</b> both methods work on a plane in <code>double</code>. Thresholds in levels assume that the plane is in the value range of the material, not normalised to 0 to 1.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>P. Perona, J. Malik: Scale-space and edge detection using anisotropic diffusion. IEEE Transactions on Pattern Analysis and Machine Intelligence 12 (1990).</li>
+  <li>C. Tomasi, R. Manduchi: Bilateral filtering for gray and color images. Proceedings of the IEEE International Conference on Computer Vision, 1998.</li>
+  <li>J. Weickert: Anisotropic Diffusion in Image Processing. Teubner, Stuttgart 1998.</li>
+</ul>
+
+<footer>
+envisionz-framework-image · background to <a href="index.html#entrauschen">Edge-preserving denoising</a> · probes: <code>Filterprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

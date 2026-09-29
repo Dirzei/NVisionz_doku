@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sequence training and sampling – training on sequences, resumable bit for bit – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#kern">Tensor, operations, gradient check</a>
+<a class="unterseite" href="ableitungen.html">Derivatives</a>
+<a class="unterseite" href="gradcheck.html">Gradient check</a>
+<a class="unterseite" href="matmul.html">Matrix product</a>
+<a class="unterseite" href="rueckwaerts.html">Reverse mode</a>
+<a class="rubrik" href="index.html#nn">Network blocks and transformer</a>
+<a class="unterseite" href="aufmerksamkeit.html">Attention</a>
+<a class="unterseite" href="bausteine.html">Building blocks and initial values</a>
+<a class="unterseite" href="encoder.html">Encoder and language head</a>
+<a class="rubrik" href="index.html#optim">Optimiser and weight storage</a>
+<a class="unterseite" href="adam.html">Adam</a>
+<a class="unterseite" href="gewichtsdatei.html">Weight file</a>
+<a class="rubrik" href="index.html#lm">Sequence training and sampling</a>
+<a class="unterseite aktiv" href="sequenztraining.html">Sequence training</a>
+<a class="unterseite" href="stichprobe.html">Sampling</a>
+<a class="rubrik" href="index.html#text">Text, tokeniser, language model</a>
+<a class="unterseite" href="absichten.html">Command examples</a>
+<a class="unterseite" href="bpe.html">Byte pair encoding</a>
+<a class="unterseite" href="sprachmodell.html">Language model</a>
+<a class="rubrik" href="index.html#dsp">Differentiable spectral model of the formant voice</a>
+<a class="unterseite" href="anpassung.html">Spectral fitting</a>
+<a class="unterseite" href="formantspektrum.html">Filter and source</a>
+<a class="unterseite" href="rahmenfolge.html">Frame sequence</a>
+<a class="rubrik" href="index.html#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="unterseite" href="korpus.html">Corpus</a>
+<a class="rubrik" href="index.html#vector">Single-precision matrix kernels and Vector API</a>
+<a class="unterseite" href="matrixkerne.html">Matrix kernels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-autograd</a> › Sequence training and sampling – training on sequences, resumable bit for bit</span><a class="sprachwahl" href="../../de/autograd/sequenztraining.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd · envisionz.autograd.lm</div>
+  <h1>Sequence training and sampling – training on sequences, resumable bit for bit</h1>
+  <p class="unter">The computation behind <code>lm.SequenceTrainer</code>: splitting into training and evaluation by sequence, batches via accumulated gradients without padding, the learning-rate schedule over the whole run, checkpoints, and resuming an interrupted run so that it is bit-identical to the uninterrupted one – with pseudocode following the source, recomputed figures, the probes and the limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A training run takes hours. It must therefore be possible to run it without a user interface, to watch it, to cancel it and – after a crash or on purpose – to resume it. "Resume" is meant more strictly than it sounds: the resumed run should deliver <b>the same numbers</b> as a run that was never interrupted. Only then can one later tell whether a bad result is due to the model or to the interruption.</p>
+<p>For that the trainer knows neither tokeniser nor text files. It receives ready-made sequences of ids, the matching target sequences and a <b>recipe</b> <code>LossFunction(ids, targets, training)</code> that turns them into a scalar loss. The same loop thus serves a language model, an intent recogniser or a parameter model for speech output – the three differ only in model and loss.</p>
+
+<h2 id="stapel">Batches via accumulated gradients</h2>
+<p>Sequences have different lengths. The usual solution – padding to a common length and masking the padded positions – is a classic source of errors: the mask must act at <b>every</b> place, in attention, in the loss, in every normalisation over positions, and a forgotten place silently falsifies the result. The trainer avoids this entirely. Because differentiation is linear,</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>∇</mi></mrow><mrow><mi mathvariant="normal">θ</mi></mrow></msub><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>B</mi></mrow></munderover><msub><mrow><mi>L</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">θ</mi><mo stretchy="false">)</mo><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>B</mi></mrow></munderover><msub><mrow><mi>∇</mi></mrow><mrow><mi mathvariant="normal">θ</mi></mrow></msub><msub><mrow><mi>L</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">θ</mi><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\nabla_\theta \sum_{j=1}^{B} L_j(\theta) = \sum_{j=1}^{B} \nabla_\theta L_j(\theta),</annotation></semantics></math></p>
+<p>it is enough to run forward and backward for each sequence of the batch separately, <b>without</b> resetting the gradients in between – they accumulate in the parameters (see <a href="rueckwaerts.html#summe">Reverse mode</a>). Afterwards they are divided by the batch size:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>g</mi><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>B</mi></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>B</mi></mrow></munderover><msub><mrow><mi>∇</mi></mrow><mrow><mi mathvariant="normal">θ</mi></mrow></msub><msub><mrow><mi>L</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">g = \frac{1}{B}\sum_{j=1}^{B} \nabla_\theta L_j.</annotation></semantics></math></p>
+<p>Without this division the effective learning rate would depend on the batch size: a batch twice as large would give a gradient twice as large. With Adam that would largely cancel in the step, but not in the norm clipping, which acts on the absolute norm.</p>
+
+<h2 id="aufteilung">Split, schedule and checkpoints</h2>
+<ul>
+  <li><b>Split by sequence.</b> The sequence indices are shuffled with <code>Random(shuffleSeed)</code>; the first <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>n</mi><mo>⋅</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>valid</mi><mo>⁡</mo></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{round}(n\cdot f_{\mathrm{valid}})</annotation></semantics></math> are evaluation sequences (at least one if the fraction is above zero, at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n-1</annotation></semantics></math>). The split is by sequence, not by position – otherwise neighbours of the same sequence would end up on both sides, and evaluation would measure memorisation.</li>
+  <li><b>Steps.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌈</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>train</mi><mo>⁡</mo></mrow></msub><mo>/</mo><mi>B</mi><mo stretchy="false">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil n_{\mathrm{train}}/B\rceil</annotation></semantics></math> optimiser steps per epoch; the last batch may be smaller and is divided by its actual size.</li>
+  <li><b>Schedule.</b> Before every step the trainer sets the learning rate per <code>Adam.schedule</code> (see <a href="adam.html#fahrplan">Adam</a>), computed over the <b>total</b> number of steps of the whole run.</li>
+  <li><b>Evaluation.</b> After every epoch the mean loss over the evaluation sequences, with <code>training = false</code> (no dropout); the best value is tracked.</li>
+  <li><b>Checkpoints.</b> Every <code>checkpointEvery</code> steps and in any case at the end the trainer writes weights and optimiser state (see <a href="gewichtsdatei.html#pruefpunkt">Checkpoint</a>); the provenance receives the current step count.</li>
+  <li><b>Watching and cancelling.</b> A <code>Listener</code> is called after every step, epoch and checkpoint – from the training thread; a user interface must wrap its calls itself. Cancellation is cooperative: before every batch the trainer asks a <code>BooleanSupplier</code>.</li>
+</ul>
+
+<h2 id="fortsetzen">Resuming bit for bit</h2>
+<p>For a run interrupted after <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">E_d</annotation></semantics></math> epochs to continue exactly like the uninterrupted one, three things must be right:</p>
+<ol>
+  <li><b>Optimiser state.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> and the step counter come from the checkpoint instead of being created anew. Without them Adam estimates from scratch and makes a jump exactly at the seam.</li>
+  <li><b>Learning-rate schedule.</b> The schedule depends on the total number of steps. If the continuation were started as "three more epochs", it would get a schedule for three epochs – with a new warm-up and a new decay. Therefore <code>trainResume</code> explicitly takes the completed epochs <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">E_d</annotation></semantics></math> and the total <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi></mrow><annotation encoding="application/x-tex">E</annotation></semantics></math>; the step counter starts at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">E_d</annotation></semantics></math> times steps per epoch. Whoever wants to interrupt a run must fix its full length <b>in advance</b>.</li>
+  <li><b>Shuffle order.</b> The sequences are reshuffled per epoch with their own generator. The continuation replays the shuffles of the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">E_d</annotation></semantics></math> completed epochs without computing and then sees the same batches as the uninterrupted run.</li>
+</ol>
+
+<figure>
+<svg viewBox="0 0 620 260" width="620" font-family="sans-serif" font-size="13">
+  <text x="100" y="24" fill="#5b6475" font-size="12">learning rate over the whole run (E = 6 epochs)</text>
+  <polyline points="100,87.9 112,62.9 124,40.0 136,40.1 148,40.3 160,40.7 172,41.3 184,42.0 196,42.9 208,43.9 220,45.1 232,46.4 244,47.8 256,49.4 268,51.0 280,52.7 292,54.5 304,56.4 316,58.3 328,60.3 340,62.2 352,64.2 364,66.3 376,68.2 388,70.2 400,72.1 412,74.0 424,75.8 436,77.5 448,79.1 460,80.7 472,82.1 484,83.4 496,84.6 508,85.6 520,86.5 532,87.2 544,87.8 556,88.2 568,88.4 580,88.5" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+  <line x1="100" y1="92" x2="580" y2="92" stroke="#c9d1dc"/>
+  <text x="94" y="125" fill="#5b6475" text-anchor="end" font-size="12">uninterrupted</text>
+  <rect x="100" y="110" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="180" y="110" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="260" y="110" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="340" y="110" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="420" y="110" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="500" y="110" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="140" y="127" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 1</text>
+  <text x="220" y="127" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 2</text>
+  <text x="300" y="127" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 3</text>
+  <text x="380" y="127" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 4</text>
+  <text x="460" y="127" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 5</text>
+  <text x="540" y="127" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 6</text>
+  <text x="94" y="165" fill="#5b6475" text-anchor="end" font-size="12">partial run</text>
+  <rect x="100" y="150" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="180" y="150" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="260" y="150" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="220" y="167" fill="#1f5f8b" text-anchor="middle" font-size="12">epochs = 3, E = 6</text>
+  <circle cx="340" cy="162" r="7" fill="#9a6400"/>
+  <text x="352" y="167" fill="#9a6400" font-size="12">checkpoint: .evzw + .evzo</text>
+  <text x="94" y="205" fill="#5b6475" text-anchor="end" font-size="12">continuation</text>
+  <rect x="100" y="190" width="240" height="24" fill="#ffffff" stroke="#c9d1dc" stroke-dasharray="4,3"/>
+  <text x="220" y="207" fill="#5b6475" text-anchor="middle" font-size="12">shuffles replayed only</text>
+  <rect x="340" y="190" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="420" y="190" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="500" y="190" width="80" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="380" y="207" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 4</text>
+  <text x="460" y="207" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 5</text>
+  <text x="540" y="207" fill="#1f5f8b" text-anchor="middle" font-size="12">epoch 6</text>
+  <text x="330" y="244" fill="#5b6475" text-anchor="middle" font-size="12">doneEpochs = 3, totalEpochs = 6: schedule and batches as in the uninterrupted run</text>
+</svg>
+<figcaption>Interrupting and resuming. The partial run computes three epochs but knows the total of six and therefore runs on the schedule of the whole run. The continuation loads weights and Adam state, replays the shuffles of the three completed epochs and starts at the step where it stopped.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>SequenceTrainer.trainResume(…, opt, E_d, E)</code></h3>
+<pre class="pseudo"><b>check</b> |inputs| = |targets| &gt; 0 and equal length per sequence
+ord ← 0 … n−1, shuffled with Random(shuffleSeed)
+nV ← round(n · validFraction);  <b>if</b> validFraction &gt; 0 <b>and</b> nV = 0: nV ← 1
+nV ← min(nV, n − 1);   valid ← ord[0 … nV);   train ← ord[nV … n)
+<b>if</b> opt = null: opt ← new Adam(params, peakLr)
+opt.weightDecay ← cfg.weightDecay;  opt.maxGradNorm ← cfg.maxGradNorm
+perEpoch ← ⌈|train| / B⌉;   total ← perEpoch · max(E, cfg.epochs)
+step ← perEpoch · E_d
+shuffler ← Random(shuffleSeed xor 0x5DEECE66D)
+<b>repeat</b> E_d times: shuffle train with shuffler      <i>replay completed epochs</i>
+<b>for</b> epoch ← 1 <b>to</b> cfg.epochs:
+    shuffle train with shuffler
+    <b>for each</b> batch S of train (size ≤ B):
+        <b>if</b> cancelled: stop
+        opt.learningRate ← Adam.schedule(step, warmup, total, peakLr, minLr)
+        opt.zeroGrad()
+        <b>for each</b> sequence j <b>in</b> S:  L ← lossFn(in_j, target_j, true);  L.backward()
+        <b>if</b> |S| &gt; 1: all gradients ← gradients / |S|
+        norm ← opt.step();  step += 1
+        listener.onStep(…);  <b>if</b> step mod checkpointEvery = 0: checkpoint
+    evaluation loss over valid with training = false;  listener.onEpoch(…)
+<b>if</b> checkpoint path set: write checkpoint
+<b>return</b> Result(step, …)</pre>
+<p class="quelle">Source: <code>envisionz-framework-autograd/src/envisionz/autograd/lm/SequenceTrainer.java</code>. <code>train(…)</code> is <code>trainResume</code> with <code>opt = null</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">E_d = 0</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi></mrow><annotation encoding="application/x-tex">E</annotation></semantics></math> = <code>cfg.epochs</code>.</p>
+
+<div class="hinweis"><b>Decision in the framework:</b> defaults in <code>SequenceTrainer.Config</code>: 10 epochs, batch size 8, peak learning rate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3\cdot 10^{-4}</annotation></semantics></math>, final value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-5}</annotation></semantics></math>, 200 warm-up steps, weight decay 0.01, norm bound 1.0, shuffle seed 42, checkpoint only at the end (<code>checkpointEvery = 0</code>), evaluation fraction 5 %. The trainer has no user interface of its own and no dependency on Swing; a user interface only watches it.</div>
+
+<h2 id="zerlegen">Cutting a long sequence</h2>
+<p>For a language model <code>chunk(ids, L, …)</code> cuts a long id sequence into non-overlapping sections of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>. The target is always the input shifted by exactly one:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mtext>in</mtext></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi><mi>L</mi></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi><mi>L</mi><mo>+</mo><mi>L</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mtext>target</mtext></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi><mi>L</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi><mi>L</mi><mo>+</mo><mi>L</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>=</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mo>…</mo><mspace width="0.3333em"/><mtext>while </mtext><mi>k</mi><mi>L</mi><mo>+</mo><mi>L</mi><mo>+</mo><mn>1</mn><mo>≤</mo><mi>n</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">\text{in}_k = (x_{kL}, \dots, x_{kL+L-1}), \qquad \text{target}_k = (x_{kL+1}, \dots, x_{kL+L}), \qquad k = 0, 1, \dots \ \text{while } kL + L + 1 \le n.</annotation></semantics></math></p>
+<p>At every position the model learns to guess the next token from everything before; the causal mask prevents it from looking ahead (see <a href="aufmerksamkeit.html#masken">Masks</a>). A remainder too short for a full section plus target is discarded. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>&lt;</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">L \lt 2</annotation></semantics></math> throws.</p>
+
+<h2 id="beispiel">Worked examples</h2>
+<p><b>Step counts.</b> 1000 sequences, evaluation fraction 5 %: 50 evaluation and 950 training sequences. With batch size 8 that is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌈</mo><mn>950</mn><mo>/</mo><mn>8</mn><mo stretchy="false">⌉</mo><mo>=</mo><mn>119</mn></mrow><annotation encoding="application/x-tex">\lceil 950/8\rceil = 119</annotation></semantics></math> steps per epoch; the last batch has 6 sequences. Ten epochs: 1190 steps.</p>
+<p><b>Resuming.</b> If this run is interrupted after three epochs and resumed with <code>trainResume(…, opt, 3, 10)</code>, the step counter starts at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>⋅</mo><mn>119</mn><mo>=</mo><mn>357</mn></mrow><annotation encoding="application/x-tex">3\cdot 119 = 357</annotation></semantics></math>; by the schedule over 1190 steps the learning rate there is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.82</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.82\cdot 10^{-4}</annotation></semantics></math>. Had the continuation been started as a new run with three epochs instead, its schedule would already have cooled down to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-5}</annotation></semantics></math> after 357 steps – an entirely different run.</p>
+<p><b>Cutting.</b> Ten ids <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>…</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>9</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_0 \dots x_9</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">L = 4</annotation></semantics></math>: sections <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>.</mo><mo>.</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>3</mn></mrow></msub><mo>→</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>.</mo><mo>.</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>4</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(x_0..x_3 \to x_1..x_4)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>4</mn></mrow></msub><mo>.</mo><mo>.</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>7</mn></mrow></msub><mo>→</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>5</mn></mrow></msub><mo>.</mo><mo>.</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>8</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(x_4..x_7 \to x_5..x_8)</annotation></semantics></math>; a third one starting at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>8</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_8</annotation></semantics></math> would need 13 ids.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>TrainerTest</code></b>: a run is interrupted halfway, loaded from the checkpoint (optimiser state restored) and resumed; the result must match the uninterrupted run to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math> – according to the module documentation the deviation is exactly 0. The counter-check without optimiser state must deviate by more than a hundred times that (documented: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.13</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.13\cdot 10^{-2}</annotation></semantics></math>), so that the result can be attributed to the state rather than to chance. In addition: the listener is called for every step and every epoch, the loss falls clearly, the evaluation loss is measured, cooperative cancellation takes effect after a few steps.</li>
+  <li><b><code>EncoderTest</code></b>: two backward passes without reset give the sum of the individual gradients to better than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math> – the computational rule behind the batches itself.</li>
+  <li>According to the module documentation exactly this comparison produced the finding about the learning-rate schedule: a partial run of "three epochs" ran with different learning rates from the first epoch on. Hence the explicit total in <code>trainResume</code>.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><b>Sequence by sequence.</b> A batch is not computed as one large tensor but as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> separate forward and backward passes. That is simple and free of masking errors, but uses the matrix kernels less well than a real batch axis.</li>
+  <li><b>Resuming only at epoch boundaries.</b> The continuation's step counter is computed from completed epochs; a checkpoint in the middle of an epoch can be loaded but not resumed bit-identically.</li>
+  <li><b>Randomness in the recipe.</b> If the loss function draws dropout masks from its own generator, its state must also match when resuming; the trainer does not know it.</li>
+  <li><b>Evaluation every epoch.</b> With large evaluation sets it costs noticeable time; there is no switch for doing it less often.</li>
+  <li><b>Pairs of equal length.</b> Input and target sequence must have the same length; tasks with output of a different length do not fit this loop.</li>
+</ul>
+
+<footer>
+envisionz-framework-autograd · Background to <a href="index.html#lm">Sequence training and sampling</a> · Probes: <code>TrainerTest</code>, <code>EncoderTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>
