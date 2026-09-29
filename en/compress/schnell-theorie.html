@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LZ4, Snappy and LZO1X – fast codecs without entropy coding – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite aktiv" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › LZ4, Snappy and LZO1X – fast codecs without entropy coding</span><a class="sprachwahl" href="../../de/compress/schnell-theorie.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.lz4 · .snappy · .lzo</div>
+  <h1>LZ4, Snappy and LZO1X – fast codecs without entropy coding</h1>
+  <p class="unter">Three methods built for speed: back-references and literals sit in the stream as whole bytes, without Huffman and without probabilities. Layout of the commands, frame formats with xxHash32 and masked CRC-32C, the state of LZO, pseudocode following <code>Lz4Block</code>, <code>Lz4</code>, <code>Snappy</code>, <code>SnappyRahmen</code> and <code>Lzo1x</code>, worked examples and probes.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>Deflate, zstd and LZMA gain a large part of their compression from entropy coding: frequent symbols get short codes. That costs work per bit when reading. LZ4, Snappy and LZO do without it. A command consists of whole bytes: a tag byte whose bits carry type, length and part of the offset, then possibly further length or offset bytes, then the literals. Unpacking is essentially a sequence of copy operations. These methods sit inside Parquet, Arrow, Avro, ORC, LevelDB and Hadoop data.</p>
+<p>All three have one thing in common: the <b>back-reference may overlap itself</b>. If the offset <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> is smaller than the length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math>, the copy reads bytes it has just written itself; the result is a pattern of period <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mi>d</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>=</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>l</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">y_{n+k} = y_{n+k-d}, \qquad k = 0, 1, \dots, l - 1</annotation></semantics></math></p>
+<p>That is why all three classes copy byte by byte. <code>System.arraycopy</code> would treat source and destination as separate and deliver the right length with the wrong content.</p>
+
+<h2 id="lz4">LZ4</h2>
+<h3>The block format</h3>
+<p>An LZ4 block is a sequence of sequences. Each begins with a <b>token</b>: the upper four bits are the number of literals, the lower four the length of the back-reference minus 4. If a field is 15, extra bytes follow and are added until one is smaller than 255:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>length</mtext><mo>=</mo><mn>15</mn><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>b</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mo>…</mo><mo>=</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>=</mo><mn>255</mn><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>b</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>&lt;</mo><mn>255</mn></mrow><annotation encoding="application/x-tex">\text{length} = 15 + \sum_{i} b_i, \qquad b_1 = \dots = b_{k-1} = 255,\ b_k &lt; 255</annotation></semantics></math></p>
+<p>After the token (and its literal extra bytes) come the literals, then the offset as 2 bytes (least significant first, 1 to 65,535), then the extra bytes of the match length. The last sequence of a block has no back-reference: it ends after its literals.</p>
+<p><b>Worked example.</b> 6000 bytes <code>abcabc…</code> can be written as a single sequence: three literals, then offset 3, length 5997. The match length is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>5997</mn><mo>−</mo><mn>4</mn><mo>=</mo><mn>5993</mn><mo>=</mo><mn>15</mn><mo>+</mo><mn>23</mn><mo>⋅</mo><mn>255</mn><mo>+</mo><mn>113</mn></mrow><annotation encoding="application/x-tex">5997 - 4 = 5993 = 15 + 23 \cdot 255 + 113</annotation></semantics></math>:</p>
+<pre><code>3F | 61 62 63 | 03 00 | FF × 23 | 71</code></pre>
+<p>That is 30 bytes; <code>Lz4Block.entpacke(block, 6000)</code> returns the 6000 bytes from it (recomputed). The foreign anchor <code>f4</code> from lz4 1.9.4 packs the same content as a frame into 63 bytes.</p>
+
+<h3>Pseudocode – <code>Lz4Block.entpacke(quelle, ab, laenge, ziel, zielAb, hoechstens)</code></h3>
+<pre class="pseudo">p ← ab;  n ← zielAb;  grenze ← zielAb + hoechstens
+<b>while</b> p &lt; ende:
+    t ← quelle[p++]
+    lit ← t >>> 4
+    <b>if</b> lit = 15: <b>repeat</b> b ← quelle[p++]; lit ← lit + b <b>while</b> b = 255
+    <b>if</b> p + lit > ende <b>or</b> n + lit > grenze: error
+    copy lit literals;  p ← p + lit;  n ← n + lit
+    <b>if</b> p ≥ ende: <b>break</b>                           <i>last sequence: no back-reference</i>
+    d ← 2 bytes, least significant first
+    <b>if</b> d = 0 <b>or</b> d > n: error
+    ℓ ← (t and 15) + 4
+    <b>if</b> (t and 15) = 15: <b>repeat</b> b ← quelle[p++]; ℓ ← ℓ + b <b>while</b> b = 255
+    <b>if</b> n + ℓ > grenze: error
+    <b>for</b> i ← 1 <b>to</b> ℓ: ziel[n] ← ziel[n − d];  n ← n + 1      <i>byte by byte</i>
+<b>return</b> n − zielAb</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/lz4/Lz4Block.java</code>. The offset is checked against the write position in the whole buffer, not against the start of the block: with linked blocks a back-reference may point into the previous block.</p>
+<div class="hinweis"><b>Convention in the framework:</b> The rules that the last five bytes of a block are literals and that the last back-reference ends at least twelve bytes before the end only bind a writer; the reader does not rely on them. The length fields are unbounded; the computation is therefore done against the known target size, and <code>entpacke(block, groesse)</code> rejects a target size above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn><mo>⋅</mo><mtext>block length</mtext><mo>+</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">255 \cdot \text{block length} + 64</annotation></semantics></math>.</div>
+
+<h3>The frame format <code>.lz4</code></h3>
+<table>
+  <tr><th>Field</th><th>length</th><th>content</th></tr>
+  <tr><td>magic</td><td>4</td><td><code>04 22 4D 18</code> (0x184D2204)</td></tr>
+  <tr><td>FLG</td><td>1</td><td>bits 7–6 version = 01; bit 5 independent blocks; bit 4 block checksums; bit 3 content size; bit 2 content checksum; bit 1 reserved; bit 0 dictionary ID</td></tr>
+  <tr><td>BD</td><td>1</td><td>bits 6–4 maximum block size: 4 → 64 KiB, 5 → 256 KiB, 6 → 1 MiB, 7 → 4 MiB; other bits 0</td></tr>
+  <tr><td>[content size]</td><td>8</td><td>least significant first</td></tr>
+  <tr><td>[dictionary ID]</td><td>4</td><td></td></tr>
+  <tr><td>HC</td><td>1</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mtext>XXH32</mtext><mo stretchy="false">(</mo><mtext>FLG</mtext><mo>…</mo><mo stretchy="false">)</mo><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>8</mn></mrow></msup><mo stretchy="false">⌋</mo><mi>mod</mi><mn>256</mn></mrow><annotation encoding="application/x-tex">\lfloor \text{XXH32}(\text{FLG} \dots) / 2^8 \rfloor \operatorname{mod} 256</annotation></semantics></math> – the <b>second</b> byte of the hash over the descriptor</td></tr>
+  <tr><td>blocks</td><td>…</td><td>4 bytes size each (bit 31 = stored uncompressed; the size – compressed or not – must not exceed the maximum block size from BD), data, optionally 4 bytes XXH32 of the block data</td></tr>
+  <tr><td>end mark</td><td>4</td><td><code>00 00 00 00</code></td></tr>
+  <tr><td>[content checksum]</td><td>4</td><td>XXH32 over the whole content</td></tr>
+</table>
+<p>If the blocks are <b>linked</b> (bit 5 = 0, the default of lz4), a back-reference may reach into previous blocks; <code>Lz4</code> therefore unpacks all blocks into one continuous buffer. A file may consist of several frames, and skippable foreign frames (<code>184D2A50</code> to <code>184D2A5F</code>) are skipped. A preset dictionary (at most its last 64 KiB) stands before the output; with independent blocks before each block.</p>
+
+<h2 id="snappy">Snappy</h2>
+<p>A raw Snappy stream begins with the uncompressed length as a <b>varint</b> (7 bits per byte, least significant group first – the other way round from SQLite). Then elements follow; the lower two bits of the tag byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> say which:</p>
+<table>
+  <tr><th>Bits</th><th>kind</th><th>length</th><th>offset</th><th>bytes</th></tr>
+  <tr><td>00</td><td>literal</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lfloor t/4 \rfloor + 1</annotation></semantics></math>; for 60…63 the length − 1 is in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>−</mo><mn>59</mn></mrow><annotation encoding="application/x-tex">\lfloor t/4 \rfloor - 59</annotation></semantics></math> following bytes</td><td>–</td><td>1 + (0…4) + length</td></tr>
+  <tr><td>01</td><td>copy</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>+</mo><mo stretchy="false">(</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">4 + (\lfloor t/4 \rfloor \operatorname{mod} 8)</annotation></semantics></math>, i.e. 4…11</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>256</mn><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>32</mn><mo stretchy="false">⌋</mo><mo>+</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">256 \lfloor t/32 \rfloor + b_1</annotation></semantics></math>, 11 bits</td><td>2</td></tr>
+  <tr><td>10</td><td>copy</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lfloor t/4 \rfloor + 1</annotation></semantics></math>, 1…64</td><td>2 bytes</td><td>3</td></tr>
+  <tr><td>11</td><td>copy</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lfloor t/4 \rfloor + 1</annotation></semantics></math>, 1…64</td><td>4 bytes</td><td>5</td></tr>
+</table>
+<p><b>Worked example.</b> The stream <code>0C 08 61 62 63 15 03</code> (recomputed with <code>Snappy.entpacke</code>): varint <code>0C</code> = 12 bytes target. <code>08</code> = literal, length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">2 + 1 = 3</annotation></semantics></math>: <code>abc</code>. <code>15</code> = <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0001</mn><mspace width="0.1667em"/><msub><mn>0101</mn><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">0001\,0101_2</annotation></semantics></math>: kind 01, length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>+</mo><mn>5</mn><mo>=</mo><mn>9</mn></mrow><annotation encoding="application/x-tex">4 + 5 = 9</annotation></semantics></math>, offset <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>256</mn><mo>⋅</mo><mn>0</mn><mo>+</mo><mn>3</mn><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">256 \cdot 0 + 3 = 3</annotation></semantics></math>. Result <code>abcabcabcabc</code>.</p>
+
+<h3>Pseudocode – <code>Snappy.entpacke</code></h3>
+<pre class="pseudo">ziel ← varint;  <b>if</b> ziel > 32·input + 64: error;  check against the decompression limit
+<b>while</b> p &lt; ende:
+    t ← daten[p];  art ← t and 3
+    <b>if</b> art = 0:
+        len ← t >>> 2;  p ← p + 1
+        <b>if</b> len ≥ 60: len ← (len − 59) bytes, least significant first
+        len ← len + 1;  copy len literals
+    <b>otherwise</b>:
+        kind 1: len ← 4 + ((t >>> 2) and 7);  d ← ((t >>> 5) &lt;&lt; 8) + daten[p+1];  p ← p + 2
+        kind 2: len ← (t >>> 2) + 1;  d ← 2 bytes;  p ← p + 3
+        kind 3: len ← (t >>> 2) + 1;  d ← 4 bytes;  p ← p + 5
+        <b>if</b> d ≤ 0 <b>or</b> d > n: error
+        copy len bytes from n − d, byte by byte
+<b>if</b> n ≠ ziel: error</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/snappy/Snappy.java</code>.</p>
+
+<h3>The framing format</h3>
+<p>The framing format splits a stream into chunks with 1 byte type and 3 bytes length. The first is the stream identifier (type <code>0xFF</code>, content <code>sNaPpY</code>). Type <code>0x00</code> is a compressed chunk, <code>0x01</code> an uncompressed one, each preceded by 4 bytes of <b>masked CRC-32C</b> of the uncompressed data; <code>0x02</code> to <code>0x7F</code> are reserved and must not be skipped; <code>0x80</code> to <code>0xFE</code> are skipped and reported as a finding. The masking is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>m</mi><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>rotr</mi></mrow><mrow><mn>15</mn></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo>+</mo><mtext>0xA282EAD8</mtext><mo stretchy="false">)</mo><mi>mod</mi><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">m = \Big(\operatorname{rotr}_{15}(c) + \text{0xA282EAD8}\Big) \operatorname{mod} 2^{32}</annotation></semantics></math></p>
+<p>with the rotation by 15 bits to the right. It prevents a CRC over data containing its own CRC from falling onto a fixed value. Details on CRC-32C are on the <a href="pruef-theorie.html#castagnoli">checksums</a> page.</p>
+
+<h2 id="lzo">LZO1X</h2>
+<p>LZO1X reads no bits but command bytes. Which command is meant follows from the value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> of the byte <b>and</b> from what came before.</p>
+<table>
+  <tr><th>Command</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></th><th>length</th><th>offset</th></tr>
+  <tr><td>M2</td><td>64 … 255</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>32</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lfloor t/32 \rfloor + 1</annotation></semantics></math> (3…8)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false">(</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo><mo>+</mo><mn>8</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">1 + (\lfloor t/4 \rfloor \operatorname{mod} 8) + 8b</annotation></semantics></math>, up to 2048</td></tr>
+  <tr><td>M3</td><td>32 … 63</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>t</mi><mi>mod</mi><mn>32</mn><mo stretchy="false">)</mo><mo>+</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">(t \operatorname{mod} 32) + 2</annotation></semantics></math>, long field for 0</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false">⌊</mo><mi>a</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>64</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">1 + \lfloor a/4 \rfloor + 64b</annotation></semantics></math>, up to 16,384</td></tr>
+  <tr><td>M4</td><td>16 … 31</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>t</mi><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo><mo>+</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">(t \operatorname{mod} 8) + 2</annotation></semantics></math>, long field for 0</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>16384</mn><mo>+</mo><mn>16384</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>8</mn><mo stretchy="false">⌋</mo><mi>mod</mi><mn>2</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">⌊</mo><mi>a</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>64</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">16384 + 16384\,(\lfloor t/8 \rfloor \operatorname{mod} 2) + \lfloor a/4 \rfloor + 64b</annotation></semantics></math></td></tr>
+  <tr><td>M1</td><td>0 … 15 after a back-reference</td><td>2</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>4</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">1 + \lfloor t/4 \rfloor + 4b</annotation></semantics></math>, up to 1024</td></tr>
+  <tr><td>M1'</td><td>0 … 15 directly after a literal run</td><td>3</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2049</mn><mo>+</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>4</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">2049 + \lfloor t/4 \rfloor + 4b</annotation></semantics></math></td></tr>
+  <tr><td>literal run</td><td>0 … 15 otherwise</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>+</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">t + 3</annotation></semantics></math>, long field for 0</td><td>–</td></tr>
+</table>
+<p>Here <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>,</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a, b</annotation></semantics></math> are the following bytes. In M4, bit 3 of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> is the top offset bit (contribution 16,384); M4 with a zero offset part is the <b>end marker</b> <code>11 00 00</code>. A long length field counts zero bytes of 255 each and then adds the base value (15, 31 or 7) and the first non-zero byte.</p>
+<p>The real trick is the <b>state</b>: after every back-reference the lower two bits of the <b>second-to-last</b> byte read say how many literals (0 to 3) follow without a command of their own. If the very first byte is greater than 17, it is itself a literal run of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>−</mo><mn>17</mn></mrow><annotation encoding="application/x-tex">t - 17</annotation></semantics></math> bytes.</p>
+<p><b>Worked examples</b> (recomputed with <code>Lzo1x.entpacke</code>): <code>15 61 62 63 64 11 00 00</code> gives <code>abcd</code> – first byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>21</mn><mo>−</mo><mn>17</mn><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">21 - 17 = 4</annotation></semantics></math> literals, then the end marker. <code>15 61 62 63 64 6C 00 11 00 00</code> gives <code>abcdabcd</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>0x6C</mtext><mo>=</mo><mn>108</mn></mrow><annotation encoding="application/x-tex">\text{0x6C} = 108</annotation></semantics></math> is M2 with length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mn>108</mn><mo>/</mo><mn>32</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">\lfloor 108/32 \rfloor + 1 = 4</annotation></semantics></math> and offset <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false">(</mo><mn>27</mn><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo><mo>+</mo><mn>0</mn><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">1 + (27 \operatorname{mod} 8) + 0 = 4</annotation></semantics></math>; the lower two bits of <code>6C</code> are 0, so no trailing literals.</p>
+
+<h3>Pseudocode – <code>Lzo1x.Lauf</code> (abridged)</h3>
+<pre class="pseudo"><b>if</b> first byte > 17:
+    t ← byte − 17;  copy t literals
+    <b>if</b> t &lt; 4: innen(next byte) <b>otherwise</b>: nachLiterallauf()
+<b>repeat</b>:
+    t ← next byte
+    <b>if</b> t ≥ 16: innen(t);  <b>continue</b>
+    <b>if</b> t = 0: t ← longField(15)
+    copy t + 3 literals;  nachLiterallauf()
+
+<b>function</b> nachLiterallauf():
+    t ← next byte
+    <b>if</b> t ≥ 16: <b>return</b> innen(t)
+    backref(offset 1 + 0x800 + (t >>> 2) + 4·next byte, length 3)
+    n ← byte[ip − 2] and 3;  <b>if</b> n > 0: copy n literals; innen(next byte)
+
+<b>function</b> innen(t):
+    <b>repeat</b>:
+        M2 / M3 / M4 / M1 depending on t (table above);  M4 with offset 0: <b>end</b>
+        backref(offset, length)                        <i>byte by byte</i>
+        n ← byte[ip − 2] and 3                          <i>trailing literals from the second-to-last byte</i>
+        <b>if</b> n = 0: <b>return</b> (a literal run is due)
+        copy n literals;  t ← next byte</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/lzo/Lzo1x.java</code>. A long length field above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{24}</annotation></semantics></math> is rejected as damaged. If an expected size is given, the output must end up exactly that long, otherwise an error (“erwartet waren …”).</p>
+<div class="hinweis"><b>Convention in the framework:</b> LZO has no checksum. The <code>Lzoprobe</code> records this as a finding: a flipped byte does not change the length, but it does change the content, and nobody notices. The expected size allocates the output buffer up front (at most 16 MiB) and since 2026-09-28 is compared at the end – it is the only thing by which a caller recognises a wrong block, if the length changes along with it.</div>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Lz4probe</code> (67 checks):</b> xxHash32 against <code>python-xxhash</code> (empty, 1, 3, 4, 16, 31, 32, 100, 1000 bytes, seeds 0 and 1, slices); a bare block; five frame anchors from lz4 1.9.4 (independent blocks, with size and content checksum, with block checksums, <code>f4</code> with offset 3 and length 5997, <code>f5</code> three linked blocks over 139,122 bytes); two frames in a row; uncompressed blocks from a writer of its own; skippable foreign frames; twelve kinds of damage; an uncompressed block exactly at the block limit (64 KiB) is read, one above it rejected. The probe proved two of its author's own assumptions wrong: <code>f1</code> had independent instead of linked blocks, and no anchor contained an uncompressed block.</li>
+  <li><b><code>Lz4woerterbuchprobe</code> (9 checks):</b> dictionary with linked and independent blocks, with and without ID, long dictionary, counter-probes.</li>
+  <li><b><code>SnappySelfTest</code> (40 checks):</b> CRC-32C (“123456789” = <code>E3069283</code>, tabled against bitwise over 200 random blocks, in pieces), masking there and back; literals of 60, 61, 300 and 70,000 bytes (zero to three length bytes); all copy kinds; overlapping copies with offset 1, 2, 3; broken streams; the framing format with repeated stream identifier, skippable and reserved chunks, wrong checksum.</li>
+  <li><b><code>Lzoprobe</code> (25 checks):</b> twelve anchors from liblzo2 via python-lzo – a pure literal run, dense short back-references, long ones with large offset, overlapping throughout, random data (compressed larger than raw), long length fields, a single byte, all four command kinds, 30,000 equal bytes, the short back-reference directly after a literal run, more than 20,000 and more than 40,000 bytes back (top offset bit); plus three error cases, an expected size too large and one too small (both reported) and the finding about the missing checksum.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>All three are read-only.</li>
+  <li>The Snappy bound <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32</mn><mo>⋅</mo><mi>n</mi><mo>+</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">32 \cdot n + 64</annotation></semantics></math> has headroom above the true maximum ratio (kind 10: 3 bytes → 64 bytes, about 21.3). Since 2026-09-28 the source comment says so (before, it read “a copy command of two bytes yields up to 64”; a two-byte command of kind 01 yields at most 11).</li>
+  <li>LZ4: with independent blocks without dictionary, a back-reference into the previous block is not prevented. (Since 2026-09-28, uncompressed blocks are checked against the block limit from the header like compressed ones.)</li>
+  <li>LZO: without a given expected size (0) the length remains unchecked.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#schnell">Fast codecs of the data formats</a> · Probes: <code>Lz4probe</code>, <code>Lz4woerterbuchprobe</code>, <code>SnappySelfTest</code>, <code>Lzoprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deflate – the module's own encoder – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite aktiv" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › Deflate – the module's own encoder</span><a class="sprachwahl" href="../../de/compress/deflate-packer.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.deflate</div>
+  <h1>Deflate – the module's own encoder</h1>
+  <p class="unter">How <code>Deflate.packe</code> produces a stream: search for back-references via hash chains, lazy matching, block formation, length-limited Huffman codes, run-length coded code lengths and the cost comparison with the stored block. The format itself is on the page <a href="deflate-theorie.html">format and decoder</a>.</p>
+</header>
+
+<h2 id="aufgabe">What it is about</h2>
+<p>The format specifies what a reader must understand – not how a writer finds its back-references. An encoder has two tasks of very different character:</p>
+<ol>
+  <li><b>Parsing:</b> splitting the input into literals and back-references. That is a search: for every position, the longest earlier match within the 32 KiB window. Done exhaustively this would be quadratic; in practice one searches via hash chains and stops after a number of candidates.</li>
+  <li><b>Coding:</b> counting the resulting symbols, building the best Huffman codes under the length limit and writing everything into a block – or finding that a stored block is shorter.</li>
+</ol>
+<p><code>Deflate.packe</code> does both in one pass: symbols are collected, and every 16,384 symbols a block is written.</p>
+
+<h2 id="hash">Search via hash chains</h2>
+<p>A back-reference is at least three bytes long. It is therefore enough to know earlier positions with the same three leading bytes. From the three bytes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">b_0, b_1, b_2</annotation></semantics></math> at a position a 15-bit value is formed:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>h</mi><mo>=</mo><mo stretchy="false">(</mo><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>10</mn></mrow></msup><mo stretchy="false">)</mo><mi>xor</mi><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>5</mn></mrow></msup><mo stretchy="false">)</mo><mi>xor</mi><msub><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msub><mo stretchy="false">)</mo><mi>mod</mi><msup><mrow><mn>2</mn></mrow><mrow><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">h = \big( (b_0 \cdot 2^{10}) \operatorname{xor} (b_1 \cdot 2^{5}) \operatorname{xor} b_2 \big) \operatorname{mod} 2^{15}</annotation></semantics></math></p>
+<p>Two arrays hold the chains: <code>kopf[h]</code> is the most recent position with this value, <code>vorher[p mod 32768]</code> the previous position with the same value as position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math>. A search walks the chain backwards from the most recent position, compares byte by byte at each candidate (at most 258) and remembers the longest match. It ends when</p>
+<ul>
+  <li>the chain leaves the window (candidate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&lt;</mo><mi>p</mi><mo>−</mo><mn>32767</mn></mrow><annotation encoding="application/x-tex">&lt; p - 32767</annotation></semantics></math>),</li>
+  <li>the chain depth of the level is used up,</li>
+  <li>a match of 258 bytes has been found (it cannot be longer), or</li>
+  <li>the next chain link is no longer smaller than the current one – then the chain runs in a circle, because <code>vorher</code> is a ring buffer and the slot was overwritten.</li>
+</ul>
+<table>
+  <tr><th>Level</th><th>chain depth</th><th>lazy matching</th></tr>
+  <tr><td><code>SCHNELL</code></td><td>16</td><td>no</td></tr>
+  <tr><td><code>NORMAL</code> (default)</td><td>128</td><td>yes</td></tr>
+  <tr><td><code>GRUENDLICH</code></td><td>2048</td><td>yes</td></tr>
+</table>
+
+<figure>
+<svg viewBox="0 0 620 170" width="620" font-family="sans-serif" font-size="12">
+  <text x="10" y="18" fill="#5b6475">input</text>
+  <rect x="10" y="26" width="600" height="24" fill="#ffffff" stroke="#5b6475"/>
+  <rect x="70" y="26" width="30" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="250" y="26" width="30" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="430" y="26" width="30" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="560" y="26" width="30" height="24" fill="#1f5f8b" stroke="#1f5f8b"/>
+  <text x="550" y="68" fill="#1f5f8b">position p</text>
+  <text x="10" y="110" fill="#5b6475">kopf[h]</text>
+  <rect x="70" y="96" width="50" height="20" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <path d="M120 106 C 300 106, 430 90, 440 54" fill="none" stroke="#1f5f8b" stroke-width="1.5"/>
+  <path d="M438 54 C 400 130, 300 130, 268 54" fill="none" stroke="#9a6400" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <path d="M258 54 C 220 140, 120 140, 88 54" fill="none" stroke="#9a6400" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="300" y="150" fill="#9a6400">vorher[...]: earlier positions with the same h</text>
+</svg>
+<figcaption>Hash chain: <code>kopf[h]</code> points to the most recent earlier position with the same three leading bytes, <code>vorher</code> from there to the next older one. The search takes the longest match among at most <i>chain depth</i> candidates.</figcaption>
+</figure>
+
+<h2 id="traege">Lazy matching</h2>
+<p>Greedy parsing takes the longest match at every position and jumps behind it. That is not always best: one position later a longer match may begin which the greedy step skips. <b>Lazy</b> parsing therefore also checks the next position after each find. If a <b>longer</b> back-reference is possible there, the current byte is written as a literal and the longer find is kept pending – it may in turn be beaten from the position after that.</p>
+<p>An example, traced with the module's own encoder: <code>Verdichter, Verdichtung, dichter Verdichter</code> (43 bytes).</p>
+<table>
+  <tr><th>Level</th><th>parse (end)</th><th>packed</th></tr>
+  <tr><td><code>SCHNELL</code> (greedy)</td><td>… <code>&lt;22,7&gt;</code> <code>&lt;21,9&gt;</code> <code>er</code></td><td>38 bytes</td></tr>
+  <tr><td><code>NORMAL</code> (lazy)</td><td>… <code>&lt;22,7&gt;</code> <code>␣</code> <code>&lt;33,10&gt;</code></td><td>39 bytes</td></tr>
+</table>
+<p>Greedily, at the position of the space before the last word, “␣Verdicht” (9 bytes, distance 21) is taken, leaving “er” as literals. Lazily, one position later the whole of “Verdichter” is seen (10 bytes, distance 33); the space is written as a literal and the longer find is taken. Here the result is nevertheless one byte longer – the larger distance needs more extra bits, and in such a short block every new symbol also costs space in the code header. On longer text the gain prevails; the module documentation states “regularly a few per cent”.</p>
+
+<h3>Pseudocode – <code>Deflate.lauf()</code></h3>
+<pre class="pseudo">pos ← 0;  letzterFund ← −1
+<b>while</b> pos &lt; n:
+    (fundLänge, fundAbstand) ← (0, 0)
+    <b>if</b> pos + 3 ≤ n: (fundLänge, fundAbstand) ← suche(pos)
+    einfuege(pos)                                 <i>pos into the hash chain</i>
+
+    <b>if</b> letzterFund ≥ 3:                            <i>a find is pending</i>
+        <b>if</b> lazy <b>and</b> fundLänge > letzterFund:
+            literal(daten[pos−1])                    <i>previous byte becomes a literal</i>
+            letzterFund ← fundLänge;  letzterAbstand ← fundAbstand
+            pos ← pos + 1;  <b>continue</b>
+        reference(letzterFund, letzterAbstand)      <i>starts at pos−1</i>
+        insert the remaining positions of the reference into the hash chain
+        pos ← pos + letzterFund − 1;  letzterFund ← −1;  <b>continue</b>
+
+    <b>if not</b> lazy:                                  <i>SCHNELL: greedy</i>
+        <b>if</b> fundLänge ≥ 3: reference(fundLänge, fundAbstand); insert positions; pos ← pos + fundLänge
+        <b>otherwise</b>: literal(daten[pos]); pos ← pos + 1
+        <b>continue</b>
+
+    <b>if</b> fundLänge ≥ 3: letzterFund ← fundLänge; letzterAbstand ← fundAbstand   <i>keep pending</i>
+    <b>otherwise</b>: literal(daten[pos])
+    pos ← pos + 1
+<b>if</b> letzterFund ≥ 3: reference(letzterFund, letzterAbstand)
+schreibeBlock(last = true)
+
+<i>// literal(...) and reference(...) store a symbol; at 16,384 symbols</i>
+<i>// schreibeBlock(last = false) is called.</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/deflate/Deflate.java</code> (<code>lauf</code>, <code>suche</code>, <code>einfuege</code>, <code>hash</code>). A pending find that began one position earlier is placed at <code>pos − 1</code> when written; therefore <code>pos</code> then advances only by <code>letzterFund − 1</code>.</p>
+
+<h2 id="block">Writing a block</h2>
+<p>A block collects up to 16,384 symbols – one pair of length and distance per symbol, distance 0 meaning a literal. When writing, in turn:</p>
+<ol>
+  <li><b>Counting.</b> Frequencies of the 286 literal/length symbols (lengths via their length code) and of the 30 distance codes; end of block 256 counts once.</li>
+  <li><b>Code lengths.</b> <code>HuffmanCode.laengen(frequency, 15)</code> for both alphabets – optimal lengths under the limit 15 by package-merge (see <a href="bausteine-theorie.html#paket">building blocks</a>).</li>
+  <li><b>Distance tree never empty.</b> If the block has no back-reference, distance code 0 gets length 1; an empty distance tree is not provided for in the format.</li>
+  <li><b>Trimming.</b> <code>HLIT</code> and <code>HDIST</code> are chosen as small as possible (at least 257 and 1): trailing zeros drop out.</li>
+  <li><b>Code-length sequence.</b> Both length sequences one after the other are run-length coded with symbols 16, 17 and 18, their frequencies counted and a code of at most 7 bits built for them; <code>HCLEN</code> is trimmed as long as the length at the last place of the fixed order is zero (at least 4).</li>
+  <li><b>Comparing costs</b> and writing the cheaper block.</li>
+</ol>
+
+<h3>Pseudocode – run lengths of the code lengths (<code>clFolge</code>)</h3>
+<pre class="pseudo">alle ← litLänge[0..hlit−1] ++ distLänge[0..hdist−1]
+i ← 0
+<b>while</b> i &lt; length(alle):
+    wert ← alle[i];  lauf ← number of equal values from i
+    <b>if</b> wert = 0:
+        <b>while</b> lauf ≥ 11: wie ← min(lauf, 138); emit (18, wie); i += wie; lauf −= wie
+        <b>while</b> lauf ≥ 3:  wie ← min(lauf, 10);  emit (17, wie); i += wie; lauf −= wie
+    <b>otherwise</b>:
+        emit (wert, 0); i += 1; lauf −= 1           <i>the value itself appears once</i>
+        <b>while</b> lauf ≥ 3:  wie ← min(lauf, 6);   emit (16, wie); i += wie; lauf −= wie
+    <b>while</b> lauf > 0: emit (wert, 0); i += 1; lauf −= 1   <i>remainder singly</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/deflate/Deflate.java</code> (<code>clFolge</code>). The repeat counts are written minus 3 (for 16 and 17, 2 and 3 bits) or minus 11 (for 18, 7 bits).</p>
+
+<h2 id="kosten">The cost comparison</h2>
+<p>With data that cannot be packed – random data, already packed files – Huffman costs more than it saves: the symbols are nearly uniformly distributed, and the code header comes on top. <code>schreibeBlock</code> therefore computes both paths in bits before writing. For the dynamic block:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mtext>dyn</mtext></mrow></msub><mo>=</mo><mn>3</mn><mo>+</mo><mn>5</mn><mo>+</mo><mn>5</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>3</mn><mspace width="0.1667em"/><mtext>HCLEN</mtext><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mtext>CL sequence</mtext></mrow></munder><mo stretchy="false">(</mo><msub><mrow><mi>l</mi></mrow><mrow><mtext>cl</mtext></mrow></msub><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>+</mo><mi>z</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>s</mi></mrow></munder><msub><mrow><mi>h</mi></mrow><mrow><mi>s</mi></mrow></msub><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>+</mo><mi>z</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>d</mi></mrow></munder><msub><mrow><mi>h</mi></mrow><mrow><mi>d</mi></mrow></msub><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>l</mi><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo><mo>+</mo><mi>z</mi><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">K_{\text{dyn}} = 3 + 5 + 5 + 4 + 3\,\text{HCLEN} + \sum_{\text{CL sequence}} \big(l_{\text{cl}}(s) + z(s)\big) + \sum_{s} h_s\,\big(l(s) + z(s)\big) + \sum_{d} h_d\,\big(l(d) + z(d)\big)</annotation></semantics></math></p>
+<p>with the code lengths <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math>, the extra bits <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> (2, 3 and 7 for the code-length symbols 16, 17, 18) and the frequencies <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi></mrow><annotation encoding="application/x-tex">h</annotation></semantics></math>. For the stored path with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math> raw bytes, split into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌈</mo><mi>r</mi><mo>/</mo><mn>65535</mn><mo stretchy="false">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil r/65535 \rceil</annotation></semantics></math> blocks:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mtext>stored</mtext></mrow></msub><mo>=</mo><mn>3</mn><mo>+</mo><mo stretchy="false">(</mo><mo stretchy="false">(</mo><mn>8</mn><mo>−</mo><mo stretchy="false">(</mo><mi>B</mi><mo>+</mo><mn>3</mn><mo stretchy="false">)</mo><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo><mo>+</mo><mn>8</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>t</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>+</mo><mn>32</mn><mspace width="0.1667em"/><mi>t</mi><mo>+</mo><mn>8</mn><mi>r</mi><mo>,</mo><mspace width="2em"/><mi>t</mi><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mn>1</mn><mo>,</mo><mrow><mo fence="true" stretchy="true">⌈</mo><mfrac><mrow><mi>r</mi></mrow><mrow><mn>65535</mn></mrow></mfrac><mo fence="true" stretchy="true">⌉</mo></mrow><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">K_{\text{stored}} = 3 + \Big(\big(8 - (B + 3) \operatorname{mod} 8\big) \operatorname{mod} 8\Big) + 8\,(t - 1) + 32\,t + 8r, \qquad t = \max\!\left(1, \left\lceil \frac{r}{65535} \right\rceil\right)</annotation></semantics></math></p>
+<p>where <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> is the number of bits written so far: the first partial block has three header bits and pads to the byte boundary (0 to 7 bits), every further one starts on a byte boundary and needs three header and five padding bits; plus LEN and NLEN per partial block. Example: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">B = 5</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>10</mn></mrow><annotation encoding="application/x-tex">r = 10</annotation></semantics></math> gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>32</mn><mo>+</mo><mn>80</mn><mo>=</mo><mn>115</mn></mrow><annotation encoding="application/x-tex">3 + 0 + 0 + 32 + 80 = 115</annotation></semantics></math> bits; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">B = 0</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>65,536</mn></mrow><annotation encoding="application/x-tex">r = 65{,}536</annotation></semantics></math> gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>+</mo><mn>5</mn><mo>+</mo><mn>8</mn><mo>+</mo><mn>64</mn><mo>+</mo><mn>524,288</mn><mo>=</mo><mn>524,368</mn></mrow><annotation encoding="application/x-tex">3 + 5 + 8 + 64 + 524{,}288 = 524{,}368</annotation></semantics></math> bits (<code>Deflate.kostenGespeichert</code>). The block is stored if <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mtext>stored</mtext></mrow></msub><mo>&lt;</mo><msub><mrow><mi>K</mi></mrow><mrow><mtext>dyn</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">K_{\text{stored}} &lt; K_{\text{dyn}}</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>≤</mo><mn>4</mn><mo>⋅</mo><mn>65535</mn></mrow><annotation encoding="application/x-tex">r \le 4 \cdot 65535</annotation></semantics></math>. This way a random stream grows by less than one per cent; without the comparison it would be several per cent.</p>
+<div class="hinweis"><b>Convention in the framework:</b> The encoder produces no blocks with fixed codes (block type 1). The decoder reads them because foreign streams contain them; producing them oneself only pays in cases that the comparison with the stored block catches anyway.</div>
+<div class="hinweis"><b>Convention in the framework:</b> Since 2026-09-28 <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mtext>stored</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">K_{\text{stored}}</annotation></semantics></math> is the exact bit count of the stored partial blocks. Before, the code computed <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>+</mo><mn>8</mn><mo>−</mo><mo stretchy="false">(</mo><mi>B</mi><mo>+</mo><mn>3</mn><mo stretchy="false">)</mo><mi>mod</mi><mn>8</mn></mrow><annotation encoding="application/x-tex">3 + 8 - (B + 3) \operatorname{mod} 8</annotation></semantics></math>: if the header ended exactly on a byte boundary, that counted 8 padding bits instead of 0, and with more than one partial block their header and padding bits were missing. Both shifted the decision by a few bits only in borderline cases.</div>
+
+<h2 id="stufen">Conventions in the framework</h2>
+<div class="hinweis"><b>Convention in the framework:</b> window 32,768 bytes, minimum length 3, maximum length 258, hash table <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{15}</annotation></semantics></math> entries, 16,384 symbols per block, literal/length and distance codes at most 15 bits, code-length code at most 7 bits. Chain depths 16, 128 and 2048 for <code>SCHNELL</code>, <code>NORMAL</code>, <code>GRUENDLICH</code>; <code>packe(daten)</code> uses <code>NORMAL</code>.</div>
+
+<h2 id="messung">Measured</h2>
+<p>From the module documentation (24 Aug 2026, files from the workspace, bytes):</p>
+<table>
+  <tr><th>File</th><th>raw</th><th>own (<code>NORMAL</code>)</th><th>JDK level 6</th><th>JDK level 9</th></tr>
+  <tr><td><code>CLAUDE.md</code> from app-machieve</td><td>44,508</td><td>20,489</td><td>19,640</td><td>19,637</td></tr>
+  <tr><td><code>glyph-cessna560-v3.ennet</code></td><td>1,476,953</td><td>1,135,039</td><td>1,113,733</td><td>1,113,733</td></tr>
+  <tr><td><code>jfreechart-1_5_6.jar</code></td><td>1,652,288</td><td>1,564,174</td><td>1,563,805</td><td>1,563,694</td></tr>
+  <tr><td><code>sample-speech-1m.wav</code></td><td>5,292,110</td><td>4,575,536</td><td>4,583,829</td><td>4,584,210</td></tr>
+</table>
+<p>Consistently within a few per cent of the JDK, slightly below it on the WAV file. Speed: 5 MB in 0.7 s at level <code>NORMAL</code>. Recomputed: 4 MiB of zeros give 4080 bytes (ratio ≈ 1028; the format allows at most 1032).</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b>Round trip</b> at all three levels over eight samples (<code>CompressSelfTest</code>).</li>
+  <li><b>Cross check:</b> every stream of our own is read by the JDK <code>Inflater</code> – this proves format conformance independently of our own decoder.</li>
+  <li><b>Size:</b> on a repeated text at most 10 % larger than JDK level 9 (the run prints the ratio); 50,000 random bytes grow by less than 1 %.</li>
+  <li><b>Cost of the stored block:</b> <code>kostenGespeichert</code> against the examples above (115, 120 and 524,368 bits), and 10,000 random bytes come out at exactly the computed length. Counter-probes <code>deflate-gespeichert-fuellbits</code> and <code>deflate-gespeichert-teilbloecke</code> red.</li>
+  <li><b>Edge cases:</b> lengths 257 to 260, distance 1, block change after 16,384 symbols, stored blocks above 65,535 bytes, repetition across 35,000 bytes.</li>
+  <li><b>Huffman:</b> no length above 15 or 7 with Fibonacci frequencies, the code stays complete.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>No optimal parsing: the search is greedy or lazy by one position; methods weighing costs over many positions do not exist.</li>
+  <li>The block boundary is fixed at 16,384 symbols, not where the statistics change.</li>
+  <li>No streaming mode: the whole input is present as an array.</li>
+  <li>No preset dictionary when packing (only when unpacking).</li>
+  <li>The encoders have no caller outside the probes yet; <code>PdfWriter</code> still uses <code>java.util.zip</code>.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#deflate">Deflate and zlib</a> · see also <a href="deflate-theorie.html">format and decoder</a> · Probes: <code>CompressSelfTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

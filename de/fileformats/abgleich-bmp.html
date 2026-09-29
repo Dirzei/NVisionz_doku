@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BMP — Abgleich gegen die Beschreibung der Windows-Strukturen und gegen Pillow – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite aktiv" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › BMP — Abgleich gegen die Beschreibung der Windows-Strukturen und gegen Pillow</span><a class="sprachwahl" href="../../en/fileformats/abgleich-bmp.html">English</a></div>
+<!-- erzeugt aus bmp/ABGLEICH.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · Abgleich</div>
+  <h1>BMP — Abgleich gegen die Beschreibung der Windows-Strukturen und gegen Pillow</h1>
+</header>
+
+<p><b>Stand:</b> 2026-09-06<br><b>Unsere Umsetzung:</b> <code>envisionz.fileformats.bmp.BmpDatei</code> mit <code>Bmpkopf</code>, rein lesend, ohne Fremdbibliothek<br><b>Spezifikation:</b> Microsoft Windows GDI, <i>Bitmap Storage</i>, und die Strukturen <code>BITMAPFILEHEADER</code>, <code>BITMAPCOREHEADER</code>, <code>BITMAPINFOHEADER</code>, <code>BITMAPV4HEADER</code>, <code>BITMAPV5HEADER</code> — öffentlich beschrieben; die Fundstellen nennen Strukturnamen und Feldnamen<br><b>Verglichen mit:</b> Pillow 12.2.0 (Python)<br><b>Prüfstand:</b> <code>envisionz.fileformats.bmp.Bmpprobe</code> — 389 Prüfungen, vierzehn Fremdanker, zwei gerechnete Prüfstücke, zwölf Gegenproben</p>
+<p><b>Das Vergleichsprodukt.</b> <b>Pillow</b> ist die Bildbibliothek des Python-Oekosystems: eine duenne Python-Schicht ueber eigenem C-Code. Sie ist der 2010 begonnene Fork der urspruenglichen <i>Python Imaging Library</i> von Fredrik Lundh (Secret Labs), angestossen von Jeffrey „Alex" Clark und heute vom Team <i>python-pillow</i> gepflegt. Praktisch alles, was in Python ein Bild oeffnet — von matplotlib bis zu den Bildfeldern von Django —, geht durch sie hindurch. Sie ist damit die verbreitetste Umsetzung ihres Fachs, aber die <b>Referenzumsetzung keines einzigen Formats</b>: sie baut fremde Formate nach. Fuer dieses Format benutzt sie <b>eigenen C-Code</b>, keine Fremdbibliothek.</p>
+<p><b>Warum ausgerechnet dieses.</b> Weil es fuer BMP <b>keine Referenzumsetzung gibt, gegen die man messen koennte</b>. Das Format ist eine Folge von C-Strukturen aus der Windows-Programmierschnittstelle; wer es liest, liest eine Beschreibung von Strukturen, nicht eine Norm. Pillow ist unter den frei erreichbaren Umsetzungen die mit Abstand meistgenutzte und deckt die Kopfarten und Lauflaengen breit ab — sie ist damit nicht die Wahrheit, aber die belastbarste zweite Meinung, die ohne Windows zu haben ist. Genau deshalb steht jeder Unterschied hier als <b>Befund</b>, nicht als Fehler der einen oder anderen Seite, bis er an der Strukturbeschreibung entschieden ist.</p>
+<p><b>Deckung, aus den Zeilen unten gerechnet:</b> von 46 Merkmalen sind bei uns 43 vorhanden, 0 teilweise und 2 nicht vorhanden; beim Vergleichsstueck 32 / 2 / 10.</p>
+<p><span class="ampel gruen">●</span> vorhanden · <span class="ampel rot">●</span> nicht vorhanden · <span class="ampel gelb">●</span> teilweise · – nicht zutreffend</p>
+<p><b>Die Spalte <i>Anmerkung</b></i> verweist auf Abschnitt 5 dieses Dokuments — nicht auf die Punkteliste des Arbeitsbereichs. Das Wort davor sagt, <i>worum es sich handelt</i>: <b>Lücke</b> ist etwas, das uns fehlt und offen ist; <b>entschieden</b> ist etwas, das wir absichtlich nicht tun; <b>Merkmal</b> ist eine Eigenschaft des Formats, die beide Umsetzungen betrifft; <b>dort offen</b> ist eine Lücke des Vergleichsprodukts. Nur die Lücken sind Arbeit — sie stehen gesammelt in Abschnitt 5.1 und als <i>ein</i> Punkt in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Merkmalsvergleich</h2>
+<p>BMP hat keine Spezifikation im Sinne der anderen Formate dieser Sammlung. Es gibt kein Dokument mit Paragraphen, auf das man verweisen könnte — es gibt <b>beschriebene C-Strukturen</b> aus der Windows-Programmierschnittstelle, und das Dateiformat ist das, was herauskommt, wenn man sie hintereinander in eine Datei schreibt. Alles, was dieses Format ausmacht, ist deshalb eine Eigenheit des Speicherlayouts von 1990 und nicht eine Entwurfsentscheidung: die Zeilen stehen von unten nach oben, weil die Koordinaten von OS/2 dort unten anfingen; die Farben stehen als Blau-Grün-Rot, weil ein <code>COLORREF</code> im Kleinend-Speicher so aussieht; die Zeilen sind auf vier Byte aufgefüllt, weil ein 32-Bit-Zugriff sonst nicht ausgerichtet wäre.</p>
+<p>Das macht BMP zum einfachsten Format dieser Reihe und gleichzeitig zu dem mit den meisten stillen Fallen. Es gibt nichts zu entpacken und nichts zu entschlüsseln; es gibt nur ein halbes Dutzend Stellen, an denen ein Leser aus Versehen etwas Plausibles liefert, das falsch ist.</p>
+<h3>Köpfe und Palette</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>Pillow 12.2.0</th><th>Anmerkung</th></tr>
+  <tr><td>Kennung <code>BM</code></td><td><code>BITMAPFILEHEADER.bfType</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>12-Byte-Kopf (<code>BITMAPCOREHEADER</code>)</td><td><code>BITMAPCOREHEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B13</td></tr>
+  <tr><td>40-Byte-Kopf (<code>BITMAPINFOHEADER</code>)</td><td><code>BITMAPINFOHEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B13</td></tr>
+  <tr><td>52-, 56- und 64-Byte-Kopf</td><td>OS/2 2.x, <code>BITMAPV2/V3INFOHEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B13</td></tr>
+  <tr><td>108-Byte-Kopf (<code>BITMAPV4HEADER</code>)</td><td><code>BITMAPV4HEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B13</td></tr>
+  <tr><td>124-Byte-Kopf (<code>BITMAPV5HEADER</code>)</td><td><code>BITMAPV5HEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B13</td></tr>
+  <tr><td>Unbekannte Kopflänge wird gemeldet und wie ein 40er gelesen</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen B17</td></tr>
+  <tr><td>Paletteneintrag zu <b>drei</b> Byte beim 12-Byte-Kopf</td><td><code>RGBTRIPLE</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B10</td></tr>
+  <tr><td>Paletteneintrag zu <b>vier</b> Byte sonst</td><td><code>RGBQUAD</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B10</td></tr>
+  <tr><td><code>biClrUsed = 0</code> heißt <b>volle</b> Palette, nicht „keine"</td><td><code>BITMAPINFOHEADER.biClrUsed</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B11</td></tr>
+  <tr><td>Palette in <b>BGR</b>, nicht RGB</td><td><code>RGBQUAD</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B9</td></tr>
+  <tr><td>Farbraum und ICC-Profil aus dem 108er/124er Kopf werden gelesen</td><td><code>BITMAPV4HEADER.bV4CSType</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal B4</td></tr>
+  <tr><td>Zu kurze Palette wird gemeldet, der Rest bleibt schwarz</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen B16</td></tr>
+</table>
+<h3>Bildpunkte</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>Pillow 12.2.0</th><th>Anmerkung</th></tr>
+  <tr><td>Zeilen von <b>unten nach oben</b></td><td><code>biHeight &gt; 0</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B7</td></tr>
+  <tr><td>Negative Höhe dreht auf von oben nach unten</td><td><code>biHeight &lt; 0</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B7</td></tr>
+  <tr><td>Negative Höhe im 12-Byte-Kopf gibt es nicht — Meldung</td><td><code>BITMAPCOREHEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal B7</td></tr>
+  <tr><td>Zeilen auf <b>vier Byte</b> aufgefüllt</td><td><i>Bitmap Storage</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B8</td></tr>
+  <tr><td>1 Bit je Bildpunkt</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>4 Bit je Bildpunkt, zwei Punkte je Byte</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>8 Bit je Bildpunkt</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>16 Bit <b>ohne</b> Masken ist 5-5-5, nicht 5-6-5</td><td><code>BI_RGB</code> mit <code>biBitCount = 16</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B12</td></tr>
+  <tr><td>24 Bit je Bildpunkt</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>32 Bit je Bildpunkt</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>BI_BITFIELDS</code> (3) mit beliebigen Masken</td><td><code>BI_BITFIELDS</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>BI_ALPHABITFIELDS</code> (6) mit vierter Maske</td><td>OS/2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen B15</td></tr>
+  <tr><td>Deckung (Alpha) aus der vierten Maske</td><td><code>bV4AlphaMask</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden B6</td></tr>
+  <tr><td>Dehnung schmaler Anteile auf acht Bit, <b>gerundet</b> — Pillow schneidet ab</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>entschieden B5</td></tr>
+  <tr><td>Bittiefe, die es nicht gibt, wird abgewiesen</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Zu kurze Bilddaten werden gemeldet, der Rest bleibt schwarz</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen B16</td></tr>
+</table>
+<h3>Lauflängen</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>Pillow 12.2.0</th><th>Anmerkung</th></tr>
+  <tr><td><code>BI_RLE8</code> (1)</td><td><code>BI_RLE8</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>BI_RLE4</code> (2), Halbbytes</td><td><code>BI_RLE4</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Gepackter Lauf (Zähler &gt; 0)</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Zeilenende (<code>00 00</code>)</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Bildende (<code>00 01</code>)</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><b>Sprung</b> (<code>00 02 dx dy</code>)</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B14</td></tr>
+  <tr><td><b>Unverpackter Lauf</b> mit Füllbyte auf gerade Bytezahl</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B14</td></tr>
+  <tr><td>Übersprungene Bildpunkte bleiben Hintergrund</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal B14</td></tr>
+  <tr><td>Strom ohne Bildende wird gemeldet</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen B16</td></tr>
+</table>
+<h3>Sonstiges</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>Pillow 12.2.0</th><th>Anmerkung</th></tr>
+  <tr><td>Eingebettetes JPEG (<code>BI_JPEG</code>, 4) wird ausgepackt</td><td><code>BI_JPEG</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal B2</td></tr>
+  <tr><td>Eingebettetes PNG (<code>BI_PNG</code>, 5) wird ausgepackt</td><td><code>BI_PNG</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal B2</td></tr>
+  <tr><td>Unbekannte Packart wird abgewiesen</td><td><code>biCompression</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Falsche Dateigröße im Kopf wird gemeldet, nicht abgebrochen</td><td><code>bfSize</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen B18</td></tr>
+  <tr><td>Erkennung über <code>Formaterkennung</code></td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td></td></tr>
+  <tr><td>Öffnen über <code>Datenquellen.oeffne</code></td><td>—</td><td><span class="ampel rot">●</span></td><td>–</td><td>entschieden B1</td></tr>
+  <tr><td>Schreiben</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden B3</td></tr>
+  <tr><td><code>bits</code> und <code>compression</code> beim Schreiben wirken</td><td>—</td><td>–</td><td><span class="ampel rot">●</span></td><td>dort offen B19</td></tr>
+</table>
+
+<h2 id="a2">Was gemessen wurde</h2>
+<p><b>Elf Fremdanker</b>: fünf hat Pillow 12.2.0 geschrieben, sechs sind von Hand gebaut und von Pillow <b>gegengelesen</b> — die Sollwerte stammen also in allen elf Fällen von dort. Von Hand gebaut werden musste, was Pillow nicht schreibt: der 12-Byte-Kopf, die negative Höhe, vier Bit, sechzehn Bit und die beiden Lauflängenbilder. Pillow schreibt eine BMP immer unkomprimiert und mit acht, vierundzwanzig oder zweiunddreißig Bit; die Angaben <code>bits=4</code> und <code>compression=1</code> werden angenommen und <b>übergangen</b> (nachgemessen, siehe B19).</p>
+<h3>Warum die Farbsumme allein hier nicht genügt</h3>
+<p>Zu jedem Anker prüft die Probe <b>drei</b> Dinge: die Farbsumme über alle Bildpunkte, die <b>erste</b> Bildzeile und die <b>letzte</b>. Der Grund ist die Hauptfalle des Formats. Eine BMP steht von unten nach oben; ein Leser, der das übersieht, liefert ein an der Waagerechten gespiegeltes Bild — mit <b>derselben</b> Farbsumme, denselben Farben, derselben Größe und ohne jede Meldung. Erst der Vergleich der ersten Zeile gegen die letzte deckt es auf. Dasselbe gilt für die BGR/RGB-Verwechslung: an einem grauen Bild ist sie unsichtbar, weil alle drei Anteile gleich sind. Deshalb stehen bunte <b>und</b> graue Anker in der Liste.</p>
+<table>
+  <tr><th>Anker</th><th>deckt ab</th><th>Ergebnis</th></tr>
+  <tr><td><code>b24</code></td><td>3 × 4, 24 Bit, von Pillow geschrieben</td><td><span class="ampel gruen">●</span> Summe 3132, erste und letzte Zeile</td></tr>
+  <tr><td><code>b8</code></td><td>9 × 5 mit Palette — deckt BGR und <code>biClrUsed</code> ab</td><td><span class="ampel gruen">●</span> Summe 16626</td></tr>
+  <tr><td><code>b1</code></td><td>17 × 3, <b>ein</b> Bit — Breite 17 erzwingt die Auffüllung</td><td><span class="ampel gruen">●</span> Summe 19125</td></tr>
+  <tr><td><code>b32</code></td><td>4 × 3, 32 Bit</td><td><span class="ampel gruen">●</span> Summe 4200</td></tr>
+  <tr><td><code>grau</code></td><td>6 × 4 in Grautönen — hier ist BGR/RGB <b>unsichtbar</b></td><td><span class="ampel gruen">●</span> Summe 6840; steht da, um genau das zu zeigen</td></tr>
+  <tr><td><code>kern12</code></td><td><b>12-Byte-Kopf</b>, Palette zu drei Byte</td><td><span class="ampel gruen">●</span> Summe 4939</td></tr>
+  <tr><td><code>obenunten</code></td><td><b>negative Höhe</b> — von oben nach unten</td><td><span class="ampel gruen">●</span> Summe 3060, und erste/letzte Zeile gegen <code>b24</code> gestellt</td></tr>
+  <tr><td><code>vierbit</code></td><td><b>4 Bit</b>, Breite 7 — ein halbes Byte am Zeilenende</td><td><span class="ampel gruen">●</span> Summe 4116</td></tr>
+  <tr><td><code>sechzehn</code></td><td><b>16 Bit als 5-5-5</b>, ohne Masken</td><td><span class="ampel gruen">●</span> Summe 2032 mit Toleranz 1 je Anteil, siehe B5</td></tr>
+  <tr><td><code>rle8</code></td><td><code>BI_RLE8</code>, nur gepackte Läufe</td><td><span class="ampel gruen">●</span> Summe 5160</td></tr>
+  <tr><td><code>rlesprung</code></td><td><code>BI_RLE8</code> mit <b>Sprung</b> und <b>unverpacktem Lauf</b></td><td><span class="ampel gruen">●</span> Summe 10888 — der elfte Anker, siehe 2.2</td></tr>
+</table>
+<p><b>Zwei Prüfstücke kommen ohne Fremdanker aus</b>, und der Grund ist ein Befund: <code>BI_BITFIELDS</code> mit ausdrücklichem 5-6-5 und <code>BI_ALPHABITFIELDS</code> mit vier Masken. Die zweite Packart liest Pillow gar nicht (B15) — es gibt für sie niemanden, der gegenliest. Beide Dateien baut die Probe deshalb selbst, Byte für Byte aus einer Vorschrift, und prüft gegen dieselbe Vorschrift statt gegen abgeschriebene Zahlen: bei acht Bit je Maske muss ein Bildpunkt <b>unverändert</b> wieder herauskommen, und dasselbe 16-Bit-Wort muss <b>ohne</b> Masken etwas anderes ergeben als mit. Das ist die einzige Stelle dieses Abgleichs ohne fremde Gegenrechnung, und sie ist als solche gekennzeichnet.</p>
+<h3>Zwei Gegenproben, die grün blieben — und warum das ein Befund über die Probe war</h3>
+<p>Eine Probe ist erst etwas wert, wenn sie rot wird, sobald man den Leser kaputt macht. Von zwölf Eingriffen wurden zunächst nur acht rot. <b>Zwei blieben grün</b>: „den Sprung im Lauflängenstrom übergehen" und „unverpackte Läufe nicht auf gerade Bytezahl auffüllen".</p>
+<p>Der Grund lag nicht am Leser, sondern am Prüfstück. Der Anker <code>rle8</code> besteht ausschließlich aus <b>gepackten Läufen</b> — vier Bildpunkte auf einen Index, vier auf einen anderen, Zeilenende, Bildende. Ein Strom in dieser Form benutzt weder den Sprung noch den unverpackten Lauf. Die beiden zugehörigen Zweige im Leser waren damit durch <b>kein einziges</b> Prüfstück gedeckt; sie standen unbewiesen da, und die Gegenproben konnten gar nicht rot werden.</p>
+<p>Nach der Hausregel wird eine Gegenprobe, die grün bleibt, verworfen <b>oder</b> die Probe geschärft. Hier war das Zweite richtig, denn beide Zweige sind echte Formatbestandteile und keine Erfindung. Also ist ein elfter Anker dazugekommen: <code>rlesprung</code>, 8 × 4, von Hand gebaut und von Pillow gegengelesen. Er enthält in der untersten Zeile einen unverpackten Lauf von <b>drei</b> Bildpunkten — also drei Byte und ein Füllbyte —, in der zweiten Zeile einen <b>Sprung</b> um drei nach rechts, dessen übersprungene Bildpunkte auf dem Hintergrund bleiben, und darüber zwei gewöhnliche Zeilen. Seither sind alle zwölf Gegenproben rot.</p>
+<table>
+  <tr><th>Eingriff</th><th>Fehlschläge</th></tr>
+  <tr><td>Paletteneinträge immer zu drei Byte</td><td><b>119</b></td></tr>
+  <tr><td>Zeilen von oben nach unten statt von unten</td><td><b>123</b></td></tr>
+  <tr><td>Palette als RGB statt BGR lesen</td><td><b>74</b></td></tr>
+  <tr><td>Zeilen nicht auf vier Byte auffüllen</td><td><b>50</b></td></tr>
+  <tr><td>Halbbytes in umgekehrter Reihenfolge</td><td><b>38</b></td></tr>
+  <tr><td>unverpackte Läufe nicht auffüllen</td><td><b>33</b> — vorher grün</td></tr>
+  <tr><td>Dehnung durch bloßes Schieben</td><td><b>35</b></td></tr>
+  <tr><td>sechzehn Bit als 5-6-5 statt 5-5-5</td><td><b>27</b></td></tr>
+  <tr><td>die Null bei <code>biClrUsed</code> wörtlich nehmen</td><td><b>18</b>, und die Probe bricht nach 362 Prüfungen ab</td></tr>
+  <tr><td>die Masken hinter dem ganzen Kopf suchen</td><td><b>8</b></td></tr>
+  <tr><td>die vierte Maske (Deckung) übergehen</td><td><b>5</b></td></tr>
+  <tr><td>den Sprung im Lauflängenstrom übergehen</td><td><b>2</b> — vorher grün</td></tr>
+</table>
+
+<h2 id="a3">Was am Format schwierig ist</h2>
+<p><b>Von unten nach oben.</b> Die erste Bildzeile in der Datei ist die <b>unterste</b> des Bildes, solange die Höhe positiv ist. Nur eine negative Höhe — die es im 12-Byte-Kopf nicht geben kann, weil dessen Maße vorzeichenlos sind — dreht das um. Wer es übersieht, bekommt ein gespiegeltes Bild mit derselben Prüfsumme. Bei einem Muster ohne klares Oben, und das sind in Prüfständen die meisten, fällt es nie auf.</p>
+<p><b>Blau, grün, rot.</b> Sowohl in der Palette als auch bei 24 und 32 Bit stehen die Anteile in dieser Reihenfolge. Vertauscht man sie, bleibt die Farbsumme <b>auf die Zahl genau gleich</b> — es sind dieselben drei Zahlen, nur anders zugeordnet. Und an einem grauen Bild ist der Fehler vollständig unsichtbar. Ein Prüfstand, der nur eine Summe über ein Graubild vergleicht, sagt zu dieser Verwechslung nichts.</p>
+<p><b>Die Zeilenauffüllung ist keine Ausrichtung der Datei, sondern jeder Zeile.</b> Jede Bildzeile belegt ein Vielfaches von vier Byte. Bei drei Bildpunkten zu 24 Bit sind das neun Nutzbyte und zwölf belegte. Wer die Auffüllung vergisst, liest ab der <b>zweiten</b> Zeile verschoben — und das Bild ist dann nicht kaputt, sondern <b>geschert</b>: es sieht aus wie ein Bild, nur schräg. Genau deshalb hat der Anker <code>b1</code> die Breite 17 und <code>vierbit</code> die Breite 7; bei geraden Breiten fällt die Auffüllung zufällig zusammen.</p>
+<p><b>Eine Null, die „alle" bedeutet.</b> <code>biClrUsed = 0</code> heißt nicht „keine Palette", sondern „so viele Einträge, wie in die Bittiefe passen" — bei acht Bit also 256. Wer die Null wörtlich nimmt, liest die Palette nicht, rechnet den Datenanfang um 1024 Byte zu früh und hält damit die Palette für Bilddaten. Das Ergebnis ist kein Absturz, sondern ein Bild aus Farbverläufen, das man auf den ersten Blick für ein Testmuster hält.</p>
+<p><b>Sechzehn Bit sind 5-5-5.</b> Ohne Masken belegen die drei Anteile je fünf Bit, das oberste Bit bleibt ungenutzt. Die von anderswo geläufige Aufteilung 5-6-5 kommt in BMP nur vor, wenn sie über <code>BI_BITFIELDS</code> <b>ausdrücklich</b> angegeben ist. Liest man ohne Masken als 5-6-5, ist das Bild nicht falsch genug, um aufzufallen: Rot und Blau sitzen um ein Bit daneben, Grün ist zu hell — es sieht aus wie eine andere Farbabstimmung, nicht wie ein Fehler.</p>
+<p><b>Die Kopfart steht nirgends — nur ihre Länge.</b> Es gibt kein Feld „Version". Das erste Wort des Beschreibungskopfes ist dessen Länge in Byte, und daran allein erkennt man, ob ein <code>BITMAPCOREHEADER</code> (12) oder ein <code>BITMAPV5HEADER</code> (124) folgt und an welcher Stelle die Farbmasken liegen. Ein unbekannter Wert lässt nur zwei Wege: abweisen oder als 40er weiterlesen und das sagen.</p>
+<p><b>Was gut ist:</b> dass es nichts zu entpacken gibt. Eine unkomprimierte BMP ist die einzige verbreitete Bilddatei, aus der man mit Papier und Bleistift einen Bildpunkt an einer gegebenen Stelle ausrechnen kann. Für einen Prüfstand ist das kein kleiner Vorteil — bei jedem Fehler kann man die Frage „was steht wirklich in der Datei" beantworten, ohne einem zweiten Leser glauben zu müssen. Genau deshalb ließen sich sechs der elf Anker von Hand bauen.</p>
+
+<h2 id="a4">Die Punkte</h2>
+<p>Die Spalte <i>Anmerkung</i> nennt die Art vor der Kennung. Nur die <b>Lücken</b> sind Arbeit.</p>
+<h3>Unsere offenen Lücken — das ist die Arbeit</h3>
+<h3>Bewusste Entscheidungen — nichts zu tun</h3>
+<p><b>B1</b> (entschieden) — Kein Weg über die allgemeine Formaterkennung</p>
+<p><code>Datenquellen.oeffne</code> weist eine BMP ab und verweist auf <code>BmpDatei.lies</code>. Der Grund ist derselbe wie bei GIF (I15): <b>ein Bild ist keine Tabelle</b>, und eine <code>Datenquelle</code> ist eine Tabellensicht. Die Erkennung selbst kennt BMP und benennt es; nur das Öffnen als Datenquelle fehlt. Dieselbe Lage wie bei VTK (V9), HDF4 (H8) und GIF (I15).</p>
+<p><b>Entschieden vom Eigner am 2026-09-06.</b> Der Punkt stand als <i>Lücke</i> in fünf Bildformaten gleichlautend (BMP B1, GIF I15, PNG P1, TIFF T24, WebP W20). Er ist keine: eine <code>Datenquelle</code> ist eine <b>Tabellensicht</b>, und ein Bild ist keine Tabelle. Möglich wäre eine Sicht mit je einer Zeile <code>(x, y, rot, grün, blau)</code> — bei 4000×3000 sind das zwölf Millionen Zeilen, und was man damit gewönne, beantwortet nicht die Frage „was steht in dieser Datei", sondern eine andere. Die Leser sind da und werden in der Ablehnungsmeldung <b>namentlich genannt</b>; das ist die Auskunft, die der Anwender braucht. Anders liegen VTK (V9) und HDF4 (H8): deren Inhalt ist wirklich tabellarisch, und dort wird die Sicht gebaut.</p>
+<p><b>B5</b> (entschieden) — Gerundet dehnen statt Bitwiederholung</p>
+<p>Ein Wert aus fünf Bit steht für den Anteil <code>v / 31</code>; auf acht Bit ist das <code>v · 255 / 31</code>, und wie man diese Zahl ganzzahlig macht, entscheidet über das Ergebnis. Drei Wege sind im Umlauf. <b>Schieben allein</b> (<code>v &lt;&lt; 3</code>) ist falsch: aus 31 wird 248, das hellste Weiß wäre kein Weiß. Die <b>Bitwiederholung</b> (<code>v &lt;&lt; 3 | v &gt;&gt; 2</code>) trifft die Enden und ist der überall zitierte Kniff — sie liegt aber an <b>vier</b> der zweiunddreißig Stellen um eins daneben (bei 3 und 7 zu dunkel, bei 24 und 28 zu hell). Wir <b>runden kaufmännisch</b>, ganzzahlig geschrieben <code>(v · 255 + 15) / 31</code>. Das ist die einzige der drei Rechnungen, die überall auf der richtigen Zahl liegt, und die Probe rechnet das geschlossen über alle 32 Werte nach — gegen die Formel, nicht gegen ein Vergleichsprodukt.</p>
+<p><b>B6</b> (entschieden) — Deckung wird geführt, aber nicht in die Summe gerechnet</p>
+<p>Der Leser gibt je Bildpunkt einen <code>int</code> in der Form <code>ARGB</code> zurück; die Deckung kommt aus der vierten Maske, wo eine da ist, und ist sonst voll. Die Farbsumme der Probe zählt <b>nur</b> Rot, Grün und Blau. Das ist Absicht: die Deckung wird von Pillow je nach Modus (<code>RGB</code> oder <code>RGBA</code>) verschieden geliefert, und eine Summe, die von der Betriebsart des Vergleichsprodukts abhängt, prüft nichts. Die Deckung wird stattdessen an einzelnen Stellen geprüft.</p>
+<p><b>B3</b> (entschieden) — Schreiben</p>
+<p>Pillow schreibt BMP und hat fünf der elf Fremdanker geliefert. Dieses Modul liest. Die sechs von Hand gebauten Anker sind Prüfmittel und kein Ausgabeweg — sie entstehen im Prüfstand aus wenigen Zeilen und liegen als gepackte Bytes in <code>Bmpanker</code>.</p>
+<p><b>B2</b> (Merkmal) — Eingebettetes JPEG und PNG — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> Die Packarten 4 und 5 sind kein Packverfahren: an der Stelle der Bildpunkte liegt eine <b>vollständige Datei</b>, mit eigener Kennung, eigenem Kopf, eigenen Massen. Die Arbeit ist deshalb das <b>Weiterreichen</b> an <code>PngDatei</code> beziehungsweise <code>JpegDatei</code> — beide stehen in derselben Reihe und kosten keine Fremdbibliothek.</p>
+<p><b>Die eine Frage, die dabei zu beantworten war:</b> welche Masse gelten, wenn der Umschlag und sein Inhalt sich widersprechen. Es gelten die des <b>inneren</b> Bildes, denn die BMP ist nur der Umschlag; der Widerspruch wird benannt. Dafür steht ein eigener Anker bereit, dessen Kopf 12 × 9 sagt und dessen PNG 8 × 6 ist — ohne ihn bliebe eine Gegenprobe grün, die die Bildpunkte mit der falschen Zeilenbreite holt, weil bei gleichen Massen beide Rechnungen zusammenfallen.</p>
+<p><b>Ein Rest ist benannt:</b> dass die Längenangabe <code>biSizeImage</code> beachtet wird, ist <b>nicht gemessen</b> — die Gegenprobe, immer bis zum Dateiende zu lesen, bleibt grün, weil weder der PNG- noch der JPEG-Leser sich an Bytes hinter dem Bildende stört. Die Zeile steht trotzdem im Code, weil das Format sie verlangt.</p>
+<p><b>B4</b> (Merkmal) — Farbraum und ICC-Profil — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen, und zwar als das, was ein lesendes Modul hier leisten kann.</b> Der 108-Byte-Kopf trägt eine Farbraumkennung, neun Endpunktkoordinaten in <b>2.30-Festkomma</b> und drei Gammawerte in <b>16.16-Festkomma</b>; der 124er dazu die Wiedergabeabsicht und Versatz und Länge eines eingebetteten ICC-Profils. Alles davon wird jetzt gelesen und über <code>Bmpkopf</code> herausgegeben, und die drei Fälle — kalibriert, eingebettetes Profil, Verweis auf eine Profildatei — werden <b>benannt</b>.</p>
+<p><b>Umgerechnet wird nichts, und das ist eine Entscheidung und kein Rest.</b> Eine Farbverwandlung braucht ein Ziel — welchen Bildschirm, welches Profil, welche Absicht —, und das weiss eine Dateiuntersuchung nicht. Wer die Werte anwendet, gibt Zahlen heraus, die <i>anders</i> sind als die in der Datei, und nennt sie trotzdem „die Bildpunkte". Deshalb kommen die Punkte unverwandelt heraus; wer sie verwandeln will, hat mit den Endpunkten und den Gammawerten jetzt alles in der Hand. Pillow führt das ICC-Profil ebenfalls nur in <code>info</code> mit und wandelt auch nicht.</p>
+<p>Die Probe misst beides zusammen: die Angaben müssen <b>herauskommen</b> und die Bildpunkte müssen davon <b>unberührt</b> bleiben. Wer hier umrechnet, fällt auf.</p>
+<h3>Eigenschaften des Formats — beide betreffend</h3>
+<p><b>B7</b> (Merkmal) — Von unten nach oben</p>
+<p>Siehe Abschnitt 3 — die Hauptfalle. Zwei Anker stehen deswegen nebeneinander: <code>b24</code> von unten nach oben und <code>obenunten</code> von oben nach unten, beide mit erster und letzter Zeile einzeln geprüft. Der 12-Byte-Kopf führt seine Maße <b>ohne</b> Vorzeichen; eine negative Höhe kann es dort nicht geben, und wir melden es, wenn dort trotzdem eine steht.</p>
+<p><b>B8</b> (Merkmal) — Zeilenauffüllung auf vier Byte</p>
+<p>Siehe Abschnitt 3. Zwei Anker sind eigens dafür ungerade breit: <code>b1</code> mit 17 Bildpunkten zu einem Bit und <code>vierbit</code> mit sieben zu vier Bit — dort endet die Zeile mitten im Byte <b>und</b> vor der Auffüllung.</p>
+<p><b>B9</b> (Merkmal) — Blau, grün, rot</p>
+<p>Siehe Abschnitt 3. Der Anker <code>grau</code> steht in der Liste, um zu zeigen, wo diese Verwechslung <b>nicht</b> auffällt.</p>
+<p><b>B10</b> (Merkmal) — Drei Byte oder vier je Paletteneintrag</p>
+<p>Der 12-Byte-Kopf führt <code>RGBTRIPLE</code> zu drei Byte, alle größeren <code>RGBQUAD</code> zu vier. Nimmt man immer vier, ist die Palette beim 12er um ein Drittel zu lang gelesen und der Datenanfang falsch; nimmt man immer drei, dasselbe umgekehrt. Der Anker <code>kern12</code> deckt genau das ab — es ist der Eingriff mit den <b>meisten</b> Fehlschlägen überhaupt (119).</p>
+<p><b>B11</b> (Merkmal) — Die Null, die „alle" bedeutet</p>
+<p>Siehe Abschnitt 3. <code>Bmpkopf.farben()</code> löst sie auf, damit kein Aufrufer sie noch einmal deuten muss.</p>
+<p><b>B12</b> (Merkmal) — Sechzehn Bit sind 5-5-5</p>
+<p>Siehe Abschnitt 3. Der Anker <code>sechzehn</code> ist ein rechnendes Bild: der Rotanteil an der Stelle (x, y) ist <code>(x·7) % 32</code>, Grün <code>(y·11+3) % 32</code>, Blau <code>(x·5 + y·9) % 32</code>. Geprüft wird gegen diese Vorschrift und nicht gegen abgeschriebene Zahlen.</p>
+<p><b>B13</b> (Merkmal) — Die Kopfart steht nur in der Länge</p>
+<p>Siehe Abschnitt 3. Wir kennen 12, 40, 52, 56, 64, 108 und 124; alles andere wird <b>gemeldet</b> und wie ein 40er weitergelesen, weil der Bildinhalt davon meist unberührt ist.</p>
+<p><b>B14</b> (Merkmal) — Sprung und unverpackter Lauf</p>
+<p>Der Lauflängenstrom kennt neben dem gepackten Lauf drei Sonderfälle mit dem Vorbyte 0: Zeilenende, Bildende und <b>Sprung</b> (<code>00 02 dx dy</code>). Alles darüber ist ein <b>unverpackter Lauf</b> von <code>n</code> Bildpunkten, dessen Bytes auf eine <b>gerade</b> Zahl aufgefüllt werden. Vergisst man das Füllbyte, wandert der ganze Rest der Zeile um ein Byte; übergeht man den Sprung, wandert alles Folgende nach links. Beide Zweige waren bis zum 6. September 2026 durch kein Prüfstück gedeckt — siehe 2.2.</p>
+<h3>Befunde am Vergleichsprodukt</h3>
+<p><b>B15</b> (dort offen) — <code>BI_ALPHABITFIELDS</code> (6) wird nicht gelesen</p>
+<p>Diese Packart stammt aus OS/2 und unterscheidet sich von <code>BI_BITFIELDS</code> nur darin, dass <b>vier</b> statt drei Masken folgen. Pillow 12.2.0 weist sie mit <code>OSError: Unsupported BMP compression (6)</code> ab; wir lesen sie. Die Packart ist selten, aber sie kommt vor, und der Aufwand ist eine vierte Maske. Weil es hier <b>niemanden gibt, der gegenliest</b>, kann es für diese Packart keinen Fremdanker geben. Die Probe baut das Prüfstück deshalb selbst, Byte für Byte aus einer Vorschrift, und prüft gegen dieselbe Vorschrift: bei acht Bit je Maske muss ein Bildpunkt unverändert wieder herauskommen, und die Deckung muss geführt und nicht erfunden sein.</p>
+<p><b>B16</b> (dort offen) — Vier Zustände als Ausnahme statt als Befund</p>
+<p>Abgeschnittene Bilddaten, eine zu kurze Palette, ein Lauflängenstrom ohne Bildende und eine unbekannte Kopflänge. Wir lesen in allen vier Fällen so weit, wie es geht, <b>melden</b> die Stelle und lassen den Rest schwarz. Pillow wirft eine Ausnahme (<code>image file is truncated</code>, <code>Unsupported BMP header type</code>) und liefert gar nichts. Das ist <b>kein Fehler von Pillow</b> — es ist eine Bildbibliothek und kein Werkzeug zur Dateiuntersuchung, und ein halbes Bild ist für ihren Zweck kein brauchbares Ergebnis. Für die Frage „was ist mit dieser Datei passiert" ist es der Unterschied zwischen einer Antwort und keiner.</p>
+<p><b>B17</b> (dort offen) — Unbekannte Kopflänge</p>
+<p>Siehe B16. Eigens aufgeführt, weil hier eine Weiterlesemöglichkeit besteht, die Pillow nicht nutzt: die ersten sechzehn Byte jedes Beschreibungskopfes ab dem 40er sind <b>gleich aufgebaut</b>. Eine unbekannte Länge — etwa aus einem Schreiber, der einen Kopf erfunden hat — kostet also nicht das Bild, sondern nur die zusätzlichen Felder.</p>
+<p><b>B18</b> (dort offen) — Falsche Dateigröße im Kopf</p>
+<p><code>bfSize</code> soll die Länge der Datei nennen. Viele Schreiber tragen dort Unsinn ein. Wir lesen nach der <b>wirklichen</b> Länge und melden die Abweichung als Befund; Pillow liest still weiter, ohne sie zu erwähnen. Kein Fehler, aber die Angabe ist die einzige Stelle, an der eine BMP von sich aus sagen kann, dass sie unvollständig ist — und dann will man sie sehen.</p>
+<p><b>B19</b> (dort offen) — <code>bits</code> und <code>compression</code> beim Schreiben werden angenommen und übergangen</p>
+<p><code>Image.save(..., "BMP", bits=4)</code> und <code>compression=1</code> werfen keinen Fehler und ändern nichts: die Datei kommt mit acht Bit und unkomprimiert heraus. Nachgemessen an einem <code>P</code>-Bild von 4 × 4 — die Datei ist in allen vier Fällen 1094 Byte lang, Packart 0, Bittiefe 8. Eine stillschweigend übergangene Angabe ist unangenehmer als eine abgewiesene, denn der Aufrufer glaubt, er habe bekommen, was er verlangt hat. Das ist der Grund, warum sechs der elf Anker von Hand gebaut werden mussten.</p>
+
+<h2 id="a5">Das Umfeld — womit diese Dateien sonst gelesen und geschrieben werden</h2>
+<p>Diese Tafel zaehlt <b>nicht</b> in die Deckung. Sie sagt nichts ueber diesen Leser, sondern ueber das Umfeld, in dem eine solche Datei entsteht — und das ist beim Lesen einer fremden Datei die wichtigere Auskunft: <b>wer sie geschrieben hat, entscheidet, welche Spielart darin steht.</b> Ein Leser, der nur die Dateien eines einzigen Schreibers kennt, haelt dessen Gewohnheiten fuer das Format.</p>
+<table>
+  <tr><th>Programm</th><th>liest</th><th>schreibt</th><th>Bemerkung</th></tr>
+  <tr><td><b>Microsoft Windows</b> (GDI, Paint, Explorer)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Der Ursprung. Paint schreibt 24 Bit unkomprimiert oder Palette; die Kopfart haengt an der Windows-Fassung.</td></tr>
+  <tr><td><b>GIMP</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Schreibt wahlweise mit <code>BITMAPV5HEADER</code> und Alphakanal — die Fassung, die viele aeltere Leser nicht kennen.</td></tr>
+  <tr><td><b>ImageMagick</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Schreibt auf Wunsch die OS/2-Koepfe und die Lauflaengenformen, die sonst kaum jemand erzeugt.</td></tr>
+  <tr><td><b>Pillow</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Das Vergleichsprodukt dieses Abgleichs.</td></tr>
+  <tr><td><b>Java</b> (<code>javax.imageio</code>)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Im JDK enthalten; kennt die alten Kopfarten, aber nicht alle Bitmasken.</td></tr>
+  <tr><td><b>Browser</b> (Chromium, Firefox)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Zeigen BMP an, schreiben es nicht. Die Lauflaengenformen werden dort teils uebergangen.</td></tr>
+</table>
+<p>Die Liste ist <b>nicht vollstaendig</b> und will es nicht sein. Sie nennt, was einem bei diesem Format tatsaechlich begegnet, und laesst weg, was es zwar auch kann, aber niemand dafuer benutzt.</p>
+
+<h2 id="a6">Die Java-Umsetzung — wo dieser Leser unter seinesgleichen steht</h2>
+<p><b>Warum gerade gegen <code>javax.imageio</code>.</b> Alle übrigen Abgleiche dieses Moduls messen gegen ein Werkzeug in einer <b>anderen</b> Sprache — Pillow, astropy, pyarrow, meshio. Das ist gut gegen Irrtümer über das Format und sagt nichts darüber, wo dieser Leser unter seinesgleichen steht. <code>javax.imageio</code> ist die Java-Umsetzung, gegen die er im Feld tatsächlich antritt: sie liegt auf jedem Rechner, auf dem dieses Modul läuft, und sie kostet <b>keine Fremdbibliothek</b> — die Regel des Moduls bleibt unangetastet. Gemessen wird bei jedem Lauf, nicht einmalig: <code>Bildvergleichsprobe</code>, mit JPEG inzwischen 80 Prüfungen. Und der Leser, gegen den hier gemessen wird, ist tatsächlich reines Java: <code>com.sun.imageio.plugins.bmp.BMPImageReader</code> hat <b>keine einzige</b> native Methode. Nachgemessen am 2026-09-06, weil sich beim Hinzunehmen von JPEG herausstellte, dass genau das dort <b>nicht</b> gilt — der JPEG-Leser des JDK ist ein JNI-Mantel um libjpeg 6b. Bei diesem Format hier ist der Vergleich also wirklich einer unter seinesgleichen.</p>
+<p><b>11 Anker, alle 11 punktgleich.</b> Ein, vier, acht, sechzehn, vierundzwanzig und zweiunddreissig Bit, beide Lauflängenverfahren mit Sprungmarken, der alte 12-Byte-Kernkopf und die von unten nach oben geschriebene Fassung — kein einziger abweichender Bildpunkt gegen <code>javax.imageio</code>.</p>
+<p><b>Und eine Falle, die der halbe Ertrag der Messung ist.</b> <code>BufferedImage.getRGB()</code> liefert <b>nicht</b> den Bildpunkt aus der Datei, sondern seine Umrechnung nach sRGB. Bei Graustufen legt ImageIO die Werte in einem <i>linearen</i> Grauraum ab, und <code>getRGB</code> rechnet die sRGB-Kennlinie darauf: aus dem Rohwert <code>0x25</code> wird <code>0x6A</code> — auf drei Stellen genau <code>(37/255)^(1/2,4)</code> in sRGB-Kodierung. Der erste Lauf meldete deshalb bei <b>jedem</b> Graustufenbild Unterschiede, in PNG <i>und</i> in BMP, also bei zwei unabhängigen Lesern von uns mit demselben Symptom. Das sah nach einem echten Fehler aus und war keiner. Verglichen wird über das <b>Raster</b>. Bei <code>TYPE_USHORT_GRAY</code> trägt das Raster den <i>rohen</i> 16-Bit-Wert, während unsere <code>punkte()</code> die auf acht Bit <b>skalierte</b> Sicht sind — wer dort schiebt statt zu runden, liegt um eins daneben und hält auch das für einen Fehler.</p>
+
+<footer>
+Erzeugt aus <code>envisionz-framework-fileformats/docs/bmp/ABGLEICH.md</code> · zurück zur <a href="index.html#bilder">Übersicht</a> · alle Formate im <a href="abgleich.html">Abgleich</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

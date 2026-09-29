@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deflate und zlib – Format und Entpacker – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#grenze">Grenze gegen Entpackbomben</a>
+<a class="unterseite" href="grenze-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#deflate">Deflate und zlib, hin und zurück</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – Abgleich</a>
+<a class="unterseite" href="deflate-packer.html">Der eigene Packer</a>
+<a class="unterseite aktiv" href="deflate-theorie.html">Format und Entpacker</a>
+<a class="rubrik" href="index.html#behaelter">gzip und ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – Abgleich</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – Abgleich</a>
+<a class="unterseite" href="behaelter-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – Abgleich</a>
+<a class="unterseite" href="lzma-theorie.html">Bereichskodierer und LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ und Vorfilter</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Abgleich</a>
+<a class="unterseite" href="bzip2-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Abgleich</a>
+<a class="unterseite" href="zstd-fse.html">FSE und Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Rahmen und Sequenzen</a>
+<a class="rubrik" href="index.html#schnell">Schnelle Packer der Datenformate</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – Abgleich</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – Abgleich</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – Abgleich</a>
+<a class="unterseite" href="schnell-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Abgleich</a>
+<a class="unterseite" href="brotli-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzw">LZW für PDF, TIFF und GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#pruef">Prüfsummen</a>
+<a class="unterseite" href="pruef-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, Lauflänge</a>
+<a class="unterseite" href="bausteine-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-compress</a> › Deflate und zlib – Format und Entpacker</span><a class="sprachwahl" href="../../en/compress/deflate-theorie.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.deflate</div>
+  <h1>Deflate und zlib – Format und Entpacker</h1>
+  <p class="unter">Was in einem Deflate-Strom steht (RFC 1951) und wie <code>Inflate</code> ihn liest: LZ77-Rückbezüge, Längen- und Abstandscodes mit Zusatzbits, kanonische Huffman-Codes, die drei Blockarten, die Codelängen-Codes des dynamischen Blocks, dazu der zlib-Rahmen (RFC 1950) mit Adler-32 und Wörterbuch. Der eigene Packer hat eine eigene Seite.</p>
+</header>
+
+<h2 id="idee">Worum es geht</h2>
+<p>Deflate verbindet zwei Gedanken. Der erste stammt von Lempel und Ziv (1977): Text wiederholt sich, also schreibt man eine Stelle, die schon einmal vorkam, nicht noch einmal hin, sondern verweist auf sie – „nimm 24 Byte ab 13 Byte weiter vorn“. Der zweite stammt von Huffman (1952): was häufig vorkommt, bekommt einen kurzen Code, was selten vorkommt, einen langen. Deflate schreibt also eine Folge aus <b>Literalen</b> (einzelnen Bytes) und <b>Rückbezügen</b> (Länge, Abstand) und kodiert diese Symbole mit Huffman-Codes.</p>
+<p>Ein Beispiel aus dem eigenen Packer (nachverfolgt mit einem kleinen Programm gegen <code>Deflate.packe</code>): der Text <code>abrakadabra, abrakadabra, abrakadabra!</code> (38 Byte) wird zu</p>
+<pre><code>a b r a k a d &lt;7,4&gt; , ␣ &lt;13,24&gt; !</code></pre>
+<p>Der Rückbezug <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⟨</mo><mn>7</mn><mo>,</mo><mn>4</mn><mo stretchy="false">⟩</mo></mrow><annotation encoding="application/x-tex">\langle 7,4\rangle</annotation></semantics></math> liefert <code>abra</code>. Der zweite, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⟨</mo><mn>13</mn><mo>,</mo><mn>24</mn><mo stretchy="false">⟩</mo></mrow><annotation encoding="application/x-tex">\langle 13,24\rangle</annotation></semantics></math>, ist länger als sein Abstand: er liest Bytes, die er selbst gerade erst geschrieben hat, und wiederholt so „abrakadabra, “ fast zweimal. Das ist erlaubt und gewollt. Gepackt sind es 29 Byte.</p>
+
+<h2 id="symbole">Das Alphabet: Literale, Längen, Abstände</h2>
+<p>Literale und Längen teilen sich <b>ein</b> Alphabet von 286 Symbolen (im festen Code 288):</p>
+<ul>
+  <li>0 bis 255: das Byte selbst;</li>
+  <li>256: Blockende;</li>
+  <li>257 bis 285: eine Längenklasse; die genaue Länge 3 bis 258 ergibt sich aus Basis plus Zusatzbits.</li>
+</ul>
+<p>Nach einem Längensymbol folgt ein Symbol aus dem zweiten Alphabet, den 30 <b>Abstandscodes</b>, wieder mit Zusatzbits, für Abstände 1 bis 32 768. Die Klassen wachsen etwa geometrisch: je zwei Klassen verdoppeln den Bereich, und ein Zusatzbit mehr deckt ihn ab. Für einen Abstandscode <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>≥</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">c \ge 4</annotation></semantics></math> gilt</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>z</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>c</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>−</mo><mn>1</mn><mo>,</mo><mspace width="2em"/><mtext>Basis</mtext><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>z</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo>+</mo><mn>1</mn></mrow></msup><mo>+</mo><mo stretchy="false">(</mo><mi>c</mi><mi>mod</mi><mn>2</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><msup><mrow><mn>2</mn></mrow><mrow><mi>z</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow></msup><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">z(c) = \left\lfloor \frac{c}{2} \right\rfloor - 1, \qquad \text{Basis}(c) = 2^{z(c)+1} + (c \operatorname{mod} 2)\, 2^{z(c)} + 1</annotation></semantics></math></p>
+<p>also etwa Code 10: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">z = 4</annotation></semantics></math>, Basis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn>33</mn></mrow><annotation encoding="application/x-tex">32 + 0 + 1 = 33</annotation></semantics></math>, Abstände 33 bis 48. Die Längen folgen demselben Muster ab Code 265, mit zwei Ausnahmen: Code 285 steht allein für 258 ohne Zusatzbits, und Code 284 mit vollen fünf Zusatzbits ergäbe rechnerisch <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>227</mn><mo>+</mo><mn>31</mn><mo>=</mo><mn>258</mn></mrow><annotation encoding="application/x-tex">227 + 31 = 258</annotation></semantics></math>. Die Tabelle in RFC 1951 nennt für Code 284 nur 227 bis 257; die Kombination ist nach der Spezifikation nicht vorgesehen, wird aber von verbreiteten Dekodern und auch von unserem <code>Inflate</code> angenommen. Unser Packer schreibt 258 immer als Code 285.</p>
+<table>
+  <tr><th>Längencode</th><th>Zusatzbits</th><th>Längen</th><th>Abstandscode</th><th>Zusatzbits</th><th>Abstände</th></tr>
+  <tr><td>257 … 264</td><td>0</td><td>3 … 10</td><td>0 … 3</td><td>0</td><td>1 … 4</td></tr>
+  <tr><td>265 … 268</td><td>1</td><td>11 … 18</td><td>4, 5</td><td>1</td><td>5 … 8</td></tr>
+  <tr><td>269 … 272</td><td>2</td><td>19 … 34</td><td>6, 7</td><td>2</td><td>9 … 16</td></tr>
+  <tr><td>273 … 276</td><td>3</td><td>35 … 66</td><td>8, 9</td><td>3</td><td>17 … 32</td></tr>
+  <tr><td>277 … 280</td><td>4</td><td>67 … 130</td><td>…</td><td>…</td><td>…</td></tr>
+  <tr><td>281 … 284</td><td>5</td><td>131 … 258</td><td>26, 27</td><td>12</td><td>8193 … 16384</td></tr>
+  <tr><td>285</td><td>0</td><td>258</td><td>28, 29</td><td>13</td><td>16385 … 32768</td></tr>
+</table>
+<p>Im Beispiel oben: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⟨</mo><mn>13</mn><mo>,</mo><mn>24</mn><mo stretchy="false">⟩</mo></mrow><annotation encoding="application/x-tex">\langle 13,24\rangle</annotation></semantics></math> ist Längencode 270 (Basis 23, zwei Zusatzbits, Wert 1) und Abstandscode 7 (Basis 13, zwei Zusatzbits, Wert 0).</p>
+
+<h2 id="huffman">Kanonische Huffman-Codes</h2>
+<p>Ein Präfixcode ordnet jedem Symbol eine Bitfolge zu, von der keine der Anfang einer anderen ist; dann lässt sich der Strom ohne Trennzeichen lesen. Ein Code mit den Längen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">l_i</annotation></semantics></math> existiert genau dann, wenn die <b>Kraft-Ungleichung</b> gilt:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></msup><mo>≤</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum_i 2^{-l_i} \le 1</annotation></semantics></math></p>
+<p>Ein vollständiger Code erfüllt die Ungleichung mit Gleichheit. RFC 1951 schreibt das nicht ausdrücklich vor; zlib verlangt es (bis auf den Sonderfall eines einzigen Abstandscodes), unser <code>HuffmanDekoder</code> nimmt auch unvollständige Codes an. Der optimale Code für die Häufigkeiten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">h_i</annotation></semantics></math> minimiert die mittlere Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>l</mi></mrow><mo>=</mo><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>h</mi></mrow><mrow><mi>i</mi></mrow></msub><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>/</mo><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>h</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\bar{l} = \sum h_i l_i / \sum h_i</annotation></semantics></math>, und die liegt höchstens ein Bit über der Entropie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo>=</mo><mo>−</mo><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow></msub><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">H = -\sum p_i \log_2 p_i</annotation></semantics></math>.</p>
+<p>Übertragen werden nur die <b>Längen</b>. Die Codes selbst folgen daraus nach einer festen Regel, die Schreiber und Leser gleich anwenden: kürzere Codes kommen zuerst, bei gleicher Länge nach Symbolnummer, und innerhalb einer Länge wird hochgezählt. Mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>l</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_l</annotation></semantics></math> Codes der Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> ist der erste Code der Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><msub><mrow><mi>c</mi></mrow><mrow><mi>l</mi></mrow></msub><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>l</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>l</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">c_1 = 0, \qquad c_l = 2\,(c_{l-1} + n_{l-1})</annotation></semantics></math></p>
+<p>Beispiel: Längen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(2, 1, 3, 3)</annotation></semantics></math> für die Symbole A, B, C, D ergeben B = <code>0</code>, A = <code>10</code>, C = <code>110</code>, D = <code>111</code>.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Huffman-Codes werden vom höchstwertigen Bit her gelesen, der Deflate-Bitstrom aber füllt jedes Byte vom niederwertigen Bit an. Der <code>BitLeser</code> liefert Bits in Stromreihenfolge; der <code>HuffmanDekoder</code> baut den Code Bit für Bit von oben her auf. Beim Schreiben dreht <code>BitSchreiber.huffman()</code> die Codes um. Alle anderen Felder (Blockkopf, Zusatzbits, Längen) werden als gewöhnliche Zahlen vom niederwertigen Bit an gelesen.</div>
+
+<h2 id="bloecke">Die drei Blockarten</h2>
+<p>Ein Strom besteht aus Blöcken. Jeder beginnt mit drei Bit: <code>BFINAL</code> (letzter Block) und <code>BTYPE</code>.</p>
+<ul>
+  <li><b>BTYPE 0 – gespeichert.</b> Die angebrochenen Bits bis zur Bytegrenze werden verworfen, dann folgen <code>LEN</code> und <code>NLEN</code> (je 16 Bit, <code>NLEN</code> ist das Einerkomplement) und <code>LEN</code> Bytes unverändert. Höchstens 65 535 Byte je Block.</li>
+  <li><b>BTYPE 1 – feste Codes.</b> Die Längen stehen in der Norm: Literale 0–143 haben 8 Bit, 144–255 haben 9, die Symbole 256–279 haben 7, 280–287 haben 8; alle 30 Abstandscodes haben 5 Bit.</li>
+  <li><b>BTYPE 2 – übertragene Codes.</b> Der Block bringt seine Codelängen selbst mit, und zwar zweistufig (siehe unten).</li>
+  <li><b>BTYPE 3</b> ist nicht vergeben und ein Fehler.</li>
+</ul>
+
+<figure>
+<svg viewBox="0 0 640 150" width="640" font-family="sans-serif" font-size="12">
+  <rect x="10" y="30" width="30" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="14" y="52" fill="#1f5f8b">1 b</text>
+  <rect x="40" y="30" width="40" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="44" y="52" fill="#1f5f8b">2 b</text>
+  <rect x="80" y="30" width="110" height="34" fill="#ffffff" stroke="#1f5f8b"/><text x="86" y="52" fill="#1f5f8b">HLIT HDIST HCLEN</text>
+  <rect x="190" y="30" width="110" height="34" fill="#ffffff" stroke="#1f5f8b"/><text x="196" y="52" fill="#1f5f8b">HCLEN × 3 Bit</text>
+  <rect x="300" y="30" width="150" height="34" fill="#ffffff" stroke="#1f5f8b"/><text x="306" y="52" fill="#1f5f8b">Codelängen (Code 0–18)</text>
+  <rect x="450" y="30" width="130" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="456" y="52" fill="#1f5f8b">Literale, Bezüge …</text>
+  <rect x="580" y="30" width="50" height="34" fill="#ffffff" stroke="#9a6400"/><text x="586" y="52" fill="#9a6400">256</text>
+  <text x="10" y="20" fill="#5b6475">BFINAL</text><text x="44" y="20" fill="#5b6475">BTYPE=2</text>
+  <text x="80" y="90" fill="#5b6475">5+5+4 Bit</text>
+  <text x="190" y="90" fill="#5b6475">Längen des Codelängen-Codes</text>
+  <text x="300" y="108" fill="#5b6475">HLIT+HDIST Längen, mit 16/17/18 lauflängenkodiert</text>
+  <text x="450" y="126" fill="#5b6475">Nutzdaten mit beiden Codes</text>
+  <text x="580" y="90" fill="#9a6400">Blockende</text>
+</svg>
+<figcaption>Aufbau eines dynamischen Blocks. Die Codelängen der beiden großen Alphabete werden ihrerseits mit einem kleinen Huffman-Code über 19 Symbole übertragen.</figcaption>
+</figure>
+
+<h2 id="dynamisch">Der dynamische Block im Einzelnen</h2>
+<p>Im Kopf stehen <code>HLIT</code> − 257 (5 Bit), <code>HDIST</code> − 1 (5 Bit) und <code>HCLEN</code> − 4 (4 Bit). Es folgen <code>HCLEN</code> Längen zu je 3 Bit für den <b>Codelängen-Code</b>, in der Reihenfolge</p>
+<pre><code>16 17 18 0 8 7 9 6 10 5 11 4 12 3 13 2 14 1 15</code></pre>
+<p>Die Reihenfolge ist so gewählt, dass die selten gebrauchten Längen am Ende stehen und mit einem kleinen <code>HCLEN</code> weggelassen werden können. Mit diesem Code werden dann <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>HLIT</mtext><mo>+</mo><mtext>HDIST</mtext></mrow><annotation encoding="application/x-tex">\text{HLIT} + \text{HDIST}</annotation></semantics></math> Codelängen gelesen – beide Alphabete hintereinander als eine Folge. Die Symbole 0 bis 15 sind die Länge selbst; drei Symbole kürzen Läufe ab:</p>
+<table>
+  <tr><th>Symbol</th><th>Bedeutung</th><th>Zusatzbits</th><th>Wiederholungen</th></tr>
+  <tr><td>16</td><td>vorige Länge wiederholen</td><td>2</td><td>3 … 6</td></tr>
+  <tr><td>17</td><td>Nullen</td><td>3</td><td>3 … 10</td></tr>
+  <tr><td>18</td><td>Nullen</td><td>7</td><td>11 … 138</td></tr>
+</table>
+<p>Im Beispiel <code>abrakadabra…</code> ergibt das <code>HLIT</code> = 271 (das höchste benutzte Symbol ist Längencode 270), <code>HDIST</code> = 8, <code>HCLEN</code> = 18, und die Literallängen <code>a</code> = 2 Bit, die übrigen Buchstaben, Komma, Leerzeichen, Ausrufezeichen und 256 je 4 Bit, die Längencodes 258 und 270 je 3 Bit; die beiden benutzten Abstandscodes 5 und 7 je 1 Bit.</p>
+
+<h2 id="inflate">Der Entpacker</h2>
+<h3>Pseudocode – <code>Inflate.lauf(daten, ab, laenge)</code></h3>
+<pre class="pseudo">leser ← BitLeser(daten, ab, laenge)         <i>Bits vom niederwertigen Ende</i>
+<b>wiederhole</b>:
+    letzter ← leser.bit() = 1
+    art ← leser.bits(2)
+    <b>falls</b> art = 0:                              <i>gespeichert</i>
+        leser.aufBytegrenze()
+        len ← 16 Bit;  nlen ← 16 Bit
+        <b>wenn</b> len xor 0xFFFF ≠ nlen: Fehler "LEN/NLEN passen nicht"
+        kopiere len Bytes;  springe dahinter
+    <b>falls</b> art = 1:  block(fest(Literale), fest(Abstände))
+    <b>falls</b> art = 2:
+        hlit ← bits(5)+257;  hdist ← bits(5)+1;  hclen ← bits(4)+4
+        <b>für</b> i ← 0 <b>bis</b> hclen−1:  cl[ORDNUNG[i]] ← bits(3)
+        c ← HuffmanDekoder(cl)
+        i ← 0
+        <b>solange</b> i &lt; hlit+hdist:
+            s ← c.lies(leser)
+            <b>wenn</b> s &lt; 16:   L[i++] ← s
+            <b>wenn</b> s = 16:   <b>wenn</b> i = 0: Fehler;  wiederhole L[i−1] (3+bits(2))-mal
+            <b>wenn</b> s = 17:   i ← i + 3 + bits(3)          <i>Nullen stehen schon da</i>
+            <b>wenn</b> s = 18:   i ← i + 11 + bits(7)
+        <b>wenn</b> i > hlit+hdist: Fehler "Codelängen laufen über"
+        block(HuffmanDekoder(L[0..hlit−1]), HuffmanDekoder(L[hlit..]))
+    <b>falls</b> art = 3: Fehler "Blockart 3 ist nicht vergeben"
+<b>bis</b> letzter
+ende ← leser.byteStelle()                      <i>erstes Byte hinter dem Strom</i>
+
+<b>funktion</b> block(lit, dist):
+    <b>wiederhole</b>:
+        s ← lit.lies(leser)
+        <b>wenn</b> s &lt; 256: schreibe Byte s
+        <b>wenn</b> s = 256: <b>zurück</b>
+        <b>sonst</b>:
+            len ← LAENGE_BASIS[s−257] + bits(LAENGE_ZUSATZ[s−257])
+            d ← dist.lies(leser)
+            abstand ← ABSTAND_BASIS[d] + bits(ABSTAND_ZUSATZ[d])
+            <b>wenn</b> abstand > n: Fehler "zeigt vor den Anfang"
+            <b>für</b> k ← 0 <b>bis</b> len−1:  aus[n+k] ← aus[n−abstand+k]   <i>Byte für Byte</i>
+            n ← n + len</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/deflate/Inflate.java</code>. Die Tabellen <code>LAENGE_BASIS</code>, <code>LAENGE_ZUSATZ</code>, <code>ABSTAND_BASIS</code>, <code>ABSTAND_ZUSATZ</code> und <code>CL_ORDNUNG</code> stehen dort als Konstanten und werden vom Packer mitbenutzt.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Rückbezüge werden <b>Byte für Byte</b> kopiert, nie mit <code>System.arraycopy</code>. Bei Abstand kleiner als Länge überlappen Quelle und Ziel absichtlich: Abstand 1, Länge 258 heißt „dasselbe Byte 258-mal“. <code>arraycopy</code> behandelt Quelle und Ziel als getrennt und lieferte die richtige Länge mit falschem Inhalt.</div>
+<p>Der <code>HuffmanDekoder</code> baut keine Sprungtabelle, sondern vergleicht Bit für Bit mit zwei Zählern je Länge – das Verfahren aus <code>puff.c</code> der zlib-Beispiele (Einzelheiten auf der Seite <a href="bausteine-theorie.html#dekoder">Bausteine</a>).</p>
+
+<h2 id="ende">Wo der Strom aufhört</h2>
+<p>Ein Deflate-Strom trägt sein Ende in sich: das Bit <code>BFINAL</code> und danach das Blockende-Symbol. <code>Inflate.entpackeMitEnde</code> gibt zusätzlich das erste Byte hinter dem Strom zurück. Die Bits nach dem letzten Block sind Füllung bis zur Bytegrenze. Das wird für gzip gebraucht, wo hinter dem Strom acht Abschlussbytes und womöglich ein weiteres Glied stehen.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> <code>ende</code> ist <code>leser.byteStelle()</code> ohne vorheriges <code>aufBytegrenze()</code>. Das ist beim heutigen <code>BitLeser</code> gleichbedeutend, weil er in <code>bits(n)</code> nur so viele Bytes nachlädt, wie er braucht, und danach immer weniger als acht Bits in seiner Halde hält. Die Gegenprobe, die beide Schreibweisen vertauscht, blieb deshalb grün und ist verworfen worden.</div>
+
+<h2 id="zlib">Der zlib-Rahmen</h2>
+<p>zlib (RFC 1950) legt um einen Deflate-Strom zwei Kopfbytes und hinten vier Byte Prüfsumme:</p>
+<ul>
+  <li><b>CMF:</b> untere vier Bit das Verfahren (8 = Deflate), obere vier Bit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/></mrow><annotation encoding="application/x-tex">\log_2</annotation></semantics></math> der Fenstergröße minus 8.</li>
+  <li><b>FLG:</b> Bit 5 ist <code>FDICT</code>; die unteren fünf Bit werden so gewählt, dass <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>256</mn><mo>⋅</mo><mtext>CMF</mtext><mo>+</mo><mtext>FLG</mtext><mo stretchy="false">)</mo><mi>mod</mi><mn>31</mn><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">(256\cdot\text{CMF} + \text{FLG}) \operatorname{mod} 31 = 0</annotation></semantics></math>.</li>
+  <li>Ist <code>FDICT</code> gesetzt, folgen vier Byte: die Adler-32 des vereinbarten Wörterbuchs.</li>
+  <li>Am Ende die Adler-32 der entpackten Daten, <b>höchstwertiges Byte zuerst</b> – wie die Wörterbuchkennung, aber anders als alle Felder im Deflate-Strom selbst.</li>
+</ul>
+<p>Adler-32 besteht aus zwei Summen modulo 65 521, der größten Primzahl unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{16}</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>a</mi><mo>=</mo><mn>1</mn><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mi>b</mi><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msub><mrow><mi>a</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mtext>Adler32</mtext><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>b</mi><mi>mod</mi><mn>65521</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>a</mi><mi>mod</mi><mn>65521</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">a = 1 + \sum_{i} x_i, \qquad b = \sum_{k} a_k, \qquad \text{Adler32} = 2^{16}\, (b \operatorname{mod} 65521) + (a \operatorname{mod} 65521)</annotation></semantics></math></p>
+<p>Die Herleitung und die Überlauffalle stehen auf der Seite <a href="pruef-theorie.html#adler">Prüfsummen</a>.</p>
+<p><b>Rechenbeispiel.</b> <code>Zlib.packe("abc")</code> ergibt 14 Byte:</p>
+<pre><code>78 01 | 01 03 00 FC FF 61 62 63 | 02 4D 01 27</code></pre>
+<p>Kopf <code>78 01</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mi>x</mi><mn>7801</mn><mo>=</mo><mn>30721</mn><mo>=</mo><mn>31</mn><mo>⋅</mo><mn>991</mn></mrow><annotation encoding="application/x-tex">0x7801 = 30721 = 31 \cdot 991</annotation></semantics></math>, also teilbar durch 31. Dann ein <b>gespeicherter</b> Block: Byte <code>01</code> trägt <code>BFINAL</code> = 1 und <code>BTYPE</code> = 0, dann <code>LEN</code> = 3, <code>NLEN</code> = <code>FFFC</code>, dann <code>abc</code>. Der Packer hat ausgerechnet, dass ein dynamischer Block für drei Byte teurer wäre. Am Ende die Adler-32 <code>024D0127</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>1</mn><mo>+</mo><mn>97</mn><mo>+</mo><mn>98</mn><mo>+</mo><mn>99</mn><mo>=</mo><mn>295</mn><mo>=</mo><mtext>0x127</mtext></mrow><annotation encoding="application/x-tex">a = 1 + 97 + 98 + 99 = 295 = \text{0x127}</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mn>98</mn><mo>+</mo><mn>196</mn><mo>+</mo><mn>295</mn><mo>=</mo><mn>589</mn><mo>=</mo><mtext>0x24D</mtext></mrow><annotation encoding="application/x-tex">b = 98 + 196 + 295 = 589 = \text{0x24D}</annotation></semantics></math>.</p>
+
+<h3>Pseudocode – <code>Zlib.entpacke(daten, woerterbuch)</code></h3>
+<pre class="pseudo"><b>wenn</b> Länge &lt; 6: Fehler
+cmf ← daten[0];  flg ← daten[1]
+<b>wenn</b> cmf und 0x0F ≠ 8: Fehler "Verfahren statt 8"
+<b>wenn</b> (cmf·256 + flg) mod 31 ≠ 0: Fehler "Kopfprüfung"
+anfang ← 2
+<b>wenn</b> flg und 0x20:                              <i>FDICT</i>
+    kennung ← 4 Byte, höchstwertiges zuerst
+    <b>wenn</b> woerterbuch = null: Fehler (nennt die Kennung)
+    <b>wenn</b> Adler32(woerterbuch) ≠ kennung: Fehler "Wörterbuch passt nicht"
+    anfang ← 6
+roh ← Inflate.entpacke(daten, anfang, Länge − anfang − 4, woerterbuch)
+<b>wenn</b> Adler32(roh) ≠ letzte 4 Byte (höchstwertiges zuerst): Fehler
+<b>gib</b> roh</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/deflate/Zlib.java</code>. Das Wörterbuch wird in <code>Inflate</code> vor die Ausgabe gelegt, höchstens die letzten 32 KiB davon; Rückbezüge dürfen hineinzeigen, zurückgegeben wird nur, was dahinter entsteht.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> <code>Zlib.packe</code> schreibt immer <code>CMF</code> = <code>0x78</code> (Deflate, 32-KiB-Fenster) und das kleinste passende <code>FLG</code>, also <code>0x01</code>, ohne Stufenangabe und ohne Wörterbuch. Trägt ein gelesener Strom kein <code>FDICT</code>, bleibt ein mitgegebenes Wörterbuch unbenutzt, wie bei zlib.</div>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<p><code>CompressSelfTest</code> (103 Prüfungen) prüft das Format nicht über Hin-und-zurück allein, denn eigener Packer und eigener Entpacker könnten sich gleich irren. Jeder Strom geht beide Kreuzwege:</p>
+<ul>
+  <li><b>Unser Strom durch <code>java.util.zip.Inflater</code></b> für acht Proben (leer, ein Byte, zwei Byte, ein Lauf von 5000 Byte, 20 000 Zufallsbytes, Text, periodisch, alle 256 Bytewerte).</li>
+  <li><b>Die Ströme des JDK-<code>Deflater</code> auf den Stufen 1, 6 und 9 durch unseren <code>Inflate</code></b> – für dieselben acht Proben; damit sind alle drei Blockarten und die vom JDK erzeugten Codes abgedeckt.</li>
+  <li>Grenzfälle: Abstand 1 mit Länge 258, Längen 257 bis 260, mehrere Blöcke, gespeicherte Blöcke über 65 535 Byte, Wiederholung über 35 000 Byte hinweg.</li>
+  <li>zlib: Kopfbyte <code>0x78</code>, Kopfprüfung durch 31 teilbar, eine verfälschte Adler-32 fällt auf.</li>
+</ul>
+<p><code>Woerterbuchprobe</code> (8 Prüfungen) prüft den Weg mit vorgegebenem Wörterbuch: zlib und roh mit Wörterbuch, ein Wörterbuch über 32 KiB (es zählt das Ende), ein Strom ohne <code>FDICT</code> lässt ein mitgegebenes Wörterbuch unbenutzt; als Gegenproben ein fehlendes und ein falsches Wörterbuch, ein roher Strom ohne Wörterbuch (Rückbezug vor den Anfang) und der Anfang statt des Endes eines großen Wörterbuchs.</p>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Das Fenster ist 32 KiB; ein längeres Wörterbuch zählt nur mit seinem Ende.</li>
+  <li><code>Inflate</code> entpackt vollständig in den Speicher; es gibt keinen strömenden Betrieb. Die Ausgabe ist durch die <a href="index.html#grenze">Entpackgrenze</a> gedeckelt.</li>
+  <li>Deflate64 (ZIP-Verfahren 9) wird nicht gelesen.</li>
+  <li>Der Huffman-Dekoder liest bitweise; bei großen Datenmengen ist eine Tabelle mit mehreren Bit Vorschau schneller. Gemessen wurde das nicht.</li>
+  <li>zlib-Ströme mit anderem Verfahren als 8 werden abgewiesen; das Fensterfeld im <code>CMF</code> wird nicht ausgewertet.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>P. Deutsch: RFC 1951, DEFLATE Compressed Data Format Specification version 1.3, 1996.</li>
+  <li>P. Deutsch, J.-L. Gailly: RFC 1950, ZLIB Compressed Data Format Specification version 3.3, 1996.</li>
+  <li>D. A. Huffman: A Method for the Construction of Minimum-Redundancy Codes. Proceedings of the IRE, 1952.</li>
+  <li>J. Ziv, A. Lempel: A Universal Algorithm for Sequential Data Compression. IEEE Transactions on Information Theory, 1977.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Hintergrund zu <a href="index.html#deflate">Deflate und zlib</a> · weiter: <a href="deflate-packer.html">der eigene Packer</a> · Proben: <code>CompressSelfTest</code>, <code>Woerterbuchprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

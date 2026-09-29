@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apache Parquet — Abgleich gegen Spezifikation und pyarrow – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite aktiv" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › Apache Parquet — Abgleich gegen Spezifikation und pyarrow</span><a class="sprachwahl" href="../../en/fileformats/abgleich-parquet.html">English</a></div>
+<!-- erzeugt aus parquet/ABGLEICH.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · Abgleich</div>
+  <h1>Apache Parquet — Abgleich gegen Spezifikation und pyarrow</h1>
+</header>
+
+<p><b>Stand:</b> 2026-09-27<br><b>Unsere Umsetzung:</b> <code>envisionz.fileformats.parquet.ParquetQuelle</code>, rein lesend, ohne Fremdbibliothek — einschliesslich eines eigenen Thrift-Lesers<br><b>Spezifikation:</b> <i>Apache Parquet Format</i> (parquet-format), öffentlich; die Fundstellen nennen Thrift-Strukturen und Feldnamen<br><b>Verglichen mit:</b> pyarrow 25.0.1 (parquet-cpp)<br><b>Prüfstand:</b> <code>envisionz.fileformats.Parquetprobe</code> — 309 Prüfungen, mit sieben Fremdankern zu verschachtelten Typen (vier seit 2026-09-25, drei seit 2026-09-27); <code>parquet.Deltaprobe</code> 71</p>
+<p><b>Das Vergleichsprodukt.</b> <b>pyarrow</b> ist die offizielle Python-Umsetzung von Apache Arrow und traegt seit der Zusammenlegung mit <i>parquet-cpp</i> auch dessen Parquet-Seite: das eigenstaendige Projekt ist stillgelegt und in <code>apache/arrow</code> aufgegangen. Parquet selbst ist ein eigenes Projekt der Apache Software Foundation. Gemessen wird also gegen die C++-Umsetzung der Stiftung, die das Format herausgibt.</p>
+<p><b>Warum ausgerechnet dieses.</b> Weil die C++-Umsetzung der Apache Software Foundation zugleich die Umsetzung des Herausgebers ist. Bei einem Format mit so vielen Kodierungswegen — RLE-Hybrid, Woerterbuch, Definitions- und Wiederholungsebenen — ist eine zweite Meinung wertlos; man braucht die, gegen die alle anderen sich richten.</p>
+<p><b>Deckung, aus den Zeilen unten gerechnet:</b> von 53 Merkmalen sind bei uns 48 vorhanden, 2 teilweise und 2 nicht vorhanden; beim Vergleichsstueck 43 / 5 / 5.</p>
+<p><span class="ampel gruen">●</span> vorhanden · <span class="ampel rot">●</span> nicht vorhanden · <span class="ampel gelb">●</span> teilweise · – nicht zutreffend</p>
+<p><b>Die Spalte <i>Anmerkung</b></i> verweist auf Abschnitt 5 dieses Dokuments — nicht auf die Punkteliste des Arbeitsbereichs. Das Wort davor sagt, <i>worum es sich handelt</i>: <b>Lücke</b> ist etwas, das uns fehlt und offen ist; <b>entschieden</b> ist etwas, das wir absichtlich nicht tun; <b>Merkmal</b> ist eine Eigenschaft des Formats, die beide Umsetzungen betrifft; <b>dort offen</b> ist eine Lücke des Vergleichsprodukts. Nur die Lücken sind Arbeit — sie stehen gesammelt in Abschnitt 5.1 und als <i>ein</i> Punkt in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Merkmalsvergleich</h2>
+<p>Parquet ist ein <b>spaltenweise</b> abgelegtes Tabellenformat mit einem Thrift-kodierten Verzeichnis am Dateiende. Es ist von den hier verglichenen Formaten dasjenige mit den meisten Schichten: Datei → Zeilengruppe → Spaltenblock → Seite → Kodierung → Packverfahren, und auf jeder Schicht gibt es Wahlmöglichkeiten.</p>
+<h3>Datei und Verzeichnis</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>pyarrow 25.0.1</th><th>Anmerkung</th></tr>
+  <tr><td>Kennung <code>PAR1</code> am Anfang und am Ende</td><td>Kennung</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Verzeichnislänge vor der Schlusskennung</td><td>Footer</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Thrift-Kompaktprotokoll</td><td>Thrift</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P1</td></tr>
+  <tr><td>Formatfassung 1 und 2</td><td>version</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Fassung neuer als 2 wird gemeldet und nach 2 gelesen</td><td>version</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen P8</td></tr>
+  <tr><td>Erzeuger wird gemeldet</td><td>created_by</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Mehrere Zeilengruppen</td><td>RowGroup</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Verschlüsselte Datei wird als solche gemeldet</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P9</td></tr>
+  <tr><td>Verschlüsseltes Verzeichnis entschlüsseln</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden P16</td></tr>
+</table>
+<h3>Typen</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>pyarrow 25.0.1</th><th>Anmerkung</th></tr>
+  <tr><td><code>BOOLEAN</code></td><td>Type</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>INT32</code>, <code>INT64</code></td><td>Type</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>FLOAT</code>, <code>DOUBLE</code></td><td>Type</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>BYTE_ARRAY</code> — Text und Rohbytes</td><td>Type</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>FIXED_LEN_BYTE_ARRAY</code></td><td>Type</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>INT96</code> (alter Zeitstempel)</td><td>Type</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P10</td></tr>
+  <tr><td>Logische Typen: Datum, Zeit, Zeitstempel</td><td>LogicalType</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P10</td></tr>
+  <tr><td>Der <b>neue</b> <code>LogicalType</code> neben dem alten <code>ConvertedType</code></td><td>LogicalType</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P10</td></tr>
+  <tr><td>Logischer Typ <code>DECIMAL</code></td><td>LogicalType</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P11</td></tr>
+  <tr><td><code>DECIMAL</code> mit mehr als fünfzehn Stellen — verlustfrei</td><td>LogicalType</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal P11</td></tr>
+  <tr><td>Verschachtelte Typen: Liste, Abbildung, Struktur</td><td>LogicalType</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P12</td></tr>
+  <tr><td>Struktur in Liste, Liste in Struktur, Abbildung auf Liste und Struktur, Liste von Abbildungen</td><td>LogicalType</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P12</td></tr>
+</table>
+<h3>Kodierungen und Packverfahren</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>pyarrow 25.0.1</th><th>Anmerkung</th></tr>
+  <tr><td><code>PLAIN</code></td><td>Encoding</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>RLE_DICTIONARY</code> / <code>PLAIN_DICTIONARY</code></td><td>Encoding</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P2</td></tr>
+  <tr><td><code>RLE</code> für Definitions- und Wiederholungsebenen</td><td>Encoding</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P3</td></tr>
+  <tr><td><code>DELTA_BINARY_PACKED</code></td><td>Encoding</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P13</td></tr>
+  <tr><td><code>DELTA_BYTE_ARRAY</code>, <code>DELTA_LENGTH_BYTE_ARRAY</code></td><td>Encoding</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P13</td></tr>
+  <tr><td><code>BYTE_STREAM_SPLIT</code></td><td>Encoding</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P13</td></tr>
+  <tr><td><code>BIT_PACKED</code> (zurückgezogen, MSB zuerst)</td><td>Encoding</td><td><span class="ampel gelb">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal P20</td></tr>
+  <tr><td>Unbekannte Kodierung wird benannt statt geraten</td><td>Encoding</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen P8</td></tr>
+  <tr><td>Ungepackt</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Snappy</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>gzip</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P4</td></tr>
+  <tr><td>zstd</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P4</td></tr>
+  <tr><td>LZ4 (<code>LZ4_RAW</code>)</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P4</td></tr>
+  <tr><td>Brotli</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P14</td></tr>
+  <tr><td>LZO</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal P14</td></tr>
+  <tr><td>Eine LZO-Seite beginnt mit dem rohen Block, ohne fremden Kopf</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>FEHLER dort P21</td></tr>
+  <tr><td>LZ4 im Hadoop-Rahmen</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal P14</td></tr>
+  <tr><td>Unbekanntes Packverfahren wird benannt statt geraten</td><td>Compression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen P8</td></tr>
+</table>
+<h3>Seiten und Ebenen</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>pyarrow 25.0.1</th><th>Anmerkung</th></tr>
+  <tr><td>Datenseite v1</td><td>DataPageHeader</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Datenseite v2</td><td>DataPageHeaderV2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Wörterbuchseite</td><td>DictionaryPageHeader</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Definitionsebenen — fehlende Werte</td><td>definition_level</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P3</td></tr>
+  <tr><td>Wiederholungsebenen — verschachtelte Werte, beliebig tief</td><td>repetition_level</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P12</td></tr>
+  <tr><td>Fehlende Struktur und fehlendes Feld sind in der Spalte je Blatt beide leer</td><td>definition_level</td><td><span class="ampel gelb">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P12</td></tr>
+  <tr><td>Spaltenstatistik (min, max, Zahl der Nullwerte)</td><td>Statistics</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P15</td></tr>
+  <tr><td>Das <b>neue</b> Paar <code>min_value</code>/<code>max_value</code> schlägt das zurückgezogene</td><td>Statistics</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P15</td></tr>
+  <tr><td>Eine fehlende Angabe ist keine Null</td><td>Statistics</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P15</td></tr>
+  <tr><td>Seitenverzeichnis lesen (<code>ColumnIndex</code>, <code>OffsetIndex</code>)</td><td>ColumnIndex</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P15</td></tr>
+  <tr><td>Seiten überspringen anhand von Statistik und Filter</td><td>ColumnIndex</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden P18</td></tr>
+  <tr><td>Bloomfilter lesen und befragen</td><td>BloomFilter</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal P17</td></tr>
+  <tr><td>xxHash64, aus der Spezifikation gebaut</td><td>BloomFilter</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal P17</td></tr>
+  <tr><td>Ein angeforderter Bloomfilter entsteht auch wirklich</td><td>BloomFilter</td><td>–</td><td><span class="ampel rot">●</span></td><td>dort offen P19</td></tr>
+</table>
+
+<h2 id="a2">Was gemessen wurde</h2>
+<p>Sieben Fremdanker aus <code>Parquetanker</code>, von <code>parquet-cpp-arrow 25.0.1</code> erzeugt und beide Male gelesen: alle sechs Grundtypen nebeneinander, fehlende Werte über Definitionsebenen, eine wörterbuchkodierte Spalte, zwanzig Zeilen in mehreren Seiten, zwölf Zeilen mit Text, <code>FIXED_LEN_BYTE_ARRAY</code> neben rohen <code>BYTE_ARRAY</code> und zweihundert Zeilen über mehrere Zeilengruppen. <b>Keine Abweichung</b> — Typen, Spaltennamen, Zeilenzahlen und Werte stimmen in allen sieben Fällen überein.</p>
+<p>Das ist bei einem Format dieser Tiefe nicht selbstverständlich, und es ist auch keine vollständige Aussage: die sieben Anker treffen die Wege, die pyarrow <b>voreingestellt</b> geht. Was pyarrow nur auf Verlangen schreibt — Delta-Kodierungen, verschachtelte Typen, Brotli — steht in den Tabellen mit <i>nein</i> und ist <b>nicht gemessen</b>, sondern aus dem Quelltext beider Umsetzungen abgeleitet. Ein Anker dafür fehlt, und das ist die ehrlichere Auskunft als ein Haken.</p>
+
+<h2 id="a3">Was am Format schwierig ist</h2>
+<p><b>Drei Stellen, an denen ein Parquet-Leser scheitert</b> — und sie liegen alle nicht dort, wo man sie sucht.</p>
+<p><b>Erstens: Thrift.</b> Das Verzeichnis ist im Kompaktprotokoll kodiert, mit Zickzack-Zahlen veränderlicher Länge und Feldnummern als Abstände zum vorigen Feld. Wer das nicht vollständig umsetzt, liest die Struktur an der ersten Stelle falsch, an der ein Feld fehlt — und fehlende Felder sind in Thrift der Normalfall, weil unveränderte Voreinstellungen gar nicht erst geschrieben werden.</p>
+<p><b>Zweitens: die Definitionsebenen.</b> Ob ein Wert fehlt, steht nicht beim Wert, sondern in einem eigenen, RLE-hybrid kodierten Strom davor. Wer ihn übergeht, bekommt eine Spalte, die <b>zu kurz</b> ist — und dann rutscht jede folgende Zeile um eins. Das Ergebnis sind Zahlen, die es alle wirklich gibt, in falscher Zuordnung.</p>
+<p><b>Drittens: der RLE-Hybrid.</b> Derselbe Strom wechselt zwischen Lauflängen und bitgepackten Blöcken, und welcher gerade dran ist, steht in einem Zickzack-Kopf. Die Bitbreite kommt von aussen — bei Ebenen aus der Schachtelungstiefe, bei Wörterbüchern aus dem ersten Byte der Seite. Wer die Breite falsch bestimmt, liest lauter gültige Indizes in ein gültiges Wörterbuch und bekommt lauter falsche Wörter.</p>
+<p><b>Was gut ist:</b> das Verzeichnis steht am Ende und beschreibt alles. Wer die letzten acht Byte lesen kann, weiss, wie gross das Verzeichnis ist, und wer das Verzeichnis lesen kann, weiss alles Übrige — ohne eine einzige Datenseite anzufassen. Für Dateien im Gigabytebereich ist das der ganze Unterschied.</p>
+
+<h2 id="a4">Die Punkte</h2>
+<p>Die Spalte <i>Anmerkung</i> nennt die Art vor der Kennung. Nur die <b>Lücken</b> sind Arbeit.</p>
+<h3>Unsere offenen Lücken — das ist die Arbeit</h3>
+<p><b>Seit dem 2026-09-25 steht hier nichts mehr</b> — P12 steht unter 5.3.</p>
+<h3>Bewusste Entscheidungen — nichts zu tun</h3>
+<p><b>P18</b> (entschieden) — Überspringen gehört in den SQL-Aufsatz</p>
+<p>Statistik, Seitenverzeichnis und Bloomfilter <b>stehen jetzt da</b> (P15, P17) — benutzt werden sie zum Überspringen nicht, und das ist kein Rest, sondern die Schnittstelle. Eine <code>Datenquelle</code> hat Tabellen und Kursoren; sie hat <b>keine Bedingung</b>, die man ihr mitgeben könnte. Ohne eine Frage gibt es nichts zu überspringen: „lies alle Zeilen, aber überspring welche" ist keine Anweisung, sondern ein Fehler. Die Bedingung hat der SQL-Aufsatz (Punkt DB10), und dort gehört das Überspringen hin — mit allem, was daran hängt: welche Zeilennummern eine übersprungene Seite verbraucht, was aus <code>LIMIT</code> wird, und was passiert, wenn die Statistik lügt. Was hierher gehörte, ist die <b>Auskunft</b>, und die steht als zwei ganz gewöhnliche Tabellen da.</p>
+<p><b>P16</b> (entschieden) — Entschlüsselt wird nicht</p>
+<p><b>Erkannt ja, entschlüsselt nein</b> — und das ist keine halbe Sache, sondern die Grenze dieses Lesers, dort gezogen, wo sie hingehört. Parquet Modular Encryption verschlüsselt Verzeichnis und Seiten einzeln mit AES-GCM; die Schlüssel kommen aus einem <b>Schlüsselspeicher</b>, den die Datei nicht enthält und nicht enthalten kann — sonst wäre sie nicht verschlüsselt. Ein Leser, der entschlüsseln wollte, bräuchte also nicht Kryptographie, sondern eine <b>Schlüsselverwaltung</b>: woher der Schlüssel kommt, wer ihn geben darf, wie lange er im Speicher steht. Das ist kein Formatthema, und es wäre die erste Stelle in diesem Arbeitsbereich, an der eine Datei nicht mehr für sich selbst spricht. Was fehlte, war die Auskunft, und die steht jetzt da (P9).</p>
+<h3>Eigenschaften des Formats — beide betreffend</h3>
+<p><b>P12</b> (Merkmal) — Verschachtelte Typen — geschlossen am 2026-09-25 (eine Stufe) und am 2026-09-27 (beliebig tief)</p>
+<p>Gelesen werden jetzt die <b>Wiederholungsebenen</b>, und die Ebenen eines Blattes kommen aus seinem <b>Weg</b> im Schema (<code>Blattpfad</code>): jede optionale oder wiederholte Gruppe darüber hebt die höchste Definitionsebene. Eine <b>Struktur</b> wird zu einer Spalte je Blatt (<code>s.a</code>, <code>s.b</code>); fehlt die Struktur, fehlen beide. Eine <b>Liste</b> wird zu einer Textspalte in eckigen Klammern, und die drei Fälle bleiben unterscheidbar: Liste fehlt, Liste leer (<code>[]</code>), Element fehlt (<code>[null, 7]</code>). Eine <b>Abbildung</b> liefert Schlüssel und Werte als zwei Listen gleicher Länge (<code>m.key</code>, <code>m.value</code>). Der Spaltenname lässt die Verpackung weg — aus <code>l.list.element</code> wird <code>l</code>. Gemessen an pyarrow 25.0.1 mit Datenseiten der Fassung 1 und 2 und an 3000 Zeilen, deren Listen über Seitengrenzen laufen. <b>Listen in Listen</b> (Wiederholungsebene über 1) werden benannt abgewiesen — deshalb <i>teil</i>. <b>Dabei aufgefallen und behoben:</b> bei Datenseiten der Fassung 2 wurde <code>is_compressed</code> nicht gelesen. pyarrow legt eine Seite ungepackt ab, wenn Packen nichts bringt, und die wurde dann als Snappy-Strom gedeutet.</p>
+<p><b>Nachtrag 2026-09-27 — über mehrere Stufen.</b> Die Wiederholungsebene über 1 wird nicht mehr abgewiesen, sondern verschachtelt zusammengesetzt: <code>Blattpfad.stufen()</code> nennt je Stufe die Definitionsebene, bei der deren Liste da, aber leer ist; darunter fehlt sie (oder das Element der Stufe darüber), darüber trägt sie ein Element, und die Wiederholungsebene einer Stelle sagt, auf welcher Stufe ein neues Element beginnt. Das Ergebnis ist ein Text in verschachtelten Klammern (<code>[[1, 2], [3]]</code>, <code>[[null, 4], null, []]</code>). <b>Dabei aufgefallen und behoben:</b> in einer Liste von Strukturen hieß die Spalte <code>ls.element.a</code> statt <code>ls.a</code> — <code>element</code> galt nur als Verpackung, wenn es ein Blatt war; jetzt immer in der Dreistufenform (die wiederholte Gruppe hat genau ein Kind). Gemessen an drei Dateien von pyarrow 25.0.1 (<code>Parquetanker.verschachteltTiefV1/V2/Lang</code>, Bauplan <code>test/proben/p12_tief.py</code>): <code>list&lt;list&lt;int32&gt;&gt;</code>, drei Stufen, <code>list&lt;struct&gt;</code>, <code>struct&lt;…, list&gt;</code>, <code>struct&lt;struct&gt;</code>, <code>map&lt;string, list&gt;</code>, <code>map&lt;string, struct&gt;</code>, <code>list&lt;map&gt;</code>, mit Datenseiten der Fassung 1 und 2 und 2000 Zeilen über kleine Seiten; die Sollzeilen sind pyarrows eigene Rückleseauskunft (<code>to_pylist</code>), auf eine Spalte je Blatt abgebildet (<code>p12_soll.py</code>). Der alte Anker <code>verschachteltTief</code>, bis dahin „benannt abgewiesen", liefert jetzt, was pyarrow liest. <b>Bewusst so gelassen:</b> die Spalte je Blatt kennt nur Wert oder leer — ob eine Struktur fehlt oder nur ihr Feld, ist daran nicht zu sehen (pyarrow unterscheidet <code>None</code> und <code>{'a': None}</code>); deshalb die eine Zeile <i>teil</i>.</p>
+<p><b>P20</b> (Merkmal) — <code>BIT_PACKED</code> — für Ebenen geschlossen am 2026-09-23</p>
+<p>Seit Parquet 2.0 zurückgezogen, kam nur bei Ebenen vor und packt als einzige Kodierung <b>höchstwertiges Bit zuerst</b>, ohne Längenvorsatz. Seit dem 2026-09-23 werden Definitionsebenen darin gelesen (<code>Spaltenwerte.bitGepacktMsb</code>); Anker ist das ausgeschriebene Beispiel der Spezifikation (0 bis 7, Breite 3), weil kein heutiger Schreiber sie erzeugt (<code>Bitpackprobe</code>). Als Kodierung von <b>Werten</b> bleibt sie abgewiesen — daran liesse sich nichts messen.</p>
+<p><b>P14</b> (Merkmal) — Sechs von sieben, und die Lücke sagt ihren Namen</p>
+<p>Geschlossen am 2026-09-07. Gelesen werden jetzt <b>alle sieben</b>: ungepackt, Snappy, gzip, LZO, Brotli, LZ4 (in beiden Spielarten) und zstd — alle aus <code>framework-compress</code>, ohne Fremdbibliothek. LZO kam am selben Abend mit BF37 dazu; pyarrow kann es gar nicht schreiben. <b>Beim Schliessen kam ein Widerspruch heraus, und zwar in diesem Dokument:</b> hier stand seit dem 2026-09-05, zstd und LZ4 seien vorhanden. Der Quelltext sagte etwas anderes — <code>Packung.ZSTD</code> und <code>LZ4_RAW</code> standen auf <i>nein</i>, und <code>Spaltenwerte.entpacke</code> hatte gar keinen Zweig dafür. Richtig war der Quelltext. Die Verwechslung ist leicht zu erklären und darum wert, hier zu stehen: an jenem Tag kamen zstd und LZ4 in <b>framework-compress</b> dazu — in den Parquet-Leser verdrahtet wurden sie nicht. <i>„Das Haus kann es" und „dieser Leser benutzt es" sind zwei Aussagen, und die zweite folgt nicht aus der ersten.</i> Dazu neu: <b>LZ4 im Hadoop-Rahmen</b>, die überholte Spielart mit zwei Vier-Byte-Zahlen davor — <b>höchstwertiges Byte zuerst</b>, die einzige Stelle in einer Parquet-Datei, an der eine Zahl so herum steht. Drei Fremdanker von pyarrow 25.0.1 mit <b>demselben Inhalt</b> in drei Packungen; damit misst der Anker nur das Auspacken und nichts sonst.</p>
+<p><b>P13</b> (Merkmal) — Die Unterschiede sind kleiner als die Zahlen</p>
+<p>Geschlossen am 2026-09-07. Eine Messreihe steigt; ihre Zahlen brauchen 32 oder 64 Bit, ihre <b>Unterschiede</b> oft drei. Alle vier Delta-Verfahren werden jetzt gelesen. Die fünf Stellen, an denen es still schiefgeht: <b>erstens</b> der kleinste Unterschied eines Blocks ist vorzeichenbehaftet und wird auf jeden Wert addiert — wer ihn weglässt, macht aus einer fallenden Reihe eine steigende; <b>zweitens</b> der erste Wert steht im Kopf und ist keine Differenz, zählt aber mit; <b>drittens</b> die Bitbreiten <i>aller</i> Miniblocks stehen da, auch der leeren im letzten Block, ihre Daten aber nicht — wer die Bytes durchzählt, liest über das Ende; <b>viertens</b> die Bitbreite darf <b>64</b> sein, und <code>(1L &lt;&lt; 64) - 1</code> ist in Java <code>0</code> und nicht <code>-1</code>; <b>fünftens</b> bei <code>DELTA_BYTE_ARRAY</code> bezieht sich der gemeinsame Anfang auf den <i>vorigen</i> Wert, und ein einziger falscher verdirbt alle folgenden. Gemessen an vier Ankern von pyarrow 25.0.1 mit <code>column_encoding</code> und ausgeschaltetem Wörterbuch — darunter <code>Long.MIN_VALUE</code> neben <code>Long.MAX_VALUE</code> (Bitbreite 64), eine fallende Reihe, eine leere Zeichenkette mitten in der Präfixkette und <code>-0.0</code>, dessen einziges gesetztes Bit im <b>letzten</b> Byteström steht.</p>
+<p><b>P15</b> (Merkmal) — Was in der Datei steht, ohne die Daten zu lesen</p>
+<p>Geschlossen am 2026-09-07. Zu jeder Spalte jeder Zeilengruppe stehen Kleinst- und Grösstwert, die Zahl der Nullwerte und wahlweise die der verschiedenen Werte da; dazu, in eigenen Blöcken <b>ausserhalb</b> des Verzeichnisses, das Seitenverzeichnis aus <code>ColumnIndex</code> (je Seite die Randwerte) und <code>OffsetIndex</code> (je Seite Ort, Grösse und erste Zeile). Beides ist jetzt lesbar, als zwei gewöhnliche Tabellen <code>spaltenstatistik</code> und <code>seiten</code>. <b>Drei Fallen, und alle drei kosten stillschweigend Zeilen:</b> erstens stehen <b>vier</b> Thrift-Felder für zwei Zahlen — Feld 1 und 2 sind zurückgezogen und wurden bei Bytefolgen <i>vorzeichenbehaftet</i> verglichen, was für UTF-8 falsch ist, sobald ein Zeichen über <code>0x7F</code> vorkommt; das neue Paar (5 und 6) schlägt sie. Zweitens stehen die Wahrheitswerte in <code>null_pages</code> als ganzes Byte <b>mit den Nummern des Feldkopfs</b>: 1 heisst wahr, <b>zwei</b> heisst falsch — wer „ungleich null" prüft, hält jede Seite für leer. Drittens tragen die Listen <code>min_values</code>/<code>max_values</code> für eine leere Seite eine <b>leere Bytefolge</b> und keinen ausgelassenen Eintrag; wer sie überspringt, schiebt jede folgende Seite um eins. Gemessen an drei Ankern von pyarrow 25.0.1, darunter einer mit einer leeren Seite <b>mitten</b> in der Spalte — an einer Spalte mit nur einer Seite sieht auch die falsche Deutung richtig aus.</p>
+<p><b>P17</b> (Merkmal) — Die Frage, bei der die Statistik nichts hergibt</p>
+<p>Geschlossen am 2026-09-07. Bei einer sortierten Spalte sagt der Bereich zwischen Kleinst- und Grösstwert viel; bei einer Kennung sagt er nichts, denn zwischen dem kleinsten und dem grössten Text liegt alles. Der Bloomfilter beantwortet dafür <b>„kommt dieser eine Wert hier vielleicht vor?"</b> — mit einem verlässlichen <i>nein</i> oder einem unverbindlichen <i>vielleicht</i>. Parquet benutzt den <b>Split-Block</b>-Filter: ein Block sind 32 Byte und passt in eine Cachezeile, aus der oberen Hälfte des Streuwerts kommt der Block, aus der unteren je Wort genau ein Bit. Der Streuwert ist <b>xxHash64 mit Saat 0</b>, hier aus der Spezifikation nachgebaut — vorgeschrieben ist er, eine Fremdbibliothek kam nicht in Frage, und ein <i>anderer</i> Streuwert wäre nicht anders, sondern falsch. Gegengeprüft an den veröffentlichten Werten (<code>xxHash64("") = ef46db3751d8e999</code>, <code>xxHash64("abc") = 44bc2cf5ad770999</code>) und an einer Datei von DuckDB 1.5.5: von 100 vorhandenen Werten wird <b>keiner</b> verneint, von 1000 fremden werden 9 fälschlich bejaht. Die Blocknummer kommt aus einer <b>Multiplikation</b> und nicht aus einer Restrechnung — bei einem Filter mit nur einem Block sieht auch das Falsche richtig aus, darum steht daneben ein Anker mit vier Blöcken.</p>
+<p><b>P9</b> (Merkmal) — Verschlüsselt ist eine Auskunft, kaputt eine falsche Fährte</p>
+<p>Geschlossen am 2026-09-07. Eine verschlüsselte Datei trägt an beiden Enden <b><code>PARE</code></b> statt <code>PAR1</code> — vier Byte, an derselben Stelle. Ein Leser, der nur <code>PAR1</code> kennt, meldet eine kaputte Datei, und dann prüft jemand Platte, Leitung und Schreiber, während die Datei die ganze Zeit in Ordnung ist. Der Leser sagt jetzt, was der Fall ist. <b>Beim Schliessen fiel ein zweiter Fehler auf, und zwar bei uns:</b> die Kennungsprüfung stand an <b>zwei</b> Stellen — einmal in <code>Parquetkopf</code> für eine Datei im Speicher, einmal in <code>ParquetQuelle.oeffne</code> abgeschrieben für den Weg über den Kanal. Die neue Erkennung stand in der einen, gerufen wurde die andere; gemerkt hat es die Probe, nicht das Lesen. Eine abgeschriebene Prüfung ist keine zweite Prüfung, sondern dieselbe, die von jetzt an getrennt altert — es gibt sie jetzt nur noch einmal. pyarrow 25.0.1 meldet den Fall ebenso deutlich (<code>Could not read encrypted metadata, no decryption found in reader's properties</code>). Das Entschlüsseln selbst ist eine Entscheidung und steht als P16 in 5.2.</p>
+<p><b>P10</b> (Merkmal) — Vier Zeitrechnungen in einem Format</p>
+<p>Geschlossen am 2026-09-07. <code>DATE</code> sind <b>Tage</b> seit dem 1970-01-01 in einem <code>INT32</code>; <code>TIME_MILLIS</code>/<code>TIME_MICROS</code> eine Uhrzeit seit Mitternacht; <code>TIMESTAMP_MILLIS</code>/<code>TIMESTAMP_MICROS</code> ein Zeitpunkt seit der Epoche; und <code>INT96</code> der alte Impala-Zeitstempel: <b>zwölf Byte, kleinstwertig zuerst</b>, acht Byte Nanosekunden des Tages, dann vier Byte <b>Julianischer Tag</b>. Der 1970-01-01 ist der Julianische Tag 2440588; wer ihn nicht abzieht, landet im Jahr 4713 vor Christus. <b>Drei Fallen, und keine davon meldet sich:</b> ein negativer Tagesabstand wird vorzeichenlos zum Jahr 5881580; der Tagesanteil eines Zeitpunkts wird bei negativen Werten falsch, wenn man mit <code>/</code> statt <code>Math.floorDiv</code> rechnet; und <b>pyarrow 25 setzt bei <code>TIME</code> gar keinen <code>ConvertedType</code> mehr</b>, nur den neuen <code>LogicalType</code> in Thrift-Feld 10 — ein Leser, der bloss das alte Feld 6 liest, sieht bei einer frischen Datei keine Bedeutung und gibt die nackte Zahl 51785123 heraus. Gemessen an zwei Ankern von pyarrow 25.0.1: <code>typen</code> mit Datum, Uhrzeit, Zeitpunkt und dem Datum <b>1969-12-31</b>, und <code>int96</code>, geschrieben mit <code>use_deprecated_int96_timestamps=True</code>, mit einem Wert vor der Epoche.</p>
+<p><b>P11</b> (Merkmal) — Ein Betrag, dem zwei Stellen fehlen, sieht aus wie ein Betrag</p>
+<p>Geschlossen am 2026-09-07. <code>DECIMAL</code> legt eine Festkommazahl als <code>INT32</code>, <code>INT64</code>, <code>BYTE_ARRAY</code> oder <code>FIXED_LEN_BYTE_ARRAY</code> ab; <b>Genauigkeit und Nachkommastellen stehen als eigene Thrift-Felder</b> (7 und 8) neben der Bedeutung, nicht in ihr. Bei den Bytefolgen ist die Zahl <b>höchstwertiges Byte zuerst und mit Vorzeichen</b> — also genau das, was <code>new BigInteger(byte[])</code> tut, und genau das Gegenteil von allem anderen in Parquet, wo kleinstwertig zuerst gilt. Die eigentliche Entscheidung liegt aber woanders: <b>ein <code>double</code> trägt fünfzehn Stellen.</b> Aus <code>DECIMAL(30,2)</code> mit 12345678901234,56 würde lautlos 1.234567890123456E13 — die letzten Stellen fort, ohne Meldung. Darum kommt eine Spalte mit mehr als fünfzehn Stellen Genauigkeit als <b>Text</b> heraus (<code>BigDecimal.toPlainString</code>) und nicht als Zahl: lieber ein Text, der stimmt, als eine Zahl, die rechnet und falsch ist. Gemessen an <code>typen</code> von pyarrow 25.0.1 mit <code>decimal128(10,2)</code> und <code>decimal128(30,2)</code>.</p>
+<p><b>P1</b> (Merkmal) — Thrift-Kompaktprotokoll</p>
+<p>Siehe Abschnitt 3. Der Leser hier bringt einen <b>eigenen</b> Thrift-Leser mit — nicht aus Sportlichkeit, sondern weil die Alternative eine Fremdbibliothek gewesen wäre und Parquet nur einen winzigen Ausschnitt von Thrift benutzt.</p>
+<p><b>P2</b> (Merkmal) — Das Wörterbuch ist eine Seite wie jede andere</p>
+<p>Die Wörterbuchseite steht <b>vor</b> den Datenseiten desselben Spaltenblocks und trägt ihre Werte <code>PLAIN</code> kodiert. Die Datenseiten tragen dann Indizes darauf, bitgepackt mit einer Breite, die im ersten Byte der Seite steht. Wer die Wörterbuchseite für eine Datenseite hält, liest die Werte zweimal — einmal als Wörter und einmal als Indizes.</p>
+<p><b>P3</b> (Merkmal) — Fehlende Werte stehen woanders</p>
+<p>Siehe Abschnitt 3, zweitens. Beide Umsetzungen machen es richtig; der Anker <code>f2</code> misst es mit einer Spalte, in der zwei von fünf Werten fehlen.</p>
+<p><b>P4</b> (Merkmal) — Fünf Packverfahren, und keines steht in der Datei beschrieben</p>
+<p>Der Spaltenblock nennt eine Zahl — 1 heisst Snappy, 2 gzip, 6 zstd. Was diese Verfahren tun, steht nirgends in Parquet; ein Leser muss sie <b>mitbringen</b>. Das ist der Grund, warum ein Parquet-Leser in diesem Arbeitsbereich erst möglich wurde, nachdem <code>framework-compress</code> sie hatte — und warum die drei letzten (gzip, LZ4, zstd) am 2026-09-05 zusammen mit BF30, BF34 und BF33 dazukamen.</p>
+<h3>Befunde am Vergleichsprodukt</h3>
+<p><b>P21</b> (FEHLER dort) — fastparquet schreibt einen Kopf, der dort nicht hingehört</p>
+<p>fastparquet 2026.5.0 packt seine LZO-Seiten mit <code>lzo.compress</code> von python-lzo — und das setzt <b>seinen eigenen Kopf</b> davor: ein Byte <code>0xF0</code> und vier Byte ungepackte Länge, höchstwertiges Byte zuerst. In einer Parquet-Seite steht der nicht; dort beginnt der rohe LZO1X-Block, so wie hadoop-lzo ihn schreibt. Auffallen kann es fastparquet nicht: es liest mit derselben Bibliothek zurück, und die frisst ihren eigenen Kopf wieder. Für jeden anderen Leser ist die Seite unlesbar — und der Fehler zeigt sich nicht am Kopf, sondern erst zweihundert Byte später als „Rückbezug um 1770 Byte, ausgegeben sind erst 223". Unser Leser übergeht den Kopf, aber nur wenn er sich <b>bestätigt</b>: die Länge darin muss der Grösse entsprechen, die die Seite ohnehin ansagt. So wird nichts geraten.</p>
+<div class="hinweis"><b>So stellt man es nach</b> — Mit fastparquet 2026.5.0 und python-lzo: <code>fastparquet.write('x.parquet', df, compression='LZO', write_index=False)</code> für einen DataFrame mit 200 Zeilen. Dann die erste Datenseite von Hand ansehen: sie beginnt mit <code>f0 00 00 06 4f</code>, also dem Kopf von python-lzo, statt mit dem ersten Befehlsbyte eines LZO1X-Blocks. pyarrow 25.0.1 kann die Datei ohnehin nicht lesen (dort fehlt LZO ganz), fastparquet selbst liest sie anstandslos. Die Datei liegt als Fremdanker im Prüfstand: <code>envisionz.fileformats.Parquetanker.packungLzo()</code>.</div>
+<p><b>P19</b> (dort offen) — Ein Schalter, der ein Wunsch ist</p>
+<p><code>WRITE_BLOOM_FILTER true</code> bei DuckDB 1.5.5 erzeugt <b>nicht immer</b> einen Bloomfilter. DuckDB baut ihn aus dem <b>Wörterbuch</b> der Spalte; wählt es für eine Spalte <code>PLAIN</code> — bei wenigen Zeilen oder bei sehr vielen verschiedenen Werten —, entsteht kein Filter, und die Datei sagt nirgends, dass der Wunsch unerfüllt blieb. Gemessen: dieselbe Spalte mit <b>20</b> Zeilen ergibt keinen Filter, mit <b>40</b> einen; mit 2000 verschiedenen Werten wieder keinen. Das ist kein Fehler — ein Bloomfilter ist eine Beschleunigung und keine Zusage —, aber wer sich beim Schreiben darauf verlässt und beim Lesen darauf baut, verlässt sich auf etwas, das nicht dasteht. Ein Leser sollte darum immer prüfen, <b>ob</b> ein Filter da ist, statt ihn vorauszusetzen.</p>
+<div class="hinweis"><b>So stellt man es nach</b> — Mit DuckDB 1.5.5 unter Python 3.10 zweimal dieselbe Anweisung, nur mit anderer Zeilenzahl: <code>COPY (SELECT ('w'||(i%5))::VARCHAR AS name, (i%7)::INTEGER AS id FROM range(N) t(i)) TO 'b.parquet' (FORMAT parquet, COMPRESSION uncompressed, WRITE_BLOOM_FILTER true, ROW_GROUP_SIZE N)</code> für N = 20 und N = 40. Erwartet: beide Male ein Bloomfilter. Beobachtet: bei N = 20 ist <code>bloom_filter_offset</code> in beiden Spalten <b>nicht gesetzt</b> und die Kodierung ist <code>PLAIN</code>; bei N = 40 steht er da (Versatz 334 und 381, je 47 Byte) und die Kodierung ist <code>PLAIN_DICTIONARY</code>. Mit <code>SELECT ('k'||i) FROM range(2000)</code> — 2000 verschiedene Werte — fehlt er wieder. Die Datei mit N = 40 liegt als Fremdanker im Prüfstand: <code>envisionz.fileformats.Parquetanker.bloom()</code>.</div>
+<p><b>P8</b> (dort offen) — Benennen statt raten</p>
+<p>Bei einer unbekannten Kodierung, einem unbekannten Packverfahren und einer zu neuen Formatfassung nennt unser Leser die Spalte und den Grund und lässt sie leer; pyarrow bricht in den ersten beiden Fällen mit einer Meldung ab, die den Spaltennamen nicht nennt, und liest im dritten weiter. Keines von beiden ist falsch — aber bei einer Datei mit zweihundert Spalten ist „Spalte <code>preis_netto</code> benutzt die Kodierung DELTA_BINARY_PACKED" eine Auskunft und „unsupported encoding" eine Suchaufgabe.</p>
+
+<h2 id="a5">Das Umfeld — womit diese Dateien sonst gelesen und geschrieben werden</h2>
+<p>Diese Tafel zaehlt <b>nicht</b> in die Deckung. Sie sagt nichts ueber diesen Leser, sondern ueber das Umfeld, in dem eine solche Datei entsteht — und das ist beim Lesen einer fremden Datei die wichtigere Auskunft: <b>wer sie geschrieben hat, entscheidet, welche Spielart darin steht.</b> Ein Leser, der nur die Dateien eines einzigen Schreibers kennt, haelt dessen Gewohnheiten fuer das Format.</p>
+<table>
+  <tr><th>Programm</th><th>liest</th><th>schreibt</th><th>Bemerkung</th></tr>
+  <tr><td><b>parquet-cpp / Apache Arrow</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Das Vergleichsprodukt dieses Abgleichs.</td></tr>
+  <tr><td><b>Apache Spark</b>, <b>Hive</b>, <b>Impala</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die Heimat des Formats; hier entstehen die meisten Parquet-Dateien.</td></tr>
+  <tr><td><b>DuckDB</b>, <b>Polars</b>, <b>pandas</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die schlanke Seite; DuckDB liest Parquet unmittelbar per SQL.</td></tr>
+  <tr><td><b>parquet-java</b> (Apache)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die Java-Umsetzung der Stiftung.</td></tr>
+  <tr><td><b>parquet-tools</b>, <b>pqrs</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Kommandozeilenwerkzeuge, um in eine fremde Datei hineinzusehen.</td></tr>
+</table>
+<p>Die Liste ist <b>nicht vollstaendig</b> und will es nicht sein. Sie nennt, was einem bei diesem Format tatsaechlich begegnet, und laesst weg, was es zwar auch kann, aber niemand dafuer benutzt.</p>
+
+<h2 id="a6">Die Java-Umsetzung — wo dieser Leser unter seinesgleichen steht</h2>
+<p><b>Warum dieser Abschnitt.</b> Alle übrigen Abgleiche dieses Moduls messen gegen ein Werkzeug in einer <b>anderen</b> Sprache. Das ist gut gegen Irrtümer über das Format und sagt nichts darüber, wo dieser Leser unter seinesgleichen steht. Entscheidend ist die Unterscheidung zwischen einem <b>reinen Nachbau in Java</b> und einem <b>Mantel um eine C-Bibliothek</b>: nur der Nachbau löst dieselbe Aufgabe unter denselben Bedingungen.</p>
+<p><b>Es gibt einen reinen Java-Nachbau:</b> <code>apache/parquet-java</code> (früher parquet-mr), einschliesslich Kodierungen und Packverfahren. <b>Nicht gemessen</b>, und der Grund ist der Abhängigkeitsbaum: parquet-java zieht Hadoop transitiv mit und importiert Hadoop-Typen bis in die Kernklassen. Wer das umgehen will, nimmt <code>strategicblue/parquet-floor</code>, das die nötigen Hadoop-Klassen nachbaut und ohne Hadoop auskommt.</p>
+<p>Für dieses Dokument ist das eine nützliche Einordnung: die etablierte Java-Umsetzung von Parquet ist ohne ein Datenökosystem im Rücken nicht zu haben. Ein Leser, der eine Parquet-Datei mit dem JDK allein öffnet, ist damit keine Selbstverständlichkeit.</p>
+<p><b>Wie belastbar das ist.</b> Recherchiert am 2026-09-06 über Web- und GitHub-Suche; die Suchschnittstelle von Maven Central war gesperrt, eine systematische Artefaktsuche war also nicht möglich. Wo unten „nicht gemessen" steht, steht es ausdrücklich — eine genannte Bibliothek ist noch keine gemessene.</p>
+
+<footer>
+Erzeugt aus <code>envisionz-framework-fileformats/docs/parquet/ABGLEICH.md</code> · zurück zur <a href="index.html#tabellen">Übersicht</a> · alle Formate im <a href="abgleich.html">Abgleich</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

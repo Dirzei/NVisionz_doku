@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimierung und Nullstellen – Brent, Nelder-Mead, Levenberg-Marquardt – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag aktiv" href="index.html">framework-math</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#fourier">Fourier- und Kosinustransformation</a>
+<a class="unterseite" href="fourier.html">Hintergrund</a>
+<a class="rubrik" href="index.html#linear">Dichte lineare Algebra</a>
+<a class="unterseite" href="linear.html">Hintergrund</a>
+<a class="rubrik" href="index.html#gspar">Dünn besetzte LU</a>
+<a class="unterseite" href="gspar.html">Hintergrund</a>
+<a class="rubrik" href="index.html#krylov">Iterative Löser (Krylov)</a>
+<a class="unterseite" href="krylov.html">Hintergrund</a>
+<a class="rubrik" href="index.html#eigen">Eigenwerte und Singulärwertzerlegung</a>
+<a class="unterseite" href="eigen.html">QR und SVD</a>
+<a class="unterseite" href="lanczos.html">Lanczos und Arnoldi</a>
+<a class="rubrik" href="index.html#ode">Anfangswertprobleme und DAE</a>
+<a class="unterseite" href="ode.html">Hintergrund</a>
+<a class="rubrik" href="index.html#quadratur">Numerische Integration</a>
+<a class="unterseite" href="quadratur.html">Hintergrund</a>
+<a class="rubrik" href="index.html#optimierung">Optimierung und Nullstellen</a>
+<a class="unterseite aktiv" href="nullstellen.html">Brent, Nelder-Mead, LM</a>
+<a class="unterseite" href="optimierung.html">L-BFGS und SQP</a>
+<a class="rubrik" href="index.html#kurven">Kurven, Splines und Flächen</a>
+<a class="unterseite" href="kurven.html">Hintergrund</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-math</a> › Optimierung und Nullstellen – Brent, Nelder-Mead, Levenberg-Marquardt</span><a class="sprachwahl" href="../../en/math/nullstellen.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-math · envisionz.math.optimierung</div>
+  <h1>Optimierung und Nullstellen – Brent, Nelder-Mead, Levenberg-Marquardt</h1>
+  <p class="unter">Die Rechnung hinter <code>Optimize</code>: Nullstelle und Minimum in einer Veränderlichen nach Brent, der Simplex von Nelder und Mead ohne Ableitungen und Levenberg-Marquardt für nichtlineare kleinste Quadrate – mit Pseudocode nach dem Quelltext, nachgerechneten Beispielen, Prüfungen und Grenzen. Die Verfahren mit Gradient stehen auf der Seite <a href="optimierung.html">L-BFGS, L-BFGS-B und SQP</a>.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p><code>Optimize</code> ist die kleine Werkzeugkiste, die framework-stats und framework-thermo benutzen; sie ist aus framework-stats unverändert (bitgleich) hierher umgezogen. Vier Aufgaben:</p>
+<table>
+  <tr><th>Methode</th><th>Aufgabe</th><th>typischer Einsatz</th></tr>
+  <tr><td><code>brentRoot(f, a, b, tol)</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f(x) = 0</annotation></semantics></math> in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[a, b]</annotation></semantics></math> mit Vorzeichenwechsel</td><td>Temperatur zu einer Enthalpie, Verteilungsquantile</td></tr>
+  <tr><td><code>brentMin(f, a, b, tol)</code></td><td>Minimum von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[a, b]</annotation></semantics></math></td><td>eindimensionale Suche, Box-Cox-Parameter</td></tr>
+  <tr><td><code>nelderMead(f, x0, tol, maxIter)</code></td><td>Minimum ohne Ableitungen, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Variablen</td><td>Maximum-Likelihood, verrauschte oder unstetige Ziele</td></tr>
+  <tr><td><code>levenbergMarquardt(r, p0, tol, maxIter)</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.1667em"/><msub><mi>min</mi><mrow><mi>p</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo>‖</mo><mi>r</mi><mo stretchy="false">(</mo><mi>p</mi><mo stretchy="false">)</mo><msubsup><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow><mrow><mn>2</mn></mrow></msubsup></mrow><annotation encoding="application/x-tex">\min_p \|r(p)\|_2^2</annotation></semantics></math></td><td>Kurvenanpassung an Messdaten</td></tr>
+</table>
+<p>Anders als <code>Lbfgs</code>, <code>LbfgsB</code> und <code>Sqp</code> geben diese Methoden nur das Ergebnis zurück (bei Levenberg-Marquardt dazu Quadratsumme, Iterationen und <code>converged</code>), keine Meldung. Was bei Misserfolg geliefert wird, steht jeweils unter <a href="#grenzen">Grenzen</a>.</p>
+
+<h2 id="brent">Nullstelle nach Brent</h2>
+<p>Hat <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> an den Enden von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[a, b]</annotation></semantics></math> verschiedene Vorzeichen, liegt dazwischen (bei stetigem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math>) eine Nullstelle. <b>Bisektion</b> findet sie sicher, halbiert aber nur – eine Binärstelle je Auswertung. <b>Sekante</b> und <b>inverse quadratische Interpolation</b> (eine Parabel <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x(f)</annotation></semantics></math> durch drei Punkte, ausgewertet bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f = 0</annotation></semantics></math>) konvergieren nahe der Nullstelle superlinear, können aber weit weg springen. Brents Verfahren (1973, nach Dekker) verbindet beides: Es hält stets eine Klammer <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[b, c]</annotation></semantics></math> mit Vorzeichenwechsel, versucht den schnellen Schritt und nimmt ihn nur, wenn er innerhalb der Klammer bleibt und schneller schrumpft als die Bisektion; sonst halbiert es.</p>
+<p>Mit den drei letzten Punkten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">a, b, c</annotation></semantics></math> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> die beste Näherung) und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>b</mi></mrow></msub><mo>/</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>a</mi></mrow></msub></mrow><annotation encoding="application/x-tex">s = f_b/f_a</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>=</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>a</mi></mrow></msub><mo>/</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">q = f_a/f_c</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>b</mi></mrow></msub><mo>/</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">r = f_b/f_c</annotation></semantics></math> lautet der Interpolationsschritt</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">Δ</mi><mo>=</mo><mfrac><mrow><mi>p</mi></mrow><mrow><mi>q</mi><mo>'</mo></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>p</mi><mo>=</mo><mi>s</mi><mo stretchy="false">(</mo><mn>2</mn><msub><mrow><mi>x</mi></mrow><mrow><mi>m</mi></mrow></msub><mi>q</mi><mo stretchy="false">(</mo><mi>q</mi><mo>−</mo><mi>r</mi><mo stretchy="false">)</mo><mo>−</mo><mo stretchy="false">(</mo><mi>b</mi><mo>−</mo><mi>a</mi><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mi>r</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>q</mi><mo>'</mo><mo>=</mo><mo stretchy="false">(</mo><mi>q</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mi>r</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mi>s</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">\Delta = \frac{p}{q'}, \qquad p = s\big(2 x_m q (q - r) - (b - a)(r - 1)\big), \qquad q' = (q - 1)(r - 1)(s - 1),</annotation></semantics></math></p>
+<p>mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>m</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mi>c</mi><mo>−</mo><mi>b</mi><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">x_m = (c - b)/2</annotation></semantics></math>; bei nur zwei verschiedenen Punkten die Sekante <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>2</mn><msub><mrow><mi>x</mi></mrow><mrow><mi>m</mi></mrow></msub><mi>s</mi></mrow><annotation encoding="application/x-tex">p = 2 x_m s</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>'</mo><mo>=</mo><mn>1</mn><mo>−</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">q' = 1 - s</annotation></semantics></math>.</p>
+<h3>Pseudocode – <code>Optimize.brentRoot(f, a, b, tol)</code></h3>
+<pre class="pseudo">fa ← f(a);  fb ← f(b)
+<b>wenn</b> fa = 0: <b>gib</b> a;   <b>wenn</b> fb = 0: <b>gib</b> b
+<b>wenn</b> fa · fb > 0: <b>gib</b> NaN                                    <i>kein Vorzeichenwechsel</i>
+c ← a;  d ← e ← b − a
+<b>für</b> iter ← 1 <b>bis</b> 200:
+    <b>wenn</b> fb · fc > 0:  c ← a;  fc ← fa;  d ← e ← b − a               <i>Klammer erneuern</i>
+    <b>wenn</b> |fc| &lt; |fb|:  a ← b, b ← c, c ← a (mit Werten)                 <i>b ist die beste Näherung</i>
+    tol1 ← 2 · 1e−12 · |b| + tol/2;   xm ← (c − b)/2
+    <b>wenn</b> |xm| ≤ tol1 <b>oder</b> fb = 0: <b>gib</b> b
+    <b>wenn</b> |e| ≥ tol1 <b>und</b> |fa| > |fb|:
+        Sekante (a = c) oder inverse quadratische Interpolation → p, q
+        <b>wenn</b> 2p &lt; min(3 xm q − |tol1 q|, |e q|):  e ← d;  d ← p/q      <i>Interpolation angenommen</i>
+        <b>sonst</b>:  d ← xm;  e ← d                                        <i>Bisektion</i>
+    <b>sonst</b>:  d ← xm;  e ← d
+    a ← b;  fa ← fb
+    b ← b + (|d| > tol1 ? d : sign(xm) · tol1);   fb ← f(b)
+<b>gib</b> b                                                              <i>nach 200 Schritten, ohne Kennzeichen</i></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-math/src/envisionz/math/optimierung/Optimize.java</code>, <code>brentRoot</code> (Aufbau wie <code>zbrent</code> in <i>Numerical Recipes</i>).</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die interne Maschinengenauigkeit ist mit <code>EPS = 1e-12</code> festgelegt, nicht mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2,2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2{,}2 \cdot 10^{-16}</annotation></semantics></math>. Die erreichbare Genauigkeit ist deshalb <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≈</mo><mn>2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup><mspace width="0.1667em"/><mo>|</mo><mi>x</mi><mo>|</mo><mo>+</mo><mtext>tol</mtext><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\approx 2 \cdot 10^{-12}\,|x| + \text{tol}/2</annotation></semantics></math>: Bei einer Nullstelle um 3000 (Temperatur in K) endet die Suche spätestens bei einer Klammer von etwa <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">6 \cdot 10^{-9}</annotation></semantics></math>, auch wenn <code>tol</code> kleiner verlangt ist.</div>
+<p><b>Beispiele.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">x^2 - 2</annotation></semantics></math> auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>2</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 2]</annotation></semantics></math>, <code>tol = 1e-12</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1,4142135623731364</mn></mrow><annotation encoding="application/x-tex">1{,}4142135623731364</annotation></semantics></math>, Abweichung von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mn>2</mn></msqrt></mrow><annotation encoding="application/x-tex">\sqrt 2</annotation></semantics></math> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4,1</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>14</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4{,}1 \cdot 10^{-14}</annotation></semantics></math>, 9 Auswertungen. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>x</mi><mo>−</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">\cos x - x</annotation></semantics></math> auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,7390851332151559</mn></mrow><annotation encoding="application/x-tex">0{,}7390851332151559</annotation></semantics></math>, 8 Auswertungen – die Bisektion bräuchte für dieselbe Genauigkeit etwa 40.</p>
+
+<h2 id="brentmin">Minimum nach Brent</h2>
+<p>Für das Minimum einer Funktion einer Veränderlichen auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[a, b]</annotation></semantics></math> gilt dasselbe Prinzip: Der <b>goldene Schnitt</b> verkleinert die Klammer sicher um den Faktor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,618</mn></mrow><annotation encoding="application/x-tex">0{,}618</annotation></semantics></math> je Auswertung; die <b>parabolische Interpolation</b> durch die drei besten Punkte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>,</mo><mi>w</mi><mo>,</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">x, w, v</annotation></semantics></math> konvergiert schneller, wird aber nur genommen, wenn der Schritt in der Klammer liegt und kleiner ist als die Hälfte des vorletzten Schritts. Der Parabelscheitel liegt bei</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>−</mo><mfrac><mrow><mi>p</mi></mrow><mrow><mi>q</mi></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>p</mi><mo>=</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mi>v</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>w</mi></mrow></msub><mo stretchy="false">)</mo><mo>−</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mi>w</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>v</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>q</mi><mo>=</mo><mn>2</mn><mo stretchy="false">(</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mi>v</mi><mo stretchy="false">)</mo><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>w</mi></mrow></msub><mo stretchy="false">)</mo><mo>−</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mi>w</mi><mo stretchy="false">)</mo><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>v</mi></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x - \frac{p}{q}, \qquad p = (x - v)^2 (f_x - f_w) - (x - w)^2 (f_x - f_v), \qquad q = 2\big((x - v)(f_x - f_w) - (x - w)(f_x - f_v)\big)</annotation></semantics></math></p>
+<p>(im Code mit umgestelltem Vorzeichen, so dass der Nenner positiv ist). Der goldene Schritt ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,3819660</mn><mo>⋅</mo></mrow><annotation encoding="application/x-tex">0{,}3819660 \cdot</annotation></semantics></math> (Abstand zum weiter entfernten Klammerende), mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,3819660</mn><mo>=</mo><mo stretchy="false">(</mo><mn>3</mn><mo>−</mo><msqrt><mn>5</mn></msqrt><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">0{,}3819660 = (3 - \sqrt 5)/2</annotation></semantics></math>.</p>
+<h3>Pseudocode – <code>Optimize.brentMin(f, a, b, tol)</code></h3>
+<pre class="pseudo">x ← w ← v ← a + 0,381966 (b − a);  fx ← fw ← fv ← f(x);  d ← e ← 0
+<b>für</b> iter ← 1 <b>bis</b> 200:
+    xm ← (a + b)/2;  tol1 ← tol·|x| + 1e−12;  tol2 ← 2 tol1
+    <b>wenn</b> |x − xm| ≤ tol2 − (b − a)/2: <b>gib</b> x
+    <b>wenn</b> |e| > tol1:  Parabel durch x, w, v → p, q
+        <b>wenn</b> |p| &lt; |q e/2| <b>und</b> x + p/q in (a, b):  e ← d;  d ← p/q  (nahe Rand: ±tol1)
+        <b>sonst</b> goldener Schnitt
+    <b>sonst</b> goldener Schnitt:  e ← (x ≥ xm) ? a − x : b − x;  d ← 0,381966 e
+    u ← x + (|d| ≥ tol1 ? d : sign(d) · tol1);  fu ← f(u)
+    Klammer [a, b] und die drei besten Punkte x, w, v nachführen
+<b>gib</b> x</pre>
+<p class="quelle">Quelle: <code>Optimize.java</code>, <code>brentMin</code> (Aufbau wie <code>brent</code> in <i>Numerical Recipes</i>).</p>
+<p><b>Beispiel und Genauigkeitsgrenze.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>x</mi></mrow><mrow><mn>4</mn></mrow></msup><mo>−</mo><mn>3</mn><mi>x</mi></mrow><annotation encoding="application/x-tex">x^4 - 3x</annotation></semantics></math> auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>2</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 2]</annotation></semantics></math> mit <code>tol = 1e-10</code>: Ergebnis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,9085602925623181</mn></mrow><annotation encoding="application/x-tex">0{,}9085602925623181</annotation></semantics></math>, exakt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>3</mn><mo>/</mo><mn>4</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>1</mn><mo>/</mo><mn>3</mn></mrow></msup><mo>=</mo><mn>0,9085602964160698</mn></mrow><annotation encoding="application/x-tex">(3/4)^{1/3} = 0{,}9085602964160698</annotation></semantics></math> – Abweichung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3,9</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3{,}9 \cdot 10^{-9}</annotation></semantics></math>, 19 Auswertungen. Das ist keine Schwäche des Verfahrens, sondern eine Eigenschaft jedes Minimums: Nahe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mo>*</mo></mrow></msub></mrow><annotation encoding="application/x-tex">x_*</annotation></semantics></math> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mo>*</mo></mrow></msub><mo>≈</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mi>f</mi><mo>'</mo><mo>'</mo><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mo>*</mo></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msup><mrow><mi mathvariant="normal">δ</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">f(x) - f_* \approx \tfrac12 f''(x_*)\,\delta^2</annotation></semantics></math>, und sobald das unter der Rundungsstufe von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> liegt (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ε</mi><mspace width="0.1667em"/><mo>|</mo><msub><mrow><mi>f</mi></mrow><mrow><mo>*</mo></mrow></msub><mo>|</mo></mrow><annotation encoding="application/x-tex">\varepsilon\,|f_*|</annotation></semantics></math>), sind die Punkte nicht mehr zu unterscheiden. Hier: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mo>*</mo></mrow></msub><mo>≈</mo><mo>−</mo><mn>2,04</mn></mrow><annotation encoding="application/x-tex">f_* \approx -2{,}04</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>'</mo><mo>'</mo><mo>≈</mo><mn>9,9</mn></mrow><annotation encoding="application/x-tex">f'' \approx 9{,}9</annotation></semantics></math> → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">δ</mi><mo>≈</mo><msqrt><mn>2</mn><mo>⋅</mo><mn>2,2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>16</mn></mrow></msup><mo>⋅</mo><mn>2,04</mn><mo>/</mo><mn>9,9</mn></msqrt><mo>≈</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\delta \approx \sqrt{2 \cdot 2{,}2\cdot 10^{-16} \cdot 2{,}04/9{,}9} \approx 10^{-8}</annotation></semantics></math>. Ein Minimum ist in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> nur auf etwa <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi mathvariant="normal">ε</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt\varepsilon</annotation></semantics></math> relativ bestimmbar; <code>tol</code> unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-8}</annotation></semantics></math> bringt nichts.</p>
+
+<h2 id="neldermead">Nelder-Mead-Simplex</h2>
+<p>Das Verfahren von Nelder und Mead (1965) braucht keine Ableitungen, nur Funktionswerte. Es führt einen <b>Simplex</b> aus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n + 1</annotation></semantics></math> Punkten im <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>n</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\mathbb{R}^n</annotation></semantics></math> (in der Ebene ein Dreieck) und ersetzt in jeder Iteration den schlechtesten Punkt durch einen besseren auf der Geraden durch den Schwerpunkt der übrigen – der Simplex wandert, streckt sich in günstige Richtungen und zieht sich um das Minimum zusammen.</p>
+
+<figure>
+<svg viewBox="0 0 560 280" width="560" font-family="sans-serif" font-size="12">
+  <polygon points="150,200 230,200 190,265" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="150" cy="200" r="4" fill="#1f5f8b"/><text x="112" y="204" fill="#1f5f8b">bester</text>
+  <circle cx="230" cy="200" r="4" fill="#1f5f8b"/><text x="238" y="204" fill="#1f5f8b">zweitschlechtester</text>
+  <circle cx="190" cy="265" r="4" fill="#9a6400"/><text x="200" y="272" fill="#9a6400">schlechtester</text>
+  <circle cx="190" cy="200" r="3" fill="#5b6475"/><text x="160" y="190" fill="#5b6475">c</text>
+  <line x1="190" y1="265" x2="190" y2="50" stroke="#5b6475" stroke-dasharray="3,3"/>
+  <circle cx="190" cy="135" r="4" fill="#1f5f8b"/><text x="198" y="139" fill="#1f5f8b">x_r = c + (c − x_n)   Spiegelung</text>
+  <circle cx="190" cy="70" r="4" fill="#1f5f8b"/><text x="198" y="74" fill="#1f5f8b">x_e = c + 2 (x_r − c)   Streckung</text>
+  <circle cx="190" cy="232" r="4" fill="#1f5f8b"/><text x="198" y="236" fill="#1f5f8b">x_c = c + ½ (x_n − c)</text>
+  <text x="198" y="250" fill="#1f5f8b">Stauchung</text>
+  <polygon points="420,200 500,200 460,265" fill="none" stroke="#5b6475" stroke-dasharray="3,3"/>
+  <polygon points="420,200 460,200 440,232" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="1.5"/>
+  <circle cx="420" cy="200" r="4" fill="#1f5f8b"/>
+  <text x="400" y="160" fill="#5b6475">Schrumpfen: alle Punkte</text>
+  <text x="400" y="176" fill="#5b6475">halb zum besten hin</text>
+</svg>
+<figcaption>Die vier Operationen des Nelder-Mead-Verfahrens im zweidimensionalen Fall. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> ist der Schwerpunkt aller Punkte außer dem schlechtesten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_n</annotation></semantics></math>. Welcher Versuch angenommen wird, hängt davon ab, wie gut <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(x_r)</annotation></semantics></math> im Vergleich zu den anderen Punkten ist.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>Optimize.nelderMead(f, x0, tol, maxIter)</code></h3>
+<pre class="pseudo">Simplex: x0 und x0 + δ_i e_i mit δ_i = 0,05 |x0_i| (bzw. 0,00025, wenn x0_i = 0)
+<b>für</b> iter ← 1 <b>bis</b> maxIter:
+    Punkte nach f aufsteigend sortieren (x_0 bester, x_n schlechtester)
+    <b>wenn</b> |f_n − f_0| ≤ tol · (|f_0| + |f_n| + 1e−12): <b>abbrechen</b>
+    c ← Schwerpunkt von x_0 … x_{n−1}
+    x_r ← c + (c − x_n)                                            <i>Spiegelung, α = 1</i>
+    <b>wenn</b> f(x_r) &lt; f_0:                                            <i>besser als der beste</i>
+        x_e ← c + 2 (x_r − c);  x_n ← (f(x_e) &lt; f(x_r)) ? x_e : x_r         <i>Streckung, γ = 2</i>
+    <b>sonst wenn</b> f(x_r) &lt; f_{n−1}:  x_n ← x_r
+    <b>sonst</b>:
+        x_c ← c + ½ (x_n − c)                                        <i>Stauchung nach innen, ρ = ½</i>
+        <b>wenn</b> f(x_c) &lt; f_n:  x_n ← x_c
+        <b>sonst</b>:  x_i ← x_0 + ½ (x_i − x_0) für alle i ≥ 1               <i>Schrumpfen, σ = ½</i>
+<b>gib</b> den besten Punkt</pre>
+<p class="quelle">Quelle: <code>Optimize.java</code>, <code>nelderMead</code>. Es gibt nur die Stauchung nach innen (zum Schwerpunkt vom schlechtesten Punkt aus), keine äußere.</p>
+<p><b>Beispiel.</b> Rosenbrock ab <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>1,2</mn><mo>;</mo><mspace width="0.3333em"/><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(-1{,}2;\ 1)</annotation></semantics></math>, <code>tol = 1e-12</code>, <code>maxIter = 5000</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1,0000000000003</mn><mo>;</mo><mspace width="0.3333em"/><mn>1,0000000000007</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1{,}0000000000003;\ 1{,}0000000000007)</annotation></semantics></math> mit 321 Auswertungen. Zum Vergleich braucht L-BFGS mit Gradient 47 Auswertungen – bei glatten Funktionen mit Gradient ist Nelder-Mead der langsamere Weg, sein Wert liegt bei Zielen ohne Ableitung.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Abbruch allein über die relative Spreizung der Funktionswerte im Simplex, nicht über seine Größe. Ein Simplex, der auf einem flachen Plateau liegt, bricht deshalb früh ab; eine Funktion, deren Werte am Minimum sehr unterschiedlich groß sind (etwa <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mo>*</mo></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f_* = 0</annotation></semantics></math>), braucht den Summanden <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-12}</annotation></semantics></math> im Nenner. Die Schrittweite des Anfangssimplex ist 5 % jeder Koordinate.</div>
+
+<h2 id="lm">Levenberg-Marquardt</h2>
+<p>Bei der Kurvenanpassung sind Parameter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> gesucht, mit denen ein Modell die Messpunkte am besten trifft: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.1667em"/><msub><mi>min</mi><mrow><mi>p</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>r</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><mi>p</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\min_p \sum_i r_i(p)^2</annotation></semantics></math> mit den Residuen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mtext>Modell</mtext><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>;</mo><mi>p</mi><mo stretchy="false">)</mo><mo>−</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">r_i = \text{Modell}(x_i; p) - y_i</annotation></semantics></math>. Das <b>Gauß-Newton-Verfahren</b> linearisiert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo stretchy="false">(</mo><mi>p</mi><mo>+</mo><mi mathvariant="normal">δ</mi><mo stretchy="false">)</mo><mo>≈</mo><mi>r</mi><mo>+</mo><mi>J</mi><mi mathvariant="normal">δ</mi></mrow><annotation encoding="application/x-tex">r(p + \delta) \approx r + J\delta</annotation></semantics></math> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi></mrow><annotation encoding="application/x-tex">J</annotation></semantics></math> die Jacobi-Matrix der Residuen) und löst die Normalgleichungen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>J</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>J</mi><mspace width="0.1667em"/><mi mathvariant="normal">δ</mi><mo>=</mo><mo>−</mo><msup><mrow><mi>J</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>r</mi></mrow><annotation encoding="application/x-tex">J^T J\,\delta = -J^T r</annotation></semantics></math>. Weit weg vom Optimum sind diese Schritte oft zu groß. Levenberg (1944) und Marquardt (1963) dämpfen:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo stretchy="false">(</mo><msup><mrow><mi>J</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>J</mi><mo>+</mo><mi mathvariant="normal">λ</mi><mspace width="0.1667em"/><mi>diag</mi><mo stretchy="false">(</mo><msup><mrow><mi>J</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>J</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi mathvariant="normal">δ</mi><mo>=</mo><mo>−</mo><msup><mrow><mi>J</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>r</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">\big(J^T J + \lambda\,\operatorname{diag}(J^T J)\big)\,\delta = -J^T r.</annotation></semantics></math></p>
+<p>Kleines <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math>: Gauß-Newton, schnell nahe der Lösung. Großes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math>: ein kurzer Schritt in Richtung des (spaltenweise skalierten) steilsten Abstiegs, sicher weit weg. Die Diagonale von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>J</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>J</mi></mrow><annotation encoding="application/x-tex">J^T J</annotation></semantics></math> statt der Einheitsmatrix macht die Dämpfung unabhängig von der Skalierung der Parameter. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> wird nach Erfolg verkleinert, nach Misserfolg vergrößert.</p>
+<h3>Pseudocode – <code>Optimize.levenbergMarquardt(r, p0, tol, maxIter)</code></h3>
+<pre class="pseudo">p ← p0;  r ← r(p);  kosten ← r·r;  λ ← 1e−3
+<b>für</b> iter ← 1 <b>bis</b> maxIter:
+    J ← Vorwärtsdifferenzen, Spalte a mit h = 1e−7 (|p_a| + 1e−7)        <i>n Auswertungen</i>
+    JᵀJ, Jᵀr bilden
+    <b>bis zu</b> 12 Versuche:
+        δ ← LinAlg.solve(JᵀJ + λ (diag(JᵀJ) + 1e−12), −Jᵀr);  singulär → λ ← 10 λ, weiter
+        <b>wenn</b> kosten(p + δ) &lt; kosten:
+            verbesserung ← kosten − kosten_neu;  p ← p + δ;  λ ← max(0,3 λ, 1e−12)
+            <b>wenn</b> verbesserung ≤ tol · (kosten_neu + 1e−12): konvergiert
+            <b>abbrechen</b>
+        <b>sonst</b> λ ← 10 λ
+    <b>wenn</b> konvergiert <b>oder</b> kein Versuch erfolgreich: <b>abbrechen</b>
+<b>gib</b> (p, kosten, iter, konvergiert)</pre>
+<p class="quelle">Quelle: <code>Optimize.java</code>, <code>levenbergMarquardt</code> und <code>jacobian</code>. Das lineare System löst <code>LinAlg.solve</code> (LU ohne Schwelle, siehe <a href="linear.html#lu">Dichte lineare Algebra</a>).</p>
+<p><b>Beispiele.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><msup><mrow><mi>e</mi></mrow><mrow><mn>0,3</mn><mi>x</mi></mrow></msup></mrow><annotation encoding="application/x-tex">y = 2\,e^{0{,}3x}</annotation></semantics></math> an <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0</mn><mo>…</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">x = 0 \dots 5</annotation></semantics></math> (exakte Daten), Start <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>;</mo><mspace width="0.3333em"/><mn>0,1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1;\ 0{,}1)</annotation></semantics></math>, <code>tol = 1e-14</code>: nach 10 Iterationen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mo stretchy="false">(</mo><mn>2</mn><mo>;</mo><mspace width="0.3333em"/><mn>0,3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p = (2;\ 0{,}3)</annotation></semantics></math>, Quadratsumme 0, 37 Auswertungen der Residuen. Mit verrauschten Werten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mo stretchy="false">(</mo><mn>2,1</mn><mo>;</mo><mspace width="0.3333em"/><mn>2,6</mn><mo>;</mo><mspace width="0.3333em"/><mn>3,7</mn><mo>;</mo><mspace width="0.3333em"/><mn>4,9</mn><mo>;</mo><mspace width="0.3333em"/><mn>6,5</mn><mo>;</mo><mspace width="0.3333em"/><mn>9,1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y = (2{,}1;\ 2{,}6;\ 3{,}7;\ 4{,}9;\ 6{,}5;\ 9{,}1)</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mo stretchy="false">(</mo><mn>1,978</mn><mo>;</mo><mspace width="0.3333em"/><mn>0,3033</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p = (1{,}978;\ 0{,}3033)</annotation></semantics></math>, Quadratsumme <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,058</mn></mrow><annotation encoding="application/x-tex">0{,}058</annotation></semantics></math>, 9 Iterationen.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Start mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\lambda = 10^{-3}</annotation></semantics></math>; nach einem angenommenen Schritt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>←</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>0,3</mn><mi mathvariant="normal">λ</mi><mo>,</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\lambda \leftarrow \max(0{,}3\lambda, 10^{-12})</annotation></semantics></math>, nach einem abgelehnten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>←</mo><mn>10</mn><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda \leftarrow 10\lambda</annotation></semantics></math>. Konvergiert heißt: Die letzte Verbesserung der Quadratsumme war relativ kleiner als <code>tol</code>. Die Jacobi-Matrix wird immer mit Vorwärtsdifferenzen gebildet; eine analytische lässt sich nicht übergeben.</div>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<p>Die <code>Optimizeprobe</code> (10 Prüfungen, aus dem früheren <code>OptimizeRngTest</code> in framework-stats) vergleicht nach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><mtext>ist</mtext><mo>−</mo><mtext>soll</mtext><mo>|</mo><mo>≤</mo><mtext>tol</mtext><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mo>|</mo><mtext>soll</mtext><mo>|</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">|\text{ist} - \text{soll}| \le \text{tol}\,(1 + |\text{soll}|)</annotation></semantics></math>:</p>
+<ul>
+  <li><b>NM4-OP-01:</b> <code>brentRoot</code> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">x^2 - 2</annotation></semantics></math> auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>2</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 2]</annotation></semantics></math> → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mn>2</mn></msqrt></mrow><annotation encoding="application/x-tex">\sqrt 2</annotation></semantics></math>, tol <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>.</li>
+  <li><b>NM4-OP-02, 03:</b> <code>brentMin</code> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mn>3</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">(x - 3)^2</annotation></semantics></math> → 3 und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>x</mi></mrow><mrow><mn>4</mn></mrow></msup><mo>−</mo><mn>3</mn><mi>x</mi></mrow><annotation encoding="application/x-tex">x^4 - 3x</annotation></semantics></math> → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,9085602964</mn></mrow><annotation encoding="application/x-tex">0{,}9085602964</annotation></semantics></math>, tol <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>.</li>
+  <li><b>NM4-OP-04:</b> <code>nelderMead</code> Rosenbrock ab <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>1,2</mn><mo>;</mo><mspace width="0.3333em"/><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(-1{,}2;\ 1)</annotation></semantics></math> → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1, 1)</annotation></semantics></math>, tol <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-3}</annotation></semantics></math>.</li>
+  <li><b>NM4-OP-05 … 07:</b> <code>levenbergMarquardt</code> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><msup><mrow><mi>e</mi></mrow><mrow><mn>0,3</mn><mi>x</mi></mrow></msup></mrow><annotation encoding="application/x-tex">y = 2\,e^{0{,}3x}</annotation></semantics></math> → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mo>;</mo><mspace width="0.3333em"/><mn>0,3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(2;\ 0{,}3)</annotation></semantics></math>, tol <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-4}</annotation></semantics></math>, <code>converged</code>.</li>
+  <li><b>NM4-OP-08, 09</b> (neu beim Umzug): ohne Vorzeichenwechsel NaN; Nullstelle genau am Rand wird genau geliefert.</li>
+</ul>
+<p>Der Nachweis „bitgleich“ beim Umzug: Die Proben aller beteiligten Module wurden vor und nach dem Umzug gefahren und die Ausgaben zeilenweise verglichen.</p>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li><code>brentRoot</code> braucht eine Klammer mit Vorzeichenwechsel; ohne sie kommt <code>NaN</code>. Doppelte Nullstellen (Berührpunkte, kein Vorzeichenwechsel) findet es nicht. Nach 200 Iterationen wird die letzte Näherung ohne Kennzeichen zurückgegeben. Genauigkeit höchstens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≈</mo><mn>2</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup><mo>|</mo><mi>x</mi><mo>|</mo></mrow><annotation encoding="application/x-tex">\approx 2 \cdot 10^{-12}|x|</annotation></semantics></math> (siehe Festlegung).</li>
+  <li><code>brentMin</code> findet ein lokales Minimum in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[a, b]</annotation></semantics></math>, bei mehreren nicht unbedingt das tiefste; Genauigkeit in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> grundsätzlich nur etwa <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi mathvariant="normal">ε</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt\varepsilon</annotation></semantics></math>.</li>
+  <li><code>nelderMead</code> hat keine Konvergenzgarantie (es gibt Beispiele, bei denen der Simplex an einem Nicht-Minimum zusammenfällt), liefert kein Kennzeichen und wird bei vielen Variablen (ab etwa zehn) langsam.</li>
+  <li><code>levenbergMarquardt</code>: Vorwärtsdifferenzen begrenzen die Genauigkeit der Jacobi-Matrix auf etwa <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math> relativ; bei stark korrelierten Parametern wird <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>J</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>J</mi></mrow><annotation encoding="application/x-tex">J^T J</annotation></semantics></math> schlecht konditioniert (Normalgleichungen quadrieren die Kondition). Lokale Minima wie bei allen Verfahren.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>R. P. Brent: <i>Algorithms for Minimization without Derivatives</i>. Prentice-Hall, 1973.</li>
+  <li>J. A. Nelder, R. Mead: A simplex method for function minimization. <i>The Computer Journal</i> 7 (1965).</li>
+  <li>D. W. Marquardt: An algorithm for least-squares estimation of nonlinear parameters. <i>J. SIAM</i> 11 (1963).</li>
+  <li>W. H. Press, S. A. Teukolsky, W. T. Vetterling, B. P. Flannery: <i>Numerical Recipes</i>. Cambridge University Press, 3. Aufl. 2007.</li>
+</ul>
+
+<footer>
+envisionz-framework-math · Hintergrund zu <a href="index.html#optimierung">Optimierung und Nullstellen</a> · Proben: <code>Optimizeprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

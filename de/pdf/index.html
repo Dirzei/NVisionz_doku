@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF und PostScript in reinem Java – vom Objekt bis zur gemalten Glyphe – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag aktiv" href="index.html">framework-pdf</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="#dokument">Dokument, Objekte, Filter, Verschlüsselung</a>
+<a class="rubrik" href="#text">Textauszug</a>
+<a class="rubrik" href="#bilder">Bilder und ihre Lage auf der Seite</a>
+<a class="rubrik" href="#dekoder">Fax und JBIG2</a>
+<a class="rubrik" href="#jpx">JPEG 2000</a>
+<a class="rubrik" href="#maler">Seitenmaler und eingebettete Schriften</a>
+<a class="rubrik" href="#schreiben">PDF schreiben</a>
+<a class="rubrik" href="#ps">PostScript und EPS</a>
+<a class="rubrik" href="#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › framework-pdf</span><a class="sprachwahl" href="../../en/pdf/index.html">English</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-pdf</div>
+  <h1>PDF und PostScript in reinem Java – vom Objekt bis zur gemalten Glyphe</h1>
+  <p class="unter">Funktionsübersicht für die Präsentation des envisionz-Frameworks, Stand 28.09.2026. Objekte, Filter und Verschlüsselung,
+  Textauszug mit Schriftkodierungen, Bilder samt Fax-, JBIG2- und JPEG-2000-Dekoder, ein Seitenmaler mit eingebetteten Schriften,
+  ein schlichter PDF-Schreiber und ein Auswerter für PostScript und EPS. Je Verfahren: Zweck, Methoden, Einsatz im Framework,
+  Anwendungen, Beispiele. Die Beispiele sind gekürzt.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>51</b><span>Klassen in 6 Paketen</span></div>
+  <div class="zahl"><b>R2–R6</b><span>Standard-Sicherheitshandler, RC4 bis AES-256</span></div>
+  <div class="zahl"><b>1014</b><span>Seiten Text in 1,5 s (Prüfbuch, 29 673 Zeilen)</span></div>
+  <div class="zahl"><b>0</b><span>Fremdbibliotheken; LZW aus framework-compress</span></div>
+  <div class="zahl"><b>28</b><span>Probenklassen</span></div>
+  <div class="zahl"><b>20</b><span>Gegenproben</span></div>
+</div>
+
+<h2 id="grundsaetze">Grundsätze des Moduls</h2>
+<div class="grundsatz">
+  <div><b>Reines JDK.</b> Keine Fremdbibliothek. Aus dem JDK kommen <code>Inflater</code> für FlateDecode, <code>javax.imageio</code> für JPEG sowie MD5, SHA-2 und AES; RC4, Fax, JBIG2, JPEG 2000 und die Schriftleser sind selbst geschrieben.</div>
+  <div><b>Die Datei durchsuchen, nicht der xref vertrauen.</b> <code>PdfDocument</code> sucht jedes <code>N G obj</code> in der Datei; das letzte Vorkommen gilt. Das übersteht kaputte Versätze und inkrementelle Updates, Objektströme werden aufgelöst.</div>
+  <div><b>Bytes, nicht Zeichen.</b> Der Lexer arbeitet auf Bytes mit wanderndem Zeiger. PDF mischt Text und Binäres; jede Zeichensatzwandlung beim Lesen verdirbt die Binärteile.</div>
+  <div><b>Sichtbar statt verschwiegen.</b> Ein nicht umgesetzter Bildfilter, eine ersetzte Schrift, eine CID-Schrift ohne <code>/ToUnicode</code> werden gemeldet. Eine Ersatzschrift, die nicht gemeldet wird, sieht aus wie die echte.</div>
+  <div><b>Rundlauf mit eigenem Schreiber.</b> Der <code>PdfWriter</code> liefert Dateien mit genau bekanntem Inhalt, gegen die der Textauszug geprüft wird; ein fremdes Werkzeug (pypdfium2) liest dieselben Dateien richtig.</div>
+  <div><b>Fremde Anker, Grenzen gegen böswillige Dateien.</b> ITU-Konformitätsdaten für JPEG 2000, die T.88-Testfolge und SerenityOS-Dateien für JBIG2, qpdf-Dateien für die Verschlüsselung. Schachtelung höchstens 512, JPEG 2000 mit Bildpunkt- und Kachelgrenzen.</div>
+</div>
+
+<!-- =============================================================== DOKUMENT -->
+<h2 id="dokument">Dokument, Objekte, Filter, Verschlüsselung <span class="paket">envisionz.pdf</span></h2>
+
+<div class="karte">
+  <h3><code>PdfDocument</code>, <code>PdfLexer</code>, <code>PdfObject</code></h3>
+  <p class="zweck">Objekttabelle, Auflösung von Verweisen, Seitenbaum. <code>PdfObject</code> ist eine versiegelte Schnittstelle mit neun Satztypen (Null, Wahrheitswert, Zahl, Zeichenkette, Name, Feld, Wörterbuch, Strom, Verweis), damit ein <code>switch</code> vom Übersetzer auf Vollständigkeit geprüft wird. Der Lexer kennt die drei Fallen naiver Leser: geschachtelte Klammerzeichenketten, <code>#</code>-Maskierung in Namen und eine <code>/Length</code>, die selbst ein Verweis ist. Der Katalog wird auch ohne <code>trailer</code>-Schlüsselwort gefunden.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>PdfDocument.load(pfad)</code>, <code>load(bytes[, passwort])</code></li>
+      <li><code>pageCount()</code>, <code>page(i)</code>, <code>pages()</code>, <code>version()</code>, <code>objectCount()</code></li>
+      <li><code>object(nummer)</code>, <code>resolve(o)</code>, <code>get(dict, schluessel)</code>, <code>resources(seite)</code>, <code>mediaBox(seite)</code></li>
+      <li><code>PdfObject.PdfDict</code>, <code>PdfStream</code>, <code>PdfArray</code>, <code>PdfName</code>, <code>PdfNumber</code>, <code>PdfString</code>, <code>PdfRef</code> …</li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-fileanalysis: Pdfseiten, Pdfauszug, Datenpanel</span><span class="chip">app-pdfdigitizer: PdfDigitizerRootPanel</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Aufbau und Objekte einer PDF-Datei sichten, auch wenn sie beschädigt ist; Grundlage für Text, Bild und Seitenbild.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>PdfFilters</code>, <code>PdfEntschluesselung</code>, <code>PdfPasswortException</code></h3>
+  <p class="zweck">Stromfilter FlateDecode, LZW, ASCIIHex, ASCII85 und RunLength samt PNG- und TIFF-Prädiktor – ohne ihn stimmt die Länge, aber nicht die Werte. Bildfilter liefern keine Bytes, sondern ein Bild und bleiben <code>PdfImages</code> überlassen. Die Entschlüsselung setzt den Standard-Sicherheitshandler aller Revisionen um: R2–R4 mit RC4 oder AES-128, R5/R6 mit AES-256. Ein Passwort wird als Benutzer-, dann als Besitzerpasswort probiert; die Rechte in <code>/P</code> werden nicht durchgesetzt, das Modul liest nur.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>PdfFilters.decode(strom, doc)</code>, <code>filters(...)</code>, <code>decodeParms(...)</code>, <code>isImageFilter(name)</code></li>
+      <li><code>inflate(in)</code>, <code>lzw(in, earlyChange)</code>, <code>asciiHex(in)</code>, <code>ascii85(in)</code>, <code>runLength(in)</code></li>
+      <li><code>PdfPasswortException.passwortGegeben()</code> – falsches oder fehlendes Passwort</li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-pdfdigitizer: Passwortabfrage</span><span class="chip">intern: PdfDocument, PdfImages, PdfText</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Die vielen Dateien öffnen, die nur ein Besitzerpasswort gegen Drucken oder Kopieren tragen, und gesperrte Dateien mit bekanntem Passwort.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – geschützte Datei öffnen</h4>
+<pre><code>try {
+    PdfDocument doc = PdfDocument.load(Files.readAllBytes(pfad), passwort);
+} catch (PdfPasswortException e) {
+    // e.passwortGegeben(): falsch oder gar nicht angegeben
+}</code></pre></div>
+</div>
+
+<!-- =============================================================== TEXT -->
+<h2 id="text">Textauszug <span class="paket">envisionz.pdf</span></h2>
+
+<div class="karte">
+  <h3><code>PdfText</code>, <code>PdfFontEncoding</code>, <code>PdfToUnicode</code>, <code>PdfCidBreiten</code></h3>
+  <p class="zweck">Ein PDF speichert keinen Fließtext, nur „diese Glyphen an diese Stellen“. Der Auszug deutet die Textoperatoren samt Textmatrix, bildet Codes über die Schriftkodierung ab (Standard, WinAnsi, MacRoman, <code>/Differences</code>, eingebaute Type-1-Kodierung, TeX-Kodierungen) und baut Zeilen und Wörter aus den gesetzten Glyphen. CID-Schriften über <code>/ToUnicode</code> und Breiten aus <code>/W</code>, Ligaturen werden zu gewöhnlichen Buchstaben, zweispaltiger Satz wird an einer durchgehenden Rinne getrennt.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>PdfText.extract(doc, seite[, optionen])</code> → <code>PageText(fragments, lines, text, warnings)</code></li>
+      <li><code>PdfText.extractAll(doc)</code>; <code>Fragment(text, x, y, fontSize, font, width, spaceWidth)</code></li>
+      <li><code>Options</code>: <code>lineTolerance</code>, <code>spaceFactor</code> (0,60), <code>detectColumns</code>, <code>columnGapFactor</code>, <code>skipBlank</code></li>
+      <li><code>PdfFontEncoding.of(doc, schrift)</code>, <code>decode(code)</code>, <code>glyphToUnicode(name)</code>; <code>PdfToUnicode.parse(bytes)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-fileanalysis: Pdfseiten, Pdfauszug</span><span class="chip">app-pdfdigitizer: PdfDigitizerRootPanel</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Technische Handbücher durchsuchbar machen, Text für eine Wissensbasis, Tabellen aus gesetzten PDFs.</p></div>
+  </div>
+  <div class="bsp">
+    <h4>Beispiel 1 – Text einer Seite</h4>
+<pre><code>PdfDocument doc = PdfDocument.load(Path.of("handbuch.pdf"));
+PdfText.PageText s = PdfText.extract(doc, doc.page(0));
+s.lines().forEach(System.out::println);
+if (s.hasWarnings()) s.warnings().forEach(System.err::println);</code></pre>
+    <h4>Beispiel 2 – eine Tabelle zeilenweise lesen</h4>
+<pre><code>PdfText.Options o = new PdfText.Options();
+o.detectColumns = false;               // Spaltenerkennung liest Tabellen sonst spaltenweise
+PdfText.PageText t = PdfText.extract(doc, doc.page(3), o);</code></pre>
+  </div>
+  <div class="hinweis">Type0/CID-Schriften <b>ohne</b> <code>/ToUnicode</code> bleiben unlesbar und werden in <code>warnings()</code> gemeldet, nicht geraten.</div>
+</div>
+
+<!-- =============================================================== BILDER -->
+<h2 id="bilder">Bilder und ihre Lage auf der Seite <span class="paket">envisionz.pdf</span></h2>
+
+<div class="karte">
+  <h3><code>PdfImages</code> und <code>PdfContentPlacement</code></h3>
+  <p class="zweck">Rohdaten, Flate und LZW werden hier zum Bild, DCT (JPEG) über <code>javax.imageio</code>, Fax, JBIG2 und JPEG 2000 über die eigenen Dekoder. Farbräume Grau, RGB, CMYK, Palette, ICC, DeviceN und Separation, Bittiefen bis 16. Ein nicht umsetzbarer Filter steht in <code>unsupportedFilter</code>. <code>composePage</code> setzt gescannte Streifen nach ihrer Lage aus dem Inhaltsstrom zusammen, nicht nach der zufälligen Reihenfolge im Ressourcenwörterbuch – an einer Handbuchseite wurden so aus 13 Zeilen und 0 Spalten 63 × 15.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>PdfImages.extract(doc, seite)</code> → <code>Extracted(name, width, height, bpc, filter, image, unsupportedFilter)</code>, <code>ok()</code></li>
+      <li><code>PdfImages.composePage(doc, seite)</code>, <code>extractAll(doc)</code>, <code>bild(doc, strom)</code></li>
+      <li><code>PdfContentPlacement.imagePlacements(doc, seite)</code> → <code>Placement(name, x, y, width, height)</code>, <code>contentBytes(doc, seite)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-pdfdigitizer: Bildauszug</span><span class="chip">app-fileanalysis: Pdfseiten</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Gescannte Leistungstabellen und Diagramme aus Handbüchern holen, um sie zu digitalisieren.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – die gescannte Seite als ein Bild</h4>
+<pre><code>BufferedImage seite = PdfImages.composePage(doc, doc.page(1));
+for (PdfImages.Extracted e : PdfImages.extract(doc, doc.page(1)))
+    if (!e.ok()) System.out.println(e.name() + ": " + e.unsupportedFilter());</code></pre></div>
+</div>
+
+<!-- =============================================================== DEKODER -->
+<h2 id="dekoder">Fax und JBIG2 <span class="paket">envisionz.pdf.ccitt · envisionz.pdf.jbig2</span></h2>
+
+<div class="karte">
+  <h3><code>CcittDecoder</code> und <code>Jbig2Decoder</code> – was in Scans praktisch immer steckt</h3>
+  <p class="zweck">CCITT Gruppe 3 und 4: modifizierte Huffman-Codes für Lauflängen und zweidimensionale Zeilenbezüge; nicht im JDK. JBIG2 vollständig für PDF: generische Bereiche (arithmetisch und MMR), Symbolwörterbuch und Textbereich, Verfeinerung, eigene Huffman-Tafeln, Halbton und EXTTEMPLATE; die Farberweiterung ist in PDF nicht vorgesehen und wird gemeldet. Der MQ-Dekoder ist an der T.88-Testfolge geprüft.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>CcittDecoder.decode(daten, params[, verbraucht])</code>, <code>toPacked(pixel, w, h, blackIs1)</code></li>
+      <li><code>CcittDecoder.Params</code>: <code>k</code> (&lt;0 Gruppe 4), <code>columns</code>, <code>rows</code>, <code>byteAlign</code>, <code>blackIs1</code></li>
+      <li><code>Jbig2Decoder.decode(daten, globals, breite, hoehe)</code> → <code>Bitmap(width, height, pixels)</code>, <code>get(x, y)</code></li>
+      <li><code>new MQDecoder(daten, start, ende).decode(cx, i)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip frei">bereit, noch ohne Aufrufer außerhalb der Proben</span><span class="chip">intern: PdfImages</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Gescannte Handbücher: ein Cessna-560-Leistungshandbuch mit 80 Fax-Streifen, ein Triebwerksbuch mit einem JBIG2-Bild je Seite.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – ein Fax-Streifen, Gruppe 4</h4>
+<pre><code>CcittDecoder.Params p = new CcittDecoder.Params();
+p.k = -1; p.columns = 2040; p.rows = 63;
+byte[] pixel = CcittDecoder.decode(daten, p);</code></pre></div>
+</div>
+
+<!-- =============================================================== JPX -->
+<h2 id="jpx">JPEG 2000 <span class="paket">envisionz.pdf.jpx</span></h2>
+
+<div class="karte">
+  <h3><code>Jpx</code> – ISO/IEC 15444-1 ohne Fremdbibliothek</h3>
+  <p class="zweck">Das JDK kann JPEG 2000 nicht. Eigene Umsetzung von Teil 1: Hauptkopf und Kachelköpfe, Aufteilung in Auflösungen, Teilbänder, Bezirke und Codeblöcke, EBCOT mit allen Codeblockstilen, inverse 5/3- und 9/7-Wavelets, Komponententransformation, der JP2-Behälter mit Farbangabe, Palette und Kanaldefinition. Der MQ-Dekoder ist derselbe wie bei JBIG2. Geprüft an ITU-Konformitätsdaten.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Jpx.dekodiere(bytes[, reduzieren])</code> → <code>Bild(breite, hoehe, komponenten, …)</code></li>
+      <li><code>Jpx.rgb(bild)</code> → <code>BufferedImage</code>, <code>acht(v, tiefe)</code></li>
+      <li><code>Jpx.aufbau(bytes)</code> → <code>Aufbau(jp2, breite, hoehe, tiefe, vorzeichen, …)</code> – nur den Kopf lesen</li>
+      <li>intern: <code>Codestrom</code>, <code>Kachel</code>, <code>Tagbaum</code>, <code>Blockdekoder</code>, <code>Wavelet</code>, <code>Jp2</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-fileanalysis: Jpxauszug</span><span class="chip">intern: PdfImages (JPXDecode)</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Bilder in neueren PDFs und eigenständige <code>.jp2</code>-Dateien anzeigen und untersuchen.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – JP2-Datei als Bild, halbe Auflösung</h4>
+<pre><code>Jpx.Bild b = Jpx.dekodiere(Files.readAllBytes(Path.of("scan.jp2")), 1);
+BufferedImage img = Jpx.rgb(b);</code></pre></div>
+</div>
+
+<!-- =============================================================== MALER -->
+<h2 id="maler">Seitenmaler und eingebettete Schriften <span class="paket">envisionz.pdf.schrift</span></h2>
+
+<div class="karte">
+  <h3><code>PdfSeitenmaler</code>, <code>PdfSchriften</code>, <code>TrueTypeSchrift</code>, <code>CffSchrift</code>, <code>Type1Schrift</code></h3>
+  <p class="zweck">Zeichnet eine Seite in ein <code>Graphics2D</code>: jede Glyphe als Umriss der eingebetteten Schrift, an ihrer Stelle, in Größe und Füllfarbe, dazu Pfade und Flächen, Bilder, Formobjekte, Strichelung und die Textdarstellungsmodi. Die Umrissleser sind eigene: TrueType (<code>glyf</code>, <code>cmap</code> Formate 0, 4, 6, 12), CFF mit Type-2-Charstrings und Type 1 mit <code>eexec</code>. Ist keine Schrift eingebettet, malt er eine auf die gemessene Breite gestreckte Ersatzschrift und meldet es mit Namen und Anzahl.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>new PdfSeitenmaler(doc).textschicht(seite, g, massstab, hoehe)</code>, <code>meldungen()</code></li>
+      <li><code>echteGlyphen()</code>, <code>ersetzteGlyphen()</code>, <code>unsichtbareGlyphen()</code>, <code>gemalteBilder()</code>, <code>gemaltePfade()</code></li>
+      <li><code>PdfSeitenmaler.sichtbareGlyphen(doc, seite)</code> – gescannt oder gesetzt?</li>
+      <li><code>Glyphenquelle</code>: <code>umriss(gid)</code>, <code>vorrueckung(gid)</code>, <code>einheitenProGeviert()</code>; <code>TrueTypeSchrift.cmap(plattform, kodierung)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-fileanalysis: Pdfseiten</span><span class="chip">app-pdfdigitizer: PdfDigitizerRootPanel</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Seitenvorschau ohne fremden Renderer, native-image-tauglich (nur <code>Shape</code> und <code>fill</code>); die Entscheidung, ob eine Seite digitalisiert oder als Text gelesen wird.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – eine Seite in doppelter Größe malen</h4>
+<pre><code>PdfSeitenmaler maler = new PdfSeitenmaler(doc);
+double[] mb = doc.mediaBox(seite);                        // links, unten, rechts, oben
+maler.textschicht(seite, g, 2.0, mb[3] - mb[1]);
+maler.meldungen().forEach(System.out::println);           // ersetzte Schriften
+boolean gescannt = PdfSeitenmaler.sichtbareGlyphen(doc, seite) == 0;</code></pre></div>
+</div>
+
+<!-- =============================================================== SCHREIBEN -->
+<h2 id="schreiben">PDF schreiben <span class="paket">envisionz.pdf</span></h2>
+
+<div class="karte">
+  <h3><code>PdfWriter</code> – schlicht und nachprüfbar</h3>
+  <p class="zweck">PDF 1.4, unkomprimierte Inhaltsströme, neun Standardschriften ohne Einbettung – größer, aber im Texteditor lesbar. Text, Linien, Rechtecke, Flächen, Rasterbilder und Tabellen mit Seitenumbruch und wiederholtem Kopf, Zellstil je Zelle. Zwei Fallen abgefangen: Zahlen nie in Exponentenschreibweise, und Zeichen außerhalb WinAnsi werden ein sichtbares <code>?</code> statt still zu verschwinden.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>new PdfWriter([PageSize.A4 | A4_LANDSCAPE | LETTER])</code>, <code>newPage()</code>, <code>pageCount()</code></li>
+      <li><code>text</code>, <code>textRight</code>, <code>textCenter</code>, <code>textIn(…, farbe)</code>, <code>line</code>, <code>rect</code>, <code>fill</code>, <code>image(x, y, w, h, bild)</code></li>
+      <li><code>table(kopf, zeilen, stil[, startY])</code>; <code>TableStyle</code>: Spaltenbreiten, rechtsbündig, Titel, <code>repeatHeader</code>, <code>zellstil</code></li>
+      <li><code>save(pfad)</code>, <code>build()</code>; <code>Font</code>: Helvetica, Courier, Times je mit Schnitten, Symbol</li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-report: ReportPdfExporter</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Berichte als PDF; Prüfdateien mit bekanntem Inhalt für den Textauszug; dokumentieren, was aus einem Scan gewonnen wurde.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – eine Tabelle im Querformat</h4>
+<pre><code>PdfWriter w = new PdfWriter(PdfWriter.PageSize.A4_LANDSCAPE);
+PdfWriter.TableStyle st = new PdfWriter.TableStyle();
+st.title = "Betriebspunkte";
+st.rightAlign = new boolean[] {false, true, true};
+w.table(new String[] {"Fall", "W2 [kg/s]", "PR"}, zeilen, st);
+w.save(Path.of("bericht.pdf"));</code></pre></div>
+</div>
+
+<!-- =============================================================== PS -->
+<h2 id="ps">PostScript und EPS <span class="paket">envisionz.ps</span></h2>
+
+<div class="karte">
+  <h3><code>EpsDokument</code>, <code>PsAuswerter</code>, <code>PsBild</code>, <code>PsLeser</code></h3>
+  <p class="zweck">Führt so viel PostScript aus, wie nötig ist, um Pfade, gesetzte Texte und Bildpunktmuster zu gewinnen: Operandenstapel, Wörterbücher, Prozeduren, Transformationsstapel, Pfadaufbau. Erzeugte Dateien (gnuplot, matplotlib, dvips, Tecplot) folgen einem engen Muster, dafür reicht es. Unbekanntes wird übersprungen und in der Reihenfolge des ersten Auftretens gezählt; eine Schrittgrenze hält rechnende Dateien auf. Kopf nach DSC-Kommentaren, ASCII- und DOS-EPS-Vorschau werden erkannt.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>EpsDokument.lies(pfad)</code>: <code>kopf(name)</code>, <code>zeichenflaeche()</code>, <code>erzeuger()</code>, <code>seiten()</code>, <code>pfade()</code>, <code>texte()</code>, <code>unbekannt()</code></li>
+      <li><code>PsBild.zeichne(dokument, dpi)</code>, <code>zeichne(dokument, seite, dpi)</code></li>
+      <li><code>new PsAuswerter().auswerten(quelle)</code> → <code>List&lt;PsPfad&gt;</code>; <code>texte()</code>, <code>bitmaps()</code></li>
+      <li><code>PsPfad.segmente()</code>, <code>streckenzuege(stuecke)</code>; <code>new PsLeser(quelle).alles()</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-fileanalysis: Psseiten, Datenpanel</span><span class="chip">app-pdfdigitizer: Karte PostScript</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Alte Diagramme als Vektordaten statt als Bild digitalisieren; EPS-Abbildungen ansehen.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – EPS zeichnen und prüfen, was übergangen wurde</h4>
+<pre><code>EpsDokument eps = EpsDokument.lies(Path.of("kennfeld.eps"));
+BufferedImage bild = PsBild.zeichne(eps, 150);
+eps.unbekannt().forEach((name, n) -&gt; System.out.println(name + " ×" + n));</code></pre></div>
+</div>
+
+<!-- =============================================================== EINSATZ -->
+<h2 id="einsatz">Einsatzmatrix im Framework</h2>
+<p class="einl">Welche Module welche Teile heute nutzen, im Quelltext gezählt (ohne Proben).</p>
+<table>
+  <tr><th>Modul</th><th>Dokument / Objekte</th><th>Text</th><th>Bilder</th><th>JPEG 2000</th><th>Seiten&shy;maler</th><th>Schreiben</th><th>PostScript</th><th>Wofür</th></tr>
+  <tr><td>app-fileanalysis</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td>PDF-, JP2- und PS-Dateien sichten, Seitenbild, Textauszug</td></tr>
+  <tr><td>app-pdfdigitizer</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td class="x">●</td><td>Tabellen und Diagramme aus Scans und gesetzten PDFs gewinnen</td></tr>
+  <tr><td>app-report</td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td></td><td>Berichtsausgabe als PDF</td></tr>
+</table>
+<div class="hinweis">Fax- und JBIG2-Dekoder werden nur über <code>PdfImages</code> genutzt. FlateDecode läuft weiter über den <code>Inflater</code> des JDK, <code>PdfWriter</code> packt Bilder mit dem <code>Deflater</code> des JDK; LZW kommt seit 23.09.2026 aus framework-compress.</div>
+
+<footer>
+envisionz-framework-pdf · 51 Klassen in 6 Paketen · Hintergrundseiten DE/EN unter <code>src/envisionz/pdf/help/</code> · Proben: <code>pruefen.cmd --nur framework-pdf</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

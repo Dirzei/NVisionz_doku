@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>netCDF — comparison against the specification and against netCDF4-python – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite aktiv" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › netCDF — comparison against the specification and against netCDF4-python</span><a class="sprachwahl" href="../../de/fileformats/abgleich-netcdf.html">Deutsch</a></div>
+<!-- erzeugt aus netcdf/COMPARISON.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · comparison</div>
+  <h1>netCDF — comparison against the specification and against netCDF4-python</h1>
+</header>
+
+<p><b>As of:</b> 2026-09-05<br><b>Our implementation:</b> <code>envisionz.fileformats.hdf5.netcdf.Netcdf3Reader</code> for the classic container and <code>NetcdfFile</code>/<code>Hdf5Backed</code> for netCDF-4, read-only, no third-party library<br><b>Specification:</b> <i>NetCDF Classic Format Specification</i> (Unidata) and <i>NetCDF-4 / HDF5 File Format</i> — both public; references give header fields and attribute names<br><b>Compared against:</b> netCDF4 1.7.4 (Python, linked against Unidata's C library)<br><b>Test bench:</b> <code>envisionz.fileformats.hdf5.Netcdf4probe</code> — 53 checks, five foreign anchors; the classic container additionally in <code>Leserprobe</code></p>
+<p><b>The reference implementation.</b> <b>netCDF4-python</b> is the binding to <i>netcdf-c</i> and is maintained under the umbrella of <b>Unidata (UCAR)</b> — that is, <b>by the owner of the format itself</b>, started by Jeff Whitaker. In climate and geoscience it is the standard route to netCDF files. This measures against the reference implementation, not against a reimplementation.</p>
+<p><b>Why this one.</b> Because netCDF4-python is maintained by the owner itself. One cannot get closer to the norm without being the norm. Every deviation is therefore unambiguously attributable — it is ours.</p>
+<p><b>Coverage, computed from the rows below:</b> of 21 features we have 19 present, 0 partial and 2 absent; the reference implementation has 19 / 1 / 0.</p>
+<p><span class="ampel gruen">●</span> present · <span class="ampel rot">●</span> absent · <span class="ampel gelb">●</span> partial · – not applicable</p>
+<p><b>The <i>Note</i> column</b> points into section 5 of this document — not into the workspace item list. The word in front says <i>what kind of thing it is</i>: <b>gap</b> is something we lack and that is open; <b>decided</b> is something we deliberately do not do; <b>property</b> is a trait of the format affecting both implementations; <b>open there</b> is a gap of the reference product. Only the gaps are work — they are collected in section 5.1 and appear as <i>one</i> item in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Feature comparison</h2>
+<p>"netCDF" is one name for <b>two entirely different byte formats</b>. The classic container (magic <code>CDF</code>) is a standalone, old, very frugal format with a header at the start of the file. netCDF-4 is a <b>convention over HDF5</b> — the same construction as CGNS. Both carry the <code>.nc</code> extension, both are read by the same library, and they have as much in common as a filing cabinet and a database.</p>
+<h3>The classic container</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>netCDF4 1.7.4</th><th>Note</th></tr>
+  <tr><td><code>CDF\x01</code> — version 1</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>CDF\x02</code> — 64-bit offset</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>CDF\x05</code> — CDF-5 (large variables)</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Big-endian, padded to four</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Dimensions, global attributes, variables</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Unlimited dimension with <code>numrecs</code></td><td>§Records</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property D1</td></tr>
+  <tr><td>Interleaved record variables</td><td>§Records</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property D1</td></tr>
+  <tr><td>Exactly <b>one</b> record variable is <b>not</b> padded</td><td>§Records</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property D2</td></tr>
+  <tr><td>All six classic types (<code>byte</code> to <code>double</code>)</td><td>§Types</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>char</code> variables as strings</td><td>§Langform</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property D3</td></tr>
+  <tr><td>The length axis is not a data axis</td><td>§Langform</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property D3</td></tr>
+</table>
+<h3>netCDF-4 over HDF5</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>netCDF4 1.7.4</th><th>Note</th></tr>
+  <tr><td>HDF5 container with netCDF rules</td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Dimensions via <code>DIMENSION_LIST</code>/<code>REFERENCE_LIST</code></td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Groups as separate tables</td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Plain HDF5 without netCDF markers is read</td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>open there D4</td></tr>
+  <tr><td>Two dimension sets yielding the same table name</td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td>decided D5</td></tr>
+  <tr><td>Compound types</td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property D6</td></tr>
+  <tr><td>Windowed access, netCDF-4 (in blocks of 65536)</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Windowed access, classic container</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>decided D7</td></tr>
+  <tr><td>String columns in blocks</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>decided D7</td></tr>
+  <tr><td>Writing</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>decided D8</td></tr>
+</table>
+
+<h2 id="a2">What was measured</h2>
+<p>Seven fixtures in <b>both</b> directions: two classic files written by netCDF4-python through our reader, and five anchors from <code>Netcdf4anker</code> through both. This makes this format one of the few in this collection whose cross-measurement runs in both directions and across <b>both containers</b>.</p>
+<h3>The classic files written by netCDF4-python</h3>
+<p><code>klassisch.nc</code> (344 bytes, <code>NETCDF3_CLASSIC</code>) and <code>gross.nc</code> (356 bytes, <code>NETCDF3_64BIT_OFFSET</code>) carry the same data: an unlimited dimension <code>zeit</code>, a dimension <code>ort</code> of length four, a double variable <code>temperatur(zeit, ort)</code> with three written records, an integer variable <code>ort</code> and a <code>char</code> variable <code>name</code>. Our reader reads both <b>identically</b>: one table <code>zeit_ort</code> with columns <code>zeit</code>, <code>ort</code>, <code>temperatur</code> and the values 0,0 / 0,1.5 / 0,3.0 …</p>
+<p>That the two versions yield the same is the real value of this measurement. Between version 1 and 2 lies only the width of the data offsets — four versus eight bytes — at exactly one place in the header. A reader confusing them still reads the header correctly and is then four bytes off at every variable. In small files that shows up as obvious nonsense; in large ones as a series of numbers shifted by half a cell.</p>
+<p>Both times our reader emits the same two findings, and both are honest: the <code>char</code> variable <code>name</code> is skipped (D3), and the classic container has no windowed access (D7).</p>
+<h3>The five netCDF-4 anchors</h3>
+<table>
+  <tr><th>Anchor</th><th>our reader</th></tr>
+  <tr><td><code>einfach.nc</code></td><td>1 table <code>zeit_ort</code>, 6 records, column <code>temperatur</code> as <code>float32</code></td></tr>
+  <tr><td><code>gruppen.nc</code></td><td>2 tables <code>i</code> and <code>j</code> — groups are carried separately</td></tr>
+  <tr><td><code>namensgleich.nc</code></td><td>2 tables <code>i</code> and <code>i#2</code>, with a finding about the renaming</td></tr>
+  <tr><td><code>reinesHdf5.nc</code></td><td>2 tables — HDF5 without netCDF markers is read nevertheless</td></tr>
+  <tr><td><code>unbegrenzt.nc</code></td><td>1 table, finding "the unlimited dimension zeit is 4 long at the variables"</td></tr>
+</table>
+<p>Two observations from this are worth recording. <b>First</b> <code>namensgleich.nc</code>: two variable groups over the same dimension set would yield the same table name. We append <code>#2</code> and <b>report it</b>. A silently merged table would be the worse answer — it would look right. <b>Second</b> <code>reinesHdf5.nc</code>: an HDF5 file without the netCDF attributes is read by us because the substrate can open it; netCDF4-python reads it too but carries the dimensions only partly. The difference is small and is noted in D4.</p>
+<p>The finding for <code>reinesHdf5.nc</code> — "HDF5 can do windows: numeric columns are read in blocks of 65536 values, not whole. String columns however whole" — is at the same time the most precise statement about the difference between the two containers this reader makes. Over HDF5 windowed access exists; over the classic container it does not.</p>
+
+<h2 id="a3">What is hard about the format</h2>
+<p><b>The interleaved record variables.</b> Variables whose first dimension is the unlimited one do <b>not</b> lie contiguously: all quantities of the first time step first, then all of the second. The stride between two records of one variable is the sum of the record sizes of <b>all</b> record variables. Overlook that and the first variable reads right and every following one reads as a mixture.</p>
+<p><b>And the exception to it.</b> If there is <b>exactly one</b> record variable, its record is <b>not</b> padded to four bytes. A special rule for a special case, a subordinate clause in the specification. Overlook it and everything from the second time step on reads wrong — while the first is right, which lengthens the search by hours. That is the nastiest single sentence in this whole collection of documents.</p>
+<p><b>Two byte formats, one name, one extension.</b> An <code>.nc</code> may be <code>CDF\x01</code>, <code>CDF\x02</code>, <code>CDF\x05</code> or HDF5. The first four bytes say so — that is the friendly part. The unfriendly one: same library, same API, same tools, and beneath them formats with nothing in common. A reader needs two separate implementations, and one of them can do windowed access and the other cannot. That is a property of the containers, not of the implementation.</p>
+<p><b>What is good:</b> the classic header. Everything is at the start of the file: dimensions, attributes, variables, types and the <b>start offset of each variable's data</b>. After a few hundred bytes a reader knows the whole inventory and can jump to any variable without scanning the file. For a format from the eighties that is a remarkably modern arrangement — and the reason older weather and ocean holdings are almost all in it and still readable.</p>
+
+<h2 id="a4">The items</h2>
+<p>The <i>Note</i> column names the kind in front of the identifier. Only the <b>gaps</b> are work.</p>
+<h3>Our open gaps — this is the work</h3>
+<p><b>D3</b> (property) — <code>char</code> variables — closed on 2026-09-07</p>
+<p><b>Closed.</b> In netCDF strings are traditionally <code>char</code> arrays with a <b>length axis</b> as their last axis — station names, units, identifiers. They are now carried as text columns. Whoever wants to know which station number three is, finds it here.</p>
+<p><b>The last axis is not a data axis.</b> A variable <code>name(station, namelen)</code> is not a table of <code>station × namelen</code> letters but a <b>column of <code>station</code> names</b>. Whoever treats the length axis as a data axis gets a table of single characters — formally right and practically useless. The mutation that leaves it in makes the test crash: the text variable then lands in a table with one axis too many.</p>
+<p><b>And it goes into the table of its <i>remaining</i> axes</b>, not into one of its own. Otherwise name and height of the same station would stand in two tables, with the association only through the row number. The anchor therefore carries <b>two</b> text variables and one numeric variable on the same axis; all three stand in the table <code>station</code>.</p>
+<p><b>The padding falls away.</b> netCDF pads shorter names to the full width — with spaces or null bytes — and the padding is not part of the name. The names in the anchor are four, seven and five characters long at a width of eight so that this shows; the mutation that leaves the padding turns six checks red. Written by netCDF4-python 1.7.4 in <code>NETCDF3_CLASSIC</code> format.</p>
+<h3>Deliberate decisions — nothing to do</h3>
+<p><b>D5</b> (decided) — Two dimension sets, one table name</p>
+<p>The table view groups variables by their <b>dimensions</b>: everything over <code>(time, station)</code> becomes one table, everything over <code>(time, depth)</code> another. The name comes from the dimensions, and so it can repeat if two groups use the same dimension names — in netCDF-4 that is allowed, because there dimensions belong to a group.</p>
+<p><b>The name is then extended by the group path, not numbered.</b> A trailing number (<code>points</code>, <code>points2</code>) would be shorter and say nothing; the path says <i>which</i> group is meant, and that is exactly the question someone has who sees two tables of the same name. It is not a gap: there is no case in which a variable would be unreachable.</p>
+<p><b>D7</b> (decided) — Windowed access — for numbers, not for strings</p>
+<p>Both containers deliver windows: netCDF-4 in blocks of 65536 values, the classic one directly via the offset. That is the property that makes a file of twenty gigabytes openable at all — what is asked for is read, not the file.</p>
+<p><b>It does not apply to string columns</b>, and that is decided, not forgotten. A <code>char</code> variable with a length dimension (D3) is assembled as a <b>whole</b> column, because its records only come into being when it is split: the length dimension is not a data dimension, and a block of 65536 bytes almost never lands on a record boundary. Windowed access would have to buffer the remainder and would then no longer be windowed access but a buffer with extra steps. At the sizes at which name columns occur — stations, identifiers, units — that is no loss.</p>
+<p><b>D8</b> (decided) — Writing</p>
+<p>This module reads. netCDF4-python writes, and all seven fixtures came about that way — five written by it, two built by hand and read back by it. A writer here would be a discipline of its own: the classic format requires a header computation over offsets one only knows once all variables are fixed, and netCDF-4 would require an HDF5 writer.</p>
+<h3>Properties of the format</h3>
+<p><b>D6</b> (property) — Compound types — closed on 2026-09-06</p>
+<p><b>Closed together with LF1</b>, because it was the same cause in the same place: the <code>Langform</code> table view took only the numeric members of a compound and reported the string members as skipped — "the compound member /messreihe.kennung has type string[8] and is skipped". They are now carried as text columns via <code>readMemberString</code>. See <code>docs/hdf5</code> LF1 for the measurement and the mutations.</p>
+<p>Item D3 (<code>char</code> variables in the <b>classic</b> container) stays open: that is a different read path — netCDF-3 has no HDF5 types — and the same cause does not apply there.</p>
+<p><b>D1</b> (property) — Interleaved record variables</p>
+<p>See section 3. Both implementations handle it; it stands here because it is the place a third would fail.</p>
+<p><b>D2</b> (property) — Exactly one record variable is not padded</p>
+<p>See section 3. The special rule easily overlooked, whose effect starts only at the second time step. Both implementations observe it.</p>
+<h3>Findings against the reference implementation</h3>
+<p><b>D4</b> (open there) — Plain HDF5 is carried only partly</p>
+<p>An HDF5 file without the netCDF marker attributes (<code>_Netcdf4Dimid</code> and relatives) opens in netCDF4-python, but it carries the dimensions only partly: datasets without an assigned dimension appear with substitute dimension names. Our reader takes the same route through the HDF5 substrate and carries the shape as it stands in the dataset. The difference is small, it is <b>not a bug</b> in netCDF4-python — the file simply is not a netCDF file — and it is recorded here because in a comparison of two outputs it would otherwise look like our error. No genuine bug in netCDF4-python was found in this measurement.</p>
+
+<h2 id="a5">The wider field — what else reads and writes these files</h2>
+<p>This table does <b>not</b> count towards the coverage figures. It says nothing about this reader but about the field in which such a file comes into being — and when reading a foreign file that is the more important information: <b>whoever wrote it decides which variant is inside.</b> A reader that only knows the files of a single writer mistakes that writer's habits for the format.</p>
+<table>
+  <tr><th>Program</th><th>reads</th><th>writes</th><th>Note</th></tr>
+  <tr><td><b>netcdf-c</b> (Unidata/UCAR)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The reference, with <code>ncdump</code> and <code>ncgen</code>. The owner of the format.</td></tr>
+  <tr><td><b>netCDF4-python</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The reference implementation of this comparison.</td></tr>
+  <tr><td><b>xarray</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The usual working environment for climate data; writes through netCDF4-python or scipy.</td></tr>
+  <tr><td><b>CDO</b>, <b>NCO</b>, <b>ncview</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The command-line tools of climate research; they produce most files one meets in the wild.</td></tr>
+  <tr><td><b>MATLAB</b>, <b>R (<code>ncdf4</code>)</b>, <b>Panoply</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Analysis and display; Panoply is the usual quick look inside.</td></tr>
+</table>
+<p>The list is <b>not exhaustive</b> and does not try to be. It names what one actually encounters with this format and leaves out what could do it too but nobody uses for it.</p>
+
+<h2 id="a6">The Java implementation — where this reader stands among its own kind</h2>
+<p><b>Why this section.</b> Every other comparison in this module measures against a tool in a <b>different</b> language. That is good against misunderstandings of the format and says nothing about where this reader stands among its own kind — and that is the question a Java developer asks first. The distinction that matters is between a <b>pure reimplementation in Java</b> and a <b>wrapper around the original C library</b>: only the reimplementation solves the same task under the same conditions as this reader; a wrapper calls the original.</p>
+<p><b>Measured on 2026-09-06 against netcdf-java 5.10.0</b> — Unidata's Java implementation, that is <b>by the format's own owner</b>, and for the classic container as for netCDF-4 a <b>pure Java reimplementation</b>. Only for <i>writing</i> netCDF-4 does it reach for the C library (via JNA, not JNI); not for reading.</p>
+<p>The measurement ran through the HDF5 path (netCDF-4 is HDF5) on five files: <b>all dataset paths, shapes and values agree</b>, without a single divergence. Details in the HDF5 document, section 7 — it is the same run.</p>
+<p>The scope is noteworthy: netcdf-java is a large project (GRIB, BUFR, HDF4, Zarr, THREDDS) and reads <b>HDF4 in pure Java as well</b> — among the Java implementations in this collection that is the only one touching HDF4 without a C library.</p>
+<p><b>This measurement lives outside the module</b>, in <code>javavergleich/Javavergleich.java</code>, because <code>envisionz-framework-fileformats</code> has the rule "no foreign libraries" — and it still holds. Only the result goes into the module, with date and version. The single exception is <code>javax.imageio</code> for the image formats: that sits in the JDK and therefore measures along as a permanent probe.</p>
+
+<footer>
+Generated from <code>envisionz-framework-fileformats/docs/netcdf/COMPARISON.md</code> · back to the <a href="index.html#behaelter">overview</a> · all formats in the <a href="abgleich.html">comparison</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

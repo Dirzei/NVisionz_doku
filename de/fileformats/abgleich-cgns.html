@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CGNS — Abgleich gegen SIDS und gegen h5py – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite aktiv" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › CGNS — Abgleich gegen SIDS und gegen h5py</span><a class="sprachwahl" href="../../en/fileformats/abgleich-cgns.html">English</a></div>
+<!-- erzeugt aus cgns/ABGLEICH.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · Abgleich</div>
+  <h1>CGNS — Abgleich gegen SIDS und gegen h5py</h1>
+</header>
+
+<p><b>Stand:</b> 2026-09-06<br><b>Unsere Umsetzung:</b> <code>envisionz.fileformats.cgns.CgnsDatei</code> mit <code>Cgnsknoten</code>, rein lesend, auf unserem eigenen HDF5-Leser, ohne Fremdbibliothek<br><b>Spezifikation:</b> <i>CGNS Standard Interface Data Structures</i> (SIDS) und <i>CGNS/HDF5 mapping</i> — beide öffentlich; die Fundstellen nennen Knotenlabel und Datensatznamen<br><b>Verglichen mit:</b> h5py 3.16 (Python) — <b>kein CGNS-Leser</b>, sondern der Behälter darunter; siehe Abschnitt 2<br><b>Prüfstand:</b> <code>envisionz.fileformats.cgns.Cgnsprobe</code> — 63 Prüfungen, vier Fremdanker</p>
+<p><b>Das Vergleichsprodukt.</b> <b>h5py</b> ist eine reine Bindung an die HDF5-C-Bibliothek der <i>HDF Group</i>, begonnen von Andrew Collette. Fuer CGNS ist es ausdruecklich <b>kein CGNS-Leser</b>, sondern der <b>Behaelter darunter</b>: eine CGNS-Datei in der HDF5-Variante ist eine HDF5-Datei mit Regeln darin. Gemessen wird also die Schicht, auf der beide Seiten dasselbe sehen muessen — und genau dort faellt auf, wenn eine Seite die Regeln anders deutet.</p>
+<p><b>Warum ausgerechnet dieses.</b> Weil ein CGNS-Leser als Vergleichsstueck die falsche Ebene waere. Die CGNS-Bibliothek deutet die Regeln bereits, und wo zwei Deuter sich einig sind, sieht man nicht mehr, ob sie beide richtig liegen. Mit h5py wird der <b>Behaelter roh</b> gelesen: Knotennamen, Datentypen, Formen, Fortran-Ordnung. Was CGNS daraus macht, ist dann unsere Sache allein — und ein Fehler in der Deutung faellt auf, statt sich zu spiegeln.</p>
+<p><b>Deckung, aus den Zeilen unten gerechnet:</b> von 21 Merkmalen sind bei uns 19 vorhanden, 0 teilweise und 2 nicht vorhanden; beim Vergleichsstueck 2 / 3 / 16.</p>
+<p><span class="ampel gruen">●</span> vorhanden · <span class="ampel rot">●</span> nicht vorhanden · <span class="ampel gelb">●</span> teilweise · – nicht zutreffend</p>
+<p><b>Die Spalte <i>Anmerkung</b></i> verweist auf Abschnitt 5 dieses Dokuments — nicht auf die Punkteliste des Arbeitsbereichs. Das Wort davor sagt, <i>worum es sich handelt</i>: <b>Lücke</b> ist etwas, das uns fehlt und offen ist; <b>entschieden</b> ist etwas, das wir absichtlich nicht tun; <b>Merkmal</b> ist eine Eigenschaft des Formats, die beide Umsetzungen betrifft; <b>dort offen</b> ist eine Lücke des Vergleichsprodukts. Nur die Lücken sind Arbeit — sie stehen gesammelt in Abschnitt 5.1 und als <i>ein</i> Punkt in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Merkmalsvergleich</h2>
+<p>CGNS ist <b>kein Byteformat</b>. Seit Fassung 3 ist es eine Konvention über HDF5 — genau das Verhältnis, das netCDF-4 zu HDF5 und Exodus zu netCDF hat. Der Unterbau war damit schon da; was hier dazukommt, sind Regeln über Namen, Label und Achsenreihenfolge. Und genau dort liegen die Fallen, denn eine falsch gelesene CGNS-Datei ist eine <b>wohlgeformte HDF5-Datei mit verdrehten Zahlen</b>.</p>
+<h3>Behälter und Knotenbaum</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>h5py 3.16</th><th>Anmerkung</th></tr>
+  <tr><td>HDF5-Behälter (Fassung 3 und später)</td><td>Mapping</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>ADF-Behälter (Fassung 2 und früher)</td><td>Mapping</td><td><span class="ampel rot">●</span></td><td><span class="ampel rot">●</span></td><td>entschieden C1</td></tr>
+  <tr><td>Wurzellabel <code>Root Node of HDF5 File</code> wird geprüft</td><td>Mapping</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen C2</td></tr>
+  <tr><td>Knotenattribute <code>name</code>, <code>label</code>, <code>type</code></td><td>Mapping</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>dort offen C2</td></tr>
+  <tr><td>Der Datensatz heisst <code>" data"</code> — mit führendem Leerzeichen</td><td>Mapping</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal C3</td></tr>
+  <tr><td><code>" format"</code> und <code>" hdf5version"</code> werden als Buchhaltung übergangen</td><td>Mapping</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal C3</td></tr>
+  <tr><td>Datei ohne <code>CGNSBase_t</code> wird gemeldet statt leer gelesen</td><td>SIDS 6</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen C2</td></tr>
+</table>
+<h3>Gitter und Lösungen</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>h5py 3.16</th><th>Anmerkung</th></tr>
+  <tr><td><code>CGNSBase_t</code>, <code>Zone_t</code></td><td>SIDS 6/7</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen C2</td></tr>
+  <tr><td>Mehrere Zonen in einer Datei</td><td>SIDS 7</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen C2</td></tr>
+  <tr><td>Strukturierte Zonen (<code>Structured</code>)</td><td>SIDS 7.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen C2</td></tr>
+  <tr><td>Unstrukturierte Zonen (<code>Unstructured</code>) mit <code>Elements_t</code></td><td>SIDS 7.3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen C2</td></tr>
+  <tr><td><code>GridCoordinates_t</code> → <code>CoordinateX/Y/Z</code></td><td>SIDS 7.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen C2</td></tr>
+  <tr><td><code>FlowSolution_t</code> → <code>DataArray_t</code></td><td>SIDS 7.7</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen C2</td></tr>
+  <tr><td>Fortran-Ordnung: die HDF5-Form wird gedreht</td><td>Mapping</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal C4</td></tr>
+  <tr><td>Zonengrösse transponiert <code>[Knoten, Zellen, Rand]</code></td><td>SIDS 7</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal C4</td></tr>
+  <tr><td>Knotennummern einsbasiert</td><td>SIDS 7.3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal C4</td></tr>
+  <tr><td>Randbedingungen <code>ZoneBC_t</code> als Tabelle</td><td>SIDS 9</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal C5</td></tr>
+  <tr><td>Zonenverbindungen <code>ZoneGridConnectivity_t</code> als Tabelle</td><td>SIDS 8</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal C6</td></tr>
+  <tr><td>Zeitschritte <code>BaseIterativeData_t</code> je Lösung zugeordnet</td><td>SIDS 11</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal C7</td></tr>
+  <tr><td>Ausschnittzugriff auf eine Spalte</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal C8</td></tr>
+  <tr><td>Schreiben</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gelb">●</span></td><td>entschieden C9</td></tr>
+</table>
+
+<h2 id="a2">Was gemessen wurde</h2>
+<p><b>Zuerst eine Einschränkung, und sie ist der wichtigste Satz dieses Dokuments:</b> Für CGNS steht in diesem Arbeitsbereich <b>kein zweiter CGNS-Leser</b> zur Verfügung. Die Referenzumsetzung (die CGNS/MLL in C, dazu <code>pyCGNS</code> oder <code>h5pyd</code>) lässt sich hier nicht bauen. Verglichen wird deshalb gegen <b>h5py</b>, und h5py liest den <b>Behälter</b>, nicht das Format. Jede Zeile der Spalte <i>h5py</i> oben mit einem <span class="ampel rot">●</span> bedeutet darum nicht „h5py kann es nicht", sondern „h5py weiss davon nichts, weil es kein CGNS-Leser ist". Das ist keine Aussage über die Qualität von h5py, sondern über die Grenze dieser Messung.</p>
+<p>Was sich damit trotzdem messen lässt, ist das Wertvollste am Behälterverhältnis: <b>ob unsere Zahlen dieselben sind wie die im HDF5-Datensatz</b> — und ob die Drehung, die CGNS verlangt, wirklich stattfindet. Genau das wurde geprüft.</p>
+<h3>Die drei Anker, durch beide Wege</h3>
+<p>Die drei Prüfstücke aus <code>Cgnsanker</code> — <code>strukturiert.cgns</code>, <code>unstrukturiert.cgns</code>, <code>zweizonen.cgns</code> — wurden einmal durch <code>CgnsDatei</code> und einmal durch h5py gelesen. h5py öffnet alle drei anstandslos und findet dieselben Gruppen, dieselben Attribute und dieselben Datensätze; die Zahlen in <code>" data"</code> stimmen Wert für Wert mit unseren überein.</p>
+<table>
+  <tr><th>Prüfstück</th><th>unser Leser</th><th>h5py</th></tr>
+  <tr><td><code>strukturiert.cgns</code></td><td>1 Tabelle <code>Zone1</code>, 6 Sätze, acht Spalten</td><td>dieselben Zahlen — aber keine Zone, keine Achsen</td></tr>
+  <tr><td><code>unstrukturiert.cgns</code></td><td>2 Tabellen: <code>Flaeche</code> (4 Knoten), <code>Flaeche_Dreiecke</code> (6 Einträge)</td><td>dieselben Zahlen, keine Elementdeutung</td></tr>
+  <tr><td><code>zweizonen.cgns</code></td><td>2 Tabellen <code>Hinten</code> und <code>Vorn</code>, je 8 Sätze</td><td>dieselben Zahlen, die Zonentrennung nur aus den Gruppennamen</td></tr>
+</table>
+<h3>Die Drehung, die man nur im Vergleich sieht</h3>
+<p>In <code>strukturiert.cgns</code> steht <code>CoordinateX</code> als HDF5-Datensatz der Form <code>3 x 2</code>. CGNS meint damit ein Gitter mit <b>i = 2 und j = 3</b>, nicht umgekehrt: die Achsen stehen in der Datei in Fortran-Ordnung. Unser Leser dreht; h5py gibt die Form so zurück, wie sie dasteht. Wer eine CGNS-Datei über h5py liest und die Form übernimmt, bekommt ein Gitter, das <b>um neunzig Grad verdreht</b> ist und trotzdem plausibel aussieht.</p>
+<p>Das ist die Art Fehler, für die dieses Dokument da ist: er wirft nichts, er meldet nichts, und er fällt erst auf, wenn jemand das Ergebnis zeichnet.</p>
+
+<h2 id="a3">Was am Format schwierig ist</h2>
+<p><b>Der Name mit dem Leerzeichen.</b> Die Daten eines Knotens liegen im HDF5-Datensatz <code>" data"</code> — mit führendem Leerzeichen. Ebenso <code>" format"</code> und <code>" hdf5version"</code>. Wer nach <code>"data"</code> sucht, findet nichts und meldet eine leere Datei; wer das Leerzeichen kennt, aber nicht weiss, dass die drei Namen mit Leerzeichen <b>keine Kindknoten</b> sind, führt Buchhaltung als Nutzlast. Beides sind Ein-Zeichen-Fehler mit ganz unterschiedlichen Folgen.</p>
+<p><b>Alles ist Fortran.</b> Die Formen der Datensätze, die Zonengrösse, die Knotennummern. Die Zonengrösse ist dabei der bösartigste Fall: SIDS beschreibt je Achse eine Zeile <code>[Knoten, Zellen, Rand]</code>, in der Datei steht die <b>transponierte</b> Form, Zeile 0 sind also die Knotenzahlen <b>aller</b> Achsen. Bei einem Würfelgitter — gleiche Zahl in allen Achsen — ist der Unterschied unsichtbar. Genau deshalb prüft <code>Cgnsprobe</code> mit einem Gitter, dessen Achsen verschieden lang sind.</p>
+<p><b>Die Bedeutung steht im Label, nicht im Namen.</b> Ein Knoten heisst, wie der Rechner ihn genannt hat; was er ist, sagt <code>label</code>: <code>Zone_t</code>, <code>GridCoordinates_t</code>, <code>FlowSolution_t</code>. Ein Leser, der über Namen sucht, funktioniert genau so lange, wie die Beispieldateien aus demselben Werkzeug kommen.</p>
+<p><b>Was gut ist:</b> dass CGNS auf HDF5 liegt, ist ein Geschenk. Der Behälter ist geprüft, selbstbeschreibend und mit vorhandenen Werkzeugen zu öffnen — jede CGNS-Datei lässt sich mit <code>h5dump</code> ansehen, auch ohne CGNS-Bibliothek. Wenige Fachformate erlauben das.</p>
+
+<h2 id="a4">Die Punkte</h2>
+<p>Die Spalte <i>Anmerkung</i> nennt die Art vor der Kennung. Nur die <b>Lücken</b> sind Arbeit. Für dieses Format gilt zusätzlich die Einschränkung aus Abschnitt 2: es gab keinen zweiten CGNS-Leser zu messen.</p>
+<h3>Unsere offenen Lücken — das ist die Arbeit</h3>
+<h3>Bewusste Entscheidungen — nichts zu tun</h3>
+<p><b>C1</b> (entschieden) — ADF wird nicht gelesen</p>
+<p>Die Fassung 2 und früher liegen im hauseigenen ADF-Behälter, einem völlig anderen Byteformat. Er wird <b>erkannt und benannt</b> — die Meldung sagt, dass es sich um ADF handelt, statt eine kaputte HDF5-Datei zu behaupten. Einen zweiten Behälterleser zu bauen, damit zwanzig Jahre alte Dateien laufen, ist die Mühe nicht wert; die Umwandlung mit <code>adf2hdf</code> gehört seit Fassung 3 zum Lieferumfang von CGNS selbst.</p>
+<p><b>C9</b> (entschieden) — Schreiben</p>
+<p>Dieses Modul liest. h5py schreibt HDF5 — aber auch h5py schreibt kein CGNS, sondern nur den Behälter; die Zeile steht auf <i>teilweise</i> und nicht auf <span class="ampel gruen">●</span>.</p>
+<p><b>C5</b> (Merkmal) — Randbedingungen — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> <code>ZoneBC_t</code> und darunter jedes <code>BC_t</code> werden zu einer eigenen Tabelle <code>&lt;Zone&gt;_rand</code> ausgelegt: eine Zeile je Randbedingung mit Name, Art, Lage und Bereich. Der <b>Wert</b> des <code>BC_t</code>-Knotens ist die Art (<code>BCWall</code>, <code>BCInflow</code>), nicht sein Kind <code>GridLocation</code> — wer das verwechselt, bekommt in jeder Zeile „Vertex".</p>
+<p><b>Eine Zeile je Randbedingung und nicht je Punkt.</b> Wer die Punkte aufzählte, machte aus zwei Ecken Tausende Zeilen und verlöre gerade die Auskunft, um die es geht: <i>welcher</i> Rand <i>was</i> ist.</p>
+<p><b>Die Falle, die dabei gemessen wurde:</b> ein <code>PointRange</code> steht in der HDF5-Datei als <code>[IndexDimension][2]</code> — je Achse ein Paar —, in der CGNS-Sicht dagegen als <code>[2][IndexDimension]</code>. Wer das Feld linear in zwei Hälften teilt, macht aus <code>1,1,1 .. 1,2,1</code> die Angabe <code>1,1,1 .. 2,1,1</code>: dieselben Zahlen, andere Bedeutung, und beides sieht wie ein Bereich aus. Die Gegenprobe dazu färbt drei Zeilen rot.</p>
+<p><b>C6</b> (Merkmal) — Zonenverbindungen — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> <code>ZoneGridConnectivity_t</code> wird zur Tabelle <code>&lt;Zone&gt;_verbindungen</code>: Name, Nachbarzone, Art (eins zu eins oder allgemein), der Bereich diesseits, der Bereich jenseits und der <b>Transform</b>. Der Transform ist der eigentliche Inhalt — er sagt, <i>wie herum</i> die Achsen der einen Zone in denen der anderen liegen: <code>1,2,3</code> heisst gleich ausgerichtet, <code>-2,1,3</code> um neunzig Grad gedreht.</p>
+<p><b>Und die zweite gemessene Falle:</b> unter einer Verbindung steht neben <code>PointRange</code> auch <code>PointRangeDonor</code>, und pyCGNS legt den <b>Donor zuerst</b> ab. Wer mit <code>startsWith</code> sucht, vertauscht die beiden Seiten der Verbindung — und bekommt zwei Bereiche, die beide wie Bereiche aussehen. Gesucht wird deshalb auf den Namen genau.</p>
+<p><b>C7</b> (Merkmal) — Zeitschritte — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen, und zwar ohne die Tabellen umzuhängen.</b> <code>BaseIterativeData_t</code> führt die Zeitpunkte, <code>ZoneIterativeData_t</code> in <code>FlowSolutionPointers</code> die Namen der Lösungen in derselben Reihenfolge. Beides zusammen ergibt die Zuordnung, und die steht jetzt als Merkmal an der Zonentabelle: <code>zeit.Loesung#1 = 0.0</code>. Die Lösungen bleiben Spalten nebeneinander — was fehlte, war nicht die Anordnung, sondern die <b>Auskunft</b>, welche zu wann gehört.</p>
+<p><b>Die dritte Falle:</b> <code>FlowSolutionPointers</code> ist ein Feld aus Zeichen <b>fester Breite</b> (32) und keine Liste von Zeichenketten. Wer die Breite aus der falschen Achse nimmt, liest bei zwei Namen die Breite zwei — und bekommt <code>Lo</code> und <code>es</code>.</p>
+<p><b>C8</b> (Merkmal) — Ausschnittzugriff — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> Eine Spalte wird nicht mehr beim ersten Griff ganz gelesen, sondern blockweise über <code>CgnsDatei.daten(knoten, ab, wieviele)</code>; der HDF5-Leser darunter konnte das seit jeher, CGNS hat es nur nicht benutzt. Bei einem Gitter mit Millionen Punkten war das keine Ungenauigkeit, sondern eine Grössenordnung: wer eine Koordinate anfasste, hatte sie für die Dauer der Sitzung vollständig im Speicher.</p>
+<p><b>Gemessen wird der Ausschnitt unmittelbar am Leser</b> und nicht über die Langform. Der Grund ist eine Gegenprobe, die grün blieb: an einem Anker mit sechs Werten liefern „ganz lesen" und „in einem Block von 65536 lesen" dasselbe. Eine Gegenprobe, die grün bleibt, misst nicht den Leser, sondern die Reichweite des Ankers. Die Probe fragt deshalb den Leser direkt: ein Ausschnitt muss genau seine Länge und genau die Werte an dieser Stelle liefern, und am Ende darf er nicht länger werden.</p>
+<h3>Eigenschaften des Formats — beide betreffend</h3>
+<p><b>C3</b> (Merkmal) — Die Namen mit dem Leerzeichen</p>
+<p>Siehe Abschnitt 3. <code>" data"</code>, <code>" format"</code>, <code>" hdf5version"</code>. Kein Leser kann das raten; es steht im CGNS/HDF5-Mapping und sonst nirgends.</p>
+<p><b>C4</b> (Merkmal) — Fortran-Ordnung an drei Stellen</p>
+<p>Siehe Abschnitt 2.2 und 3. Datensatzformen, Zonengrösse, Knotennummern. Alle drei sind unabhängig voneinander falsch zu machen, und keiner der drei Fehler wirft.</p>
+<h3>Befunde am Vergleichsprodukt</h3>
+<p><b>C2</b> (dort offen) — h5py kennt CGNS nicht — und das ist keine Kritik</p>
+<p>Alle Zeilen oben, die in der Spalte <i>h5py</i> ein <span class="ampel rot">●</span> tragen, gehen auf denselben Umstand zurück: h5py ist ein HDF5-Leser und macht keine Aussage über CGNS. Sie stehen hier trotzdem, weil sie die <b>Grenze der Messung</b> sichtbar machen: Für dieses Format konnte nur der Behälter gegengelesen werden, nicht die Deutung. Sollte in diesem Arbeitsbereich einmal eine CGNS-Bibliothek verfügbar sein, ist dieser Abschnitt der erste, der neu zu messen ist. Ein Fehler von h5py ist hier <b>nicht</b> gefunden worden.</p>
+
+<h2 id="a5">Das Umfeld — womit diese Dateien sonst gelesen und geschrieben werden</h2>
+<p>Diese Tafel zaehlt <b>nicht</b> in die Deckung. Sie sagt nichts ueber diesen Leser, sondern ueber das Umfeld, in dem eine solche Datei entsteht — und das ist beim Lesen einer fremden Datei die wichtigere Auskunft: <b>wer sie geschrieben hat, entscheidet, welche Spielart darin steht.</b> Ein Leser, der nur die Dateien eines einzigen Schreibers kennt, haelt dessen Gewohnheiten fuer das Format.</p>
+<table>
+  <tr><th>Programm</th><th>liest</th><th>schreibt</th><th>Bemerkung</th></tr>
+  <tr><td><b>CGNS/MLL</b> (CGNS Steering Committee)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die Referenzbibliothek, mit <code>cgnscheck</code> und <code>cgnsview</code>. Sie kann HDF5 und das aeltere ADF als Behaelter.</td></tr>
+  <tr><td><b>h5py</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Das Vergleichsprodukt — bewusst <b>kein</b> CGNS-Leser, sondern der Behaelter darunter.</td></tr>
+  <tr><td><b>Ansys Fluent</b>, <b>CFX</b>, <b>Star-CCM+</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die Stroemungsloeser, die CGNS in der Industrie erzeugen und lesen.</td></tr>
+  <tr><td><b>Pointwise</b>, <b>ICEM CFD</b>, <b>Gmsh</b></td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>Netzgeneratoren; sie sind die uebliche Quelle einer CGNS-Datei.</td></tr>
+  <tr><td><b>ParaView</b>, <b>Tecplot</b>, <b>VisIt</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Die Anzeigeprogramme. ParaView liest CGNS ueber VTK.</td></tr>
+  <tr><td><b>meshio</b></td><td><span class="ampel gelb">●</span></td><td><span class="ampel gelb">●</span></td><td>Nur der Netzanteil, ohne Loesungsfelder.</td></tr>
+</table>
+<p>Die Liste ist <b>nicht vollstaendig</b> und will es nicht sein. Sie nennt, was einem bei diesem Format tatsaechlich begegnet, und laesst weg, was es zwar auch kann, aber niemand dafuer benutzt.</p>
+
+<h2 id="a6">Die Java-Umsetzung — wo dieser Leser unter seinesgleichen steht</h2>
+<p><b>Warum dieser Abschnitt.</b> Alle übrigen Abgleiche dieses Moduls messen gegen ein Werkzeug in einer <b>anderen</b> Sprache. Das ist gut gegen Irrtümer über das Format und sagt nichts darüber, wo dieser Leser unter seinesgleichen steht. Entscheidend ist dabei die Unterscheidung zwischen einem <b>reinen Nachbau in Java</b> und einem <b>Mantel um die originale C-Bibliothek</b>: nur der Nachbau löst dieselbe Aufgabe unter denselben Bedingungen wie dieser Leser; ein Mantel ruft das Original.</p>
+<p><b>Keine Java-Umsetzung gefunden.</b> Die Referenzbibliothek ist C und Fortran; die offiziellen Bindungen decken Python (pyCGNS) und MATLAB (cgns4m) ab, Java nicht. Der einzige Java-Weg, den es heute gibt, führt über den <b>JNI-Mantel</b> <code>vtkCGNSReader</code> in den VTK-Java-Wrappern — also über die C++-Bibliothek und nicht über einen Nachbau.</p>
+<p>Ein Teilweg wäre möglich: eine CGNS/HDF5-Datei lässt sich mit jHDF oder netcdf-java auf <b>Knotenebene</b> in reinem Java öffnen — der Behälter ist HDF5. Die SIDS-Semantik, also was ein <code>Zone_t</code> oder ein <code>GridCoordinates_t</code> bedeutet, müsste man darauf selbst schreiben. Genau das tut dieser Leser.</p>
+<p><b>Wie belastbar das ist.</b> Recherchiert am 2026-09-06 über Web- und GitHub-Suche; die Suchschnittstelle von Maven Central war dabei gesperrt, eine systematische Artefaktsuche war also nicht möglich. „Nichts gefunden" ist deshalb nicht dasselbe wie „es gibt nichts" — eine wenig sichtbare oder hausinterne Umsetzung wäre so nicht auffindbar. Was hier steht, ist der Stand einer ehrlichen Suche und keine Vollständigkeitsaussage.</p>
+
+<footer>
+Erzeugt aus <code>envisionz-framework-fileformats/docs/cgns/ABGLEICH.md</code> · zurück zur <a href="index.html#netze">Übersicht</a> · alle Formate im <a href="abgleich.html">Abgleich</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

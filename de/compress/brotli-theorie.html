@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brotli – Kontextmodellierung und ein Wörterbuch mit Umformungen – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#grenze">Grenze gegen Entpackbomben</a>
+<a class="unterseite" href="grenze-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#deflate">Deflate und zlib, hin und zurück</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – Abgleich</a>
+<a class="unterseite" href="deflate-packer.html">Der eigene Packer</a>
+<a class="unterseite" href="deflate-theorie.html">Format und Entpacker</a>
+<a class="rubrik" href="index.html#behaelter">gzip und ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – Abgleich</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – Abgleich</a>
+<a class="unterseite" href="behaelter-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – Abgleich</a>
+<a class="unterseite" href="lzma-theorie.html">Bereichskodierer und LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ und Vorfilter</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Abgleich</a>
+<a class="unterseite" href="bzip2-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Abgleich</a>
+<a class="unterseite" href="zstd-fse.html">FSE und Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Rahmen und Sequenzen</a>
+<a class="rubrik" href="index.html#schnell">Schnelle Packer der Datenformate</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – Abgleich</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – Abgleich</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – Abgleich</a>
+<a class="unterseite" href="schnell-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Abgleich</a>
+<a class="unterseite aktiv" href="brotli-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzw">LZW für PDF, TIFF und GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#pruef">Prüfsummen</a>
+<a class="unterseite" href="pruef-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, Lauflänge</a>
+<a class="unterseite" href="bausteine-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-compress</a> › Brotli – Kontextmodellierung und ein Wörterbuch mit Umformungen</span><a class="sprachwahl" href="../../en/compress/brotli-theorie.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.brotli</div>
+  <h1>Brotli – Kontextmodellierung und ein Wörterbuch mit Umformungen</h1>
+  <p class="unter">Was Brotli (RFC 7932) über Deflate hinaus tut: Präfixcodes in zwei Bauarten, drei unabhängige Blockeinteilungen, Literale, deren Code von den zwei vorigen Bytes abhängt, ein Befehlscode aus Einfüge- und Kopierlänge, vier gemerkte Abstände mit Abweichungen, und ein eingebautes Wörterbuch von 122 784 Byte mit 121 Umformungen. Mit Pseudocode nach <code>Brotli</code>, <code>Brotlibaum</code> und <code>Brotliwoerterbuch</code>.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Brotli ist ein LZ77-Verfahren mit Huffman-artigen Präfixcodes, wie Deflate. Es packt vor allem Text und Webinhalte besser, aus drei Gründen:</p>
+<ul>
+  <li><b>Kontext.</b> Welcher Präfixcode ein Literal kodiert, hängt von den zwei zuvor ausgegebenen Bytes ab. Nach einem Leerzeichen ist ein Großbuchstabe wahrscheinlicher als nach einem Kleinbuchstaben; Brotli kann dafür verschiedene Codes benutzen.</li>
+  <li><b>Blockarten.</b> Literale, Befehle und Abstände haben je eine eigene Einteilung in Abschnitte („Blöcke“) mit eigener Statistik; zwischen ihnen wird im Strom umgeschaltet.</li>
+  <li><b>Statisches Wörterbuch.</b> Ein Rückbezug, der weiter zurückzeigt als alles bisher Ausgegebene, greift in ein eingebautes Wörterbuch aus 13 504 Wörtern und Wortstücken – mit einer von 121 Umformungen (Großschreibung, angehängtes Leerzeichen, abgeschnittene Enden, …). Die ersten Wörter einer HTML-Seite lassen sich so holen, bevor der Packer irgendetwas gelernt hat.</li>
+</ul>
+
+<h2 id="strom">Der Strom und seine Metablöcke</h2>
+<p>Der Strom beginnt mit der Fenstergröße <code>WBITS</code> (ein Nullbit heißt 16; sonst 3 Bit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math>, bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">m \ne 0</annotation></semantics></math> ist es <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>17</mn><mo>+</mo><mi>m</mi></mrow><annotation encoding="application/x-tex">17 + m</annotation></semantics></math>; sonst weitere 3 Bit: 0 → 17, 1 → großes Fenster außerhalb von RFC 7932, abgewiesen, sonst <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>+</mo><mi>m</mi></mrow><annotation encoding="application/x-tex">8 + m</annotation></semantics></math>). Das Fenster ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mtext>WBITS</mtext></mrow></msup><mo>−</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">2^{\text{WBITS}} - 16</annotation></semantics></math> Byte. Dann folgen <b>Metablöcke</b>:</p>
+<table>
+  <tr><th>Feld</th><th>Bits</th><th>Bedeutung</th></tr>
+  <tr><td>ISLAST</td><td>1</td><td>letzter Metablock</td></tr>
+  <tr><td>ISLASTEMPTY</td><td>1, nur wenn ISLAST</td><td>letzter und leer – der Strom ist zu Ende</td></tr>
+  <tr><td>MNIBBLES</td><td>2</td><td>0–2: 4, 5, 6 Halbbytes für MLEN; 3: Beiwerkblock (wird übersprungen)</td></tr>
+  <tr><td>MLEN − 1</td><td>4 · MNIBBLES</td><td>Zahl der Ausgabebytes dieses Metablocks</td></tr>
+  <tr><td>ISUNCOMPRESSED</td><td>1, nur wenn nicht ISLAST</td><td>die MLEN Bytes stehen ab der nächsten Bytegrenze roh</td></tr>
+</table>
+<p>Der kürzeste gültige Strom ist ein einziges Byte: <code>06</code> = Bits 0, 1, 1 – Fenster 16, ISLAST, ISLASTEMPTY. <code>Brotli.entpacke(new byte[]{6})</code> liefert null Byte (nachgerechnet).</p>
+
+<h2 id="praefix">Präfixcodes</h2>
+<p>Brotli baut seine Codes kanonisch wie Deflate, liest sie aber mit dem niederwertigsten Bit zuerst; der Code steht also bitverkehrt im Strom. <code>Brotlibaum</code> legt deshalb je Codelänge eine Tafel über die <b>umgedrehten</b> Codes an und liest Bit für Bit, bis ein Eintrag belegt ist. Ein Code wird auf zwei Arten übertragen:</p>
+<ul>
+  <li><b>Einfach</b> (erste 2 Bit = 1): 1 bis 4 Symbole unmittelbar, je <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌈</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mtext>Alphabetgröße</mtext><mo stretchy="false">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil \log_2 \text{Alphabetgröße} \rceil</annotation></semantics></math> Bit. Die Längen sind fest: 1 Symbol → 0 Bit; 2 → 1, 1; 3 → 1, 2, 2; 4 → 2, 2, 2, 2 oder (Wahlbit) 1, 2, 3, 3 – in der Reihenfolge, in der die Symbole dastehen.</li>
+  <li><b>Zusammengesetzt</b> (sonst; die 2 Bit sind die Zahl der übersprungenen ersten Einträge): zuerst die Längen eines Codes über 18 Codelängen-Symbole, in der festen Reihenfolge 1, 2, 3, 4, 0, 5, 17, 6, 16, 7, 8, 9, 10, 11, 12, 13, 14, 15, jede mit einem <b>festen</b> Code variabler Länge (Längen 2, 4, 3, 2, 2, 4 für die Werte 0 bis 5). Dann damit die Codelängen des eigentlichen Alphabets; 16 wiederholt die vorige von null verschiedene Länge (Vorgabe 8), 17 wiederholt Nullen.</li>
+</ul>
+<p>Die Wiederholbefehle haben eine Eigenheit: folgen zwei Befehle derselben Art aufeinander, <b>verlängert</b> der zweite den ersten, statt ihn zu ersetzen:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mtext>neu</mtext></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>r</mi></mrow><mrow><mtext>alt</mtext></mrow></msub><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>z</mi></mrow></msup><mo>+</mo><mn>3</mn><mo>+</mo><mtext>bits</mtext><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>z</mi><mo>=</mo><mn>2</mn><mtext> (Symbol 16)</mtext><mo>,</mo><mspace width="0.3333em"/><mi>z</mi><mo>=</mo><mn>3</mn><mtext> (Symbol 17)</mtext></mrow><annotation encoding="application/x-tex">r_{\text{neu}} = (r_{\text{alt}} - 2) \cdot 2^{z} + 3 + \text{bits}(z), \qquad z = 2 \text{ (Symbol 16)},\ z = 3 \text{ (Symbol 17)}</annotation></semantics></math></p>
+<p>und es kommen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mtext>neu</mtext></mrow></msub><mo>−</mo><msub><mrow><mi>r</mi></mrow><mrow><mtext>alt</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">r_{\text{neu}} - r_{\text{alt}}</annotation></semantics></math> weitere Einträge hinzu. So entsteht ein langer Lauf ohne lange Zusatzfelder. Die <code>Brotlibaumprobe</code> baut damit etwa aus einer 8 und vier verlängernden 16ern 256 Symbole zu je 8 Bit.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> <code>Brotlibaum.ausLaengen</code> prüft die Kraft-Summe: jeder Code der Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> belegt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>L</mi><mo>−</mo><mi>l</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^{L - l}</annotation></semantics></math> von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>L</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^{L}</annotation></semantics></math> Blättern, ein vollständiger Code belegt sie genau. Über- und unterbelegte Längen werfen beim Bauen, nicht erst beim Lesen eines freien Codes. Ein Baum mit nur einem Symbol kostet kein Bit.</div>
+
+<h2 id="befehle">Befehle: Einfügen und Kopieren</h2>
+<p>Die Nutzdaten eines Metablocks sind eine Folge von <b>Befehlen</b>. Jeder Befehl heißt: füge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi></mrow><annotation encoding="application/x-tex">I</annotation></semantics></math> Literale ein, dann kopiere <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> Byte vom Abstand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi></mrow><annotation encoding="application/x-tex">D</annotation></semantics></math>. Einfüge- und Kopierlänge stehen zusammen in einem Symbol <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> aus 704 möglichen:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>g</mi><mo>=</mo><mo stretchy="false">⌊</mo><mi>c</mi><mo>/</mo><mn>64</mn><mo stretchy="false">⌋</mo><mo>,</mo><mspace width="2em"/><mi>i</mi><mo>=</mo><msub><mrow><mi>V</mi></mrow><mrow><mi>I</mi></mrow></msub><mo stretchy="false">(</mo><mi>g</mi><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">⌊</mo><mi>c</mi><mo>/</mo><mn>8</mn><mo stretchy="false">⌋</mo><mi>mod</mi><mn>8</mn><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>=</mo><msub><mrow><mi>V</mi></mrow><mrow><mi>C</mi></mrow></msub><mo stretchy="false">(</mo><mi>g</mi><mo stretchy="false">)</mo><mo>+</mo><mi>c</mi><mi>mod</mi><mn>8</mn></mrow><annotation encoding="application/x-tex">g = \lfloor c / 64 \rfloor, \qquad i = V_I(g) + \lfloor c/8 \rfloor \operatorname{mod} 8, \qquad k = V_C(g) + c \operatorname{mod} 8</annotation></semantics></math></p>
+<p>mit den Versatztafeln <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>I</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>8</mn><mo>,</mo><mn>8</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>16</mn><mo>,</mo><mn>8</mn><mo>,</mo><mn>16</mn><mo>,</mo><mn>16</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">V_I = (0,0,0,0,8,8,0,16,8,16,16)</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>C</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>8</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>8</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>8</mn><mo>,</mo><mn>16</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>16</mn><mo>,</mo><mn>8</mn><mo>,</mo><mn>16</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">V_C = (0,8,0,8,0,8,16,0,16,8,16)</annotation></semantics></math>. Aus den Codes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> folgen die Längen über Grundwert und Zusatzbits (Einfügen 0 bis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>22594</mn><mo>+</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">22594 + 2^{24} - 1</annotation></semantics></math>, Kopieren 2 bis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2118</mn><mo>+</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2118 + 2^{24} - 1</annotation></semantics></math>). Für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>&lt;</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">g &lt; 2</annotation></semantics></math>, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>&lt;</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">c &lt; 128</annotation></semantics></math>, steht kein Abstand im Strom: gemeint ist der letzte (Abstandscode 0).</p>
+<p>Beispiel: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>=</mo><mn>130</mn></mrow><annotation encoding="application/x-tex">c = 130</annotation></semantics></math> → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">g = 2</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">i = 0</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k = 2</annotation></semantics></math>: keine Literale, Kopierlänge 4, Abstand steht im Strom.</p>
+
+<h2 id="abstand">Abstände</h2>
+<p>Brotli merkt sich die letzten <b>vier</b> Abstände in einem Ring; zu Beginn des Stroms 4, 11, 15, 16 (der letzte ist 4). Die Abstandscodes bedeuten:</p>
+<table>
+  <tr><th>Code</th><th>Abstand</th></tr>
+  <tr><td>0, 1, 2, 3</td><td>letzter, vorletzter, drittletzter, viertletzter</td></tr>
+  <tr><td>4 … 9</td><td>letzter −1, +1, −2, +2, −3, +3</td></tr>
+  <tr><td>10 … 15</td><td>vorletzter −1, +1, −2, +2, −3, +3</td></tr>
+  <tr><td>16 … 15 + NDIRECT</td><td>1 … NDIRECT unmittelbar</td></tr>
+  <tr><td>darüber</td><td>mit Zusatzbits, siehe unten</td></tr>
+</table>
+<p>Mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo></mrow><annotation encoding="application/x-tex">P =</annotation></semantics></math> NPOSTFIX (0…3) und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>N</mi></mrow><mrow><mi>D</mi></mrow></msub><mo>=</mo></mrow><annotation encoding="application/x-tex">N_D =</annotation></semantics></math> NDIRECT (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>…</mo><mn>15</mn><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>P</mi></mrow></msup></mrow><annotation encoding="application/x-tex">0 \dots 15 \cdot 2^{P}</annotation></semantics></math>) aus dem Metablockkopf und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mtext>Code</mtext><mo>−</mo><msub><mrow><mi>N</mi></mrow><mrow><mi>D</mi></mrow></msub><mo>−</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">r = \text{Code} - N_D - 16</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>z</mi><mo>=</mo><mn>1</mn><mo>+</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>r</mi></mrow><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>P</mi><mo>+</mo><mn>1</mn></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>,</mo><mspace width="1em"/><mi>h</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>r</mi></mrow><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>P</mi></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>,</mo><mspace width="1em"/><mi>o</mi><mo>=</mo><mo stretchy="false">(</mo><mn>2</mn><mo>+</mo><mo stretchy="false">(</mo><mi>h</mi><mi>mod</mi><mn>2</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mspace width="0.1667em"/><msup><mrow><mn>2</mn></mrow><mrow><mi>z</mi></mrow></msup><mo>−</mo><mn>4</mn><mo>,</mo><mspace width="1em"/><mi>D</mi><mo>=</mo><mo stretchy="false">(</mo><mi>o</mi><mo>+</mo><mtext>bits</mtext><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mspace width="0.1667em"/><msup><mrow><mn>2</mn></mrow><mrow><mi>P</mi></mrow></msup><mo>+</mo><mo stretchy="false">(</mo><mi>r</mi><mi>mod</mi><msup><mrow><mn>2</mn></mrow><mrow><mi>P</mi></mrow></msup><mo stretchy="false">)</mo><mo>+</mo><msub><mrow><mi>N</mi></mrow><mrow><mi>D</mi></mrow></msub><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">z = 1 + \left\lfloor \frac{r}{2^{P+1}} \right\rfloor, \quad h = \left\lfloor \frac{r}{2^{P}} \right\rfloor, \quad o = \big(2 + (h \operatorname{mod} 2)\big)\, 2^{z} - 4, \quad D = \big(o + \text{bits}(z)\big)\, 2^{P} + (r \operatorname{mod} 2^{P}) + N_D + 1</annotation></semantics></math></p>
+<p>Mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">P = 0</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>N</mi></mrow><mrow><mi>D</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">N_D = 0</annotation></semantics></math> ergeben die Codes 16, 17, 18 die Abstände 1–2, 3–4, 5–8 – dieselbe geometrische Staffelung wie bei Deflate. NPOSTFIX erlaubt eigene Codes für die unteren Bits, etwa bei Daten mit fester Satzlänge.</p>
+<p>Code 0 und Griffe ins Wörterbuch legen nichts in den Ring; jeder andere Abstand wird der neue letzte.</p>
+
+<h2 id="woerterbuch">Das statische Wörterbuch</h2>
+<p>Ist der Abstand größer als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mtext>bisher ausgegeben</mtext><mo>,</mo><mtext>Fenster</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">D_{\max} = \min(\text{bisher ausgegeben}, \text{Fenster})</annotation></semantics></math>, ist das kein Fehler, sondern ein Griff ins Wörterbuch. Die Kopierlänge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> (4 bis 24) ist dann die <b>Wortlänge</b>; aus dem Überschuss folgen Wortnummer und Umformung:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>u</mi><mo>=</mo><mi>D</mi><mo>−</mo><msub><mrow><mi>D</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>−</mo><mn>1</mn><mo>,</mo><mspace width="2em"/><mtext>Wort</mtext><mo>=</mo><mi>u</mi><mi>mod</mi><msup><mrow><mn>2</mn></mrow><mrow><mi>B</mi><mo stretchy="false">(</mo><mi>C</mi><mo stretchy="false">)</mo></mrow></msup><mo>,</mo><mspace width="2em"/><mtext>Umformung</mtext><mo>=</mo><mo stretchy="false">⌊</mo><mi>u</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>B</mi><mo stretchy="false">(</mo><mi>C</mi><mo stretchy="false">)</mo></mrow></msup><mo stretchy="false">⌋</mo><mo>&lt;</mo><mn>121</mn></mrow><annotation encoding="application/x-tex">u = D - D_{\max} - 1, \qquad \text{Wort} = u \operatorname{mod} 2^{B(C)}, \qquad \text{Umformung} = \lfloor u / 2^{B(C)} \rfloor &lt; 121</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo stretchy="false">(</mo><mi>C</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">B(C)</annotation></semantics></math> ist die Zahl der Bits der Wortnummer für die Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math>: von 10 Bit für Länge 4 (1024 Wörter) bis 5 Bit für Länge 24 (32 Wörter). Die Summe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>C</mi><mo>=</mo><mn>4</mn></mrow><mrow><mn>24</mn></mrow></munderover><mi>C</mi><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>B</mi><mo stretchy="false">(</mo><mi>C</mi><mo stretchy="false">)</mo></mrow></msup></mrow><annotation encoding="application/x-tex">\sum_{C=4}^{24} C \cdot 2^{B(C)}</annotation></semantics></math> ergibt genau 122 784 Byte; das Wörterbuch enthält 13 504 Wörter (beides mit <code>Brotliwoerterbuch</code> nachgerechnet).</p>
+<p>Eine <b>Umformung</b> ist: Vorsilbe + verwandeltes Wort + Nachsilbe. Die Verwandlung schneidet vorn oder hinten 1 bis 9 Zeichen ab oder schreibt das erste bzw. alle Zeichen groß. Großschreiben ist eine Byteoperation, die UTF-8 kennt: bei einem Byte unter <code>0xC0</code> wird ein Kleinbuchstabe durch <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>xor</mi><mn>32</mn></mrow><annotation encoding="application/x-tex">\operatorname{xor} 32</annotation></semantics></math> groß, bei einem Zwei-Byte-Zeichen wird im zweiten Byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>xor</mi><mn>32</mn></mrow><annotation encoding="application/x-tex">\operatorname{xor} 32</annotation></semantics></math> gerechnet, bei drei Byte im dritten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>xor</mi><mn>5</mn></mrow><annotation encoding="application/x-tex">\operatorname{xor} 5</annotation></semantics></math>.</p>
+<table>
+  <tr><th>Umformung</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>9</th><th>10</th><th>44</th></tr>
+  <tr><td>Wort 0 der Länge 4</td><td><code>time</code></td><td><code>time␣</code></td><td><code>␣time␣</code></td><td><code>ime</code></td><td><code>Time␣</code></td><td><code>time␣the␣</code></td><td><code>Time</code></td><td><code>time␣and␣</code></td><td><code>TIME</code></td></tr>
+</table>
+<p class="quelle">Werte mit <code>Brotliwoerterbuch.umgeformt(4, 0, u)</code> berechnet. Das Wörterbuch steht zlib-gepackt und Base64-kodiert im Quelltext (in acht Stücken, weil eine Zeichenkette in einer Klassendatei höchstens 65 535 Byte lang sein darf) und wird beim ersten Zugriff mit dem <code>Zlib</code> des Moduls entpackt und gegen seine Länge geprüft.</p>
+
+<h2 id="kontext">Blockarten und Kontext</h2>
+<p>Für jede der drei Kategorien – Literale (L), Befehle (I), Abstände (D) – nennt der Metablockkopf die Zahl der Blockarten (1 bis 256). Bei mehr als einer folgen ein Code für die Blockart, ein Code für die Blocklänge (26 Symbole, Grundwert plus Zusatzbits) und die erste Blocklänge. Ist ein Block aufgebraucht, liest der Leser vor dem nächsten Symbol dieser Kategorie einen Umschaltbefehl: 0 = die Art vor der aktuellen, 1 = nächste Art (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>+</mo><mn>1</mn><mi>mod</mi></mrow><annotation encoding="application/x-tex">+1 \operatorname{mod}</annotation></semantics></math> Zahl), sonst Symbol − 2.</p>
+<p>Für Literale kommt der <b>Kontext</b> dazu. Jede Literal-Blockart hat einen von vier Kontextmodi; aus den zwei vorigen Bytes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">p_1, p_2</annotation></semantics></math> entsteht eine Kontextnummer 0 bis 63:</p>
+<table>
+  <tr><th>Modus</th><th>Kontext</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo></mrow><annotation encoding="application/x-tex">p_1 =</annotation></semantics></math> <code>e</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo></mrow><annotation encoding="application/x-tex">p_2 =</annotation></semantics></math> <code>␣</code></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo></mrow><annotation encoding="application/x-tex">p_1 =</annotation></semantics></math> <code>T</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo></mrow><annotation encoding="application/x-tex">p_2 =</annotation></semantics></math> <code>a</code></th></tr>
+  <tr><td>0 LSB6</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mi>mod</mi><mn>64</mn></mrow><annotation encoding="application/x-tex">p_1 \operatorname{mod} 64</annotation></semantics></math></td><td>37</td><td>20</td></tr>
+  <tr><td>1 MSB6</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor p_1 / 4 \rfloor</annotation></semantics></math></td><td>25</td><td>21</td></tr>
+  <tr><td>2 UTF8</td><td>Tafel für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">p_1</annotation></semantics></math> oder Tafel für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">p_2</annotation></semantics></math> (Zeichenklassen)</td><td>56</td><td>55</td></tr>
+  <tr><td>3 mit Vorzeichen</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>⋅</mo><mi>T</mi><mo stretchy="false">(</mo><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>+</mo><mi>T</mi><mo stretchy="false">(</mo><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">8 \cdot T(p_1) + T(p_2)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> = Größenklasse</td><td>26</td><td>27</td></tr>
+</table>
+<p class="quelle">Werte aus der Kontexttafel von <code>Brotliwoerterbuch.kontexttafel()</code> berechnet. Die Tafel hat 2048 Byte: je Modus zwei Tafeln zu 256 Einträgen, eine für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">p_1</annotation></semantics></math> und eine für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">p_2</annotation></semantics></math>; die Kontextnummer ist bei allen vier Modi ihre Veroderung.</p>
+<p>Die <b>Kontextabbildung</b> ordnet jedem Paar (Blockart, Kontext) einen von bis zu 256 Literalcodes zu – für Literale <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>64</mn><mo>⋅</mo><mtext>Arten</mtext></mrow><annotation encoding="application/x-tex">64 \cdot \text{Arten}</annotation></semantics></math> Einträge, für Abstände <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>⋅</mo><mtext>Arten</mtext></mrow><annotation encoding="application/x-tex">4 \cdot \text{Arten}</annotation></semantics></math> (Kontext der Abstände ist die Kopierlänge: 2, 3, 4 oder mehr). Sie ist zweifach verdichtet: Nullen laufen lauflängenkodiert (Symbole 1 bis RLEMAX stehen für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>s</mi></mrow></msup><mo>+</mo><mtext>bits</mtext><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">2^{s} + \text{bits}(s)</annotation></semantics></math> Nullen), und das Ganze steht wahlweise in Move-to-Front-Ordnung, die am Ende umgekehrt wird.</p>
+
+<h3>Pseudocode – ein gepackter Metablock (<code>Brotli.datenblock</code>)</h3>
+<pre class="pseudo">schL ← Blockschalter(zahlBis256())   <i>je: Zahl, Artcode, Längencode, erste Länge – verschränkt</i>
+schI ← Blockschalter(zahlBis256())
+schD ← Blockschalter(zahlBis256())
+P ← bits(2);  N_D ← bits(4) · 2^P
+modus[j] ← bits(2) für jede Literal-Blockart j
+karteL ← abbildung(64 · Arten_L);  karteD ← abbildung(4 · Arten_D)
+lese die Literalcodes (256), Befehlscodes (704), Abstandscodes (16 + N_D + 48·2^P)
+<b>solange</b> n &lt; ziel:
+    schI.vielleichtWechseln();  c ← befehle[schI.art].symbol()
+    I ← Einfügelänge(c);  C ← Kopierlänge(c)
+    <b>wiederhole</b> I-mal, solange n &lt; ziel:
+        schL.vielleichtWechseln()
+        k ← tafel[modus][aus[n−1]] oder tafel[modus][256 + aus[n−2]]
+        aus[n++] ← literale[karteL[64·schL.art + k]].symbol()
+    <b>wenn</b> n ≥ ziel: <b>abbrechen</b>                  <i>Kopierlänge wird dann nicht gebraucht</i>
+    <b>wenn</b> c &lt; 128: code ← 0
+    <b>sonst</b>: schD.vielleichtWechseln();  code ← abstaende[karteD[4·schD.art + min(C−2, 3)]].symbol()
+    D ← abstandAus(code)
+    <b>wenn</b> D > min(n, fenster): ausWoerterbuch(D, C);  <b>weiter</b>
+    <b>wenn</b> code ≠ 0: lege D in den Ring
+    kopiere C Byte ab n − D, Byte für Byte
+<b>wenn</b> n ≠ ziel: Fehler</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/brotli/Brotli.java</code> (<code>lies</code>, <code>datenblock</code>, <code>abstandAus</code>, <code>ausWoerterbuch</code>, <code>abbildung</code>, <code>Blockschalter</code>).</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die drei Blockeinteilungen stehen im Kopf <b>verschränkt</b>: Zahl, ihre beiden Codes, ihre erste Blocklänge – dann erst die nächste Zahl. Wer zuerst die drei Zahlen liest, steht ab dem ersten Code um Bits daneben; bei Dateien mit nur einer Blockart je Kategorie fällt das nie auf. Die Anfangsabstände werden so eingetragen, dass Code 0 die 4 liefert, nicht die 16.</div>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b><code>Brotliprobe</code> (36 Prüfungen):</b> das Wörterbuch (Länge 122 784, dieselbe Zahl aus den Größenbits gerechnet, SHA-256, die ersten Wörter <code>time</code>, <code>down</code>, <code>life</code>, <code>left</code>, 1024 Wörter der Länge 4, 2048 der Länge 6, 32 der Länge 24, 121 Umformungen); Umformungen einschließlich Großschreibung bei Zwei-Byte-Zeichen; elf Anker von brotli 1.2.0: leer, lauter Literale, Griff ins Wörterbuch, HTML mit Blockarten und Kontext, UTF-8-Umlaute, 126 000 Byte mit großem Fenster, ungepackter Datenblock (Zufall), erzwungene Blockarten, drei Statistiken mit verschränkten Köpfen, enges Fenster von 1024 Byte, enges Fenster zusammen mit Wörterbuch; vier Fehlerfälle.</li>
+  <li><b><code>Brotlibaumprobe</code> (29 Prüfungen):</b> der feste Code des Codelängen-Alphabets gegen die Muster aus RFC 7932 3.5; kanonische Codes über 18 000 Symbole in 60 Alphabeten; alle einfachen Codes (NSYM 1 bis 4, beide Wahlbits); zusammengesetzte Codes mit verlängernden Wiederholbefehlen und übersprungenen ersten Einträgen; über- und unterbelegte Längen.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Nur lesend; die Erweiterung „großes Fenster“ (außerhalb von RFC 7932) wird abgewiesen.</li>
+  <li>Ein Einfügebefehl, der über das Ende des Metablocks hinausreicht, wird am Ende abgeschnitten statt abgewiesen.</li>
+  <li>Das Wörterbuch wird beim ersten Zugriff vollständig entpackt (122 784 Byte) und bleibt im Speicher.</li>
+  <li>Die Ausgabe liegt vollständig im Speicher; gedeckelt durch die <a href="index.html#grenze">Entpackgrenze</a>.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>J. Alakuijala, Z. Szabadka: RFC 7932, Brotli Compressed Data Format, 2016.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Hintergrund zu <a href="index.html#brotli">Brotli</a> · Proben: <code>Brotliprobe</code>, <code>Brotlibaumprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

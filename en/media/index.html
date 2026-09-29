@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From disc image to elementary stream, without inventing anything – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag aktiv" href="index.html">framework-media</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#befund">Findings</a>
+<a class="rubrik" href="#disc">Discs and file systems</a>
+<a class="rubrik" href="#dvd">DVD-Video</a>
+<a class="rubrik" href="#ps">MPEG program stream</a>
+<a class="rubrik" href="#ton">Sound and time stamps</a>
+<a class="rubrik" href="#schaden">Damage in the video stream</a>
+<a class="rubrik" href="#erkennung">What kind of file is this?</a>
+<a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-media</span><a class="sprachwahl" href="../../de/media/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-media</div>
+  <h1>From disc image to elementary stream, without inventing anything</h1>
+  <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. The layer beneath the video decoder:
+  sectors and file systems (ISO 9660, UDF), DVD navigation (IFO, VOB), MPEG program streams with picture, sound and time stamps,
+  readability of damaged images and a detector for what a file is – every statement as a graded finding.
+  For each method: purpose, API, use in the framework, applications, examples. The examples are shortened.
+  Many API names are German (e.g. <code>Befund</code> = finding, <code>Sektorquelle</code> = sector source, <code>Lesbarkeit</code> = readability, <code>Tonstrom</code> = audio stream); they are shown unchanged.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>18</b><span>classes in 5 packages</span></div>
+  <div class="zahl"><b>0</b><span>dependencies; JDK only</span></div>
+  <div class="zahl"><b>4</b><span>finding levels: INFO, ACHTUNG, FALLE, LUECKE</span></div>
+  <div class="zahl"><b>2048 / 2352</b><span>bytes per sector, ordinary and raw image, recognised by the sync pattern</span></div>
+  <div class="zahl"><b>5</b><span>probe classes</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>Invent nothing.</b> A DVD backup is to become a picture without anything being made up along the way. What is only suspected is called a suspicion, not a finding.</div>
+  <div><b>Read-only.</b> Images are opened exclusively with <code>READ</code>; large title sets are streamed file by file, not loaded into memory.</div>
+  <div><b>Findings with consequences.</b> Every statement carries a grade and says what it means for further processing – not “here is a video” but “non-square pixels, otherwise distorted faces”.</div>
+  <div><b>Traps named.</b> Navigation packs in the middle of the stream, partition-relative UDF sectors, BCD times in the IFO, MPEG-1 headers with stuffing bytes, random sync words in audio – each one is documented in the Javadoc of the class that handles it.</div>
+  <div><b>Without dependencies.</b> No project references, no third-party library. framework-video, framework-restore and app-forensik build on it.</div>
+</div>
+
+<!-- =============================================================== FINDINGS -->
+<h2 id="befund">Findings <span class="paket">envisionz.media</span></h2>
+
+<div class="karte">
+  <h3><code>Befund</code>, <code>MediaException</code>, <code>UnsupportedMediaException</code></h3>
+  <p class="zweck">The profile of a disc is not prose but a list of findings: level, area, statement and consequence. <code>INFO</code> is a plain fact, <code>ACHTUNG</code> must be heeded, <code>FALLE</code> is a known place where things tend to go wrong, <code>LUECKE</code> says what this tool does not handle.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Befund(stufe, bereich, text, folge)</code>; <code>Befund.Stufe.INFO | ACHTUNG | FALLE | LUECKE</code></li>
+      <li><code>Befund.info(bereich, text)</code>, <code>achtung(bereich, text, folge)</code>, <code>falle(...)</code>, <code>luecke(bereich, text)</code></li>
+      <li><code>MediaException(message[, cause])</code>, <code>UnsupportedMediaException(what)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: Steckbrief, ForensikPanel, VideoRestore</span><span class="chip">framework-restore: Quelle, Planer, Protokoll, Bildmessung, Vorverarbeitung, Schnitterkennung, Tonmessung</span><span class="chip">framework-video: YuvLeser (<code>MediaException</code>)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>A common language for everything that is established about disc, stream and picture – right into the restoration plan and the log.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== DISC -->
+<h2 id="disc">Discs and file systems <span class="paket">envisionz.media.disc</span></h2>
+
+<div class="karte">
+  <h3><code>Sektorquelle</code>, <code>Iso9660</code>, <code>Udf</code> – sector by sector, not file by file</h3>
+  <p class="zweck"><code>Sektorquelle</code> recognises by the sync pattern <code>00 FF … FF 00</code> whether a raw image with 2352 bytes per sector is present (Video CD, mode 2 form 2 with 2324 bytes of payload) or an ordinary one with 2048. <code>Iso9660</code> reads primary and supplementary descriptors and recognises Joliet and Rock Ridge. <code>Udf</code> follows the chain anchor → descriptor sequence → file set → control block → directory, with sector numbers relative to the partition; it skips deleted entries, verifies the tag checksum and reads data embedded in the file entry itself.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Sektorquelle(Path)</code>, <code>rohsektoren()</code>, <code>modus()</code>, <code>form()</code>, <code>nutzlast()</code>, <code>sektoren()</code>, <code>sektor(n)</code>, <code>lese(versatz, laenge)</code></li>
+      <li><code>Iso9660(quelle)</code>, <code>gefunden()</code>, <code>datentraegerName()</code>, <code>joliet()</code>, <code>rockRidge()</code>, <code>alleEintraege()</code>, <code>befunde()</code></li>
+      <li><code>Udf(quelle)</code>, <code>gefunden()</code>, <code>partitionStart()</code>, <code>kennzeichnung()</code>, <code>alleEintraege()</code>, <code>befunde()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: Steckbrief (disc image)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Open DVD and VCD images without mounting them; find files larger than four gigabytes that exist only in UDF.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – contents of an image</h4>
+<pre><code>try (Sektorquelle q = new Sektorquelle(Path.of("scheibe.iso"))) {
+    Udf udf = new Udf(q);
+    List&lt;Udf.Eintrag&gt; eintraege = udf.gefunden() ? udf.alleEintraege() : List.of();
+    new Iso9660(q).alleEintraege().forEach(System.out::println);
+}</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>Lesbarkeit</code> – read errors and multi-session, and what an image can tell about them</h3>
+  <p class="zweck">C2 errors and session boundaries are in no image. The class therefore looks at what the ripping tool recorded: a <code>.cue</code> or <code>.toc</code> file names the sessions, a <code>ddrescue</code> map the unreadable areas. Without either, the suspicion from contiguous zero sectors remains – explicitly marked as a suspicion, because a black frame looks the same.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Lesbarkeit(abbild, quelle)</code>, <code>luecken()</code> → <code>Luecke(vonSektor, bisSektor, nachgewiesen, herkunft)</code></li>
+      <li><code>sitzungen()</code>, <code>befunde()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: Steckbrief</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Distinguish “there was a read error here” from “this looks like one” – only the first justifies marking an area as replaced.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== DVD -->
+<h2 id="dvd">DVD-Video <span class="paket">envisionz.media.dvd</span></h2>
+
+<div class="karte">
+  <h3><code>Ifo</code> – in which order the performance belongs together</h3>
+  <p class="zweck">The VOB files are not a film in playback order but a store of cells; the order is in the program chain. Read are titles, program chains with cells and duration, angle blocks, audio format and subtitles. Numbers are big-endian, times are BCD. <code>vobPruefung</code> checks the sizes of the VOB files against the IFO.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Ifo(Path)</code>, <code>titel()</code>, <code>ketten()</code> → <code>Programmkette(nummer, programme, sekunden, zellen)</code></li>
+      <li><code>winkelzellen()</code>, <code>hatWinkel()</code>, <code>tonart()</code>, <code>untertitel()</code>, <code>anbieter()</code></li>
+      <li><code>bilddatenSektoren()</code>, <code>vobsStartsektor()</code>, <code>vobPruefung(groessen…)</code>, <code>befunde()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: Steckbrief, ForensikPanel</span><span class="chip">app-forensik: VideoRestore, Lupe, Farbversatz, DrizzleProbe, StapelBeleg</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Menus, intros and repeats in the right place; detect angles before files are concatenated wrongly.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>Vobs</code> – the VOB files of a title set as one stream</h3>
+  <p class="zweck">DVD limits each file to one gibibyte; an eighty-minute recording lies in three or four files, and the boundary falls in the middle of a picture. <code>Vobs</code> streams them in name order as one stream and reports when the IFO names a different chain. From it, picture and audio streams can be extracted from any sector and the time stamps at a jump position read.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Vobs(verzeichnis, titelsatz)</code>, <code>gegen(ifo)</code>, <code>dateien()</code>, <code>groesse()</code>, <code>groessen()</code>, <code>befunde()</code></li>
+      <li><code>videoAus(aus)</code>, <code>videoAusAb(sektor, aus)</code>, <code>videoNach(Path)</code></li>
+      <li><code>tonAus(kennung, aus)</code>, <code>tonAusAb(sektor, kennung, aus)</code>, <code>rohAb(sektor, wieviel)</code></li>
+      <li><code>zeitmarken(sektor, tonKennung)</code> → <code>Zeitmarken.Paar</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: ForensikPanel, VideoRestore, TonAuszug, Lupe, Farbversatz, DrizzleProbe, StapelBeleg</span><span class="chip">framework-restore: Sprungsucher</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Decode the whole recording of a DVD backup, jump to a position, extract the sound separately.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – check title set 1 and extract picture and audio stream</h4>
+<pre><code>Path videoTs = Path.of("VIDEO_TS");
+Vobs vobs = new Vobs(videoTs, 1);
+vobs.gegen(new Ifo(videoTs.resolve("VTS_01_0.IFO")));
+vobs.befunde().forEach(System.out::println);
+vobs.videoNach(Path.of("titel1.m2v"));
+try (OutputStream o = Files.newOutputStream(Path.of("ton.mp2"))) { vobs.tonAus(0xC0, o); }</code></pre></div>
+</div>
+
+<!-- =============================================================== PS -->
+<h2 id="ps">MPEG program stream <span class="paket">envisionz.media.ps</span></h2>
+
+<div class="karte">
+  <h3><code>Programmstrom</code> and <code>Videokopf</code> – what is inside the stream</h3>
+  <p class="zweck">Splits a program or system stream at the start codes <code>00 00 01</code>: pack header (different lengths in MPEG-1 and MPEG-2), system header, padding packets, navigation packs (<code>BF</code>), private stream 1 (<code>BD</code>, AC-3/LPCM/DTS/subtitles at the first payload byte), MPEG audio and video. <code>Videokopf</code> evaluates the sequence header and extensions: non-square pixels, interlacing and field order per picture, pulldown via <code>repeat_first_field</code>, colour space from the display extension, custom quantiser matrices.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Programmstrom(byte[])</code>, <code>video()</code> → <code>Videokopf</code>, <code>befunde()</code></li>
+      <li><code>Videokopf</code>: <code>breite()</code>, <code>hoehe()</code>, <code>bildrate()</code>, <code>bitrate()</code>, <code>istMpeg2()</code>, <code>verschraenkt()</code>, <code>veraenderlicheBitrate()</code>, <code>befunde()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: Steckbrief (video file and DVD)</span><span class="chip">internal: Videokopf via Programmstrom</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Build the profile of a recording before anything is decoded.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – findings for the video stream</h4>
+<pre><code>Programmstrom ps = new Programmstrom(Files.readAllBytes(Path.of("film.mpg")));   // short file
+System.out.println(ps.video().breite() + "x" + ps.video().hoehe() + ", MPEG-2: " + ps.video().istMpeg2());
+ps.befunde().forEach(System.out::println);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>Elementarstrom</code> – the pure video stream</h3>
+  <p class="zweck">Cuts out navigation packs and PES headers; passed through, they would cause breakage exactly at the chapter points. In MPEG-2 the header length is in the third byte, in MPEG-1 stuffing bytes <code>FF</code> come first – the reason why an extractor that only knows MPEG-2 fails on a Video CD. Works on a sliding window of 1 MiB.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Elementarstrom().kennung(0xE0)</code>, <code>videoAus(byte[])</code>, <code>videoAus(daten, aus)</code>, <code>videoAus(ein, aus)</code></li>
+      <li><code>datei(von, nach)</code>, <code>navigationspakete()</code>, <code>befunde()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: Vobs</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Input for the own MPEG decoder in framework-video.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== SOUND -->
+<h2 id="ton">Sound and time stamps <span class="paket">envisionz.media.ps</span></h2>
+
+<div class="karte">
+  <h3><code>Tonstrom</code>, <code>Tonauszug</code>, <code>Zeitmarken</code></h3>
+  <p class="zweck"><code>Tonstrom</code> inspects: which tracks are present, MPEG audio in <code>C0</code>–<code>DF</code> or AC-3/DTS/LPCM in the private stream, with sample rate, channels and bit rate; a find only counts when several frames match in a chain. <code>Tonauszug</code> extracts an audio stream streaming – a title set of almost three gibibytes fits into no <code>byte[]</code> – and remembers the first time stamp. <code>Zeitmarken</code> reads presentation time stamps (90 kHz) from MPEG-1 and MPEG-2 headers; their difference after a jump is the offset between picture and sound.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Tonstrom().untersuchen(d)</code>, <code>spuren()</code> → <code>Spur(kennung, unterstrom, art, abtastrate, kanaele, bitrate, bytes)</code>, <code>daten(kennung)</code></li>
+      <li><code>new Tonauszug().kennung(0xC0)</code>, <code>tonAus(ein, aus)</code>, <code>ersterPts()</code>, <code>pakete()</code>, <code>bytes()</code></li>
+      <li><code>Zeitmarken.suchen(d, tonKennung)</code> → <code>Paar(video, ton)</code>, <code>versatzSekunden()</code>, <code>vollstaendig()</code>; <code>TAKT = 90000</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: Steckbrief, Tondialog, ForensikPanel, TonAuszug (<code>Tonstrom</code>)</span><span class="chip">app-forensik: ForensikPanel (<code>Zeitmarken</code>)</span><span class="chip">internal: Vobs (<code>Tonauszug</code>)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Name audio tracks, save sound separately, start picture and sound in sync after a jump.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – picture-sound offset at a jump position</h4>
+<pre><code>Zeitmarken.Paar p = vobs.zeitmarken(120_000L, 0xC0);
+if (p.vollstaendig()) System.out.printf("offset %.3f s%n", p.versatzSekunden());</code></pre></div>
+</div>
+
+<!-- =============================================================== DAMAGE -->
+<h2 id="schaden">Damage in the video stream <span class="paket">envisionz.media.ps</span></h2>
+
+<div class="karte">
+  <h3><code>Bitfehler</code> – where a decoder must conceal, found without decoding</h3>
+  <p class="zweck">A decoder fills destroyed areas with an estimate, and the result looks like picture content. <code>Bitfehler</code> finds such places at the slice start codes: each macroblock row carries its number in the last byte, a PAL picture needs 36 of them without gaps. Missing, duplicate or invalid numbers and pictures without any slice are located to within sixteen picture lines.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Bitfehler(hoehe)</code>, <code>untersuchen(d)</code></li>
+      <li><code>schaeden()</code> → <code>Schaden(bild, vonReihe, bisReihe, art)</code>, <code>bildzeilen()</code></li>
+      <li><code>heilAnteil()</code>, <code>befunde()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Verifiable restoration: mark concealed areas instead of presenting them as real picture content.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== FILE TYPE -->
+<h2 id="erkennung">What kind of file is this? <span class="paket">envisionz.media.erkennung</span></h2>
+
+<div class="karte">
+  <h3><code>Erkenner</code> and <code>Dateiart</code> – container and video stream separately</h3>
+  <p class="zweck">Reads the identifiers every container carries at a known position and reports container (elementary stream, program and transport stream, AVI, QuickTime/MP4, Matroska, DVD IFO) and video stream (MPEG-1/2, MPEG-4 Part 2, H.264, MJPEG, DV, Indeo, Cinepak, uncompressed) separately. Inferring the codec from the container regularly goes wrong; for a restoration the video stream decides. Readable today are MPEG-1 and MPEG-2.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Erkenner.erkennen(byte[] kopf)</code> → <code>Dateiart(behaelter, bildstrom, kennung, breite, hoehe, bemerkung)</code></li>
+      <li><code>Dateiart.meldung()</code>, <code>Bildstrom.wirdUnterstuetzt()</code>, <code>lesbar()</code> (display name)</li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Tell before opening whether the own decoder can read a file, and why not.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== USAGE -->
+<h2 id="einsatz">Usage matrix in the framework</h2>
+<p class="einl">Which modules use which parts today, counted in the source code (excluding probes).</p>
+<table>
+  <tr><th>Module</th><th>Finding</th><th>Sectors / ISO / UDF</th><th>Read&shy;ability</th><th>IFO</th><th>VOB</th><th>Program stream</th><th>Sound / time stamps</th><th>What for</th></tr>
+  <tr><td>app-forensik</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td>Profile, playback, sound, command-line tools</td></tr>
+  <tr><td>framework-restore</td><td class="x">●</td><td></td><td></td><td></td><td class="x">●</td><td></td><td></td><td>Findings for source, plan and log; jump finder over VOB</td></tr>
+  <tr><td>framework-video</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>only <code>MediaException</code> in YuvLeser</td></tr>
+</table>
+<div class="hinweis"><code>Bitfehler</code> and file-type detection are verified but have no callers outside the probes yet; <code>Elementarstrom</code> and <code>Tonauszug</code> are used via <code>Vobs</code>.</div>
+
+<footer>
+envisionz-framework-media · 18 classes in 5 packages · no dependencies · probes: <code>pruefen.cmd --nur framework-media</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

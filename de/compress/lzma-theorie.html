@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LZMA – Bereichskodierer und lernende Modelle – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#grenze">Grenze gegen Entpackbomben</a>
+<a class="unterseite" href="grenze-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#deflate">Deflate und zlib, hin und zurück</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – Abgleich</a>
+<a class="unterseite" href="deflate-packer.html">Der eigene Packer</a>
+<a class="unterseite" href="deflate-theorie.html">Format und Entpacker</a>
+<a class="rubrik" href="index.html#behaelter">gzip und ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – Abgleich</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – Abgleich</a>
+<a class="unterseite" href="behaelter-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – Abgleich</a>
+<a class="unterseite aktiv" href="lzma-theorie.html">Bereichskodierer und LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ und Vorfilter</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Abgleich</a>
+<a class="unterseite" href="bzip2-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Abgleich</a>
+<a class="unterseite" href="zstd-fse.html">FSE und Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Rahmen und Sequenzen</a>
+<a class="rubrik" href="index.html#schnell">Schnelle Packer der Datenformate</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – Abgleich</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – Abgleich</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – Abgleich</a>
+<a class="unterseite" href="schnell-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Abgleich</a>
+<a class="unterseite" href="brotli-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzw">LZW für PDF, TIFF und GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#pruef">Prüfsummen</a>
+<a class="unterseite" href="pruef-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, Lauflänge</a>
+<a class="unterseite" href="bausteine-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-compress</a> › LZMA – Bereichskodierer und lernende Modelle</span><a class="sprachwahl" href="../../en/compress/lzma-theorie.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.lzma</div>
+  <h1>LZMA – Bereichskodierer und lernende Modelle</h1>
+  <p class="unter">Der Kern hinter <code>Lzma</code> und <code>Bereichsleser</code>: wie ein Bereichskodierer Bits mit gebrochener Bitzahl kostet, wie die Wahrscheinlichkeiten beim Lesen gelernt werden, und wie LZMA daraus Literale, Rückbezüge, vier gemerkte Abstände und einen Zustandsautomaten baut. Die Stückelung LZMA2, der XZ-Behälter und die Vorfilter stehen auf einer eigenen Seite.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>LZMA schreibt dieselben Dinge wie Deflate – Literale und Rückbezüge –, kodiert sie aber anders. Deflate gibt jedem Symbol eine ganze Zahl von Bits, festgelegt für einen ganzen Block. LZMA zerlegt jede Entscheidung in einzelne <b>Ja/Nein-Fragen</b> („ist das ein Rückbezug?“, „ist das nächste Bit des Literals eine 1?“) und kodiert jede Antwort mit einer <b>Wahrscheinlichkeit</b>, die sich nach jeder Antwort anpasst. Ein Bit, das fast immer 0 ist, kostet dann weit weniger als ein Bit. Das ist der Grund für die hohe Packrate – und für die Eigenschaft, dass ein einziger Lesefehler alles Folgende in Rauschen verwandelt.</p>
+
+<h2 id="bereich">Der Bereichskodierer</h2>
+<p>Der Kodierer führt ein Intervall mit. Soll ein Bit mit der Wahrscheinlichkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">P_0</annotation></semantics></math> für „0“ kodiert werden, wird das Intervall der Breite <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi></mrow><annotation encoding="application/x-tex">R</annotation></semantics></math> geteilt: der untere Teil der Breite <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>0</mn></mrow></msub><mi>R</mi></mrow><annotation encoding="application/x-tex">P_0 R</annotation></semantics></math> steht für 0, der obere für 1, und das Intervall schrumpft auf den gewählten Teil. Nach vielen Bits ist das Intervall sehr schmal; jede Zahl darin bezeichnet die ganze Bitfolge. Ihre Länge in Bit ist näherungsweise</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>L</mi><mo>≈</mo><mo>−</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L \approx -\sum_k \log_2 P(b_k)</annotation></semantics></math></p>
+<p>also genau die Informationsmenge – ohne Aufrundung auf ganze Bits je Symbol. Ein Bit mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>0,98</mn></mrow><annotation encoding="application/x-tex">P = 0{,}98</annotation></semantics></math> kostet <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mn>0,98</mn><mo>≈</mo><mn>0,029</mn></mrow><annotation encoding="application/x-tex">-\log_2 0{,}98 \approx 0{,}029</annotation></semantics></math> Bit.</p>
+<p>Der Leser hält die Breite <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi></mrow><annotation encoding="application/x-tex">R</annotation></semantics></math> (<code>breite</code>) und den Abstand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> des gelesenen Werts von der unteren Intervallgrenze (<code>wert</code>), beide als vorzeichenlose 32-Bit-Zahlen. Die Wahrscheinlichkeit steht als ganze Zahl <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>∈</mo><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>2048</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p ∈ [0, 2048)</annotation></semantics></math> mit 11 Bit Genauigkeit, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mi>p</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>11</mn></mrow></msup></mrow><annotation encoding="application/x-tex">P_0 = p / 2^{11}</annotation></semantics></math>. Die Teilung ist</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>g</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>R</mi></mrow><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>11</mn></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>⋅</mo><mi>p</mi></mrow><annotation encoding="application/x-tex">g = \left\lfloor \frac{R}{2^{11}} \right\rfloor \cdot p</annotation></semantics></math></p>
+<p>Ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>&lt;</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">C &lt; g</annotation></semantics></math>, war das Bit 0 und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>←</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">R \leftarrow g</annotation></semantics></math>; sonst war es 1, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>←</mo><mi>C</mi><mo>−</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">C \leftarrow C - g</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>←</mo><mi>R</mi><mo>−</mo><mi>g</mi></mrow><annotation encoding="application/x-tex">R \leftarrow R - g</annotation></semantics></math>. Fällt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi></mrow><annotation encoding="application/x-tex">R</annotation></semantics></math> unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{24}</annotation></semantics></math>, wird <b>normiert</b>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>←</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>8</mn></mrow></msup><mi>R</mi></mrow><annotation encoding="application/x-tex">R \leftarrow 2^8 R</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>←</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>8</mn></mrow></msup><mi>C</mi><mo>+</mo><mtext>nächstes Byte</mtext></mrow><annotation encoding="application/x-tex">C \leftarrow 2^8 C + \text{nächstes Byte}</annotation></semantics></math>. So bleibt die Rechnung in 32 Bit, und es gehen nie mehr als acht Bit Genauigkeit auf einmal verloren.</p>
+
+<figure>
+<svg viewBox="0 0 620 150" width="620" font-family="sans-serif" font-size="12">
+  <rect x="20" y="30" width="580" height="26" fill="#ffffff" stroke="#5b6475"/>
+  <rect x="20" y="30" width="360" height="26" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="170" y="48" fill="#1f5f8b">Bit 0: Breite g = ⌊R/2048⌋·p</text>
+  <text x="430" y="48" fill="#9a6400">Bit 1: R − g</text>
+  <line x1="250" y1="20" x2="250" y2="66" stroke="#9a6400" stroke-width="2"/>
+  <text x="222" y="16" fill="#9a6400">C</text>
+  <text x="20" y="80" fill="#5b6475">0</text><text x="585" y="80" fill="#5b6475">R</text>
+  <rect x="20" y="100" width="360" height="26" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="26" y="118" fill="#1f5f8b">neues Intervall, Breite g; C liegt darin → gelesenes Bit 0</text>
+  <line x1="200" y1="56" x2="200" y2="100" stroke="#5b6475" stroke-dasharray="3,3"/>
+</svg>
+<figcaption>Ein Schritt des Bereichslesers: die Grenze teilt das Intervall im Verhältnis der gelernten Wahrscheinlichkeit; wo der gelesene Wert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi></mrow><annotation encoding="application/x-tex">C</annotation></semantics></math> liegt, entscheidet das Bit.</figcaption>
+</figure>
+
+<h3>Lernende Modelle</h3>
+<p>Nach jedem Bit rückt das benutzte Modell ein Zweiunddreißigstel des Abstands in Richtung des gesehenen Bits:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>nach 0:</mtext><mspace width="1em"/><mi>p</mi><mo>←</mo><mi>p</mi><mo>+</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mn>2048</mn><mo>−</mo><mi>p</mi></mrow><mrow><mn>32</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>,</mo><mspace width="2em"/><mtext>nach 1:</mtext><mspace width="1em"/><mi>p</mi><mo>←</mo><mi>p</mi><mo>−</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>p</mi></mrow><mrow><mn>32</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow></mrow><annotation encoding="application/x-tex">\text{nach 0:}\quad p \leftarrow p + \left\lfloor \frac{2048 - p}{32} \right\rfloor, \qquad \text{nach 1:}\quad p \leftarrow p - \left\lfloor \frac{p}{32} \right\rfloor</annotation></semantics></math></p>
+<p>Das ist ein exponentiell gleitender Mittelwert mit dem Gewicht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">1/32</annotation></semantics></math>. Jedes Modell beginnt bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">p = 1024</annotation></semantics></math>, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>1</mn><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">P_0 = 1/2</annotation></semantics></math>. Leser und Schreiber rechnen bitgenau dasselbe; deshalb steht keine einzige Wahrscheinlichkeit in der Datei.</p>
+<p><b>Rechenbeispiel.</b> Lauter Nullbits: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> läuft 1024 → 1056 → 1087 → 1117 → … Der Schritt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mo stretchy="false">(</mo><mn>2048</mn><mo>−</mo><mi>p</mi><mo stretchy="false">)</mo><mo>/</mo><mn>32</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor (2048-p)/32 \rfloor</annotation></semantics></math> wird null, sobald <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2048</mn><mo>−</mo><mi>p</mi><mo>&lt;</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">2048 - p &lt; 32</annotation></semantics></math>; die Folge bleibt bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>2017</mn></mrow><annotation encoding="application/x-tex">p = 2017</annotation></semantics></math> stehen. Ein erwartetes Bit kostet dann höchstens</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo>−</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><mn>2017</mn></mrow><mrow><mn>2048</mn></mrow></mfrac><mo>≈</mo><mn>0,022</mn><mspace width="0.3333em"/><mtext>Bit</mtext></mrow><annotation encoding="application/x-tex">-\log_2 \frac{2017}{2048} \approx 0{,}022\ \text{Bit}</annotation></semantics></math></p>
+<p>Umgekehrt fällt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> bei lauter Einsen bis 31. Die <code>Lzmabausteinprobe</code> misst den Anfang: aus 1024 wird nach einem Nullbit 1056, nach einem Einsbit 992. Mit einem eigenen Bereichsschreiber nach dem LZMA-SDK kodiert sie 5000 Bits in 515 Byte und liest sie bitgenau zurück.</p>
+
+<h3>Bits ohne Modell und Bitbäume</h3>
+<ul>
+  <li><b>Direkte Bits</b> (<code>direkt</code>): gleichverteilt, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>←</mo><mi>R</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">R \leftarrow R/2</annotation></semantics></math>, Bit = 1, wenn <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>≥</mo><mi>R</mi></mrow><annotation encoding="application/x-tex">C \ge R</annotation></semantics></math>. Für die oberen Bits großer Abstände, wo jede Belegung gleich wahrscheinlich ist.</li>
+  <li><b>Bitbaum</b> (<code>baum</code>): eine Zahl aus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Bits, höchstwertiges zuerst; jedes Bit hat ein eigenes Modell, das vom bisherigen Präfix abhängt. Der Index läuft <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mn>1</mn><mo>,</mo><mn>2</mn><mi>m</mi><mo>+</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo></mrow><annotation encoding="application/x-tex">m = 1, 2m + b_1, \dots</annotation></semantics></math>, das Ergebnis ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>−</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>n</mi></mrow></msup></mrow><annotation encoding="application/x-tex">m - 2^n</annotation></semantics></math>. Ein Baum mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Bits hat <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>n</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^n</annotation></semantics></math> Modelle.</li>
+  <li><b>Umgekehrter Bitbaum</b> (<code>baumUmgekehrt</code>): dasselbe, aber das <b>niederwertigste</b> Bit zuerst. Nur für die Ausrichtungsbits und die mittleren Bits kleiner Abstände.</li>
+</ul>
+
+<h3>Pseudocode – <code>Bereichsleser</code></h3>
+<pre class="pseudo"><b>anfang</b>(daten, ab, ende):
+    <b>wenn</b> ab + 5 > ende: Fehler
+    <b>wenn</b> daten[ab] ≠ 0: Fehler "kein LZMA-Strom"      <i>das erste Byte ist immer 0</i>
+    breite ← FFFFFFFF;  wert ← nächste 4 Byte, höchstwertiges zuerst
+
+<b>funktion</b> nächstesByte():  <b>gib</b> stelle &lt; ende ? daten[stelle++] : 0     <i>hinter dem Ende Nullen</i>
+
+<b>funktion</b> normieren():
+    <b>wenn</b> breite &lt; 2^24 (vorzeichenlos): breite ← breite·256;  wert ← wert·256 + nächstesByte()
+
+<b>funktion</b> bit(p, i):
+    normieren()
+    g ← (breite >>> 11) · p[i]
+    <b>wenn</b> wert &lt; g (vorzeichenlos):  breite ← g;  p[i] ← p[i] + ((2048 − p[i]) >>> 5);  <b>gib</b> 0
+    <b>sonst</b>:  breite ← breite − g;  wert ← wert − g;  p[i] ← p[i] − (p[i] >>> 5);  <b>gib</b> 1
+
+<b>funktion</b> direkt(n):
+    <b>wiederhole</b> n-mal: normieren(); breite ← breite >>> 1; wert ← wert − breite
+                     t ← (wert negativ) ? −1 : 0;  wert ← wert + (breite und t)
+                     r ← 2r + (t + 1)
+<b>funktion</b> baum(p, ab, n):          m ← 1; <b>n-mal</b>: m ← 2m + bit(p, ab + m);  <b>gib</b> m − 2^n
+<b>funktion</b> baumUmgekehrt(p, ab, n): m ← 1; r ← 0; <b>für</b> i ← 0..n−1: b ← bit(p, ab+m); m ← 2m+b; r ← r + b·2^i</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/lzma/Bereichsleser.java</code>.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Hinter dem Ende des Stroms liefert der Leser Nullbytes statt einer Ausnahme. Das ist Absicht: der Leser hält vier Byte Vorlauf und liest beim letzten Symbol regelmäßig über das Ende. <code>Xzprobe</code> zeigt es: ein <code>.lzma</code>-Strom ohne seine letzten ein oder zwei Byte ergibt dasselbe, erst ohne drei kippt er. Die Genauigkeit (11 Bit), die Anpassung (5 Bit) und die Normierungsschwelle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{24}</annotation></semantics></math> sind Teil des Formats und stehen deshalb als benannte Konstanten, nicht als Stellschrauben.</div>
+
+<h2 id="lzma">LZMA: was kodiert wird</h2>
+<p>Ein LZMA-Strom ist eine Folge von Paketen. Welches Paket folgt, entscheidet eine Kette von Modellbits:</p>
+<table>
+  <tr><th>Bits</th><th>Paket</th><th>Bedeutung</th></tr>
+  <tr><td><code>0</code></td><td>LIT</td><td>ein Literal</td></tr>
+  <tr><td><code>1 0</code> + Länge + Abstand</td><td>MATCH</td><td>Rückbezug mit neuem Abstand</td></tr>
+  <tr><td><code>1 1 0 0</code></td><td>SHORTREP</td><td>genau ein Byte vom letzten Abstand</td></tr>
+  <tr><td><code>1 1 0 1</code> + Länge</td><td>REP0</td><td>letzter Abstand</td></tr>
+  <tr><td><code>1 1 1 0</code> + Länge</td><td>REP1</td><td>vorletzter Abstand</td></tr>
+  <tr><td><code>1 1 1 1 0</code> + Länge</td><td>REP2</td><td>drittletzter Abstand</td></tr>
+  <tr><td><code>1 1 1 1 1</code> + Länge</td><td>REP3</td><td>viertletzter Abstand</td></tr>
+</table>
+<p>Die Modelle dieser Entscheidungen hängen vom <b>Zustand</b> ab, und <code>istBezug</code> und <code>istKurz</code> zusätzlich von den unteren <code>pb</code> Bits der Ausgabestelle. Ein gemerkter Abstand, der benutzt wird, rückt nach vorn; ein neuer Abstand schiebt die vier gemerkten um eine Stelle weiter.</p>
+
+<h3>Der Zustand</h3>
+<p>Der Zustand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>∈</mo><mo stretchy="false">{</mo><mn>0</mn><mo>,</mo><mo>…</mo><mo>,</mo><mn>11</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">s ∈ \{0, \dots, 11\}</annotation></semantics></math> merkt sich grob, was die letzten Pakete waren. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>&lt;</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">s &lt; 7</annotation></semantics></math> heißt: das letzte Paket war ein Literal. Die Übergänge sind Tabellen:</p>
+<table>
+  <tr><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math></th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th></tr>
+  <tr><td>nach LIT</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>4</td><td>5</td></tr>
+  <tr><td>nach MATCH</td><td>7</td><td>7</td><td>7</td><td>7</td><td>7</td><td>7</td><td>7</td><td>10</td><td>10</td><td>10</td><td>10</td><td>10</td></tr>
+  <tr><td>nach REP</td><td>8</td><td>8</td><td>8</td><td>8</td><td>8</td><td>8</td><td>8</td><td>11</td><td>11</td><td>11</td><td>11</td><td>11</td></tr>
+  <tr><td>nach SHORTREP</td><td>9</td><td>9</td><td>9</td><td>9</td><td>9</td><td>9</td><td>9</td><td>11</td><td>11</td><td>11</td><td>11</td><td>11</td></tr>
+</table>
+<p>Der Gedanke: auf ein Literal folgt mit anderer Wahrscheinlichkeit ein Literal als auf einen Rückbezug, und diese Auskunft ist umsonst, weil beide Seiten sie kennen.</p>
+
+<h3>Literale</h3>
+<p>Ein Literal wird als Bitbaum aus acht Bits gelesen, mit 0x300 Modellen je <b>Kontext</b>. Der Kontext besteht aus den oberen <code>lc</code> Bits des vorigen Bytes und den unteren <code>lp</code> Bits der Stelle:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>k</mi><mo>=</mo><mo stretchy="false">(</mo><mo stretchy="false">(</mo><mi>n</mi><mi>and</mi><mo stretchy="false">(</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>l</mi><mi>p</mi></mrow></msup><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>l</mi><mi>c</mi></mrow></msup><mo stretchy="false">)</mo><mo>+</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mtext>vorig</mtext></mrow><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>8</mn><mo>−</mo><mi>l</mi><mi>c</mi></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>,</mo><mspace width="2em"/><mtext>Modelle ab </mtext><mn>768</mn><mspace width="0.1667em"/><mi>k</mi></mrow><annotation encoding="application/x-tex">k = \big((n \operatorname{and} (2^{lp}-1)) \cdot 2^{lc}\big) + \left\lfloor \frac{\text{vorig}}{2^{8-lc}} \right\rfloor, \qquad \text{Modelle ab } 768\,k</annotation></semantics></math></p>
+<p>Direkt nach einem Rückbezug (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>≥</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">s \ge 7</annotation></semantics></math>) ist die Lage anders: das nächste Byte ist oft das Byte, das beim letzten Abstand <i>als nächstes</i> gekommen wäre, aber nicht ganz – sonst wäre der Rückbezug länger geworden. LZMA kodiert das Literal dann <b>gegen dieses Vergleichsbyte</b>: solange die bisher gelesenen Bits mit denen des Vergleichsbytes übereinstimmen, wird für jedes Bit ein eigener Modellsatz benutzt, je nach dem Bit des Vergleichsbytes; ab der ersten Abweichung geht es mit dem gewöhnlichen Baum weiter.</p>
+<pre class="pseudo"><b>funktion</b> literal():
+    vorig ← (n > wbAb) ? aus[n−1] : 0
+    k ← ((n und lpMaske) &lt;&lt; lc) + (vorig >>> (8 − lc));  ab ← 0x300 · k;  m ← 1
+    <b>wenn</b> zustand ≥ 7:                                 <i>"matched literal"</i>
+        gegen ← aus[n − a0 − 1]                          <i>Byte am letzten Abstand</i>
+        <b>wiederhole</b>:
+            bitG ← oberstes Bit von gegen;  gegen ← gegen &lt;&lt; 1
+            b ← bit(literale, ab + ((1 + bitG) &lt;&lt; 8) + m);  m ← 2m + b
+            <b>wenn</b> b ≠ bitG: <b>abbrechen</b>
+        <b>solange</b> m &lt; 0x100
+    <b>solange</b> m &lt; 0x100:  m ← 2m + bit(literale, ab + m)
+    zustand ← NACH_LITERAL[zustand];  schreibe(m − 0x100)</pre>
+
+<h3>Längen</h3>
+<p>Längen 2 bis 273 laufen durch einen dreistufigen Kodierer: ein Wahlbit, dann entweder 3 Bit für 2–9 (je <code>pb</code>-Stelle eigener Baum), oder ein zweites Wahlbit und 3 Bit für 10–17 (ebenso), oder 8 Bit für 18–273. Neue Rückbezüge und gemerkte Abstände haben je einen eigenen Längenkodierer.</p>
+
+<h3>Abstände</h3>
+<p>Ein neuer Abstand beginnt mit einem 6-Bit-<b>Platz</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math> (Bitbaum, eigener Baum je Längenklasse <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>l</mi><mo>−</mo><mn>2</mn><mo>,</mo><mn>3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\min(l - 2, 3)</annotation></semantics></math>). Plätze 0 bis 3 sind der Abstand selbst. Sonst ist</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>z</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>q</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>−</mo><mn>1</mn><mo>,</mo><mspace width="2em"/><mi>d</mi><mo>=</mo><mo stretchy="false">(</mo><mn>2</mn><mo>+</mo><mo stretchy="false">(</mo><mi>q</mi><mi>mod</mi><mn>2</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>z</mi></mrow></msup><mo>+</mo><mtext>Rest aus </mtext><mi>z</mi><mtext> Bits</mtext></mrow><annotation encoding="application/x-tex">z = \left\lfloor \frac{q}{2} \right\rfloor - 1, \qquad d = \big(2 + (q \operatorname{mod} 2)\big) \cdot 2^{z} + \text{Rest aus } z \text{ Bits}</annotation></semantics></math></p>
+<p>Für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>&lt;</mo><mn>14</mn></mrow><annotation encoding="application/x-tex">q &lt; 14</annotation></semantics></math> kommen die <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> Restbits aus einem umgekehrten Bitbaum; für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>≥</mo><mn>14</mn></mrow><annotation encoding="application/x-tex">q \ge 14</annotation></semantics></math> sind die oberen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>−</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">z - 4</annotation></semantics></math> Bits direkt und die unteren 4 kommen aus dem umgekehrten Ausrichtungsbaum. Gespeichert wird der Abstand minus eins; der wahre Rückgriff geht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">d + 1</annotation></semantics></math> Byte zurück.</p>
+<table>
+  <tr><th>Platz <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math></th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math></th><th>Restbits</th></tr>
+  <tr><td>0 … 3</td><td>–</td><td>0 … 3</td><td>keine</td></tr>
+  <tr><td>4, 5</td><td>1</td><td>4–5, 6–7</td><td>Baum</td></tr>
+  <tr><td>6, 7</td><td>2</td><td>8–11, 12–15</td><td>Baum</td></tr>
+  <tr><td>12, 13</td><td>5</td><td>64–95, 96–127</td><td>Baum</td></tr>
+  <tr><td>14, 15</td><td>6</td><td>128–191, 192–255</td><td>2 direkt + 4 Ausrichtung</td></tr>
+  <tr><td>63</td><td>30</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>30</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3 \cdot 2^{30}</annotation></semantics></math> … <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{32} - 1</annotation></semantics></math></td><td>26 direkt + 4 Ausrichtung</td></tr>
+</table>
+<p>Der Wert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><msub><mrow><mtext>FFFFFFFF</mtext></mrow><mrow><mn>16</mn></mrow></msub></mrow><annotation encoding="application/x-tex">d = \text{FFFFFFFF}_{16}</annotation></semantics></math> ist die <b>Endmarke</b>. Sie steht nur, wenn die Ausgabegröße nicht bekannt ist.</p>
+
+<h3>Pseudocode – <code>Lzma.entpacken</code> und <code>abstandLesen</code></h3>
+<pre class="pseudo"><b>solange</b> n &lt; ziel:
+    st ← n und pbMaske
+    <b>wenn</b> bit(istBezug, 16·zustand + st) = 0:  literal();  <b>weiter</b>
+    <b>wenn</b> bit(istGemerkt, zustand) = 1:
+        <b>wenn</b> bit(gemerkt0, zustand) = 0:
+            <b>wenn</b> bit(istKurz, 16·zustand + st) = 0:
+                zustand ← NACH_KURZ[zustand];  schreibe(aus[n − a0 − 1]);  <b>weiter</b>
+        <b>sonst</b>:
+            <b>wenn</b> bit(gemerkt1, zustand) = 0:       neu ← a1
+            <b>sonst wenn</b> bit(gemerkt2, zustand) = 0: neu ← a2;  a2 ← a1
+            <b>sonst</b>:                                 neu ← a3;  a3 ← a2;  a2 ← a1
+            a1 ← a0;  a0 ← neu
+        ℓ ← laengeGemerkt.lies(st) + 2;  zustand ← NACH_GEMERKT[zustand]
+    <b>sonst</b>:
+        a3 ← a2;  a2 ← a1;  a1 ← a0
+        ℓ ← laenge.lies(st) + 2;  zustand ← NACH_BEZUG[zustand]
+        a0 ← abstandLesen(ℓ − 2)
+        <b>wenn</b> a0 = FFFFFFFF: <b>abbrechen</b>                  <i>Endmarke</i>
+    <b>wenn</b> a0 ≥ n − wbAb: Fehler "Bezug zeigt zu weit zurück"
+    kopiere ℓ Byte ab n − a0 − 1, Byte für Byte
+
+<b>funktion</b> abstandLesen(klasse):
+    q ← baum(platz, 64·min(klasse, 3), 6)
+    <b>wenn</b> q &lt; 4: <b>gib</b> q
+    z ← (q >>> 1) − 1;  a ← (2 + (q und 1)) · 2^z           <i>als long rechnen</i>
+    <b>wenn</b> q &lt; 14: a ← a + baumUmgekehrt(mittel, a − q, z)
+    <b>sonst</b>:      a ← a + direkt(z − 4) · 16 + baumUmgekehrt(ausrichtung, 0, 4)
+    <b>gib</b> a</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/lzma/Lzma.java</code> (<code>entpacken</code>, <code>literal</code>, <code>abstandLesen</code>, <code>bezug</code>, Klasse <code>Laenge</code>). Die mittleren Bits aller Plätze unter 14 teilen sich ein Modellfeld von 115 Einträgen; der Versatz <code>a − q</code> gibt jedem Platz seinen eigenen Ast.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> In <code>abstandLesen</code> wird die Basis als <code>long</code> gerechnet, bevor verschoben wird. Beim Platz 63 sind es 30 Bit, und <code>(2|1) &lt;&lt; 30</code> liefe als <code>int</code>-Rechnung ins Vorzeichen: heraus käme <code>0xFFFFFFFFC0000000</code> statt <code>0xC0000000</code>. Genau daran wurde die Endmarke am 2026-09-06 nicht erkannt; der Fehler zeigt sich nur beim größten Platz.</div>
+
+<h2 id="eigenschaften">Die Eigenschaften lc, lp, pb</h2>
+<p>Die drei Zahlen stehen zusammen in einem Byte, als Stellenwertdarstellung mit den Basen 9 und 5:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>e</mi><mo>=</mo><mo stretchy="false">(</mo><mi>p</mi><mi>b</mi><mo>⋅</mo><mn>5</mn><mo>+</mo><mi>l</mi><mi>p</mi><mo stretchy="false">)</mo><mo>⋅</mo><mn>9</mn><mo>+</mo><mi>l</mi><mi>c</mi><mo>,</mo><mspace width="2em"/><mi>l</mi><mi>c</mi><mo>=</mo><mi>e</mi><mi>mod</mi><mn>9</mn><mo>,</mo><mspace width="1em"/><mi>l</mi><mi>p</mi><mo>=</mo><mo stretchy="false">⌊</mo><mi>e</mi><mo>/</mo><mn>9</mn><mo stretchy="false">⌋</mo><mi>mod</mi><mn>5</mn><mo>,</mo><mspace width="1em"/><mi>p</mi><mi>b</mi><mo>=</mo><mo stretchy="false">⌊</mo><mi>e</mi><mo>/</mo><mn>45</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">e = (pb \cdot 5 + lp) \cdot 9 + lc, \qquad lc = e \operatorname{mod} 9,\quad lp = \lfloor e/9 \rfloor \operatorname{mod} 5,\quad pb = \lfloor e/45 \rfloor</annotation></semantics></math></p>
+<p>Die Vorgabe ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>c</mi><mo>=</mo><mn>3</mn><mo>,</mo><mi>l</mi><mi>p</mi><mo>=</mo><mn>0</mn><mo>,</mo><mi>p</mi><mi>b</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">lc = 3, lp = 0, pb = 2</annotation></semantics></math>, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo>=</mo><mo stretchy="false">(</mo><mn>2</mn><mo>⋅</mo><mn>5</mn><mo>+</mo><mn>0</mn><mo stretchy="false">)</mo><mo>⋅</mo><mn>9</mn><mo>+</mo><mn>3</mn><mo>=</mo><mn>93</mn><mo>=</mo><mtext>0x5D</mtext></mrow><annotation encoding="application/x-tex">e = (2\cdot 5 + 0)\cdot 9 + 3 = 93 = \text{0x5D}</annotation></semantics></math>. Das größte zulässige Byte ist 224 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>c</mi><mo>=</mo><mn>8</mn><mo>,</mo><mi>l</mi><mi>p</mi><mo>=</mo><mn>4</mn><mo>,</mo><mi>p</mi><mi>b</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">lc = 8, lp = 4, pb = 4</annotation></semantics></math>).</p>
+<p>Die alte <code>.lzma</code>-Datei (<code>Lzma.entpackeAlone</code>) hat einen Kopf von 13 Byte ohne Kennung: das Eigenschaftsbyte, vier Byte Wörterbuchgröße, acht Byte Ausgabegröße (<code>FFFFFFFFFFFFFFFF</code> = unbekannt, dann endet der Strom mit der Endmarke). Weil es keine Kennung gibt, prüft der Leser Eigenschaftsbyte und Größe auf Glaubwürdigkeit.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b><code>Lzmabausteinprobe</code> (58 Prüfungen):</b> die Konstanten; ein eigener Bereichsschreiber nach dem LZMA-SDK kodiert 5000 Modellbits, die bitgenau zurückkommen, mit gleich gelernten Wahrscheinlichkeiten auf beiden Seiten und sauberem Ende; direkte Bits (202 Werte zu 1 bis 26 Bit), Bitbaum (207 Werte) und umgekehrter Bitbaum (191 Werte); Nullen hinter dem Ende; der Strombeginn mit Nullbyte. Dazu die LZMA2-Steuerung und drei liblzma-Anker (siehe <a href="xz-theorie.html">LZMA2 und XZ</a>).</li>
+  <li><b><code>Xzprobe</code> (55 Prüfungen):</b> die Anker aus liblzma, darunter <code>p1</code> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>c</mi><mo>=</mo><mn>0</mn><mo>,</mo><mi>l</mi><mi>p</mi><mo>=</mo><mn>2</mn><mo>,</mo><mi>p</mi><mi>b</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">lc = 0, lp = 2, pb = 0</annotation></semantics></math> statt der Vorgabe, drei <code>.lzma</code>-Dateien (Text, leer, Zufall), die Zerlegung des Eigenschaftsbytes (0x5D, 0, 224, Abweisung von 225 und negativen Werten), und 104 Einzelbitverdrehungen in einer Datei, von denen 100 auffallen – die vier übrigen liegen im Nachlauf des Bereichsstroms.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Nur lesend: es gibt keinen Bereichs<i>schreiber</i> im Hauptcode (nur in den Proben) und keinen LZMA-Packer.</li>
+  <li>Die Ausgabe ist zugleich das Wörterbuch und wird vollständig gehalten; kein Ringpuffer. Grenze etwa 2 GiB und die <a href="index.html#grenze">Entpackgrenze</a>.</li>
+  <li>Ein Fehler im Strom zeigt sich nicht lokal: ab der Stelle ist die Ausgabe Rauschen. Erkannt wird er erst an einem Rückbezug ins Nichts, an der Größe oder am Prüfwert des Behälters.</li>
+  <li><code>sauberBeendet()</code> (Wert null am Ende) ist keine Prüfsumme und fängt nur grobe Fehler.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>G. N. N. Martin: Range encoding: an algorithm for removing redundancy from a digitised message. Video &amp; Data Recording Conference, 1979.</li>
+  <li>I. Pavlov: LZMA SDK (Dokumentation <code>lzma-specification.txt</code>).</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Hintergrund zu <a href="index.html#lzma">XZ, LZMA, LZMA2</a> · weiter: <a href="xz-theorie.html">LZMA2, XZ und Vorfilter</a> · Proben: <code>Lzmabausteinprobe</code>, <code>Xzprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

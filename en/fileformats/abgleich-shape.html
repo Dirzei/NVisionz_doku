@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ESRI Shapefile — comparison against specification, pyshp and shapely – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite aktiv" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › ESRI Shapefile — comparison against specification, pyshp and shapely</span><a class="sprachwahl" href="../../de/fileformats/abgleich-shape.html">Deutsch</a></div>
+<!-- erzeugt aus shape/COMPARISON.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · comparison</div>
+  <h1>ESRI Shapefile — comparison against specification, pyshp and shapely</h1>
+</header>
+
+<p><b>As of:</b> 2026-09-26<br><b>Our implementation:</b> <code>envisionz.fileformats.shape.ShapeQuelle</code>, read-only, no third-party library<br><b>Specification:</b> ESRI Shapefile Technical Description (July 1998); references give byte offsets and shape types<br><b>Compared against:</b> pyshp 3.1.6 and shapely 2.1.2 (Python)<br><b>Test bench:</b> <code>envisionz.fileformats.shape.Shapeprobe</code> — 73 checks; <code>Bezugssystemprobe</code> — 76 checks against pyproj/PROJ (SH3)</p>
+<p><b>The reference implementation.</b> <b>pyshp</b> is a pure Python library started by <b>Joel Lawhead</b>, for years the usual tool for reading and writing shapefiles without GDAL. <b>shapely</b> is the Python binding to <b>GEOS</b>, the geometry library behind PostGIS and QGIS.</p>
+<p><b>Why this one.</b> pyshp writes the fixtures; the expected text of the shapes comes from shapely, translating pyshp's GeoJSON view into WKT. So neither the file nor the expected value comes from this reader. GDAL was not available.</p>
+<p><b>Coverage, computed from the rows below:</b> of 12 features we have 11 present, 0 partial and 1 absent; the reference implementation has 8 / 3 / 1.</p>
+<p><span class="ampel gruen">●</span> present · <span class="ampel rot">●</span> absent · <span class="ampel gelb">●</span> partial · – not applicable</p>
+<p><b>The <i>Note</i> column</b> points into section 5 of this document — not into the workspace item list. The word in front says <i>what kind of thing it is</i>: <b>gap</b> is something we lack and that is open; <b>decided</b> is something we deliberately do not do; <b>property</b> is a trait of the format affecting both implementations; <b>open there</b> is a gap of the reference product. Only the gaps are work — they are collected in section 5.1 and appear as <i>one</i> item in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Feature comparison</h2>
+<p>A shapefile set is three to five files sharing a stem: the shapes (<code>.shp</code>), their index (<code>.shx</code>), their attributes (<code>.dbf</code>), often also the encoding (<code>.cpg</code>) and the projection (<code>.prj</code>). The occasion was item SK18: until 2026-09-25 only the <code>.dbf</code> was read.</p>
+<h3>The set</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>pyshp 3.1.6 and shapely 2.1.2</th><th>Note</th></tr>
+  <tr><td>Header: code 9994 (big endian), version 1000 (little endian)</td><td>Byte 0–35</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property SH1</td></tr>
+  <tr><td><code>.shx</code> checked against <code>.shp</code></td><td>.shx</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>property SH2</td></tr>
+  <tr><td>Attributes from the <code>.dbf</code>, record <i>n</i> to shape <i>n</i></td><td>.dbf</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Encoding from the <code>.cpg</code></td><td>.cpg</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Reference system from the <code>.prj</code> interpreted, lon/lat for TM, Mercator, LCC</td><td>.prj</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property SH3</td></tr>
+  <tr><td>Deleted <code>.dbf</code> records stay with their shape</td><td>.dbf Byte 0</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>decided SH4</td></tr>
+</table>
+<h3>The shapes</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>pyshp 3.1.6 and shapely 2.1.2</th><th>Note</th></tr>
+  <tr><td>Null, Point, MultiPoint, PolyLine, Polygon</td><td>Art 0, 1, 8, 3, 5</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Z types with optional M part</td><td>Art 11–18</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>M types; M below -10³⁸ means "no data"</td><td>Art 21–28</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property SH5</td></tr>
+  <tr><td>MultiPatch (strips, fans, rings)</td><td>Art 31</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>property SH6</td></tr>
+  <tr><td>Assigning holes to the enclosing outer ring</td><td>Polygon</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property SH7</td></tr>
+  <tr><td>Writing</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>decided SH8</td></tr>
+</table>
+
+<h2 id="a2">What was measured</h2>
+<p>Seven sets, <b>written by pyshp</b> (<code>docs/shape/erzeuge.py</code>): points with a null shape and UTF-8 attributes, single- and two-part lines, polygons with a hole and with a hole placed after a foreign outer ring, a multipoint, PointZ with and without M, PolyLineM and a multipatch. The pyshp and shapely output is in <code>docs/shape/auskunft.txt</code> verbatim. <b>Equal</b> for every shape shapely can represent. Z, M and multipatch cannot reach shapely through pyshp's GeoJSON; there the numbers come from pyshp and the notation follows ISO 19125.</p>
+
+<h2 id="a3">What is hard about the format</h2>
+<p><b>Two byte orders in one file.</b> Code, file length, record number and record length are big endian, everything else little endian — and the lengths count 16-bit words, not bytes.</p>
+<p><b>A polygon is a list of rings, not of polygons.</b> Which rings belong together is told only by orientation (outer clockwise) and position. The description demands no order; a hole may follow a different outer ring.</p>
+<p><b><code>.shp</code> and <code>.shx</code> share the same header.</b> They are told apart by the first entry: record number 1 in the <code>.shp</code>, offset 50 in the <code>.shx</code>.</p>
+
+<h2 id="a4">The items</h2>
+<p>The <i>Note</i> column names the kind in front of the identifier. Only the <b>gaps</b> are work.</p>
+<h3>Our open gaps — this is the work</h3>
+<p><b>Since 2026-09-26 nothing is left here.</b> SH3, interpreting the projection, is built and now listed under 5.3.</p>
+<h3>Deliberate decisions</h3>
+<p><b>SH4</b> (decided) — Deleted <code>.dbf</code> records are read along</p>
+<p>The <code>.dbf</code> only marks; the shape in the <code>.shp</code> stays. Assignment is by position — skipping deleted records shifts every following shape onto foreign attributes. GDAL omits such features; we read them and report the count.</p>
+<p><b>SH8</b> (decided) — Writing</p>
+<p>pyshp writes. This module reads.</p>
+<h3>Properties of the format</h3>
+<p><b>SH1</b> (property) — Detection by header, ahead of dBASE</p>
+<p><code>Formaterkennung</code> checks the code, five zero words, the version and a shape type of the description. It runs before the dBASE check because that one is only plausible.</p>
+<p><b>SH2</b> (property) — The <code>.shx</code> is checked, not needed</p>
+<p>The <code>.shp</code> is read sequentially. A mismatching index is a finding; a missing one too, but no obstacle. pyshp reads through the index when present.</p>
+<p><b>SH5</b> (property) — "No data" becomes NaN, not -10³⁹</p>
+<p>pyshp returns <code>None</code>, we return <code>NaN</code> (or an empty cell). Passed through, -10³⁹ would be a measurement silently carried into calculations; a mutation without this mapping turns four checks red.</p>
+<p><b>SH6</b> (property) — Multipatch as in GDAL</p>
+<p>The multipatch has no WKT counterpart. Strips and fans fall apart into triangles, rings become polygons with holes by their kind — the result is a <code>MULTIPOLYGON Z</code>. pyshp refuses a GeoJSON view of it.</p>
+<p><b>SH7</b> (property) — Holes by position, not by order</p>
+<p>A counter-clockwise ring belongs to the outer ring that contains its first point. The obvious shortcut "to the preceding ring" would give a different result than shapely on the second fixture; the probe checks both.</p>
+<p><b>SH3</b> (property) — The reference system is interpreted, four projections converted</p>
+<p><code>Bezugssystem</code> reads the <code>.prj</code> in both dialects — as ArcGIS writes it and as GDAL writes it — into one model: datum, ellipsoid, prime meridian, units, projection, parameters, EPSG (from <code>AUTHORITY</code>, otherwise inferred from the name and marked so). Transverse Mercator (sixth-order Krüger series), Mercator on ellipsoid and sphere, Lambert conformal conic with one and two parallels and geographic systems are converted; the <code>punkte</code> table then gets <code>laenge</code> and <code>breite</code>. <b>No datum shift</b> — its parameters or grids are nowhere in the <code>.prj</code>. Other projections are named, not computed, and a finding says so. Measured on fifteen EPSG codes against PROJ 9.5.1: lon/lat to 1e-8 degrees, x/y to one millimetre. Two traps: GDAL writes Pseudo-Mercator (3857) as <code>Mercator_1SP</code> on WGS 84 and stores the sphere only in <code>EXTENSION["PROJ4",…]</code> — without it the map is off by up to 40 km; and for NTF Paris the prime meridian is in degrees, the parameters in grads.</p>
+
+<h2 id="a5">The wider field — what else reads and writes these files</h2>
+<p>This table does <b>not</b> count towards the coverage figures.</p>
+<table>
+  <tr><th>Program</th><th>reads</th><th>writes</th><th>Note</th></tr>
+  <tr><td><b>QGIS</b>, <b>GDAL/OGR</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The largest living source; writes <code>.cpg</code> with <code>UTF-8</code>.</td></tr>
+  <tr><td><b>ArcGIS</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The originator of the format.</td></tr>
+  <tr><td><b>pyshp</b>, <b>geopandas/pyogrio</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>pyshp is this comparison's reference product.</td></tr>
+  <tr><td><b>GeoTools</b> (Java)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>See section 7.</td></tr>
+</table>
+
+<h2 id="a6">The Java implementation — where this reader stands among its own kind</h2>
+<p><b>GeoTools</b> (<code>gt-shapefile</code>) is the Java reference: a pure reimplementation, maintained, with JTS as its geometry model. This reader is deliberately smaller — it hands out tables and WKT instead of a geometry model. <b>Not measured.</b></p>
+
+<footer>
+Generated from <code>envisionz-framework-fileformats/docs/shape/COMPARISON.md</code> · back to the <a href="index.html#tabellen">overview</a> · all formats in the <a href="abgleich.html">comparison</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

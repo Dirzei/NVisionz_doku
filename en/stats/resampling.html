@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resampling, power and data preparation – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag aktiv" href="index.html">framework-stats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grundlagen">Foundations and distributions</a>
+<a class="unterseite" href="spezialfunktionen.html">Special functions</a>
+<a class="unterseite" href="verteilungen.html">Distributions and quantiles</a>
+<a class="rubrik" href="index.html#beschreibend">Describe, explore, outliers</a>
+<a class="unterseite" href="ausreisser.html">Outliers</a>
+<a class="unterseite" href="beschreibend.html">Summaries and quantiles</a>
+<a class="rubrik" href="index.html#schaetzen">Confidence, prediction and tolerance intervals</a>
+<a class="unterseite" href="intervalle.html">Background</a>
+<a class="rubrik" href="index.html#tests">Test families</a>
+<a class="unterseite" href="anpassungstests.html">Goodness-of-fit tests</a>
+<a class="unterseite" href="kontingenz.html">Contingency tables</a>
+<a class="unterseite" href="tests-parametrisch.html">Parametric tests</a>
+<a class="unterseite" href="tests-rang.html">Rank tests</a>
+<a class="rubrik" href="index.html#regression">Correlation and regression</a>
+<a class="unterseite" href="korrelation.html">Correlation</a>
+<a class="unterseite" href="regression.html">Regression</a>
+<a class="rubrik" href="index.html#anova">Analysis of variance and multiple testing</a>
+<a class="unterseite" href="anova.html">Background</a>
+<a class="rubrik" href="index.html#multivariat">Multivariate methods</a>
+<a class="unterseite" href="multivariat.html">Background</a>
+<a class="rubrik" href="index.html#zeitreihen">Time series</a>
+<a class="unterseite" href="zeitreihen.html">Background</a>
+<a class="rubrik" href="index.html#spc">Statistical process control</a>
+<a class="unterseite" href="spc.html">Background</a>
+<a class="rubrik" href="index.html#resample">Resampling and data preparation</a>
+<a class="unterseite aktiv" href="resampling.html">Resampling, power and data preparation – background</a>
+<a class="rubrik" href="index.html#katalog">Method catalogue for the GUI</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-stats</a> › Resampling, power and data preparation – background</span><a class="sprachwahl" href="../../de/stats/resampling.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-stats · envisionz.stats.resample · envisionz.stats.prep</div>
+  <h1>Resampling, power and data preparation – background</h1>
+  <p class="unter">The computation behind <code>Resample</code> and <code>Prep</code>: jackknife, permutation test, Monte Carlo, k-fold cross-validation, power and sample size of the t-test; imputing missing values, Box-Cox with optimal λ, Yeo-Johnson, standardising, weighted statistics and group aggregation.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>The classical methods derive the distribution of a statistic from assumptions – normality, large samples. <b>Resampling</b> goes the other way: it generates many new samples from the available data and looks at how the statistic varies across them. That needs computing time instead of formulas and works also for statistics for which no formula exists.</p>
+<p><b>Data preparation</b> is on the same page because it often decides whether a classical method is applicable: a skewed quantity becomes approximately normal through a Box-Cox transformation, and then t-test and analysis of variance hold again.</p>
+<div class="hinweis"><b>Framework convention:</b> All random procedures receive an <code>Rng</code> with a fixed seed (see <a href="verteilungen.html#zufall">Random numbers</a>). Same seed, same result – bit-identical. The bootstrap intervals are in <code>Estimate</code> (see <a href="intervalle.html#bootstrap">Bootstrap intervals</a>).</div>
+
+<h2 id="jackknife">Jackknife</h2>
+<p>The jackknife (Quenouille, Tukey) leaves out each value once and computes the statistic <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi mathvariant="normal">θ</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msub></mrow><annotation encoding="application/x-tex">\hat\theta_{(i)}</annotation></semantics></math> on the remaining <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n-1</annotation></semantics></math> values. Bias and standard error follow from the spread of these <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> values:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi mathvariant="normal">θ</mi></mrow></mrow><mrow><mo stretchy="false">(</mo><mo>⋅</mo><mo stretchy="false">)</mo></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mover accent="true"><mrow><mi mathvariant="normal">θ</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msub><mo>,</mo><mspace width="2em"/><mover accent="true"><mrow><mtext>bias</mtext></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mo stretchy="false">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi mathvariant="normal">θ</mi></mrow></mrow><mrow><mo stretchy="false">(</mo><mo>⋅</mo><mo stretchy="false">)</mo></mrow></msub><mo>−</mo><mover accent="true"><mrow><mi mathvariant="normal">θ</mi></mrow><mo stretchy="true">^</mo></mover><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mover accent="true"><mrow><mtext>se</mtext></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><msqrt><mfrac><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><mo stretchy="false">(</mo><msub><mrow><mover accent="true"><mrow><mi mathvariant="normal">θ</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi mathvariant="normal">θ</mi></mrow></mrow><mrow><mo stretchy="false">(</mo><mo>⋅</mo><mo stretchy="false">)</mo></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></msqrt></mrow><annotation encoding="application/x-tex">\bar\theta_{(\cdot)} = \frac1n\sum_i\hat\theta_{(i)}, \qquad \widehat{\text{bias}} = (n-1)(\bar\theta_{(\cdot)} - \hat\theta), \qquad \widehat{\text{se}} = \sqrt{\frac{n-1}{n}\sum_i(\hat\theta_{(i)} - \bar\theta_{(\cdot)})^2}</annotation></semantics></math></p>
+<p>The factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n-1</annotation></semantics></math> compensates for the subsamples being almost identical. For the mean the jackknife gives exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>/</mo><msqrt><mi>n</mi></msqrt></mrow><annotation encoding="application/x-tex">s/\sqrt n</annotation></semantics></math> and bias 0. For non-smooth statistics like the median the jackknife standard error is unreliable; the bootstrap is better there.</p>
+<pre class="pseudo">θ ← f(x)
+<b>for</b> i ← 1 <b>to</b> n:  jack[i] ← f(x without xᵢ)
+θ̄ ← mean(jack)
+bias ← (n − 1)·(θ̄ − θ)
+se ← √((n − 1)/n · Σ(jack[i] − θ̄)²)
+<b>return</b> (θ, bias, se)                               <i>θ uncorrected</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-stats/src/envisionz/stats/resample/Resample.java</code>, method <code>jackknife</code>.</p>
+
+<h2 id="permutation">Permutation test</h2>
+<p>Under the null hypothesis “both groups come from the same distribution” the group labels are arbitrary. So one shuffles the pooled values, splits them again into groups of the original sizes and recomputes the test statistic. The fraction of shuffles with a test statistic at least as extreme is the p-value – without any distributional assumption.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>p</mi><mo>=</mo><mfrac><mrow><mn>1</mn><mo>+</mo><mo>#</mo><mo stretchy="false">{</mo><mi>b</mi><mo>:</mo><mo>|</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>b</mi></mrow></msub><mo>|</mo><mo>≥</mo><mo>|</mo><msub><mrow><mi>T</mi></mrow><mrow><mtext>obs</mtext></mrow></msub><mo>|</mo><mo stretchy="false">}</mo></mrow><mrow><mn>1</mn><mo>+</mo><mi>B</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">p = \frac{1 + \#\{b: |T_b| \ge |T_\text{obs}|\}}{1 + B}</annotation></semantics></math></p>
+<p>The “+1” in numerator and denominator counts the observed arrangement itself as one of the possible ones; so <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> is never zero, and the test keeps its level exactly. For two groups of 5 values there are only <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo stretchy="false">(</mo><mn>10</mn><mo>,</mo><mn>5</mn><mo stretchy="false">)</mo><mo>=</mo><mn>252</mn></mrow><annotation encoding="application/x-tex">C(10, 5) = 252</annotation></semantics></math> splits; with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mn>3000</mn></mrow><annotation encoding="application/x-tex">B = 3000</annotation></semantics></math> random shuffles each is drawn about twelve times on average.</p>
+<pre class="pseudo">T_obs ← |stat(x, y)|;  pool ← x ∪ y;  count ← 0
+<b>for</b> b ← 1 <b>to</b> B:
+    π ← rng.permutation(N)
+    a ← pool[π[1..n₁]];  c ← pool[π[n₁+1..N]]
+    <b>if</b> |stat(a, c)| ≥ T_obs: count ← count + 1
+<b>return</b> (count + 1)/(B + 1)</pre>
+<p class="quelle">Source: <code>envisionz-framework-stats/src/envisionz/stats/resample/Resample.java</code>, method <code>permutationTest</code>; the default statistic is the difference of means. The test is always two-sided via the absolute value. In the catalogue: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mn>3000</mn></mrow><annotation encoding="application/x-tex">B = 3000</annotation></semantics></math>, seed 1.</p>
+
+<h2 id="cv-mc">Cross-validation and Monte Carlo</h2>
+<p><b>k-fold cross-validation</b> estimates how well a model predicts new data – more honestly than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>R</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">R^2</annotation></semantics></math>, which rises with every additional term. The data are shuffled randomly and distributed to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> parts (position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> of the shuffle goes into part <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mspace width="0.1667em"/><mi>mod</mi><mspace width="0.1667em"/><mi>k</mi></mrow><annotation encoding="application/x-tex">i \,\operatorname{mod}\, k</annotation></semantics></math>). Each part serves once as the test set while the model is fitted on the others:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>MSE</mi></mrow><mrow><mtext>CV</mtext></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mtext>parts</mtext></mrow></munder><mspace width="0.3333em"/><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>∈</mo><mtext>part</mtext></mrow></munder><mo stretchy="false">(</mo><msubsup><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mi>i</mi></mrow><mrow><mo stretchy="false">(</mo><mo>−</mo><mtext>part</mtext><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\mathrm{MSE}_\text{CV} = \frac1n\sum_{\text{parts}}\ \sum_{i ∈ \text{part}}(\hat y_i^{(-\text{part})} - y_i)^2</annotation></semantics></math></p>
+<p>The model is a function <code>CvModel.predict(trainX, trainY, testX)</code>, i.e. arbitrary. <code>monteCarlo(sampler, stat, B)</code> averages a statistic over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> generated samples – for instance to study the behaviour of an estimator under an assumed distribution.</p>
+
+<h2 id="guete">Power and sample size of the t-test</h2>
+<p>The <b>power</b> of a test is the probability of detecting a difference that really exists. For the two-sided two-sample t-test with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> values per group and standardised effect <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mi mathvariant="normal">Δ</mi><mo>/</mo><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">d = \Delta/\sigma</annotation></semantics></math> the module computes with the normal approximation:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">δ</mi><mo>=</mo><mi>d</mi><msqrt><mi>n</mi><mo>/</mo><mn>2</mn></msqrt><mo>,</mo><mspace width="2em"/><mn>1</mn><mo>−</mo><mi mathvariant="normal">β</mi><mo>=</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><msub><mrow><mi>z</mi></mrow><mrow><mn>1</mn><mo>−</mo><mi mathvariant="normal">α</mi><mo>/</mo><mn>2</mn></mrow></msub><mo>−</mo><mi mathvariant="normal">δ</mi><mo stretchy="false">)</mo><mo>+</mo><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mo>−</mo><msub><mrow><mi>z</mi></mrow><mrow><mn>1</mn><mo>−</mo><mi mathvariant="normal">α</mi><mo>/</mo><mn>2</mn></mrow></msub><mo>−</mo><mi mathvariant="normal">δ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\delta = d\sqrt{n/2}, \qquad 1 - \beta = 1 - \Phi(z_{1-\alpha/2} - \delta) + \Phi(-z_{1-\alpha/2} - \delta)</annotation></semantics></math></p>
+<p>Conversely the sample size per group for a desired power is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>n</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">⌈</mo><mn>2</mn><msup><mrow><mrow><mo fence="true" stretchy="true">(</mo><mfrac><mrow><msub><mrow><mi>z</mi></mrow><mrow><mn>1</mn><mo>−</mo><mi mathvariant="normal">α</mi><mo>/</mo><mn>2</mn></mrow></msub><mo>+</mo><msub><mrow><mi>z</mi></mrow><mrow><mn>1</mn><mo>−</mo><mi mathvariant="normal">β</mi></mrow></msub></mrow><mrow><mi>d</mi></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow></mrow><mrow><mn>2</mn></mrow></msup><mo fence="true" stretchy="true">⌉</mo></mrow></mrow><annotation encoding="application/x-tex">n = \left\lceil 2\left(\frac{z_{1-\alpha/2} + z_{1-\beta}}{d}\right)^2\right\rceil</annotation></semantics></math></p>
+<div class="hinweis"><b>Framework convention:</b> Both formulas use the normal distribution instead of the noncentral t distribution. This slightly underestimates the required sample size, noticeably for small <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math>: for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">d = 0.5</annotation></semantics></math>, power 80 % and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">α</mi><mo>=</mo><mn>0.05</mn></mrow><annotation encoding="application/x-tex">\alpha = 0.05</annotation></semantics></math> the module gives 63 per group, the exact computation with the noncentral t distribution 64.</div>
+
+<h2 id="prep">Data preparation</h2>
+<h3>Missing values</h3>
+<p>Missing values are <code>NaN</code>. <code>meanImpute</code> and <code>medianImpute</code> replace them by the mean or median of the available values; <code>missingFraction</code> reports the fraction. Imputation artificially reduces the spread and is only acceptable for a few gaps.</p>
+<h3>Box-Cox</h3>
+<p>For positive values the Box-Cox transformation</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mrow><mi>x</mi></mrow><mrow><mo stretchy="false">(</mo><mi mathvariant="normal">λ</mi><mo stretchy="false">)</mo></mrow></msup><mo>=</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><mstyle displaystyle="true"><mfrac><mrow><msup><mrow><mi>x</mi></mrow><mrow><mi mathvariant="normal">λ</mi></mrow></msup><mo>−</mo><mn>1</mn></mrow><mrow><mi mathvariant="normal">λ</mi></mrow></mfrac></mstyle></mtd><mtd style="text-align:left"><mi mathvariant="normal">λ</mi><mo>≠</mo><mn>0</mn></mtd></mtr><mtr><mtd style="text-align:left"><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>x</mi></mtd><mtd style="text-align:left"><mi mathvariant="normal">λ</mi><mo>=</mo><mn>0</mn></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">x^{(\lambda)} = \begin{cases}\dfrac{x^\lambda - 1}{\lambda} &amp; \lambda \ne 0\\ \ln x &amp; \lambda = 0\end{cases}</annotation></semantics></math></p>
+<p>is continuous in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> and includes reciprocal (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lambda = -1</annotation></semantics></math>), logarithm (0), square root (½) and identity (1). The best <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> is the one under which the transformed data are closest to normal – measured by the profile log-likelihood:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>ℓ</mi><mo stretchy="false">(</mo><mi mathvariant="normal">λ</mi><mo stretchy="false">)</mo><mo>=</mo><mo>−</mo><mfrac><mrow><mi>n</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msup><mrow><mover accent="true"><mrow><mi mathvariant="normal">σ</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">(</mo><mi mathvariant="normal">λ</mi><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi mathvariant="normal">λ</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">ℓ(\lambda) = -\frac n2\ln\hat\sigma^2(\lambda) + (\lambda - 1)\sum_i\ln x_i</annotation></semantics></math></p>
+<p>with the population variance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mover accent="true"><mrow><mi mathvariant="normal">σ</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">(</mo><mi mathvariant="normal">λ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\hat\sigma^2(\lambda)</annotation></semantics></math> of the transformed values. The second term is the Jacobian of the transformation; without it variances for different <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> would not be comparable. The module maximises <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ℓ</mi></mrow><annotation encoding="application/x-tex">ℓ</annotation></semantics></math> with Brent's method for one-dimensional minimisation (from <code>framework-math</code>) on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>2</mn><mo>,</mo><mn>2</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-2, 2]</annotation></semantics></math>, tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>.</p>
+<pre class="pseudo"><b>function</b> boxCoxLambda(x):
+    negLL(λ) ← −( −n/2·ln(populationVariance(boxCox(x, λ))) + (λ − 1)·Σ ln xᵢ )
+    <b>return</b> Optimize.brentMin(negLL, −2, 2, 1e−6)</pre>
+<p class="quelle">Source: <code>envisionz-framework-stats/src/envisionz/stats/prep/Prep.java</code>, methods <code>boxCox</code>, <code>boxCoxLambda</code>, <code>boxCoxLogLik</code>.</p>
+<h3>Yeo-Johnson</h3>
+<p>Box-Cox requires positive values. Yeo-Johnson extends it to all real numbers by treating positive and negative values separately:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">ψ</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi mathvariant="normal">λ</mi><mo stretchy="false">)</mo><mo>=</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><mstyle displaystyle="true"><mfrac><mrow><mo stretchy="false">(</mo><mi>x</mi><mo>+</mo><mn>1</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mi mathvariant="normal">λ</mi></mrow></msup><mo>−</mo><mn>1</mn></mrow><mrow><mi mathvariant="normal">λ</mi></mrow></mfrac></mstyle></mtd><mtd style="text-align:left"><mi>x</mi><mo>≥</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mi mathvariant="normal">λ</mi><mo>≠</mo><mn>0</mn></mtd></mtr><mtr><mtd style="text-align:left"><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>x</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mtd><mtd style="text-align:left"><mi>x</mi><mo>≥</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mi mathvariant="normal">λ</mi><mo>=</mo><mn>0</mn></mtd></mtr><mtr><mtd style="text-align:left"><mo>−</mo><mstyle displaystyle="true"><mfrac><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>x</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn><mo>−</mo><mi mathvariant="normal">λ</mi></mrow></msup><mo>−</mo><mn>1</mn></mrow><mrow><mn>2</mn><mo>−</mo><mi mathvariant="normal">λ</mi></mrow></mfrac></mstyle></mtd><mtd style="text-align:left"><mi>x</mi><mo>&lt;</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mi mathvariant="normal">λ</mi><mo>≠</mo><mn>2</mn></mtd></mtr><mtr><mtd style="text-align:left"><mo>−</mo><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>x</mi><mo stretchy="false">)</mo></mtd><mtd style="text-align:left"><mi>x</mi><mo>&lt;</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mi mathvariant="normal">λ</mi><mo>=</mo><mn>2</mn></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">\psi(x, \lambda) = \begin{cases}\dfrac{(x+1)^\lambda - 1}{\lambda} &amp; x \ge 0,\ \lambda \ne 0\\ \ln(x+1) &amp; x \ge 0,\ \lambda = 0\\ -\dfrac{(1-x)^{2-\lambda} - 1}{2-\lambda} &amp; x &lt; 0,\ \lambda \ne 2\\ -\ln(1-x) &amp; x &lt; 0,\ \lambda = 2\end{cases}</annotation></semantics></math></p>
+<p>The module does not compute an optimal <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> for Yeo-Johnson; it is supplied.</p>
+<h3>Scaling, ranks, weights, aggregation</h3>
+<ul>
+  <li><code>standardize</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>x</mi></mrow><mo stretchy="false">)</mo><mo>/</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">(x - \bar x)/s</annotation></semantics></math>, with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> using denominator <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n-1</annotation></semantics></math>.</li>
+  <li><code>minMaxScale(x, a, b)</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mo>−</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">)</mo><mo>⋅</mo><mo stretchy="false">(</mo><mi>b</mi><mo>−</mo><mi>a</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">a + (x - \min)/(\max - \min)\cdot(b - a)</annotation></semantics></math>.</li>
+  <li><code>rank</code>: average ranks as in the <a href="tests-rang.html#raenge">rank tests</a>.</li>
+  <li><code>weightedMean</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>/</mo><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum w_i x_i/\sum w_i</annotation></semantics></math>; <code>weightedVariance</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>x</mi></mrow></mrow><mrow><mi>w</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>/</mo><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum w_i(x_i - \bar x_w)^2/\sum w_i</annotation></semantics></math>, without a correction for the degrees of freedom.</li>
+  <li><code>aggregate(values, groups, f)</code>: splits by group key, applies <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> per group and returns the results in order of first appearance (“split-apply-combine”).</li>
+</ul>
+
+<h2 id="beispiel">Worked examples</h2>
+<h3>Jackknife of the standard deviation</h3>
+<p>For the ten diameters with the outlier 9.8 (see <a href="beschreibend.html#beispiel">Summary statistics</a>): <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mn>2.382</mn></mrow><annotation encoding="application/x-tex">s = 2.382</annotation></semantics></math>, jackknife bias <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>0.978</mn></mrow><annotation encoding="application/x-tex">-0.978</annotation></semantics></math>, standard error 2.134. The standard error is almost as large as the estimate – a clear hint that <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> depends on a single value.</p>
+<h3>Permutation test</h3>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mn>4.1</mn><mo>;</mo><mspace width="0.3333em"/><mn>5.0</mn><mo>;</mo><mspace width="0.3333em"/><mn>4.6</mn><mo>;</mo><mspace width="0.3333em"/><mn>5.3</mn><mo>;</mo><mspace width="0.3333em"/><mn>4.8</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{4.1;\ 5.0;\ 4.6;\ 5.3;\ 4.8\}</annotation></semantics></math> against <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mn>5.2</mn><mo>;</mo><mspace width="0.3333em"/><mn>5.9</mn><mo>;</mo><mspace width="0.3333em"/><mn>5.1</mn><mo>;</mo><mspace width="0.3333em"/><mn>6.0</mn><mo>;</mo><mspace width="0.3333em"/><mn>5.5</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{5.2;\ 5.9;\ 5.1;\ 6.0;\ 5.5\}</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mn>9999</mn></mrow><annotation encoding="application/x-tex">B = 9999</annotation></semantics></math>, seed 1: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0.0229</mn></mrow><annotation encoding="application/x-tex">p = 0.0229</annotation></semantics></math>. For completely separated groups <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mn>1</mn><mo>…</mo><mn>5</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{1 \dots 5\}</annotation></semantics></math> against <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mn>10</mn><mo>…</mo><mn>14</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{10 \dots 14\}</annotation></semantics></math> the exact value is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>/</mo><mn>252</mn><mo>=</mo><mn>0.0079</mn></mrow><annotation encoding="application/x-tex">2/252 = 0.0079</annotation></semantics></math>; with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mn>3000</mn></mrow><annotation encoding="application/x-tex">B = 3000</annotation></semantics></math> the module gives 0.0097.</p>
+<h3>Power</h3>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">d = 0.5</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">α</mi><mo>=</mo><mn>0.05</mn></mrow><annotation encoding="application/x-tex">\alpha = 0.05</annotation></semantics></math>: power 0.201 at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>10</mn></mrow><annotation encoding="application/x-tex">n = 10</annotation></semantics></math>, 0.353 at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">n = 20</annotation></semantics></math>, 0.807 at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">n = 64</annotation></semantics></math> per group. Sample size for 80 % power: 63; for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>0.8</mn></mrow><annotation encoding="application/x-tex">d = 0.8</annotation></semantics></math> and 90 %: 33.</p>
+<h3>Box-Cox</h3>
+<p>For the right-skewed values 0.5 0.8 1.1 1.3 1.9 2.4 3.5 5.2 8.8 15.0 (skewness 1.54), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi mathvariant="normal">λ</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mo>−</mo><mn>0.151</mn></mrow><annotation encoding="application/x-tex">\hat\lambda = -0.151</annotation></semantics></math>, close to the logarithm; afterwards the skewness is 0.053. For the Fibonacci numbers 1 … 34, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi mathvariant="normal">λ</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mn>0.039</mn></mrow><annotation encoding="application/x-tex">\hat\lambda = 0.039</annotation></semantics></math>. All values recomputed with the module.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<p><b><code>ResampledPrepTest</code></b> (16 checks): jackknife of the mean with bias 0 and standard error <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>/</mo><msqrt><mi>n</mi></msqrt></mrow><annotation encoding="application/x-tex">s/\sqrt n</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>; permutation test with separated groups <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&lt;</mo><mn>0.05</mn></mrow><annotation encoding="application/x-tex">p &lt; 0.05</annotation></semantics></math>, with identical groups <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&gt;</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">p &gt; 0.5</annotation></semantics></math>; power between 0 and 1 and rising with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math>; sample size positive; cross-validation of an exact straight line with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>MSE</mi><mo>&lt;</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\mathrm{MSE} &lt; 10^{-9}</annotation></semantics></math>; mean imputation, fraction of missing values, Box-Cox with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\lambda = 0</annotation></semantics></math> equal to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow><annotation encoding="application/x-tex">\ln</annotation></semantics></math>, standardising (mean 0, standard deviation 1), min-max scaling, weighted mean and group aggregation.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Power and sample size only for the two-sided two-sample t-test and only with the normal approximation.</li>
+  <li>The permutation test shuffles randomly; there is no complete enumeration of all splits for small groups. Two-sided only.</li>
+  <li>Box-Cox searches <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> only in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>2</mn><mo>,</mo><mn>2</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-2, 2]</annotation></semantics></math>; if the optimum lies outside, the boundary is returned. Values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≤</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\le 0</annotation></semantics></math> give <code>NaN</code>.</li>
+  <li>No optimal <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> for Yeo-Johnson.</li>
+  <li>The weighted variance is the population form; for frequency weights the correction <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><mi>w</mi><mo>/</mo><mo stretchy="false">(</mo><mo largeop="true" movablelimits="true">∑</mo><mi>w</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\sum w/(\sum w - 1)</annotation></semantics></math> is missing.</li>
+  <li>Cross-validation only with squared error; no stratified split.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>B. Efron, R. J. Tibshirani: An Introduction to the Bootstrap. Chapman &amp; Hall 1993 – jackknife and permutation tests.</li>
+  <li>G. E. P. Box, D. R. Cox: An Analysis of Transformations. Journal of the Royal Statistical Society B 26 (1964).</li>
+  <li>I.-K. Yeo, R. A. Johnson: A New Family of Power Transformations to Improve Normality or Symmetry. Biometrika 87 (2000).</li>
+  <li>P. I. Good: Permutation, Parametric, and Bootstrap Tests of Hypotheses. 3rd ed., Springer 2005.</li>
+</ul>
+
+<footer>
+envisionz-framework-stats · background to <a href="index.html#resample">Resampling and data preparation</a> · probe: <code>ResampledPrepTest</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

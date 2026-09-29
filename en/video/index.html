@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our own MPEG-1/2 decoder, measured against the standard – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag aktiv" href="index.html">framework-video</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#dekoder">The decoder</a>
+<a class="rubrik" href="#kopf">Header data and extensions</a>
+<a class="rubrik" href="#schichten">Layers without decoding</a>
+<a class="rubrik" href="#rekonstruktion">Reconstruction</a>
+<a class="rubrik" href="#bit">Bit level</a>
+<a class="rubrik" href="#bild">Pictures</a>
+<a class="rubrik" href="#farbe">Colour and geometry</a>
+<a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-video</span><a class="sprachwahl" href="../../de/video/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-video</div>
+  <h1>Our own MPEG-1/2 decoder, measured against the standard</h1>
+  <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. Bit level and VLC tables, header layers
+  down to the slice, macroblocks, inverse quantisation, IDCT and motion compensation, pictures in display order from streams of any size –
+  plus colour space, levels, chroma siting and aspect ratio for further processing.
+  For each method: purpose, API, use in the framework, applications, examples. The examples are shortened.
+  Many API names are German (e.g. <code>Dekoder</code> = decoder, <code>Bildpuffer</code> = frame buffer, <code>Kopfangaben</code> = header data, <code>Bewegungskompensation</code> = motion compensation); they are shown unchanged.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>30</b><span>classes in 3 packages</span></div>
+  <div class="zahl"><b>11</b><span>VLC tables, each exhaustively checked for the prefix property</span></div>
+  <div class="zahl"><b>69.7…76.4</b><span>dB against ffmpeg, over I, P and B pictures</span></div>
+  <div class="zahl"><b>1</b><span>dependency: framework-media; no ffmpeg, no third-party library</span></div>
+  <div class="zahl"><b>6</b><span>probe classes, 1 counter-probe</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>No ffmpeg.</b> For the same reason as everywhere in the workspace – and because the yardstick for a decoder measurement is the normative reference software from ISO/IEC TR 13818-5, not ffmpeg.</div>
+  <div><b>Display order, not coding order.</b> Two reference pictures are kept; I and P pictures leave delayed, B pictures at once. Whoever ignores this gets judder that looks like a tape fault.</div>
+  <div><b>Streamed, not collected.</b> A sliding window, cut only at start codes; a 2.86 GiB program stream fits into no <code>byte[]</code> and does not need to.</div>
+  <div><b>A worse picture instead of an abort.</b> Unfitting slices are rejected and counted, missing macroblocks are concealed on request and counted as well; a sequence header above 2048 × 2048 is skipped.</div>
+  <div><b>Precise where it matters.</b> The IDCT computes in double precision, far more accurate than IEEE 1180 requires – every rounding enters all subsequent restoration steps.</div>
+</div>
+
+<!-- =============================================================== DECODER -->
+<h2 id="dekoder">The decoder <span class="paket">envisionz.video.mpeg</span></h2>
+
+<div class="karte">
+  <h3><code>Dekoder</code> – elementary stream in, pictures in display order out</h3>
+  <p class="zweck">Brings together entropy layer, inverse quantisation, IDCT and motion compensation, for MPEG-1 and MPEG-2. Three inputs: a <code>byte[]</code> with a collected list, a <code>byte[]</code> with a sink, an <code>InputStream</code> with a sink. <code>abSequenzkopf</code> skips to the next sequence header – for entering in the middle of a recording; on DVD every VOBU starts with one. Data-partitioned streams get their second partition separately. After the run all header data and counters are available.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>dekodieren(byte[])</code> → <code>List&lt;Bildpuffer&gt;</code>, <code>dekodieren(byte[], senke)</code>, <code>dekodieren(InputStream, senke)</code></li>
+      <li><code>fehlerverdeckung(an)</code>, <code>abSequenzkopf(an)</code>, <code>zweiterTeilstrom(teil)</code></li>
+      <li><code>bilder()</code>, <code>fehlermarken()</code>, <code>abgewieseneSlices()</code>, <code>verdeckteMakrobloecke()</code>, <code>verdeckteBilder()</code>, <code>abbruch()</code></li>
+      <li><code>kopfangaben()</code>, <code>bildangaben()</code>, <code>bildgruppen()</code>, <code>anzeigeangaben()</code>, <code>skalierbarkeit()</code>, <code>urheberangaben()</code>, <code>benutzerdaten()</code>, <code>farbformatName()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: ForensikPanel (playback, still frame)</span><span class="chip">app-forensik: VideoRestore, Lupe, Farbversatz, DrizzleProbe, StapelBeleg</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Make DVD and VCD material restorable picture by picture, without a third-party decoder that conceals or rounds unnoticed.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – run through a title set and count what was concealed</h4>
+<pre><code>Dekoder dek = new Dekoder().fehlerverdeckung(true);
+try (InputStream ein = Files.newInputStream(Path.of("titel1.m2v"))) {
+    dek.dekodieren(ein, bild -&gt; verarbeite(bild.y(), bild.breite(), bild.hoehe()));   // verarbeite: own method
+}
+System.out.println(dek.kopfangaben().meldung());
+System.out.println(dek.bilder() + " pictures, " + dek.verdeckteMakrobloecke() + " macroblocks concealed");</code></pre></div>
+  <div class="hinweis">Measured against ffmpeg (decoder Javadoc): I pictures 76.0–76.4 dB, P pictures 69.7–75.0 dB, B pictures 72.9–74.6 dB. The remainder is the ±1 rounding tolerance permitted by IEEE 1180, which accumulates over a group of pictures. A picture comparison against the reference software is still outstanding – it is not available in the workspace.</div>
+</div>
+
+<!-- =============================================================== HEADERS -->
+<h2 id="kopf">Header data and extensions <span class="paket">envisionz.video.mpeg</span></h2>
+
+<div class="karte">
+  <h3><code>Kopfangaben</code>, <code>Bildangaben</code>, <code>Anzeigeangaben</code>, <code>Bildgruppe</code>, <code>Skalierbarkeit</code> …</h3>
+  <p class="zweck">What the stream says about itself: size, aspect ratio and pixel aspect ratio, frame rate, bit rate and buffer size; per picture type, temporal reference and fields; video format, colour coefficients and transfer characteristic from the display extension; time code of the group of pictures; scalability (data partitioning, SNR, spatial, temporal) detected, not decoded; copyright data and user data. With read damage the time code tells <b>how much</b> is missing.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Kopfangaben</code>: <code>breite()</code>, <code>hoehe()</code>, <code>bildrate()</code>, <code>seitenverhaeltnisName()</code>, <code>bildpunktverhaeltnis()</code>, <code>datenrate()</code>, <code>meldung()</code></li>
+      <li><code>Bildangaben</code>: <code>artName()</code>, <code>halbbilder()</code>; <code>Anzeigeangaben</code>: <code>videoartName()</code>, <code>kennlinieName()</code>, <code>weichtAb(b, h)</code></li>
+      <li><code>Bildgruppe.lesen(b)</code>, <code>zeitcode()</code>, <code>bildnummer(bilderJeSekunde)</code></li>
+      <li><code>Skalierbarkeit.lesen(b)</code>, <code>name()</code>; <code>BildSkalierbarkeit.Raeumlich</code>/<code>Zeitlich</code>; <code>Urheberangaben</code>, <code>Benutzerdaten.alsText()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: ForensikPanel (<code>Kopfangaben</code>)</span><span class="chip">framework-restore: Sprungsucher (<code>Bildgruppe</code>)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Profile of a recording, jump to a picture number via the time code, proof of gaps.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== LAYERS -->
+<h2 id="schichten">Layers without decoding <span class="paket">envisionz.video.mpeg</span></h2>
+
+<div class="karte">
+  <h3><code>Schichtenleser</code> – down to the slice, without coefficient tables</h3>
+  <p class="zweck">Jumps from start code to start code through sequence, group of pictures, picture and slice. The most important side information is the quantiser scale per slice: how coarsely this macroblock row was rounded – the same information as at macroblock level in coarser resolution, for a hundredth of the effort.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Schichtenleser().lesen(d)</code>, <code>bilder()</code> → <code>Bildangaben(nummer, art, zeitbezug, struktur, …)</code></li>
+      <li><code>artZeichen()</code>, <code>mittlereQuantisierung()</code>, <code>quantisierungsprofil(bild)</code></li>
+      <li><code>breite()</code>, <code>hoehe()</code>, <code>istMpeg2()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>See quickly where a recording is coarsely coded and where a restoration is most worthwhile.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== RECONSTRUCTION -->
+<h2 id="rekonstruktion">Reconstruction <span class="paket">envisionz.video.mpeg</span></h2>
+
+<div class="karte">
+  <h3><code>Makroblockleser</code>, <code>Quantisierung</code>, <code>Idct</code>, <code>Bewegungskompensation</code>, <code>Zweifach</code></h3>
+  <p class="zweck">The macroblock reader reads per slice addresses (with escape +33), types, motion vectors and coefficients in zigzag or alternate scan. <code>Quantisierung</code> with default and custom matrices, linear and non-linear scale, MPEG-1 special case. <code>Idct</code> separable along the axes in <code>double</code>. <code>Bewegungskompensation</code> fetches full- and half-pel predictions from frames and fields and averages for bidirectional prediction; <code>Zweifach</code> derives the second vector of dual-prime prediction.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Makroblockleser(breite)</code>, <code>slice(b, reihe, anfangsQuant)</code>, <code>bloecke()</code> → <code>Makroblock</code> (<code>intra()</code>, <code>halbbildVorhersage()</code>, <code>zweifach()</code>, …)</li>
+      <li><code>Quantisierung.zurueck(koeff, innerbildlich, stufenkennwert)</code>, <code>intraMatrix</code>, <code>stufenart</code>, <code>matrixLesen(b)</code></li>
+      <li><code>Idct.rueck(int[64])</code>, <code>Idct.hin(double[64])</code></li>
+      <li><code>Bewegungskompensation.holen</code>, <code>holenAusHalbbild</code>, <code>mitteln</code>; <code>Zweifach.imVollbild</code>, <code>imHalbbild</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: Dekoder</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Keep the building blocks individually testable; make macroblock types and vectors accessible for forensic analysis.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – one block back into pixels</h4>
+<pre><code>int[] f = new int[64];  f[0] = 1024;           // DC only
+int[] p = Idct.rueck(f);                        // 64 equal values, 128 each</code></pre></div>
+</div>
+
+<!-- =============================================================== BIT -->
+<h2 id="bit">Bit level <span class="paket">envisionz.video.mpeg</span></h2>
+
+<div class="karte">
+  <h3><code>Bitleser</code>, <code>Bitschreiber</code>, <code>Doppelleser</code>, <code>Vlc</code>, <code>Abtastfolge</code></h3>
+  <p class="zweck"><code>Bitleser</code> with look-ahead, signed reads and start-code detection; <code>Vlc</code> as a lookup table over a fixed bit width. <code>Doppelleser</code> switches between two partitions for data partitioning – nothing is re-encoded, both parts together contain the same bits. <code>Abtastfolge</code> holds zigzag and alternate scan.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Bitleser(d[, von, laenge])</code>, <code>bits(n)</code>, <code>schau(n)</code>, <code>vorzeichen(n)</code>, <code>aufByteAusrichten()</code>, <code>startcodeVoraus()</code>, <code>stelle()</code></li>
+      <li><code>Vlc(eintraege)</code>, <code>lies(b)</code>, <code>schau(b)</code>, <code>UNGUELTIG</code></li>
+      <li><code>Doppelleser(erster, zweiter)</code>, <code>jetzt()</code>, <code>umschalten()</code>, <code>zurueck()</code>; <code>Bitschreiber.uebernehmen(q, von, anzahl)</code></li>
+      <li><code>Abtastfolge.ZICKZACK</code>, <code>WECHSELND</code>, <code>folge(wechselnd)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">framework-restore: Sprungsucher (<code>Bitleser</code> for the GOP header)</span><span class="chip">internal: all readers</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Read header data at any position without starting the decoder.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== PICTURES -->
+<h2 id="bild">Pictures <span class="paket">envisionz.video.mpeg · envisionz.video.bild</span></h2>
+
+<div class="karte">
+  <h3><code>Bildpuffer</code>, <code>Bild</code>, <code>YuvLeser</code> – Y, Cb, Cr instead of RGB</h3>
+  <p class="zweck"><code>Bildpuffer</code> is the decoder's output: three <code>int</code> planes 0…255, with 4:2:0 chroma planes half as wide and half as high, plus picture type and temporal reference. <code>Bild</code> is the form for restoration: <code>double</code> planes in the file's value range, deliberately not RGB, because the chroma subsampling is itself a measurement; fields can be extracted. <code>YuvLeser</code> reads raw YUV sequences whose size comes from outside.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Bildpuffer</code>: <code>y()</code>, <code>cb()</code>, <code>cr()</code>, <code>breite()</code>, <code>hoehe()</code>, <code>farbBreite()</code>, <code>art()</code>, <code>zeitbezug()</code></li>
+      <li><code>Bild(y, cb, cr, breite, hoehe, …)</code>, <code>hell(x, z)</code>, <code>zeile(z)</code>, <code>halbbildHeraus(oben)</code>, <code>nummer()</code></li>
+      <li><code>YuvLeser(pfad, breite, hoehe[, teilerX, teilerY])</code>, <code>naechstes()</code> → <code>Bild</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: ForensikPanel, Lupe, Farbversatz, DrizzleProbe, StapelBeleg (<code>Bildpuffer</code>)</span><span class="chip">framework-restore: Bildmessung, Vorverarbeitung, Schnitterkennung (<code>Bild</code>)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Pass decoded pictures to display, measurement and restoration without loss of information.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== COLOUR -->
+<h2 id="farbe">Colour and geometry <span class="paket">envisionz.video.farbe</span></h2>
+
+<div class="karte">
+  <h3><code>Farbraum</code>, <code>Pegel</code>, <code>Chromalage</code>, <code>Seitenverhaeltnis</code></h3>
+  <p class="zweck">The conversions on which almost every tool chain stumbles. <code>Farbraum</code>: Y'CbCr ↔ RGB after BT.601 or BT.709, level expansion included. <code>Pegel</code>: luma 16…235, chroma 16…240, expand and compress, detect video levels. <code>Chromalage</code>: where the chroma sample sits in 4:2:0 – MPEG-1 in the centre, MPEG-2 on the left. <code>Seitenverhaeltnis</code>: PAL 720 × 576 at 4:3 becomes 768 × 576 square pixels; belongs at the end of the chain.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Farbraum.nachRgb(y, cb, cr, Norm.BT601)</code>, <code>nachYcbcr(r, g, b, norm)</code>, <code>ebenenNachRgb(y[], cb[], cr[], norm)</code></li>
+      <li><code>Pegel.hellDehnen</code>, <code>hellStauchen</code>, <code>farbeDehnen</code>, <code>sichtVideopegel(ebene)</code></li>
+      <li><code>Chromalage.hochrechnen(farbe, fw, fh, breite, hoehe, Lage.LINKS)</code></li>
+      <li><code>Seitenverhaeltnis.zielbreite(breite, hoehe, zaehler, nenner)</code>, <code>waagerechtUmrechnen(ebene, breite, hoehe, neueBreite)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Display and export without colour cast, without a washed-out picture and without faces that are too narrow.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – target width and one colour value</h4>
+<pre><code>int b = Seitenverhaeltnis.zielbreite(720, 576, 4, 3);                // 768
+double[] rgb = Farbraum.nachRgb(81.48, 90.20, 240.0, Farbraum.Norm.BT601);  // pure red</code></pre></div>
+</div>
+
+<!-- =============================================================== USAGE -->
+<h2 id="einsatz">Usage matrix in the framework</h2>
+<p class="einl">Which modules use which parts today, counted in the source code (excluding probes).</p>
+<table>
+  <tr><th>Module</th><th>Decoder</th><th>Header data</th><th>Layer reader</th><th>Bit level</th><th>Frame buffer</th><th>Bild</th><th>Colour / geometry</th><th>What for</th></tr>
+  <tr><td>app-forensik</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td></td><td>Playback, still frame, magnifier, stacking and drizzle evidence, VideoRestore</td></tr>
+  <tr><td>framework-restore</td><td></td><td class="x">●</td><td></td><td class="x">●</td><td></td><td class="x">●</td><td></td><td>Jump finder via time code; image measurement, pre-processing detection, cut detection</td></tr>
+</table>
+<div class="hinweis">The <code>farbe</code> package, the <code>Schichtenleser</code> and the <code>YuvLeser</code> have no callers outside the probes yet. According to the module description, everything above the building blocks remains unverified against a second decoder – whether the pixels are right in the end can only be answered by the reference software.</div>
+
+<footer>
+envisionz-framework-video · 30 classes in 3 packages · dependency: framework-media · work thread: <code>docs/video/STRANG-VIDEO-RESTAURIERUNG-2026-08-29.md</code> · probes: <code>pruefen.cmd --nur framework-video</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

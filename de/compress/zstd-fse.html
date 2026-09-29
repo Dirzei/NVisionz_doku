@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zstandard – FSE, Huffman über Gewichte und der rückwärts gelesene Bitstrom – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#grenze">Grenze gegen Entpackbomben</a>
+<a class="unterseite" href="grenze-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#deflate">Deflate und zlib, hin und zurück</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – Abgleich</a>
+<a class="unterseite" href="deflate-packer.html">Der eigene Packer</a>
+<a class="unterseite" href="deflate-theorie.html">Format und Entpacker</a>
+<a class="rubrik" href="index.html#behaelter">gzip und ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – Abgleich</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – Abgleich</a>
+<a class="unterseite" href="behaelter-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – Abgleich</a>
+<a class="unterseite" href="lzma-theorie.html">Bereichskodierer und LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ und Vorfilter</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Abgleich</a>
+<a class="unterseite" href="bzip2-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Abgleich</a>
+<a class="unterseite aktiv" href="zstd-fse.html">FSE und Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Rahmen und Sequenzen</a>
+<a class="rubrik" href="index.html#schnell">Schnelle Packer der Datenformate</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – Abgleich</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – Abgleich</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – Abgleich</a>
+<a class="unterseite" href="schnell-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Abgleich</a>
+<a class="unterseite" href="brotli-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzw">LZW für PDF, TIFF und GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#pruef">Prüfsummen</a>
+<a class="unterseite" href="pruef-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, Lauflänge</a>
+<a class="unterseite" href="bausteine-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-compress</a> › Zstandard – FSE, Huffman über Gewichte und der rückwärts gelesene Bitstrom</span><a class="sprachwahl" href="../../en/compress/zstd-fse.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.zstd</div>
+  <h1>Zstandard – FSE, Huffman über Gewichte und der rückwärts gelesene Bitstrom</h1>
+  <p class="unter">Die Entropiekodierung von zstd (RFC 8878): wie ein Zustandsautomat nach der Art von tANS Symbole mit gebrochener Bitzahl liest, wie die Zustandstabelle aus einer normierten Verteilung entsteht und wie diese Verteilung im Strom steht, warum der Bitstrom rückwärts läuft, und wie Huffman-Codes aus Gewichten gebaut werden. Mit Pseudocode nach <code>Zstdbits</code>, <code>Zstdfse</code> und <code>Zstdhuff</code>. Rahmen, Literale und Sequenzen stehen auf einer eigenen Seite.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Huffman gibt jedem Symbol eine ganze Zahl von Bits. Ein Symbol mit der Wahrscheinlichkeit 0,7 trüge eigentlich <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mn>0,7</mn><mo>≈</mo><mn>0,51</mn></mrow><annotation encoding="application/x-tex">-\log_2 0{,}7 \approx 0{,}51</annotation></semantics></math> Bit Information, kostet aber mindestens ein ganzes. Ein Bereichskodierer wie in LZMA vermeidet das, rechnet aber je Bit mit Multiplikationen. <b>FSE</b> (<i>Finite State Entropy</i>, eine Form von tabellierten asymmetrischen Zahlensystemen, tANS) erreicht die gebrochene Bitzahl mit einer Tabelle: je Symbol ein Zugriff, eine Addition und wenige gelesene Bits.</p>
+
+<h2 id="ans">Die Idee hinter tANS</h2>
+<p>Der Kodierer führt einen Zustand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> aus einem festen Bereich von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>A</mi></mrow></msup></mrow><annotation encoding="application/x-tex">N = 2^A</annotation></semantics></math> Werten (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> = Genauigkeit). Jeder Zustand ist genau einem Symbol zugeordnet; ein Symbol <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> mit der normierten Häufigkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_s</annotation></semantics></math> besitzt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_s</annotation></semantics></math> Zustände, mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>s</mi></mrow></munder><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>=</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">\sum_s n_s = N</annotation></semantics></math>. Seine Wahrscheinlichkeit ist also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>/</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">n_s / N</annotation></semantics></math>.</p>
+<p>Der <b>Leser</b> sieht im Zustand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> das Symbol <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">s(x)</annotation></semantics></math> und kommt zum nächsten Zustand, indem er <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">b(x)</annotation></semantics></math> Bits liest und sie zu einer Grundzahl <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">g(x)</annotation></semantics></math> addiert:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>'</mo><mo>=</mo><mi>g</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>+</mo><mtext>lies</mtext><mo stretchy="false">(</mo><mi>b</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x' = g(x) + \text{lies}\big(b(x)\big)</annotation></semantics></math></p>
+<p>Die <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_s</annotation></semantics></math> Zustände eines Symbols teilen den ganzen Zustandsraum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mi>N</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[0, N)</annotation></semantics></math> lückenlos unter sich auf: der <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>-te von ihnen (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><mn>2</mn><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">k = n_s, \dots, 2n_s - 1</annotation></semantics></math> gezählt) deckt einen Bereich der Breite <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^{b}</annotation></semantics></math> mit</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>b</mi><mo>=</mo><mi>A</mi><mo>−</mo><mo stretchy="false">⌊</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>k</mi><mo stretchy="false">⌋</mo><mo>,</mo><mspace width="2em"/><mi>g</mi><mo>=</mo><mi>k</mi><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi></mrow></msup><mo>−</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">b = A - \lfloor \log_2 k \rfloor, \qquad g = k \cdot 2^{b} - N</annotation></semantics></math></p>
+<p>Ein Symbol mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>=</mo><mi>N</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n_s = N/2</annotation></semantics></math> liest so immer genau 1 Bit, eines mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n_s = 1</annotation></semantics></math> immer <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> Bits. Liegt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_s</annotation></semantics></math> zwischen zwei Zweierpotenzen, lesen manche seiner Zustände <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>A</mi><mo>−</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor A - \log_2 n_s \rfloor</annotation></semantics></math> und manche ein Bit mehr – im Mittel ergibt sich <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≈</mo><mo>−</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>/</mo><mi>N</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\approx -\log_2(n_s/N)</annotation></semantics></math>.</p>
+<p>Der Kodierer arbeitet genau umgekehrt: er kennt zu jedem Symbol und dem Folgezustand den Vorzustand und schreibt die Bits, die der Leser lesen wird. Weil der Zustand vom <b>nächsten</b> Symbol abhängt, kodiert er die Symbole von hinten nach vorn – und schreibt den Bitstrom rückwärts, damit der Leser vorwärts dekodieren kann.</p>
+
+<h2 id="tabelle">Die Zustandstabelle aus einer Verteilung</h2>
+<p>Welcher Zustand zu welchem Symbol gehört, legt RFC 8878 genau fest, damit Schreiber und Leser dieselbe Tabelle bauen:</p>
+<ol>
+  <li>Symbole mit der Häufigkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math> („kommt vor, aber seltener als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">1/N</annotation></semantics></math>“) bekommen je einen Zustand <b>vom Ende her</b>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>N</mi><mo>−</mo><mn>2</mn><mo>,</mo><mo>…</mo></mrow><annotation encoding="application/x-tex">N-1, N-2, \dots</annotation></semantics></math>. Sie zählen wie Häufigkeit 1 und lesen stets <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> Bits.</li>
+  <li>Die übrigen Symbole werden der Reihe nach, jedes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_s</annotation></semantics></math>-mal, mit der Schrittweite <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mi>N</mi><mo>/</mo><mn>2</mn><mo>+</mo><mi>N</mi><mo>/</mo><mn>8</mn><mo>+</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\sigma = N/2 + N/8 + 3</annotation></semantics></math> im Kreis verteilt, wobei die schon belegten Endplätze übersprungen werden. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi></mrow><annotation encoding="application/x-tex">\sigma</annotation></semantics></math> ist ungerade und damit teilerfremd zu <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math>, trifft also jeden Platz genau einmal.</li>
+  <li>Dann werden die Zustände jedes Symbols in aufsteigender Folge durchnummeriert, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>,</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>+</mo><mn>1</mn><mo>,</mo><mo>…</mo></mrow><annotation encoding="application/x-tex">k = n_s, n_s + 1, \dots</annotation></semantics></math>, und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi></mrow><annotation encoding="application/x-tex">g</annotation></semantics></math> nach der Formel oben berechnet.</li>
+</ol>
+
+<h3>Pseudocode – <code>Zstdfse.ausVerteilung(verteilung, hoechstes, A)</code></h3>
+<pre class="pseudo">N ← 2^A
+<b>wenn</b> Σ (v = −1 ? 1 : v) ≠ N: Fehler "Verteilung geht nicht auf"
+hoch ← N − 1
+<b>für</b> s ← 0 <b>bis</b> hoechstes:
+    <b>wenn</b> v[s] = −1: symbol[hoch--] ← s;  nächster[s] ← 1
+    <b>sonst</b>:          nächster[s] ← v[s]
+σ ← N/2 + N/8 + 3;  stelle ← 0
+<b>für</b> s ← 0 <b>bis</b> hoechstes:
+    <b>wiederhole</b> v[s]-mal:
+        symbol[stelle] ← s
+        stelle ← (stelle + σ) mod N
+        <b>solange</b> stelle > hoch:  stelle ← (stelle + σ) mod N     <i>Endplätze überspringen</i>
+<b>wenn</b> stelle ≠ 0: Fehler
+<b>für</b> i ← 0 <b>bis</b> N−1:
+    s ← symbol[i];  k ← nächster[s]++
+    bits[i] ← A − ⌊log2 k⌋;  grund[i] ← k · 2^bits[i] − N</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/zstd/Zstdfse.java</code>. Lesen: <code>anfang</code> liest <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> Bits als ersten Zustand, <code>symbol(x)</code> schlägt nach, <code>weiter(x)</code> liest <code>bits[x]</code> Bits und addiert <code>grund[x]</code>.</p>
+
+<h3>Rechenbeispiel</h3>
+<p>Genauigkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">A = 5</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">N = 32</annotation></semantics></math>, Verteilung für die Symbole 0 bis 3: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>1</mn><mo>,</mo><mn>6</mn><mo>,</mo><mn>16</mn><mo>,</mo><mn>9</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(-1, 6, 16, 9)</annotation></semantics></math>, Summe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mn>6</mn><mo>+</mo><mn>16</mn><mo>+</mo><mn>9</mn><mo>=</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">1 + 6 + 16 + 9 = 32</annotation></semantics></math>. Die Schrittweite ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><mo>=</mo><mn>16</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>3</mn><mo>=</mo><mn>23</mn></mrow><annotation encoding="application/x-tex">\sigma = 16 + 4 + 3 = 23</annotation></semantics></math>. Die Tabelle, mit <code>Zstdfse.ausVerteilung</code> über Reflexion berechnet, nach Symbolen geordnet:</p>
+<table>
+  <tr><th>Symbol (Häufigkeit)</th><th>Zustände: Bits → Folgezustände</th></tr>
+  <tr><td>0 (−1)</td><td>31: 5 → 0…31</td></tr>
+  <tr><td>1 (6)</td><td>14: 2 → 0…3 · 19: 2 → 4…7 · 23: 2 → 8…11 · 28: 2 → 12…15 · 0: 3 → 16…23 · 5: 3 → 24…31</td></tr>
+  <tr><td>2 (16)</td><td>1, 2, 3, 6, 7, 10, 11, 12, 15, 16, 20, 21, 24, 25, 29, 30: je 1 Bit → 0–1, 2–3, …, 30–31</td></tr>
+  <tr><td>3 (9)</td><td>26: 1 → 0–1 · 27: 1 → 2–3 · 4: 2 → 4…7 · 8: 2 → 8…11 · 9: 2 → 12…15 · 13: 2 → 16…19 · 17: 2 → 20…23 · 18: 2 → 24…27 · 22: 2 → 28…31</td></tr>
+</table>
+<p>Jede Zeile deckt die Folgezustände 0 bis 31 genau einmal ab. Symbol 2 (Wahrscheinlichkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">1/2</annotation></semantics></math>) kostet immer 1 Bit; Symbol 3 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>9</mn><mo>/</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">9/32</annotation></semantics></math>, Information <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>9</mn><mo>/</mo><mn>32</mn><mo stretchy="false">)</mo><mo>≈</mo><mn>1,83</mn></mrow><annotation encoding="application/x-tex">-\log_2(9/32) \approx 1{,}83</annotation></semantics></math> Bit) kostet in zwei Zuständen 1 Bit und in sieben Zuständen 2 Bit; Symbol 0 kostet 5 Bit.</p>
+
+<h2 id="verteilung">Wie die Verteilung im Strom steht</h2>
+<p>Eine Verteilung wird <b>vorwärts</b> gelesen, Bits vom niederwertigen Ende jedes Bytes an – im Gegensatz zum Bitstrom, der danach folgt. Die ersten 4 Bit sind <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>−</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">A - 5</annotation></semantics></math>. Dann folgen die Häufigkeiten mit einer <b>schrumpfenden</b> Bitbreite: je weniger vom Zustandsraum noch zu vergeben ist, desto weniger Bits braucht die nächste Zahl. Innerhalb einer Breite gibt es zusätzlich einen Sonderbereich kleiner Werte, die mit einem Bit weniger auskommen. Gespeichert wird die Häufigkeit plus eins (so wird <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math> zu 0). Nach einer Häufigkeit 0 folgt eine Wiederholungszahl in Zwei-Bit-Gruppen für weitere Nullen; der Wert 3 heißt „drei weitere, und es geht weiter“.</p>
+<pre class="pseudo">A ← bits(4) + 5;  N ← 2^A
+rest ← N + 1;  schwelle ← N;  breite ← A + 1;  s ← 0
+<b>solange</b> rest > 1 <b>und</b> s ≤ hoechstesSymbol:
+    <b>wenn</b> vorige Häufigkeit war 0:
+        weitere ← 0
+        <b>solange</b> schau(2) = 3:  weitere ← weitere + 3;  nimm(2)
+        weitere ← weitere + bits(2);  setze so viele Symbole auf 0;  <b>weiter</b>
+    grenze ← 2·schwelle − 1 − rest
+    w ← schau(breite);  klein ← w mod schwelle
+    <b>wenn</b> klein &lt; grenze:  zahl ← klein;  nimm(breite − 1)          <i>Sonderbereich</i>
+    <b>sonst</b>:  zahl ← w mod (2·schwelle);  <b>wenn</b> zahl ≥ schwelle: zahl ← zahl − grenze
+            nimm(breite)
+    zahl ← zahl − 1                                                 <i>−1 ist erlaubt</i>
+    rest ← rest − |zahl|;  v[s++] ← zahl
+    <b>solange</b> rest &lt; schwelle:  breite ← breite − 1;  schwelle ← schwelle / 2
+<b>wenn</b> rest ≠ 1: Fehler "summiert sich nicht auf N"
+Tabelle ← ausVerteilung(v, s − 1, A);  verbraucht ← aufgerundete Bytes</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/zstd/Zstdfse.java</code> (<code>liesVerteilung</code>, innere Klasse <code>Vorwaerts</code>). Fehlende Bits hinter dem Abschnitt zählen beim Vorausschauen als 0; wer mehr als vier Byte darüber hinaus verbrauchen will, wird abgewiesen.</p>
+
+<h2 id="rueckwaerts">Der rückwärts gelesene Bitstrom</h2>
+<p>Innerhalb eines Bytes laufen die Bits vom niederwertigen Ende, der Strom als Ganzes aber vom <b>letzten</b> Byte zum ersten. Im letzten Byte steht deshalb kein Datenbit zuoberst, sondern eine <b>Marke</b>: das höchste gesetzte Bit sagt, wo die Nutzbits aufhören; es und die Nullen darüber sind Füllung. Mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> führenden Nullen im letzten Byte hat ein Strom aus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> Byte</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mn>8</mn><mi>m</mi><mo>−</mo><mo stretchy="false">(</mo><mi mathvariant="normal">λ</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">8m - (\lambda + 1)</annotation></semantics></math></p>
+<p>Nutzbits. Beispiel aus der <code>Zstdbausteinprobe</code>: das einzelne Byte <code>0x05</code> = <code>0000 0101</code> hat die Marke auf Bit 2 und darunter zwei Nutzbits mit dem Wert <code>01</code>. Ein letztes Byte 0 ist ein Fehler.</p>
+<pre class="pseudo"><b>anfang</b>(daten, ab, m):
+    <b>wenn</b> m ≤ 0 <b>oder</b> daten[ab+m−1] = 0: Fehler
+    stelle ← 8m − (führende Nullen des letzten Bytes + 1)
+<b>funktion</b> bits(n):   <i>das oberste zuerst</i>
+    <b>wenn</b> stelle − n &lt; 0: Fehler "Bitstrom zu Ende"
+    <b>wiederhole</b> n-mal: stelle ← stelle − 1;  w ← 2w + Bit (stelle mod 8) von Byte (stelle div 8)
+<b>funktion</b> schau(n):  wie bits, aber ohne zu verbrauchen; Bits unter Stelle 0 zählen als 0
+<b>funktion</b> bitsMitNullen(n): w ← schau(n); stelle ← stelle − n   <i>darf negativ werden</i></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/zstd/Zstdbits.java</code>.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Im Sequenzstrom wird streng gelesen – ein Zugriff unter Stelle 0 ist ein Fehler. Bei den FSE-kodierten Huffman-Gewichten und beim Lesen von Huffman-Codes mit der größten Codelänge auf einmal zählen fehlende Bits dagegen als 0: der Kodierer hat dafür gesorgt, dass die aufgefüllten Nullen dasselbe ergeben. Geprüft wird bei den Literalen danach, und schärfer: nach dem letzten Symbol eines Stroms müssen genau null Bits übrig sein.</div>
+
+<h2 id="huffman">Huffman über Gewichte</h2>
+<p>zstd überträgt für die Literale nicht die Codelängen, sondern <b>Gewichte</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">w_s</annotation></semantics></math>. Ein Gewicht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">w &gt; 0</annotation></semantics></math> belegt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>w</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{w-1}</annotation></semantics></math> Anteile des Coderaums, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">w = 0</annotation></semantics></math> heißt „kommt nicht vor“. Aus der Summe der übertragenen Gewichte folgen die größte Codelänge und das <b>letzte</b> Gewicht, das nicht im Strom steht:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>S</mi><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>s</mi></mrow></munder><msup><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>w</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>−</mo><mn>1</mn></mrow></msup><mo>,</mo><mspace width="2em"/><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mo stretchy="false">⌊</mo><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>S</mi><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn><mo>,</mo><mspace width="2em"/><msup><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>w</mi></mrow><mrow><mtext>letzt</mtext></mrow></msub><mo>−</mo><mn>1</mn></mrow></msup><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub></mrow></msup><mo>−</mo><mi>S</mi></mrow><annotation encoding="application/x-tex">S = \sum_{s} 2^{w_s - 1}, \qquad L_{\max} = \lfloor \log_2 S \rfloor + 1, \qquad 2^{w_{\text{letzt}} - 1} = 2^{L_{\max}} - S</annotation></semantics></math></p>
+<p>Der Rest <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub></mrow></msup><mo>−</mo><mi>S</mi></mrow><annotation encoding="application/x-tex">2^{L_{\max}} - S</annotation></semantics></math> muss eine Zweierpotenz sein. Die Codelänge eines Symbols ist dann <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>l</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>=</mo><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>+</mo><mn>1</mn><mo>−</mo><msub><mrow><mi>w</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">l_s = L_{\max} + 1 - w_s</annotation></semantics></math>.</p>
+<p><b>Rechenbeispiel</b> (das Beispiel aus RFC 8878, nachgerechnet mit <code>Zstdhuff.ausGewichten</code>): die Gewichte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>4</mn><mo>,</mo><mn>3</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(4, 3, 2, 0, 1)</annotation></semantics></math> der Symbole 0 bis 4 ergeben <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>=</mo><mn>8</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>2</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn>15</mn></mrow><annotation encoding="application/x-tex">S = 8 + 4 + 2 + 0 + 1 = 15</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">L_{\max} = 4</annotation></semantics></math>, Rest <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>16</mn><mo>−</mo><mn>15</mn><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">16 - 15 = 1</annotation></semantics></math>, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mn>5</mn></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">w_5 = 1</annotation></semantics></math>. Die Codelängen sind 1, 2, 3, –, 4, 4.</p>
+<table>
+  <tr><th>Symbol</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+  <tr><td>Gewicht</td><td>4</td><td>3</td><td>2</td><td>0</td><td>1</td><td>1 (hergeleitet)</td></tr>
+  <tr><td>Code</td><td><code>1</code></td><td><code>01</code></td><td><code>001</code></td><td>–</td><td><code>0000</code></td><td><code>0001</code></td></tr>
+</table>
+<p>Die kanonische Zuweisung läuft <b>andersherum</b> als bei Deflate: zstd vergibt die längsten Codes zuerst, also an die Symbole mit dem kleinsten Gewicht, innerhalb eines Gewichts nach Symbolnummer. Mit der Deflate-Reihenfolge entstünde eine vollständige Tabelle, die andere Symbole liefert.</p>
+<p>Gelesen wird mit einer Tabelle über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub></mrow></msup></mrow><annotation encoding="application/x-tex">2^{L_{\max}}</annotation></semantics></math> Einträge: man sieht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub></mrow><annotation encoding="application/x-tex">L_{\max}</annotation></semantics></math> Bits an, schlägt Symbol und wahre Codelänge nach und verbraucht nur so viele Bits.</p>
+
+<h3>Pseudocode – <code>Zstdhuff.ausGewichten</code> und <code>symbol</code></h3>
+<pre class="pseudo">S ← Σ 2^(w−1) über w > 0;  <b>wenn</b> S = 0: Fehler
+L ← Bitlänge(S);  voll ← 2^L;  rest ← voll − S
+<b>wenn</b> rest keine Zweierpotenz: Fehler
+w[letztes] ← Bitlänge(rest)
+<b>für</b> ℓ ← L <b>abwärts bis</b> 1:                          <i>längste Codes zuerst</i>
+    anfang[ℓ] ← stelle;  stelle ← stelle + (Zahl der Symbole mit Länge ℓ) · 2^(L−ℓ)
+<b>für</b> jedes Symbol s mit w[s] > 0:
+    ℓ ← L + 1 − w[s]
+    fülle 2^(L−ℓ) Einträge ab anfang[ℓ] mit (s, ℓ);  anfang[ℓ] += 2^(L−ℓ)
+
+<b>funktion</b> symbol(strom):  v ← strom.schau(L);  strom.nimm(länge[v]);  <b>gib</b> sym[v]</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/zstd/Zstdhuff.java</code>.</p>
+
+<h3>Wie die Gewichte im Strom stehen</h3>
+<ul>
+  <li>Kopfbyte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>≥</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">h \ge 128</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>−</mo><mn>127</mn></mrow><annotation encoding="application/x-tex">h - 127</annotation></semantics></math> Gewichte folgen direkt, je 4 Bit, das erste im oberen Halbbyte.</li>
+  <li>Kopfbyte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>&lt;</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">h &lt; 128</annotation></semantics></math>: die nächsten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi></mrow><annotation encoding="application/x-tex">h</annotation></semantics></math> Byte sind FSE-kodiert, mit einer Verteilung der Genauigkeit höchstens 6. Gelesen wird mit <b>zwei abwechselnden Zuständen</b>. Das Ende steht nirgends als Zahl: es ist erreicht, wenn eine Fortschaltung über den Stromanfang hinausgreift; das dann noch anstehende Symbol des anderen Zustands gehört dazu.</li>
+</ul>
+<pre class="pseudo">za ← anfang();  zb ← anfang();  n ← 0
+<b>wiederhole</b>:
+    w[n++] ← sym(za);  za ← weiterNachsichtig(za)
+    <b>wenn</b> übrig &lt; 0:  w[n++] ← sym(zb);  <b>abbrechen</b>
+    w[n++] ← sym(zb);  zb ← weiterNachsichtig(zb)
+    <b>wenn</b> übrig &lt; 0:  w[n++] ← sym(za);  <b>abbrechen</b></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/zstd/Zstdblock.java</code> (<code>liesBaum</code>).</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b><code>Zstdbausteinprobe</code> (52 Prüfungen):</b> die Endmarke des rückwärts gelesenen Stroms an Einzelbytes, 400 rückwärts eingebettete Felder zu 0 bis 32 Bit; die drei vorgegebenen Verteilungen (LL, ML, OF) summieren sich richtig, haben die <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>-Symbole oben und stimmen mit einer Konstruktion nach dem Wortlaut von RFC 8878 4.1.1 überein; ANS-Eigenschaften über 40 gerechnete Verteilungen der Genauigkeit 5 bis 9; Verteilungsköpfe, von einem eigenen Schreiber erzeugt und zurückgelesen (60 Verteilungen, Nullläufe der Längen 1, 3, 4, 7, 18); 500 Symbole gegen einen eigenen FSE-Kodierer; das Huffman-Beispiel der RFC mit elf Symbolen; 60 gerechnete Huffman-Bäume zu je 200 Symbolen; Fehlerfälle (Summe falsch, alle Gewichte null, Rest keine Zweierpotenz).</li>
+  <li>Drei Fehler, die die Formatprobe beim Bau gefunden hat und die als Gegenproben stehen: eine vorgegebene ML-Verteilung mit den <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>-Symbolen an falscher Stelle (Summe stimmte, Zustand 57 lieferte 32 statt 52), die umgekehrte kanonische Reihenfolge, und ein zu strenger Gewichtsstrom.</li>
+</ul>
+<p>Nicht einzeln an Handblöcken prüfbar sind FSE-kodierte Gewichte und FSE-gepackte Sequenztabellen; sie deckt die <code>Zstdprobe</code> über die Anker aus libzstd (siehe <a href="zstd-theorie.html">Rahmen und Sequenzen</a>).</p>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Nur lesend: es gibt keine FSE-Normierung, keine Gewichtssuche und keinen Kodierer im Hauptcode.</li>
+  <li>Die Tabellen werden je Block neu gebaut (bis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^9</annotation></semantics></math> Zustände); schnellere Leser mit mehreren Symbolen je Zugriff gibt es nicht.</li>
+  <li>Genauigkeiten: LL und ML höchstens 9, OF höchstens 8, Huffman-Gewichte höchstens 6 – größere Angaben werden abgewiesen.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>J. Duda: Asymmetric numeral systems: entropy coding combining speed of Huffman coding with compression rate of arithmetic coding. arXiv:1311.2540, 2013.</li>
+  <li>Y. Collet, M. Kucherawy: RFC 8878, Zstandard Compression and the 'application/zstd' Media Type, 2021.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Hintergrund zu <a href="index.html#zstd">Zstandard</a> · weiter: <a href="zstd-theorie.html">Rahmen, Literale und Sequenzen</a> · Proben: <code>Zstdbausteinprobe</code>, <code>Zstdprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

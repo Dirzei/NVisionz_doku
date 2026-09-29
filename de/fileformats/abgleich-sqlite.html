@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQLite — Abgleich gegen Spezifikation und die SQLite-Bibliothek selbst – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite aktiv" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › SQLite — Abgleich gegen Spezifikation und die SQLite-Bibliothek selbst</span><a class="sprachwahl" href="../../en/fileformats/abgleich-sqlite.html">English</a></div>
+<!-- erzeugt aus sqlite/ABGLEICH.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · Abgleich</div>
+  <h1>SQLite — Abgleich gegen Spezifikation und die SQLite-Bibliothek selbst</h1>
+</header>
+
+<p><b>Stand:</b> 2026-09-07<br><b>Unsere Umsetzung:</b> <code>envisionz.fileformats.sqlite</code> — <code>SqliteQuelle</code>, <code>SqliteSeiten</code>, <code>SqliteSatz</code>, <code>SqliteTabelle</code>, <code>Varint</code>, <code>SqliteReste</code>, rein lesend<br><b>Spezifikation:</b> <i>SQLite Database File Format</i>, öffentlich und ungewöhnlich vollständig; die Fundstellen nennen Kopf-Offsets und Seitenarten<br><b>Verglichen mit:</b> SQLite 3 über Pythons <code>sqlite3</code> 2.6.0 — <b>die Referenzumsetzung selbst</b><br><b>Prüfstand:</b> <code>Sqliteprobe</code> 138, <code>OhneRowidprobe</code> 28, <code>Resteprobe</code> 22 — zusammen 188 Prüfungen, vier Anker von SQLite selbst, sieben Gegenproben</p>
+<p><b>Das Vergleichsprodukt.</b> <b>SQLite</b> ist zugleich Eigner und Referenzumsetzung des Formats, begonnen im August 2000 von <b>D. Richard Hipp</b>, entwickelt bei <i>Hwaci</i>, Code und Dokumentation gemeinfrei. Es ist die verbreitetste Datenbank-Maschine ueberhaupt. Gemessen wurde ueber Pythons mitgeliefertes <code>sqlite3</code>-Modul, das nichts anderes tut, als diese C-Bibliothek anzusprechen.</p>
+<p><b>Warum ausgerechnet dieses.</b> Weil SQLite selbst das Vergleichsstueck ist. Das Dateiformat ist <b>normativ beschrieben</b> — die Beschreibung sagt von sich, dass sie das Format aller Fassungen seit 3.0.0 definiert —, und die Bibliothek daneben ist genau diese Beschreibung in ausfuehrbarer Form. Naeher kommt man an eine Wahrheit nicht.</p>
+<p><b>Deckung, aus den Zeilen unten gerechnet:</b> von 42 Merkmalen sind bei uns 39 vorhanden, 1 teilweise und 2 nicht vorhanden; beim Vergleichsstueck 36 / 2 / 4.</p>
+<p><span class="ampel gruen">●</span> vorhanden · <span class="ampel rot">●</span> nicht vorhanden · <span class="ampel gelb">●</span> teilweise · – nicht zutreffend</p>
+<p><b>Die Spalte <i>Anmerkung</b></i> verweist auf Abschnitt 5 dieses Dokuments — nicht auf die Punkteliste des Arbeitsbereichs. Das Wort davor sagt, <i>worum es sich handelt</i>: <b>Lücke</b> ist etwas, das uns fehlt und offen ist; <b>entschieden</b> ist etwas, das wir absichtlich nicht tun; <b>Merkmal</b> ist eine Eigenschaft des Formats, die beide Umsetzungen betrifft; <b>dort offen</b> ist eine Lücke des Vergleichsprodukts. Nur die Lücken sind Arbeit — sie stehen gesammelt in Abschnitt 5.1 und als <i>ein</i> Punkt in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Merkmalsvergleich</h2>
+<p><b>Dieser Abgleich hat eine Besonderheit:</b> das Vergleichsstück ist nicht eine zweite Umsetzung, sondern <b>die</b> Umsetzung. Was SQLite tut, <i>ist</i> das Format — die Spezifikation beschreibt eine Bibliothek, nicht umgekehrt. Ein Befund gegen sie wäre kein Befund, sondern ein Missverständnis unsererseits. Der Abschnitt 5.4 ist deshalb hier leer, und das ist keine Zurückhaltung.</p>
+<h3>Datei und Seiten</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>SQLite 3 über Pythons <code>sqlite3</code> 2.6.0 — <b>die Referenzumsetzung selbst</b></th><th>Anmerkung</th></tr>
+  <tr><td>Kennung <code>SQLite format 3\0</code></td><td>Byte 0–15</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Seitengrösse 512 bis 65536</td><td>Byte 16</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Seitenzahl im Kopf, geprüft gegen die Dateilänge</td><td>Byte 28</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S1</td></tr>
+  <tr><td>Seitenzahl gilt nur bei passendem Änderungszähler</td><td>Byte 24, 92</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S1</td></tr>
+  <tr><td>Textkodierung UTF-8</td><td>Byte 56</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Textkodierung UTF-16</td><td>Byte 56</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S9</td></tr>
+  <tr><td>Reservierter Platz am Seitenende</td><td>Byte 20</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Tabellen-B-Baum, Blatt- und innere Seiten</td><td>Seitenart 13, 5</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Index-B-Baum, Blatt- und innere Seiten</td><td>Seitenart 10, 2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S2</td></tr>
+  <tr><td>Überlaufseiten</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S3</td></tr>
+  <tr><td>Freiliste</td><td>Byte 32</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S4</td></tr>
+  <tr><td>Verwaiste Seiten und Freiblöcke innerhalb einer Seite</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal S4</td></tr>
+  <tr><td>Zeigerkarten (<code>ptrmap</code>) bei <code>auto_vacuum</code></td><td>Byte 52</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S10</td></tr>
+  <tr><td>Die Zeigerkarte beschreibt <b>sich selbst nicht</b></td><td>Byte 52</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S10</td></tr>
+  <tr><td>Die Kette einer Seite bis zu ihrer Wurzel</td><td>Byte 52</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal S10</td></tr>
+</table>
+<h3>Sätze und Typen</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>SQLite 3 über Pythons <code>sqlite3</code> 2.6.0 — <b>die Referenzumsetzung selbst</b></th><th>Anmerkung</th></tr>
+  <tr><td>Satzkopf mit Serientypen als Varint</td><td>Record Format</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S5</td></tr>
+  <tr><td><code>NULL</code></td><td>Serientyp 0</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Ganze Zahlen 1, 2, 3, 4, 6 und 8 Byte</td><td>Serientyp 1–6</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Gleitkomma 8 Byte</td><td>Serientyp 7</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Die Sonderwerte 0 und 1 ohne Bytes</td><td>Serientyp 8, 9</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Rohbytes</td><td>Serientyp gerade ≥ 12</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Text</td><td>Serientyp ungerade ≥ 13</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>rowid</code> als versteckte Spalte</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>INTEGER PRIMARY KEY</code> ist der <code>rowid</code></td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S6</td></tr>
+  <tr><td><code>WITHOUT ROWID</code></td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S2</td></tr>
+  <tr><td>Spaltennamen aus dem Erzeugungstext</td><td>sqlite_schema</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S7</td></tr>
+  <tr><td>Unsichere Spaltennamen werden gemeldet</td><td>sqlite_schema</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal S7</td></tr>
+</table>
+<h3>Begleitdateien und Zustand</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>SQLite 3 über Pythons <code>sqlite3</code> 2.6.0 — <b>die Referenzumsetzung selbst</b></th><th>Anmerkung</th></tr>
+  <tr><td>Journal <code>-journal</code> wird bemerkt, nicht angefasst</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>entschieden S8</td></tr>
+  <tr><td>WAL <code>-wal</code> wird bemerkt, nicht angefasst</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden S8</td></tr>
+  <tr><td>Inhalt einer WAL wird eingerechnet</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S11</td></tr>
+  <tr><td>Die neueste Fassung einer Seite gewinnt</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S11</td></tr>
+  <tr><td>Das <b>Salz</b> trennt die Runden</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S11</td></tr>
+  <tr><td>Die Prüfsumme läuft <b>fortlaufend</b> über alle Rahmen</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S11</td></tr>
+  <tr><td>Nur ein <b>Abschlussrahmen</b> gilt</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S11</td></tr>
+  <tr><td>Die Seitenzahl aus dem WAL geht vor</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S11</td></tr>
+  <tr><td><code>-shm</code> wird bemerkt, nicht angefasst</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden S8</td></tr>
+  <tr><td>Sichten, Auslöser, virtuelle Tabellen werden <b>genannt</b></td><td>sqlite_schema</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal S12</td></tr>
+  <tr><td>Das Modul einer virtuellen Tabelle</td><td>sqlite_schema</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal S12</td></tr>
+  <tr><td>Die Schattentabellen einer virtuellen Tabelle</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal S12</td></tr>
+  <tr><td>Eine Sicht wird <b>ausgeführt</b></td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden S15</td></tr>
+  <tr><td>SQL ausführen</td><td>—</td><td><span class="ampel gelb">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden S13</td></tr>
+  <tr><td>Schreiben</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden S14</td></tr>
+</table>
+
+<h2 id="a2">Was gemessen wurde</h2>
+<p>Sechs Datenbanken, mit Pythons <code>sqlite3</code> <b>erzeugt</b> und mit unserem Leser gelesen: Grundtypen samt <code>NULL</code> und leerem Blob; eine <code>WITHOUT ROWID</code>-Tabelle mit zusammengesetztem Schlüssel; dreissig Sätze zu je 5000 Zeichen, die Überlaufseiten erzwingen; alle Serientypen an ihren Grenzen (2⁶², 1e308, ein Text von 300 Zeichen, Bytes 0…19, negative Null); fünfzig Sätze mit einem eigenen Index; und zweihundert Sätze, von denen die Hälfte wieder gelöscht wurde, um eine Freiliste zu erzeugen.</p>
+<p><b>Alle sechs gelesen, Werte gleich.</b> Die <code>WITHOUT ROWID</code>-Tabelle kommt mit der richtigen Spaltenreihenfolge heraus, die 5000-Zeichen-Texte vollständig über die Überlaufkette, die hundert übriggebliebenen Sätze der Freilisten-Datenbank in der richtigen Zahl.</p>
+<p>Eine einzige Kleinigkeit ging auseinander: die <b>negative Null</b>. SQLite legt sie als <code>-0.0</code> ab, unser Leser gibt <code>0</code> aus. Das ist keine Abweichung im Lesen — der Rohstand am <code>Wert</code> trägt die acht Byte unverändert —, sondern eine der Darstellung. Sie steht hier trotzdem, weil sie in einer Prüfung „Wert für Wert gleich" auffallen würde und man dann eine halbe Stunde an der falschen Stelle sucht.</p>
+
+<h2 id="a3">Was am Format schwierig ist</h2>
+<p><b>Die Seitenzahl im Kopf gilt nicht immer.</b> Byte 28 nennt die Zahl der Seiten — aber nur, wenn Byte 92 zum Änderungszähler in Byte 24 passt. Passt es nicht, stammt die Zahl aus einer älteren SQLite-Fassung, die sie gar nicht führte, und gilt die Dateilänge. Wer das übersieht, liest bei alten Dateien zu wenig oder zu viel.</p>
+<p><b>Der Satzkopf beschreibt sich selbst — mit Varints.</b> Jeder Serientyp ist eine Zahl veränderlicher Länge, und aus ihr folgt die Byte-Zahl des Wertes: gerade ab 12 heisst Blob, ungerade ab 13 heisst Text, und die Länge ist <code>(n−12)/2</code> beziehungsweise <code>(n−13)/2</code>. Wer den Varint um ein Byte falsch liest, bekommt einen Serientyp, den es gibt, mit einer Länge, die es gibt — und ab da ist der ganze Satz verschoben.</p>
+<p><b><code>INTEGER PRIMARY KEY</code> ist kein Feld.</b> Eine so erklärte Spalte steht <b>nicht</b> im Satz; ihr Wert ist der <code>rowid</code> des B-Baum-Eintrags. Ein Leser, der stur die Spalten des Erzeugungstextes gegen die Werte des Satzes hält, ist ab dieser Spalte um eine verschoben — und die Verschiebung sieht aus wie ein Typfehler, nicht wie ein Zählfehler.</p>
+<p><b><code>WITHOUT ROWID</code> dreht drei Dinge um.</b> Solche Tabellen liegen als Index-B-Baum (Seitenarten 2 und 10), der Schlüssel steht <b>vorn</b> im Satz statt an seiner erklärten Stelle, und es gibt keinen <code>rowid</code>. Wer das nicht auseinanderhält, liest die Spalten in der falschen Reihenfolge — mit lauter gültigen Werten.</p>
+<p><b>Was gut ist:</b> die Formatbeschreibung von SQLite ist die beste in dieser ganzen Sammlung. Sie ist vollständig, öffentlich, mit Byte-Offsets, und sie wird gepflegt. Bei keinem anderen Format hier musste so wenig gemessen und so viel nachgeschlagen werden.</p>
+
+<h2 id="a4">Die Punkte</h2>
+<p>Die Spalte <i>Anmerkung</i> nennt die Art vor der Kennung. Nur die <b>Lücken</b> sind Arbeit.</p>
+<h3>Unsere offenen Lücken — das ist die Arbeit</h3>
+<h3>Bewusste Entscheidungen — nichts zu tun</h3>
+<p><b>S15</b> (entschieden) — Eine Sicht wird genannt, nicht ausgeführt</p>
+<p>Eine Sicht ist eine <b>gespeicherte Abfrage</b> und hat keine Seiten — ihre Wurzelseite ist null. Sie als Tabelle anzubieten hiesse, sie auszuführen, und dafür bräuchte es eine SQL-Maschine: Ausdrücke, Verbünde, Sortierung, Gruppierung. Das ist ein eigenes Modul und keine Zeile, und es wäre auch ein anderes Versprechen — dieser Leser sagt, <b>was in der Datei steht</b>, und in der Datei steht die Abfrage und nicht ihr Ergebnis.</p>
+<p>Der Erzeugungstext steht vollständig zur Verfügung; wer die Sicht auswerten will, hat sie. Dasselbe gilt für einen <b>Auslöser</b>: er ist Verhalten und keine Daten.</p>
+<p><b>S8</b> (entschieden) — Begleitdateien werden bemerkt und nicht angefasst</p>
+<p>Journal, WAL und <code>-shm</code> werden gefunden und im Befund genannt — angelegt, aufgeräumt oder zurückgespielt wird nichts. Das ist der Kern des Nur-Lese-Grundsatzes dieses Moduls: <b>ein Leser, der repariert, hat schon verloren.</b> Die SQLite-Bibliothek tut hier zwangsläufig etwas anderes; sie ist auch keine Leseschnittstelle, sondern eine Datenbank.</p>
+<p><b>S13</b> (entschieden) — SQL — nur so viel wie nötig</p>
+<p>Wir werten den <b>Erzeugungstext</b> aus, um Spaltennamen und Typen zu bekommen, und es gibt darüber einen eigenen SQL-Aufsatz (<code>Sqlprobe</code>, 116 Prüfungen, Punkt DB10) über <b>allen</b> Datenquellen. Was es nicht gibt, ist eine SQL-Ausführung <i>in</i> der Datei: keine Auslöser, keine Sichten, keine Funktionen. Ein Formatleser, der SQL ausführt, ist eine Datenbank.</p>
+<p><b>S14</b> (entschieden) — Schreiben</p>
+<p>Kein Schreibpfad, keine Reparatur, keine Migration beim Öffnen — gemessen von <code>Nurlesenprobe</code> über 24 Muster und von <code>Datenprobe.nurLesend()</code> Byte für Byte vor und nach einem vollständigen Durchlauf.</p>
+<h3>Eigenschaften des Formats — beide betreffend</h3>
+<p><b>S11</b> (Merkmal) — Das WAL wird eingerechnet — geschlossen am 2026-09-07</p>
+<p>Im WAL-Betrieb schreibt SQLite geänderte Seiten <b>nicht</b> in die Hauptdatei, sondern hängt sie an eine Nebendatei an; erst ein <i>Checkpoint</i> trägt sie ein. Liegt also ein <code>-wal</code> daneben, zeigt die Hauptdatei einen <b>älteren</b> Stand — und zwar lautlos: sie ist in sich vollständig, jede Seite stimmt, jede Prüfsumme geht auf, nur die neuesten Sätze fehlen. <b>Ein Leser, der das WAL übergeht, liefert einwandfreie, veraltete Daten</b>, und das ist die unangenehmste Art, falsch zu liegen.</p>
+<p>Der Anker zeigt es an einer Zahl: dieselbe Hauptdatei liefert <b>fünf</b> Sätze allein und <b>neun</b> mit ihrem WAL — einer geändert, einer gelöscht, fünf dazugekommen. Der Sollwert ist der von SQLite selbst, das beide Fälle liest. Und das WAL, um das es geht, ist 568 Byte gross und enthält <b>einen</b> Rahmen.</p>
+<p><b>Vier Regeln, und jede einzelne ist ein möglicher stiller Fehler.</b> Erstens: <b>dieselbe Seite steht mehrfach darin</b>. Wird sie dreimal geändert, steht sie dreimal im WAL, und nur die letzte gilt — wer von vorn liest und den ersten Treffer nimmt, bekommt den zweitältesten Stand, also schlimmer als gar keinen. Zweitens: das <b>Salz</b>. Nach einem Checkpoint fängt SQLite von vorn an und wechselt die zwei Salzwerte im Kopf; die alten Rahmen bleiben physisch stehen, denn die Datei wird nicht gekürzt. Drittens: die <b>Prüfsumme läuft fortlaufend</b> — die eines Rahmens setzt auf der des vorigen auf, ein beschädigter Rahmen macht damit alle folgenden ungültig. Ein WAL ist eine Kette und keine Sammlung. Viertens: nur ein Rahmen mit einer <b>Datenbankgrösse ungleich null</b> schliesst eine Änderung ab; Rahmen dahinter gehören zu einer, die nie fertig wurde.</p>
+<p><b>Das Salz ist die einzige Prüfung, die ihren Fall allein fängt</b>, und das ist nicht selbstverständlich: die fortlaufende Prüfsumme deckt es <b>nicht</b> ab. Sie läuft über die ersten <b>acht</b> Byte des Rahmenkopfes — Seitennummer und Datenbankgrösse — und dann über die Seite; die Salzwerte stehen bei Byte 8 bis 15 und bleiben aussen vor. Ein Rahmen mit fremdem Salz hat also eine einwandfreie Prüfsumme. Die Gegenprobe dazu ist ein von Hand umgeschriebenes WAL, und SQLite liest dieselbe Datei und zeigt den alten Stand.</p>
+<p><b>Und eine Kennzahl, die das Gegenteil ihres Namens sagt.</b> Der WAL-Kopf fängt mit <code>377f0682</code> oder <code>377f0683</code> an, und die Zahl sagt auch, in welcher Wortreihenfolge die Prüfsumme gerechnet wird. Die <b>gerade</b> Zahl bedeutet <b>kleine</b> Reihenfolge: in SQLite heisst das Feld <code>bigEndCksum</code> und wird als <code>magie &amp; 1</code> gerechnet, die gerade Kennzahl setzt es also auf null. Wer vom Namen auf den Wert schliesst, hat es genau andersherum — und verwirft dann jeden Rahmen, ohne dass jemand es merkt: die Datei öffnet sich, die Daten sind heil, und es sind die von vorgestern. <b>Gemessen, nicht gelesen.</b></p>
+<p>Schliesslich: <b>die Datenbank kann im WAL kürzer sein als die Hauptdatei.</b> Ein <code>DELETE</code> mit <code>VACUUM</code> kürzt sie, und die Hauptdatei bleibt erst einmal lang. Der Abschlussrahmen nennt die gültige Seitenzahl, und die geht vor.</p>
+<p><b>S10</b> (Merkmal) — Die Zeigerkarten — geschlossen am 2026-09-07</p>
+<p><code>auto_vacuum</code> räumt eine Datei beim Löschen auf: freie Seiten am Ende werden abgeschnitten, und dafür müssen belegte Seiten vom Ende nach vorn <b>verschoben</b> werden. Wer eine Seite verschiebt, muss jeden Verweis auf sie umschreiben — und dazu muss er wissen, <b>wer</b> auf sie zeigt. Genau das steht in den Zeigerkarten: zu jeder Seite ihre Art und ihr Elternteil, fünf Byte je Eintrag.</p>
+<p><b>Erkennbar sind sie nur am Kopf.</b> Byte 52 bis 55 nennen die grösste Wurzelseite; steht dort null, gibt es keine Zeigerkarten. Steht dort etwas anderes, ist <b>Seite 2 keine Datenseite</b>, und danach jede weitere Karte auch nicht. Wer das übersieht, findet mitten in einer sonst heilen Datei Seiten, deren Seitenart es nicht gibt.</p>
+<p><b>Und die Karte beschreibt sich selbst nicht.</b> Zwischen zwei Karten liegen genau so viele gewöhnliche Seiten, wie Einträge in eine Karte passen; die Karte selbst kommt in keiner Rechnung vor. Wer sie mitzählt, verschiebt sich um eine Seite je Karte — und zwar <b>erst ab der zweiten</b>. Bei einer Seitengrösse von 4096 sind das 819 Seiten, bis der Fehler zum ersten Mal sichtbar wird; bei den 512 Byte des Ankers 102. Deshalb ist der Anker klein und prüft die zweite Karte trotzdem: daran, dass sie <b>nicht</b> vorkommt.</p>
+<p>Für das Lesen einer <b>heilen</b> Datei ist das alles ohne Belang — die Bäume tragen ihre Verweise selbst, und die Karten werden übersprungen. Es zählt genau dort, wo die Bäume kaputt sind: bei einer <b>verwaisten Seite</b> ist die Zeigerkarte die einzige Stelle, die noch sagt, wohin sie gehört. <code>bisZurWurzel</code> liefert die Kette von einer Seite bis zum Wurzelknoten ihres Baumes — und damit die Antwort auf die Frage, zu welcher Tabelle ein gefundener Rest gehört (DB6). Ohne sie ist ein Rest ein Fund ohne Herkunft.</p>
+<p><b>S12</b> (Merkmal) — Sichten, Auslöser, virtuelle Tabellen — geschlossen am 2026-09-07</p>
+<p><code>schemaobjekte()</code> nennt alles aus <code>sqlite_schema</code>, was keine gewöhnliche Tabelle ist: Sichten, Auslöser und virtuelle Tabellen, jeweils mit Namen, Zugehörigkeit und Erzeugungstext. <b>Genannt, nicht angeboten</b> — warum, steht in S15. Der Unterschied zum Zustand vorher ist trotzdem der wesentliche: eine Datenbank mit fünf Sichten sah bisher aus wie eine ohne.</p>
+<p><b>Eine virtuelle Tabelle steht als <code>table</code> da und hat die Wurzelseite null.</b> Am Eintrag selbst ist sie nur am Erzeugungstext zu erkennen — <code>CREATE VIRTUAL TABLE … USING fts5(…)</code>. Ihre Daten liegen in <b>Schattentabellen</b>: <code>suche</code> legt <code>suche_data</code>, <code>suche_idx</code>, <code>suche_content</code>, <code>suche_docsize</code> und <code>suche_config</code> an. Die stehen alle als gewöhnliche Tabellen da und sind einzeln lesbar.</p>
+<p><b>Wie sie zusammengehören, sagt allein der Name</b>, und deshalb ist <code>schattentabellen(name)</code> eine <b>Vermutung</b> und keine Auslese: es gibt in der Datei keinen Verweis von der virtuellen Tabelle auf ihre Schatten. Sie steht hier trotzdem, weil ohne sie fünf Tabellen ohne erkennbaren Zweck herumstehen — und weil eine Vermutung, die als solche benannt ist, mehr wert ist als Schweigen.</p>
+<p><b>S9</b> (Merkmal) — UTF-16 als Textkodierung — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen, und wieder war nichts zu bauen.</b> Byte 56 darf 2 (UTF-16LE) oder 3 (UTF-16BE) sagen, und <code>SqliteKopf.kodierung()</code> liefert seit dem Bau die richtige Kodierung an den Kursor. Der Punkt stand offen mit der Begründung „billig zu schliessen, aber kein Prüfstück da" — und genau das war er auch: <b>keine Lücke, sondern eine Lücke in der Beleglage</b>. <code>Sqliteschreiber</code> schreibt UTF-8, weil er es so gelernt hat; ein eigener Schreiber kann diese Stelle nicht messen.</p>
+<p><code>Sqliteanker</code> trägt jetzt zwei Datenbanken, mit dem <code>sqlite3</code>-Modul über <code>PRAGMA encoding</code> erzeugt. Sie enthalten <b>Umlaute</b> — und das ist der Punkt: bei reinem ASCII stünde in UTF-16LE an jedem zweiten Byte eine Null, und eine falsche Deutung fiele sofort auf. Mit Umlauten kommt ein Zeichen heraus, das wie ein Zeichen aussieht. Zwei Gegenproben werden rot: UTF-16LE als UTF-8 deuten (drei Fehlschläge) und die Byte-Reihenfolge vertauschen (zwei).</p>
+<p>Nebenbei aufgefallen und mit erledigt: die Gegenprobe riss zuerst die <b>ganze Probe</b> mit, statt eine rote Zeile zu erzeugen — und eine Probe ohne Schlusszeile gilt als nicht gelaufen. Der Abschnitt hat jetzt eine Klammer, wie sie an anderen Stellen des Arbeitsbereichs schon steht.</p>
+<p><b>S1</b> (Merkmal) — Die Seitenzahl mit Bedingung</p>
+<p>Siehe Abschnitt 3. Wir melden beide Fälle im Befund; die Bibliothek löst sie still auf, weil sie es kann.</p>
+<p><b>S2</b> (Merkmal) — <code>WITHOUT ROWID</code> dreht die Satzform um</p>
+<p>Siehe Abschnitt 3. Der Punkt hat im Arbeitsbereich eine eigene Probe (<code>OhneRowidprobe</code>, 28 Prüfungen), weil er beim ersten Bau falsch war.</p>
+<p><b>S3</b> (Merkmal) — Überlauf ist eine Kette, kein Feld</p>
+<p>Ein Wert, der nicht in eine Seite passt, steht zum Teil in der Zelle und zum Rest in einer Kette von Überlaufseiten, deren erste vier Byte auf die nächste zeigen. Wieviel in der Zelle bleibt, hängt von der Seitengrösse und dem reservierten Platz ab — eine Formel, die man nicht raten kann.</p>
+<p><b>S5</b> (Merkmal) — Varints, und zwar grossendig</p>
+<p>SQLite legt seine Zahlen veränderlicher Länge <b>höchstwertiges Byte zuerst</b> ab, bis zu neun Byte, wobei das neunte alle acht Bits beisteuert. Das ist die andere Richtung als bei Parquet und Protobuf. Wer die Bauart von dort mitbringt, liest gültige Zahlen — die falschen.</p>
+<p><b>S6</b> (Merkmal) — Der Schlüssel, der nicht dasteht</p>
+<p>Siehe Abschnitt 3, <code>INTEGER PRIMARY KEY</code>.</p>
+<p><b>S7</b> (Merkmal) — Spaltennamen stehen in SQL, nicht in einer Liste</p>
+<p>Die einzige Stelle, an der die Spaltennamen stehen, ist der <code>CREATE TABLE</code>-Text in <code>sqlite_schema</code> — also <b>Quelltext</b>, mit Anführungszeichen in drei Bauarten, Kommentaren, Zeilenumbrüchen und Tabellenbedingungen, die aussehen wie Spalten. Wir werten ihn aus und melden es, wenn das Ergebnis unsicher ist. Diese Meldung ist keine Schwäche, sondern die einzige ehrliche Auskunft an einer Stelle, an der geraten werden muss.</p>
+<p><b>S4</b> (Merkmal) — Gelöschtes ist noch da</p>
+<p>Freiliste, Freiblöcke innerhalb einer Seite und verwaiste Seiten tragen weiter die Bytes gelöschter Sätze. <code>SqliteReste</code> (Punkt DB6, <code>Resteprobe</code> 22 Prüfungen) macht sie sichtbar. Die Bibliothek tut das nicht — sie hat keinen Grund dazu; für eine Forensik ist es der Gegenstand.</p>
+<h3>Befunde am Vergleichsprodukt</h3>
+<p><b>Keine, und das ist hier eine Aussage über die Lage, nicht über die Sorgfalt.</b> Das Vergleichsstück ist die Umsetzung, die das Format definiert. Wo wir von ihr abweichen, liegt der Fehler bei uns; wo sie etwas anders macht als die Formatbeschreibung, ist die Beschreibung veraltet. Ein Befund wäre in beiden Fällen falsch adressiert.</p>
+
+<h2 id="a5">Das Umfeld — womit diese Dateien sonst gelesen und geschrieben werden</h2>
+<p>Diese Tafel zaehlt <b>nicht</b> in die Deckung. Sie sagt nichts ueber diesen Leser, sondern ueber das Umfeld, in dem eine solche Datei entsteht — und das ist beim Lesen einer fremden Datei die wichtigere Auskunft: <b>wer sie geschrieben hat, entscheidet, welche Spielart darin steht.</b> Ein Leser, der nur die Dateien eines einzigen Schreibers kennt, haelt dessen Gewohnheiten fuer das Format.</p>
+<table>
+  <tr><th>Programm</th><th>liest</th><th>schreibt</th><th>Bemerkung</th></tr>
+  <tr><td><b>SQLite</b> (<code>sqlite3</code>)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Eigner und Referenzumsetzung zugleich; das Vergleichsprodukt dieses Abgleichs.</td></tr>
+  <tr><td><b>Jedes Mobiltelefon</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Android und iOS legen ihre Anwendungsdaten darin ab — es ist die verbreitetste Datenbank ueberhaupt.</td></tr>
+  <tr><td><b>Browser</b>, <b>Mail- und Notizprogramme</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Firefox, Chrome, Thunderbird und viele andere; wer forensisch arbeitet, trifft es staendig.</td></tr>
+  <tr><td><b>DB Browser for SQLite</b>, <b>DBeaver</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die ueblichen Anzeigeprogramme.</td></tr>
+  <tr><td><b>GeoPackage</b>, <b>MBTiles</b>, <b>Apple Photos</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Formate, die SQLite als <b>Behaelter</b> benutzen — wer SQLite liest, liest ihren Unterbau.</td></tr>
+</table>
+<p>Die Liste ist <b>nicht vollstaendig</b> und will es nicht sein. Sie nennt, was einem bei diesem Format tatsaechlich begegnet, und laesst weg, was es zwar auch kann, aber niemand dafuer benutzt.</p>
+
+<h2 id="a6">Die Java-Umsetzung — wo dieser Leser unter seinesgleichen steht</h2>
+<p><b>Warum dieser Abschnitt.</b> Alle übrigen Abgleiche dieses Moduls messen gegen ein Werkzeug in einer <b>anderen</b> Sprache. Das ist gut gegen Irrtümer über das Format und sagt nichts darüber, wo dieser Leser unter seinesgleichen steht. Entscheidend ist die Unterscheidung zwischen einem <b>reinen Nachbau in Java</b> und einem <b>Mantel um eine C-Bibliothek</b>: nur der Nachbau löst dieselbe Aufgabe unter denselben Bedingungen.</p>
+<p><b>Der Java-Normalfall ist hier ein Mantel, nicht ein Nachbau.</b> <code>xerial/sqlite-jdbc</code>, die De-facto-Standard-Bibliothek, packt vorkompilierte <code>sqlitejdbc.dll</code>/<code>.so</code>/<code>.dylib</code> ins jar und entpackt sie beim Laden — sie misst also die C-Bibliothek und nicht eine Java-Umsetzung.</p>
+<p><b>Reine JVM-Wege gibt es zwei, beide mit einem Haken.</b> <code>SQLJet</code> ist ein echter Java-Nachbau, aber <b>ohne SQL</b> — nur B-Baum-Zugriff auf niedriger Ebene; das Projekt wirkt eingeschlafen. <code>roastedroot/sqlite4j</code> übersetzt die SQLite-C-Quelle nach WebAssembly und von dort in JVM-Bytecode — kein JNI und kein Nachbau, sondern ein dritter Weg. <b>Beide nicht gemessen.</b></p>
+<p>Das ordnet diesen Leser ein: er liest die Seiten selbst, ohne C und ohne Wasm, und bringt mit <code>SqliteReste</code> und dem SQL-Aufsatz Dinge mit, die keiner der drei Java-Wege in dieser Zusammenstellung hat.</p>
+<p><b>Wie belastbar das ist.</b> Recherchiert am 2026-09-06 über Web- und GitHub-Suche; die Suchschnittstelle von Maven Central war gesperrt, eine systematische Artefaktsuche war also nicht möglich. Wo unten „nicht gemessen" steht, steht es ausdrücklich — eine genannte Bibliothek ist noch keine gemessene.</p>
+
+<footer>
+Erzeugt aus <code>envisionz-framework-fileformats/docs/sqlite/ABGLEICH.md</code> · zurück zur <a href="index.html#tabellen">Übersicht</a> · alle Formate im <a href="abgleich.html">Abgleich</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

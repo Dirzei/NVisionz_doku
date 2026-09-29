@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building blocks – bit readers, length-limited Huffman codes, run length – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite aktiv" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › Building blocks – bit readers, length-limited Huffman codes, run length</span><a class="sprachwahl" href="../../de/compress/bausteine-theorie.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.bits · .huffman · .rle</div>
+  <h1>Building blocks – bit readers, length-limited Huffman codes, run length</h1>
+  <p class="unter">The parts underneath the formats: how bits are read and written from the least or the most significant end, why Huffman codes are reversed when written, how package-merge finds the optimal code under a length limit, how canonical codes arise and are read bit by bit, and PackBits as run-length coding. With pseudocode following <code>BitLeser</code>, <code>BitSchreiber</code>, <code>BitLeserMsb</code>, <code>HuffmanCode</code>, <code>HuffmanDekoder</code> and <code>Rle</code>.</p>
+</header>
+
+<h2 id="bits">Bit orders</h2>
+<p>A bit stream is a sequence of bits stored in bytes. Open questions are in which order the bits of a byte are filled, and in which order the bits of a multi-bit number appear in the stream. The formats in the module use three combinations:</p>
+<table>
+  <tr><th>Reader</th><th>first bit of a byte</th><th>multi-bit number</th><th>formats</th></tr>
+  <tr><td><code>BitLeser</code></td><td>bit 0 (least significant)</td><td>least significant bit first</td><td>Deflate, Brotli</td></tr>
+  <tr><td><code>BitLeserMsb</code></td><td>bit 7 (most significant)</td><td>most significant bit first</td><td>bzip2</td></tr>
+  <tr><td><code>Zstdbits</code></td><td>backwards from the end of the stream</td><td>most significant bit first</td><td>zstd (see <a href="zstd-fse.html#rueckwaerts">FSE</a>)</td></tr>
+</table>
+<p><b>Worked example LSB.</b> <code>BitSchreiber</code> writes in turn 5 in 3 bits, 0 in 1 bit, <code>ABCD</code> in 16 bits and 1 in 1 bit. The result is the bytes <code>D5 BC 1A</code>: byte 0 = <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1101</mn><mspace width="0.1667em"/><mn>0</mn><mspace width="0.1667em"/><msub><mn>101</mn><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">1101\,0\,101_2</annotation></semantics></math> (the 5 at the bottom, above it the 0, at the top the lower four bits of <code>ABCD</code>), byte 1 = <code>BC</code>, byte 2 = <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0001</mn><mspace width="0.1667em"/><msub><mn>1010</mn><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">0001\,1010_2</annotation></semantics></math> (the upper four bits <code>A</code> and above them the 1).</p>
+<p><b>Worked example MSB.</b> <code>BitLeserMsb</code> over <code>A5 0F</code> reads, with <code>bits(4)</code>, <code>bits(8)</code>, <code>bits(4)</code>, the values 10, 80 (= <code>0x50</code>) and 15 – bits run across the byte boundary from top to bottom.</p>
+
+<h3>Huffman codes in an LSB stream</h3>
+<p>A Huffman code is a sequence of decisions in the tree, read from the first bit on; written canonically, the first bit is the most significant one of the code value. An LSB stream, however, puts the bit written first at the bottom. So that the reader gets the bits in tree order, <code>BitSchreiber.huffman(code, l)</code> writes the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> bits one at a time, <b>most significant first</b>. Example: the codes <code>110</code>, <code>0</code>, <code>1110</code> give the single byte <code>73</code> = <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0111</mn><mspace width="0.1667em"/><msub><mn>0011</mn><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">0111\,0011_2</annotation></semantics></math>: read from the bottom 1, 1, 0 | 0 | 1, 1, 1, 0.</p>
+
+<h3>Pseudocode – <code>BitLeser.bits(n)</code> and <code>BitSchreiber.bits(w, n)</code></h3>
+<pre class="pseudo"><b>function</b> read(n):                            <i>0 ≤ n ≤ 32</i>
+    <b>while</b> haldeBits &lt; n:
+        <b>if</b> pos ≥ ende: error (names the position)
+        halde ← halde or (daten[pos++] &lt;&lt; haldeBits);  haldeBits += 8
+    w ← halde and (2^n − 1);  halde ← halde >>> n;  haldeBits −= n
+    <b>return</b> w
+
+<b>function</b> write(w, n):
+    halde ← halde or ((w and (2^n − 1)) &lt;&lt; haldeBits);  haldeBits += n
+    <b>while</b> haldeBits ≥ 8:  output the lowest byte;  halde ← halde >>> 8;  haldeBits −= 8
+
+<b>function</b> huffman(code, l):  <b>for</b> i ← l−1 <b>down to</b> 0:  write((code >>> i) and 1, 1)</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/bits/BitLeser.java</code>, <code>BitSchreiber.java</code>. <code>aufBytegrenze()</code> discards the partial bits when reading and pads with zeros when writing; <code>bytes(...)</code> writes whole bytes only at a byte boundary.</p>
+<div class="hinweis"><b>Convention in the framework:</b> Reading past the end throws an exception naming the position instead of delivering zero bits – otherwise a truncated stream would turn into a decoding error at a completely different place. (Intentional exceptions: the LZMA range reader and the zstd streams, where the format provides for reading past the end.) <code>BitLeser</code> loads only as many bytes as it needs and afterwards always keeps fewer than eight bits in its reservoir. <code>BitLeserMsb</code> keeps the position in bits and checks before a multi-bit access whether enough is there; a failed access consumes nothing.</div>
+
+<h2 id="huffman">Huffman codes and their length limit</h2>
+<p>For symbols with frequencies <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">h_i</annotation></semantics></math> one looks for code lengths <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">l_i</annotation></semantics></math> that satisfy the Kraft inequality <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></msup><mo>≤</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sum 2^{-l_i} \le 1</annotation></semantics></math> and minimise the total length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>h</mi></mrow><mrow><mi>i</mi></mrow></msub><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\sum h_i l_i</annotation></semantics></math>. Huffman's method (repeatedly merging the two rarest nodes) delivers the optimum. The mean length lies between the entropy and one bit above it:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>H</mi><mo>≤</mo><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>l</mi></mrow><mo>&lt;</mo><mi>H</mi><mo>+</mo><mn>1</mn><mo>,</mo><mspace width="2em"/><mi>H</mi><mo>=</mo><mo>−</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow></msub><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="1em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mrow><mi>h</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi></mrow></munder><msub><mrow><mi>h</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">H \le \bar{l} &lt; H + 1, \qquad H = -\sum_i p_i \log_2 p_i, \quad p_i = \frac{h_i}{\sum_j h_j}</annotation></semantics></math></p>
+<p>Huffman's tree, however, knows no length limit. With very uneven frequencies it becomes deep: Fibonacci frequencies give a tree in which every symbol lies one level deeper than the next more frequent one. Deflate allows at most 15 bits, the code-length table at most 7. A code above the limit is not “a bit too long” but unreadable for any foreign reader.</p>
+
+<h3 id="paket">Package-merge</h3>
+<p>Package-merge (Larmore and Hirschberg, 1990) finds the optimal code <b>under</b> a length limit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>. It rests on a coin collector's problem: every symbol is available on each of the levels <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>…</mo><mi>L</mi></mrow><annotation encoding="application/x-tex">1 \dots L</annotation></semantics></math> as a “coin” with weight <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">h_i</annotation></semantics></math> and face value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mi>k</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-k}</annotation></semantics></math> on level <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>. Sought is a selection of total face value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n - 1</annotation></semantics></math> (for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> symbols) with the smallest total weight; how often a symbol appears in this selection is its code length.</p>
+<p>In practice one computes from the deepest level upwards: the coin list sorted by weight is combined into pairs (“package”), and the packages are sorted into the coin list of the next level (“merge”). After <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">L - 1</annotation></semantics></math> rounds one takes the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>n</mi><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">2n - 2</annotation></semantics></math> lightest entries of the top list; every symbol gets as length the number of its occurrences in them.</p>
+
+<h3>Pseudocode – <code>HuffmanCode.laengen(h, L)</code></h3>
+<pre class="pseudo">benutzt ← symbols with h > 0
+<b>if</b> none: <b>return</b> all lengths 0
+<b>if</b> exactly one: <b>return</b> length 1 for it                <i>Deflate requires a one-bit code</i>
+grund ← one item (h, {s}) per symbol, sorted by weight
+pakete ← empty
+<b>repeat</b> L − 1 times:
+    zusammen ← merge(grund, pakete)                  <i>sorted by weight</i>
+    pakete ← every two consecutive items into one (weights added, symbols united)
+letzte ← merge(grund, pakete)
+<b>for</b> the first 2·|benutzt| − 2 items of letzte:
+    <b>for</b> each symbol s in it:  length[s] ← length[s] + 1</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/huffman/HuffmanCode.java</code>. With equal weight the item from the base list is taken first.</p>
+
+<h3>Worked examples</h3>
+<p><b>The textbook example</b> with frequencies 5, 9, 12, 13, 16, 45 (sum 100) gives the lengths 4, 4, 3, 3, 3, 1 and the canonical codes <code>1110</code>, <code>1111</code>, <code>100</code>, <code>101</code>, <code>110</code>, <code>0</code>. The mean length is 2.24 bits, the entropy 2.22 bits.</p>
+<p><b>Fibonacci frequencies</b> 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144 (sum 376, entropy 2.484 bits) under different limits, computed with <code>HuffmanCode.laengen</code>:</p>
+<table>
+  <tr><th>Limit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></th><th>lengths</th><th>total bits</th><th>mean length</th></tr>
+  <tr><td>15 (not binding)</td><td>11 11 10 9 8 7 6 5 4 3 2 1</td><td>971</td><td>2.582</td></tr>
+  <tr><td>7</td><td>7 7 6 5 5 5 4 4 3 3 2 2</td><td>975</td><td>2.593</td></tr>
+  <tr><td>5</td><td>5 5 5 5 5 5 4 4 4 3 2 2</td><td>1003</td><td>2.668</td></tr>
+  <tr><td>4</td><td>4 4 4 4 4 4 4 4 4 4 3 2</td><td>1127</td><td>2.997</td></tr>
+</table>
+<p>Here the limit 7 costs four bits over 376 symbols. Every code satisfies the Kraft equation with equality; for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">L = 4</annotation></semantics></math>, for instance, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>10</mn><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mn>4</mn></mrow></msup><mo>+</mo><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mn>3</mn></mrow></msup><mo>+</mo><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><mn>2</mn></mrow></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">10 \cdot 2^{-4} + 2^{-3} + 2^{-2} = 1</annotation></semantics></math>.</p>
+
+<h2 id="kanonisch">Canonical codes</h2>
+<p>Only the lengths are transmitted; writer and reader form the same codes from them. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>l</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_l</annotation></semantics></math> codes of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math>, the first code of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><msub><mrow><mi>c</mi></mrow><mrow><mi>l</mi></mrow></msub><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>l</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>l</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">c_1 = 0, \qquad c_l = 2\,(c_{l-1} + n_{l-1})</annotation></semantics></math></p>
+<p>and within one length the code counts up by symbol number. <code>HuffmanCode.vollstaendig</code> checks the Kraft sum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msup><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>−</mo><msub><mrow><mi>l</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></msup><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><msub><mrow><mi>L</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub></mrow></msup></mrow><annotation encoding="application/x-tex">\sum_i 2^{L_{\max} - l_i} = 2^{L_{\max}}</annotation></semantics></math> (with the special case of a single symbol). Deflate and Brotli assign codes this way; zstd assigns the longest codes first (see <a href="zstd-fse.html#huffman">FSE and Huffman</a>).</p>
+
+<h2 id="dekoder">Decoding bit by bit</h2>
+<p>The <code>HuffmanDekoder</code> builds no lookup table but keeps only two arrays: the number of codes per length and the symbols sorted by length and number. When reading, the code is built up bit by bit from the top. After <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math> bits, <code>erster</code> is the smallest code of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math>; if the value read lies below <code>erster</code> + (number of codes of this length), the symbol has been found. This is the method from <code>puff.c</code> among the zlib examples.</p>
+<pre class="pseudo">code ← 0;  erster ← 0;  index ← 0
+<b>for</b> ℓ ← 1 <b>to</b> largest length:
+    code ← code or leser.bit()
+    anzahl ← zaehl[ℓ]
+    <b>if</b> code − erster &lt; anzahl:  <b>return</b> symbol[index + code − erster]
+    index ← index + anzahl
+    erster ← (erster + anzahl) · 2
+    code ← code · 2
+error "no valid Huffman code"</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/huffman/HuffmanDekoder.java</code>. Construction costs one pass over the lengths; compared with a table with nine bits of look-ahead there is no table to build, but reading costs one step per bit.</p>
+
+<h2 id="rle">Run length after PackBits</h2>
+<p><code>Rle</code> encodes after the pattern of PackBits: a control byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math>, then data.</p>
+<ul>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi>s</mi><mo>≤</mo><mn>127</mn></mrow><annotation encoding="application/x-tex">0 \le s \le 127</annotation></semantics></math>: the next <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">s + 1</annotation></semantics></math> bytes stand singly.</li>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>129</mn><mo>≤</mo><mi>s</mi><mo>≤</mo><mn>255</mn></mrow><annotation encoding="application/x-tex">129 \le s \le 255</annotation></semantics></math>: the following byte applies <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>257</mn><mo>−</mo><mi>s</mi></mrow><annotation encoding="application/x-tex">257 - s</annotation></semantics></math> times (2 to 128).</li>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">s = 128</annotation></semantics></math> is not assigned and is an error.</li>
+</ul>
+<p>The encoder takes a run from three equal bytes on (at most 128), otherwise it collects single bytes (at most 128) and stops before the next run of three. The worst case is bounded: one control byte per 128 single bytes, i.e.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mtext>out</mtext></mrow></msub><mo>≤</mo><mi>n</mi><mo>+</mo><mrow><mo fence="true" stretchy="true">⌈</mo><mfrac><mrow><mi>n</mi></mrow><mrow><mn>128</mn></mrow></mfrac><mo fence="true" stretchy="true">⌉</mo></mrow></mrow><annotation encoding="application/x-tex">n_{\text{out}} \le n + \left\lceil \frac{n}{128} \right\rceil</annotation></semantics></math></p>
+<p>The best case is bounded too: two bytes per 128, i.e. at most 64 : 1.</p>
+<p><b>Worked examples</b> (with <code>Rle.packe</code>): <code>AAAAABCDEEE</code> gives <code>FC 41 02 42 43 44 FE 45</code> – <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>257</mn><mo>−</mo><mn>252</mn><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">257 - 252 = 5</annotation></semantics></math> times <code>A</code>, then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">2 + 1 = 3</annotation></semantics></math> single bytes <code>BCD</code>, then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>257</mn><mo>−</mo><mn>254</mn><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">257 - 254 = 3</annotation></semantics></math> times <code>E</code>. 3000 equal bytes give 48 bytes: 23 runs of 128 and one of 56, two bytes each.</p>
+<pre class="pseudo"><b>while</b> i &lt; n:
+    lauf ← number of equal bytes from i, at most 128
+    <b>if</b> lauf ≥ 3:  emit (257 − lauf), daten[i];  i ← i + lauf
+    <b>otherwise</b>:
+        anfang ← i;  einzeln ← 0
+        <b>while</b> i &lt; n <b>and</b> einzeln &lt; 128:
+            <b>if</b> daten[i] = daten[i+1] = daten[i+2]: <b>break</b>
+            i ← i + 1;  einzeln ← einzeln + 1
+        emit (einzeln − 1), daten[anfang .. anfang + einzeln − 1]</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/rle/Rle.java</code>.</p>
+<div class="hinweis"><b>Convention in the framework:</b> <code>Rle</code> is meant as a <b>pre-stage</b>, not as a replacement for Deflate: on masks, segmentation images and sparse fields it shortens the input so that the 32 KiB window of LZ77 afterwards covers a much larger area. On its own it is inferior.</div>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>CompressSelfTest</code>:</b> bit stream there and back, reversed Huffman codes come back in tree order, reading past the end reports itself; Huffman: the most frequent symbol has the shortest code, Kraft sum complete, mean length 2.24 bits in the textbook example (tolerance 0.005), with Fibonacci frequencies no length above 15 or 7, a symbol sequence comes back unchanged through the decoder, a single symbol gets one bit; RLE there and back for five samples, worst case below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mi>n</mi><mo>/</mo><mn>128</mn><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n + n/128 + 1</annotation></semantics></math>, 3000 equal bytes give exactly 48.</li>
+  <li><b><code>Msbleserprobe</code> (23 checks):</b> the MSB reader against slices of a <code>BigInteger</code> (400 cases), continuous reading with widths 1 to 32, <code>bitsLang(64)</code> against <code>ByteBuffer.getLong</code> (50 cases), limits and exceptions, a failed access consumes nothing.</li>
+</ul>
+<p>A lesson from building it is recorded in the module documentation: the check “a long run shrinks a lot” demanded fewer than 40 bytes for 3000 equal bytes. Correct is 48, because PackBits caps a run at 128 – the check was wrong, not the code.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li><code>BitLeser</code> and <code>BitSchreiber</code> read and write at most 32 bits at once, <code>BitLeserMsb</code> with <code>bitsLang</code> up to 64. None is usable concurrently.</li>
+  <li>Package-merge creates new lists with symbol sets for every level; for the module's alphabets (up to 286 symbols, limit 15) this does not matter, for very large alphabets a more economical version would be appropriate.</li>
+  <li>The bitwise Huffman decoder is slower than a table-driven one; the difference has not been measured.</li>
+  <li>The encoders (<code>Rle.packe</code>, Huffman lengths outside Deflate) have no caller outside the probes yet.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>D. A. Huffman: A Method for the Construction of Minimum-Redundancy Codes. Proceedings of the IRE, 1952.</li>
+  <li>L. L. Larmore, D. S. Hirschberg: A Fast Algorithm for Optimal Length-Limited Huffman Codes. Journal of the ACM, 1990.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#bausteine">Bits, Huffman, run length</a> · Probes: <code>CompressSelfTest</code>, <code>Msbleserprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning maps: surrogate models from our own networks – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag aktiv" href="index.html">framework-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#core">The network</a>
+<a class="rubrik" href="#train">Training</a>
+<a class="rubrik" href="#data">Data, normalisation, metrics</a>
+<a class="rubrik" href="#model">Surrogate model, ensemble, storage</a>
+<a class="rubrik" href="#search">Model search</a>
+<a class="rubrik" href="#analysis">Sensitivity analysis</a>
+<a class="rubrik" href="#api">Interface for other applications</a>
+<a class="rubrik" href="#ocr">Character recognition without Tesseract</a>
+<a class="rubrik" href="#seq">Sequences without alignment: CTC</a>
+<a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-neural</span><a class="sprachwahl" href="../../de/neural/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-neural</div>
+  <h1>Learning maps: surrogate models from our own networks</h1>
+  <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. Multilayer networks modelled on FANN,
+  training with SGD, Adam and L-BFGS, surrogate models with normalisation and storage, model search with cross-validation, sensitivity analysis,
+  ensembles and quantile bands, character recognition without Tesseract and sequence training with CTC.
+  For each method: purpose, API, use in the framework, applications, examples. The examples are shortened.
+  The package <code>seq</code> uses German API names (e.g. <code>Strahlsuche</code> = beam search, <code>Fehlerrate</code> = error rate, <code>trainiere</code> = train, <code>erkenne</code> = recognise); they are shown unchanged.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>0</b><span>dependencies; JDBC drivers only at run time</span></div>
+  <div class="zahl"><b>11</b><span>packages, 41 classes</span></div>
+  <div class="zahl"><b>3</b><span>optimisers: SGD with momentum, Adam/AdamW, L-BFGS</span></div>
+  <div class="zahl"><b>≈ 1.9 M</b><span>predictions per second for a 2-16-16-3 net, measured scalar</span></div>
+  <div class="zahl"><b>5</b><span>calling modules: app-neural, app-maps, app-pdfdigitizer, app-digitizer, framework-audio</span></div>
+  <div class="zahl"><b>2</b><span>probe classes, 7 test files</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>Self-contained and flat.</b> No dependency, weights as a flat array <code>w[o·in + i]</code>, buffers allocated in advance. No reflection, no JAXB: native-image ready.</div>
+  <div><b>The surrogate is one unit.</b> Network, input and target normalisation and metadata belong together; <code>predict</code> works on raw physical values.</div>
+  <div><b>Reproducible.</b> Seeds are explicit everywhere (initialisation, split, shuffle, dropout). Runs without dropout stay bit-identical; dropout draws from a separate stream.</div>
+  <div><b>Bit-exact storage.</b> <code>.ennet</code> via StAX, weights as Base64 over little-endian <code>double</code>. DTD and external entities are disabled, unknown elements are skipped.</div>
+  <div><b>Not thread-safe, by declaration.</b> <code>NeuralNet</code> and <code>SurrogateModel</code> hold internal buffers. For parallel evaluation there is <code>copy()</code> per thread.</div>
+  <div><b>Errors as NaN at the app boundary.</b> <code>SurrogateLibrary</code> returns <code>NaN</code> or <code>null</code> for an unknown model or wrong dimension, so a formula in maps does not abort.</div>
+</div>
+
+<!-- =============================================================== CORE -->
+<h2 id="core">The network <span class="paket">de.envisionz.neural.core</span></h2>
+
+<div class="karte">
+  <h3><code>NeuralNet</code>, <code>DenseLayer</code>, <code>Activation</code>, <code>Init</code></h3>
+  <p class="zweck">Fully connected layers with a builder. Gradients accumulate, so batches work without changes; dropout is inverted. Six activations, two initialisations (He, Xavier). Snapshot and restore for the best model under early stopping.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>NeuralNet.builder().inputs(n).hidden(n, act[, dropout]).outputs(n, act).init(Init.HE).seed(s).build()</code></li>
+      <li><code>run(x)</code> (copy), <code>forward(x)</code>, <code>backward(dLdOut)</code>, <code>zeroGrads()</code>, <code>scaleGrads(f)</code></li>
+      <li><code>snapshot()</code>, <code>restore(snap)</code>, <code>copy()</code>, <code>parameterCount()</code>, <code>layer(k)</code></li>
+      <li><code>Activation</code>: <code>LINEAR</code>, <code>RELU</code>, <code>LEAKY_RELU</code>, <code>SILU</code>, <code>TANH</code>, <code>SIGMOID</code>; <code>f(z)</code>, <code>df(z)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: model, training and search tabs</span><span class="chip">app-pdfdigitizer: ModelLibrary</span><span class="chip">framework-audio: keyword spotting (KwsTraining)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Regression of maps, classification of small patterns (characters, keywords).</p></div>
+  </div>
+  <div class="bsp"><h4>Example – network for a compressor map (2 inputs, 3 outputs)</h4>
+<pre><code>NeuralNet net = NeuralNet.builder().inputs(2)
+        .hidden(16, Activation.TANH).hidden(16, Activation.TANH)
+        .outputs(3, Activation.LINEAR).init(Init.XAVIER).seed(42).build();</code></pre></div>
+</div>
+
+<!-- =============================================================== TRAIN -->
+<h2 id="train">Training <span class="paket">de.envisionz.neural.train</span></h2>
+
+<div class="karte">
+  <h3><code>Trainer</code>, <code>TrainConfig</code>, <code>LrSchedule</code></h3>
+  <p class="zweck">Mini-batches with Fisher-Yates shuffling, validation loss per epoch, early stopping with return to the best state, cooperative cancellation per epoch. Learning-rate schedules constant, exponential, cosine and one-cycle.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Trainer().train(net, train, valid, loss, optimizer, cfg, listener[, stopRequested])</code> → <code>TrainResult(epochsRun, bestEpoch, finalTrainLoss, finalValLoss, stoppedEarly, cancelled)</code></li>
+      <li><code>TrainConfig.builder().epochs(n).batchSize(n).shuffleSeed(s).lrSchedule(p).earlyStopping(patience[, minDelta]).build()</code></li>
+      <li><code>LrSchedule.constant()</code>, <code>exponential(decay)</code>, <code>cosine(minScale)</code>, <code>oneCycle(warmupFrac, startScale, minScale)</code></li>
+      <li><code>Trainer.evaluate(net, data, loss)</code>, <code>TrainListener</code> (runs on the worker thread)</li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: TrainTab, SearchTab</span><span class="chip">framework-audio: KwsTraining</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Surrogate models from map or test-bed data; training with a stop button in the GUI.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – training with a cosine schedule and early stopping</h4>
+<pre><code>TrainConfig cfg = TrainConfig.builder().epochs(500).batchSize(32)
+        .lrSchedule(LrSchedule.cosine(0.0)).earlyStopping(30).build();
+Trainer.TrainResult r = new Trainer().train(net, teile[0], teile[1],
+        new MseLoss(), AdamOptimizer.adam(1e-3), cfg, null);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3>Losses and optimisers – <code>MseLoss</code>, <code>SoftmaxCrossEntropyLoss</code>, <code>QuantileLoss</code>; <code>SgdOptimizer</code>, <code>AdamOptimizer</code>, <code>LbfgsOptimizer</code></h3>
+  <p class="zweck">Cross-entropy fused with softmax and stable via log-sum-exp. The pinball loss trains quantiles: with τ = 0.1 / 0.5 / 0.9 three models form an uncertainty band. AdamW with decoupled weight decay, never applied to the bias. L-BFGS with the two-loop recursion and a damped first step, without line search.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Loss</code>: <code>value(pred, target)</code>, <code>gradient(pred, target, grad)</code>; <code>new QuantileLoss(tau)</code></li>
+      <li><code>new SgdOptimizer(lr, momentum[, weightDecay])</code></li>
+      <li><code>AdamOptimizer.adam(lr)</code>, <code>adamW(lr, wd)</code>, <code>new AdamOptimizer(lr, beta1, beta2, eps, wd)</code></li>
+      <li><code>new LbfgsOptimizer(lr, memory)</code>, <code>LbfgsOptimizer.standard()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: optimiser choice, quantile models</span><span class="chip">framework-audio: Adam and cross-entropy</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Regression, classification and uncertainty bands; L-BFGS for smooth problems with little data.</p></div>
+  </div>
+  <div class="hinweis">L-BFGS needs the gradient over all data: set <code>batchSize</code> at least as large as the data set.</div>
+</div>
+
+<!-- =============================================================== DATA -->
+<h2 id="data">Data, normalisation, metrics <span class="paket">de.envisionz.neural.data · de.envisionz.neural.eval</span></h2>
+
+<div class="karte">
+  <h3><code>DataSet</code>, <code>Normalizer</code>, <code>JdbcDataLoader</code>, <code>Metrics</code></h3>
+  <p class="zweck"><code>DataSet</code> splits into training and validation or into k folds, without copying the arrays. <code>Normalizer</code> with ZSCORE (tolerates outliers) or MINMAX, guarded against constant columns. The JDBC loader needs only <code>java.sql</code>; SQL NULL and empty results throw with column and row.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>DataSet.of(inputs, targets)</code>, <code>split(fraction, seed)</code>, <code>kFolds(k, seed)</code>, <code>oneHot(labels, classes)</code></li>
+      <li><code>Normalizer.fit(Type.ZSCORE, data)</code>, <code>of(type, offset, scale)</code>, <code>transform</code>, <code>inverse</code></li>
+      <li><code>JdbcDataLoader.load(con, sql, inputColumns, targetColumns)</code></li>
+      <li><code>Metrics.mse</code>, <code>rmse</code>, <code>mae</code>, <code>r2PerOutput</code>, <code>predictAll</code>, <code>accuracy</code>, <code>confusionMatrix</code>, <code>softmax</code>, <code>argmax</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: data, evaluation, slice and contour views</span><span class="chip">app-pdfdigitizer: GlyphHarvester, ModelLibrary</span><span class="chip">framework-audio: KwsTraining, KwsModell</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Preparing data from tables or databases, evaluating models honestly (R² per output, confusion matrix).</p></div>
+  </div>
+  <div class="bsp"><h4>Example – normalising and splitting</h4>
+<pre><code>Normalizer nIn  = Normalizer.fit(Normalizer.Type.ZSCORE, rohEin);
+Normalizer nZiel = Normalizer.fit(Normalizer.Type.ZSCORE, rohZiel);
+DataSet[] teile = DataSet.of(nIn.transform(rohEin), nZiel.transform(rohZiel)).split(0.8, 7L);</code></pre></div>
+  <div class="hinweis"><code>DataSet</code> takes the caller's arrays without a copy; do not modify them afterwards.</div>
+</div>
+
+<!-- =============================================================== MODEL -->
+<h2 id="model">Surrogate model, ensemble, storage <span class="paket">de.envisionz.neural.model · de.envisionz.neural.io</span></h2>
+
+<div class="karte">
+  <h3><code>SurrogateModel</code> and <code>Ensemble</code></h3>
+  <p class="zweck">The surrogate takes raw values, normalises, computes and transforms back. The ensemble averages k models and returns their spread as a measure of uncertainty; the members must be trained with different seeds, otherwise the spread is exactly zero.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>SurrogateModel.of(net, inNorm, targetNorm[, metadata])</code>, <code>predict(raw)</code>, <code>predictAll(raw[][])</code>, <code>copy()</code>, <code>metadata()</code></li>
+      <li><code>new Ensemble(members)</code>, <code>predict(x)</code>, <code>predictStd(x)</code>, <code>predictAll</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-maps: MapFuncs <code>SUR(…)</code>, OperatingManager</span><span class="chip">app-neural: evaluation, slice, ensemble training</span><span class="chip">app-pdfdigitizer</span><span class="chip">framework-audio: KwsModell</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Maps as a fast function in cycle and operating-point calculations; recognising uncertainty outside the training range.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – ensemble from three runs</h4>
+<pre><code>Ensemble e = new Ensemble(List.of(m1, m2, m3));       // trained with different seeds
+double[] mittel = e.predict(x), streuung = e.predictStd(x);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>NetIO</code> – the <code>.ennet</code> format</h3>
+  <p class="zweck">XML via StAX, version 1. Weights and biases as Base64 over little-endian IEEE-754 doubles, normalisation parameters as plain text: the round trip is bit-exact. Non-ASCII characters in the metadata are escaped, because the JDK's <code>XMLStreamWriter</code> replaces them with <code>?</code> depending on the platform encoding.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>NetIO.save(model, path)</code>, <code>NetIO.load(path)</code> → <code>SurrogateModel</code></li>
+      <li><code>escapeNonAscii(s)</code>, <code>unescapeNonAscii(s)</code>, <code>FORMAT_VERSION</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: NeuralPanel</span><span class="chip">app-pdfdigitizer: ModelLibrary, GlyphLabelPanel</span><span class="chip">framework-audio: KwsModell</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Passing models between applications; shipping character and keyword models.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – storing a surrogate</h4>
+<pre><code>SurrogateModel m = SurrogateModel.of(net, nIn, nZiel);
+NetIO.save(m, Path.of("verdichter.ennet"));            // file name illustrative</code></pre></div>
+</div>
+
+<!-- =============================================================== SEARCH -->
+<h2 id="search">Model search <span class="paket">de.envisionz.neural.search</span></h2>
+
+<div class="karte">
+  <h3><code>ModelSearch</code> – grid and random search with k-fold cross-validation</h3>
+  <p class="zweck">Candidates from layer widths, activations, learning rates and weight decay. Cross-validation runs in parallel over the candidates and can be cancelled; the result is sorted by mean validation loss, best first. <code>trainFinal</code> returns the finished surrogate with metadata.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>grid(hiddenOptions, activations, learningRates, weightDecays)</code>, <code>randomSearch(…)</code></li>
+      <li><code>kFoldSearch(data, specs, k, cfg, seed, threads, listener[, stop[, classification]])</code> → <code>SearchResult</code></li>
+      <li><code>trainFinal(rawIn, rawTg, normType, spec, cfg, trainFraction, seed)</code></li>
+      <li><code>ModelSpec(hidden, activation, learningRate, weightDecay)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: SearchTab, NeuralPanel</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Finding the right network size for a map instead of guessing it.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – eight candidates, five folds</h4>
+<pre><code>List&lt;ModelSearch.ModelSpec&gt; specs = ModelSearch.grid(List.of(new int[] {16, 16}, new int[] {32, 32}),
+        List.of(Activation.TANH, Activation.SILU), new double[] {1e-3, 3e-3}, new double[] {0.0});
+List&lt;ModelSearch.SearchResult&gt; r = ModelSearch.kFoldSearch(daten, specs, 5, cfg, 42L, 4, null);
+SurrogateModel best = ModelSearch.trainFinal(rohEin, rohZiel, Normalizer.Type.ZSCORE,
+        r.get(0).spec(), cfg, 0.85, 42L);</code></pre></div>
+  <div class="hinweis">Parallelism is over the candidates, not over the folds. On grid data a random split flatters the model.</div>
+</div>
+
+<!-- =============================================================== ANALYSIS -->
+<h2 id="analysis">Sensitivity analysis <span class="paket">de.envisionz.neural.analysis</span></h2>
+
+<div class="karte">
+  <h3><code>SobolAnalyzer</code>, <code>PermutationImportance</code>, <code>DataSensitivity</code></h3>
+  <p class="zweck">First-order and total Sobol indices after Saltelli with centred estimators, optionally also S<sub>ij</sub>. Permutation importance on the model. And model-free from the data: binned first-order indices (corrected for the ANOVA noise term) and Spearman correlation.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>SobolAnalyzer.analyze(f, lo, hi, n, seed, secondOrder)</code> → <code>Result(firstOrder, totalOrder, secondOrder, outputVariance, evaluations)</code>, <code>firstOrderSum(o)</code></li>
+      <li><code>PermutationImportance.mseIncrease(f, inputs, targets, seed)</code>, <code>accuracyDrop(…)</code></li>
+      <li><code>DataSensitivity.binnedFirstOrder(inputs, targets, bins)</code>, <code>spearman(…)</code>, <code>autoBins(n)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: SensitivityPanel</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Which inputs really drive a map; detecting interactions (1 − Σ S<sub>1</sub>).</p></div>
+  </div>
+  <div class="bsp"><h4>Example – Sobol indices of a surrogate</h4>
+<pre><code>SurrogateModel eigen = m.copy();                        // own copy, not thread-safe
+SobolAnalyzer.Result s = SobolAnalyzer.analyze(eigen::predict, lo, hi, 8192, 1L, false);
+double[] s1 = s.firstOrder()[0];</code></pre></div>
+</div>
+
+<!-- =============================================================== API -->
+<h2 id="api">Interface for other applications <span class="paket">de.envisionz.neural.api</span></h2>
+
+<div class="karte">
+  <h3><code>SurrogateLibrary</code> and <code>SurrogateAvailableEvent</code></h3>
+  <p class="zweck">The library scans a directory for <code>*.ennet</code>, loads on demand and caches the models. The event carries a freshly trained or loaded model as a copy over the EventBus to other apps.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>SurrogateLibrary.scan(dir)</code>, <code>empty()</code>, <code>names()</code>, <code>model(name)</code>, <code>predict(name, outIdx, inputs)</code></li>
+      <li><code>SurrogateAvailableEvent(model, task, sourcePath)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-maps: MapsRootPanel (library and EventBus)</span><span class="chip">app-neural: NeuralPanel, SurrogateService</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Using surrogates in formulas, e.g. <code>SUR(modellname, outIdx, in1, in2, …)</code> in app-maps.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – evaluating a model from a directory</h4>
+<pre><code>SurrogateLibrary lib = SurrogateLibrary.scan(Path.of("modelle"));
+double eta = lib.predict("verdichter", 1, new double[] {0.9, 2.4});   // NaN if unknown</code></pre></div>
+  <div class="hinweis">The library's cache is not synchronised.</div>
+</div>
+
+<!-- =============================================================== OCR -->
+<h2 id="ocr">Character recognition without Tesseract <span class="paket">de.envisionz.neural.ocr</span></h2>
+
+<div class="karte">
+  <h3><code>NeuralGlyphOcr</code>, <code>TemplateGlyphOcr</code>, <code>LineSegmenter</code>, <code>GlyphRaster</code>, <code>GlyphCharset</code>, <code>GlyphDataGen</code>, <code>TrainGlyphOcr</code></h3>
+  <p class="zweck">A line is split into characters by projection, each character brought to an N×N grey image and recognised by a network or by template matching. Character sets: standard and digits (<code>0123456789.,+-()=</code>). Training data are generated from fonts or harvested from the document; the model is an <code>.ennet</code> file with character set and raster size in the metadata.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>GlyphRecognizer</code>: <code>recognize(lineImage)</code>, <code>id()</code></li>
+      <li><code>NeuralGlyphOcr.load(ennet)</code>, <code>new TemplateGlyphOcr(charset, raster, segmenter, font)</code></li>
+      <li><code>new LineSegmenter()</code>, <code>segment(line)</code> → <code>Glyph(image, spaceBefore)</code>; <code>new GlyphRaster(n)</code>, <code>toVector(image)</code></li>
+      <li><code>GlyphCharset.standard()</code>, <code>digits()</code>, <code>byName</code>; <code>new GlyphDataGen(charset, raster, fonts).generate(perChar, seed)</code></li>
+      <li><code>TrainGlyphOcr.train(charset, raster, perChar, epochs, seed, verbose)</code>, <code>main</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-pdfdigitizer: CellOcr, GlyphHarvester, GlyphLabelPanel</span><span class="chip">app-digitizer: NeuralOcrEngine (at run time via <code>Class.forName</code>)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Reading axis labels and table cells in scanned charts and PDF tables.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – reading a line of digits</h4>
+<pre><code>GlyphRecognizer ocr = NeuralGlyphOcr.load(Path.of("ziffern.ennet"));
+String zahl = ocr.recognize(zeilenbild);                 // BufferedImage of one text line</code></pre></div>
+  <div class="hinweis">Touching characters are the known limit of the segmentation. A validation accuracy of 1.0 on system fonts says little about a scan; a network trained on glyphs from the same print read everything correctly there.</div>
+</div>
+
+<!-- =============================================================== SEQ -->
+<h2 id="seq">Sequences without alignment: CTC <span class="paket">de.envisionz.neural.seq</span></h2>
+
+<div class="karte">
+  <h3><code>Ctc</code>, <code>Strahlsuche</code>, <code>SequenzTrainer</code>, <code>Fehlerrate</code></h3>
+  <p class="zweck">Connectionist Temporal Classification sums over all alignments that yield the correct output, in O(T · S). The existing network suffices because each time frame already carries its context in the input. Decoding is greedy or by beam search, optionally with a language model and a length bonus. Evaluation uses the edit distance.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Ctc.rechne(logits, etikett)</code> → <code>Ergebnis(verlust, gradient)</code>, <code>verlust</code>, <code>gierig</code>, <code>falte</code>, <code>darstellbar</code>, <code>LEER</code> = 0 (blank)</li>
+      <li><code>Strahlsuche.suche(logits, breite[, sprache, gewicht, laengenBonus])</code> → <code>Treffer(folge, logP)</code></li>
+      <li><code>SequenzTrainer.trainiere(netz, training, gueltig, opt, Einstellung)</code>, <code>erkenne(netz, eingang[, breite])</code>, <code>fehlerrateAuf</code>, <code>Einstellung.ueblich()</code></li>
+      <li><code>Fehlerrate.abstand(a, b)</code>, <code>rate(erkannt, richtig)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Recognising phoneme sequences from audio features without anyone aligning frames to phonemes by hand.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – training and decoding with beam width 12</h4>
+<pre><code>SequenzTrainer.Ergebnis e = SequenzTrainer.trainiere(netz, training, pruefung,
+        AdamOptimizer.adam(1e-3), SequenzTrainer.Einstellung.ueblich());
+int[] laute = SequenzTrainer.erkenne(netz, merkmale, 12);
+double per = Fehlerrate.rate(laute, richtig);</code></pre></div>
+</div>
+
+<!-- =============================================================== USAGE -->
+<h2 id="einsatz">Usage matrix in the framework</h2>
+<p class="einl">Which modules use which parts today, counted in the source code (probes excluded).</p>
+<table>
+  <tr><th>Module</th><th>Network</th><th>Training</th><th>Data &amp; metrics</th><th>Surrogate &amp; storage</th><th>Search</th><th>Sensi&shy;tivity</th><th>App interface</th><th>OCR</th><th>What for</th></tr>
+  <tr><td>app-neural</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td>Training workbench: data, training, search, evaluation, sensitivity</td></tr>
+  <tr><td>app-maps</td><td></td><td></td><td></td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td>Surrogates in formulas (<code>SUR</code>), receipt via the EventBus</td></tr>
+  <tr><td>app-pdfdigitizer</td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td class="x">●</td><td>Cell and character recognition in PDF tables</td></tr>
+  <tr><td>app-digitizer</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Character recognition, at run time via reflection</td></tr>
+  <tr><td>framework-audio</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td>Keyword spotting</td></tr>
+</table>
+<div class="hinweis">The package <code>seq</code> (CTC, beam search) is verified but not yet connected. Obvious next step: connecting it to framework-audio, whose context window, according to the class comment of <code>SequenzTrainer</code>, supplies the inputs.</div>
+
+<footer>
+envisionz-framework-neural · 41 classes in 11 packages (package root <code>de.envisionz.neural</code>) · six help pages DE/EN under <code>src/de/envisionz/neural/help/</code> · state and benchmark documents <code>docs/PROJECT_STATE.md</code>, <code>docs/vector-api-benchmark.md</code> · Probes: <code>pruefen.cmd --nur framework-neural</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

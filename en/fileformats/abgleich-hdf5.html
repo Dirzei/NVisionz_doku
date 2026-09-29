@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDF5 — comparison against specification, h5py and jHDF – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite aktiv" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › HDF5 — comparison against specification, h5py and jHDF</span><a class="sprachwahl" href="../../de/fileformats/abgleich-hdf5.html">Deutsch</a></div>
+<!-- erzeugt aus hdf5/COMPARISON.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · comparison</div>
+  <h1>HDF5 — comparison against specification, h5py and jHDF</h1>
+</header>
+
+<p><b>As of:</b> 2026-09-25 (Merkmalstabellen vom 2026-08-26, Runde 46; siebter Nachtrag 2026-09-25)<br><b>Our implementation:</b> <code>envisionz.fileformats.hdf5</code> — 34 core classes plus 10 in the <code>envisionz.fileformats.hdf5.netcdf</code> package, read-only, no third-party library<br><b>Specification:</b> <i>HDF5 File Format Specification Version 4.0</i> by The HDF Group — <b>freely available</b>, which is why section numbers appear here<br><b>Compared against:</b> h5py 3.16 / HDF5 2.0 (measured)<br><b>And against:</b> jHDF — feature column from the 0.5.11 changelog, values measured against 0.13.0 on 2026-09-06<br><b>Test bench:</b> <code>Leserprobe</code> 120, <code>Entpackerprobe</code> 70, <code>Netcdf4probe</code> 53, <code>Hdf4probe</code> 113, <code>Langformprobe</code> 172, <code>Nachtrag7probe</code> 73 — 601 checks in total</p>
+<p><b>The reference implementation.</b> <b>h5py</b> is a <b>pure binding</b> to the HDF5 C library, started by Andrew Collette and maintained by a community. Measuring against h5py therefore does not measure against a second opinion but against the <b>reference implementation</b>: library and format both come from the <i>HDF Group</i>, the non-profit successor to the HDF work at NCSA.</p>
+<p><b>The second reference implementation.</b> <b>jHDF</b> by James Mudd is a pure <b>Java</b> reader for HDF5, built explicitly from the format specification and <b>without</b> HDF Group code — not a wrapper around the C library but a reimplementation under the same conditions as this one. Reading is broadly covered, writing only in limited cases; what it cannot do, it reports. Its column in this document comes <b>from the change log, not from a measurement of our own</b> — as the header also states, and as should be kept in mind when reading the table.</p>
+<p><b>Why this one.</b> Because h5py talks to the HDF Group's C library and is therefore <b>the reference itself</b>: format and library come from the same place. jHDF stands beside it as a <b>second</b> reference for a specific reason — it too is a pure reimplementation in Java, that is, the implementation solving the same task under the same conditions as this one.</p>
+<p><b>Coverage, computed from the rows below:</b> of 81 features we have 78 present, 0 partial and 3 absent; the reference implementation has 65 / 9 / 7. The second reference implementation has 22 / 14 / 44.</p>
+<p><span class="ampel gruen">●</span> present · <span class="ampel rot">●</span> absent · <span class="ampel gelb">●</span> partial · – not applicable</p>
+<p><b>The <i>Note</i> column</b> points into section 5 of this document — not into the workspace item list. The word in front says <i>what kind of thing it is</i>: <b>gap</b> is something we lack and that is open; <b>decided</b> is something we deliberately do not do; <b>property</b> is a trait of the format affecting both implementations; <b>open there</b> is a gap of the reference product. Only the gaps are work — they are collected in section 5.1 and appear as <i>one</i> item in <code>OFFENE-PUNKTE.md</code>.</p>
+<p><b>Two comparison columns, two kinds of evidence.</b> The h5py column is measured: the same files through both readers. The jHDF column comes from the project's <b>changelog</b> and is <b>not</b> measured — jHDF lives on Maven Central, and this session's network access does not reach it. What stands in the jHDF column is therefore of the same kind as a statement from a manual: usable, but not verified. The parenthesised notes such as "(from 0.6.6)" name the version in which the project announced the feature.</p>
+<p>To profile a single file: <code>java -cp bin cmd.fileformats.Hdf5Inspect file.h5</code></p>
+
+<h2 id="a1">Feature comparison</h2>
+<p>✔ present · ✖ absent · ~ partial</p>
+<h3>Level 0 — File metadata</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>h5py 3.16 / HDF5 2.0</th><th>jHDF — feature column from the 0.5.11 changelog, values measured against 0.13.0 on 2026-09-06</th><th>Note</th></tr>
+  <tr><td>Superblock v0, v1, v2, v3</td><td>II.A</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Base address with a preceding user block</td><td>II.A</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Superblock extension</td><td>II.C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Family driver</td><td>II.B</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Multi driver</td><td>II.B</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Split driver</td><td>II.B</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Subfiling driver</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>decided H1</td></tr>
+</table>
+<p><b>Level 0 is complete</b>, except for subfiling — which is not part of the format specification. See section 2.1.</p>
+<h3>Level 1 — Infrastructure</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>h5py 3.16 / HDF5 2.0</th><th>jHDF — feature column from the 0.5.11 changelog, values measured against 0.13.0 on 2026-09-06</th><th>Note</th></tr>
+  <tr><td>B-tree v1, node types 0 and 1</td><td>III.A.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>B-tree v2, record types 1–4 (huge heap objects)</td><td>III.A.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>B-tree v2, record types 5, 6, 8, 9 (name indexes)</td><td>III.A.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>B-tree v2, record type 7 (SOHM index)</td><td>III.A.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>B-tree v2, record types 10, 11 (chunks)</td><td>III.A.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Symbol tables, cache types 0, 1, 2</td><td>III.B, III.C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Local heap, global heap</td><td>III.D, III.E</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Global heap block for virtual datasets, v0</td><td>III.F</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>… the same with shared names (v1)</td><td>III.F</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property C1b</td></tr>
+  <tr><td>Fractal heap: managed, huge and tiny objects</td><td>III.G</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Fractal heap with filtered blocks</td><td>III.G</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property C7c</td></tr>
+  <tr><td>Heap IDs of all three kinds</td><td>III.G</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Free-space index</td><td>III.H</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property D9</td></tr>
+  <tr><td>SOHM master table and store</td><td>III.I</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Metadata cache image</td><td>III.J</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+</table>
+<h3>Level 2 — Data objects</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>h5py 3.16 / HDF5 2.0</th><th>jHDF — feature column from the 0.5.11 changelog, values measured against 0.13.0 on 2026-09-06</th><th>Note</th></tr>
+  <tr><td>Object header v1 and v2, continuation blocks</td><td>IV.A.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Timestamps in the v2 header prefix</td><td>IV.A.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Shared messages, versions 1, 2, 3</td><td>IV.A.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Dataspace v1, v2, maximum dimensions</td><td>IV.A.3.b</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Null dataspace, scalar datasets</td><td>IV.A.3.b</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Link info, group info</td><td>IV.A.3.c, .k</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Datatype integer, floating point</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Floating point of any width (4, 6, 16 bit, bfloat16)</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Unsigned 64-bit integers</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Datatype time (class 2)</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Strings, fixed and variable length</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>String columns in the Langform table view</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>–</td><td>property LF1</td></tr>
+  <tr><td>Bitfield, opaque</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Compound types, including nested</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Enumerations, array types, variable length</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Datatype complex (class 11, HDF5 2.0)</td><td>IV.A.3.d</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property C5</td></tr>
+  <tr><td>Fill value, old and new format</td><td>IV.A.3.e, .f</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Links: hard, soft, external</td><td>IV.A.3.g</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td><b>Following external links across file chains</b></td><td>IV.A.3.g</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>User-defined links (kept visible)</td><td>IV.A.3.g</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>External data files</td><td>IV.A.3.h</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Layout v1, v2 — compact, contiguous, chunked</td><td>IV.A.3.i</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Layout v3, v4, v5</td><td>IV.A.3.i</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Virtual datasets</td><td>IV.A.3.i</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>… with printf-style names (<code>%b</code>, growing)</td><td>IV.A.3.i</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>… with open extent and no pattern</td><td>IV.A.3.i</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Filters deflate, shuffle, fletcher32</td><td>IV.A.3.l</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Filter LZF</td><td>IV.A.3.l</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Filter LZ4</td><td>IV.A.3.l</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Filter nbit — atomic types</td><td>IV.A.3.l</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Filter nbit — compound and array types</td><td>IV.A.3.l</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Filter scaleoffset — integer and floating point</td><td>IV.A.3.l</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Filter szip</td><td>IV.A.3.l</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property C3b</td></tr>
+  <tr><td>Filter plugins (bitshuffle, blosc, zstd, custom)</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel rot">●</span></td><td>decided H2</td></tr>
+  <tr><td>Attributes, compact and dense</td><td>IV.A.3.m, .v</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Large attributes</td><td>IV.A.3.m</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Object comment, modification times</td><td>IV.A.3.n, .o, .s</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Object reference count</td><td>IV.A.3.w</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>B-tree K values, driver info, file space info</td><td>IV.A.3.t, .u, .x</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Chunk index: B-tree v1</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Chunk index: single chunk, fixed array, extensible array</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Extensible array with secondary blocks</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Chunk index: implicit</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Chunk index: B-tree v2</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Chunk numbering by <b>maximum</b> dimensions</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td></td></tr>
+  <tr><td>Dataspace selection: all, none, hyperslab v1–v3, points</td><td>Anhang D</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Object references</td><td>Anhang D</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Region references</td><td>Anhang D</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Revised reference encoding, HDF5 1.12+</td><td>Anhang D</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel rot">●</span></td><td>property C6b</td></tr>
+</table>
+<h3>Beyond the format</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>h5py 3.16 / HDF5 2.0</th><th>jHDF — feature column from the 0.5.11 changelog, values measured against 0.13.0 on 2026-09-06</th><th>Note</th></tr>
+  <tr><td>Writing</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>decided H3</td></tr>
+  <tr><td>Works without a third-party library</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td><span class="ampel rot">●</span></td><td>property FB1</td></tr>
+  <tr><td>Partial reads, contiguous</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Partial reads, chunked multi-dimensional</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Raw chunk access</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Parallel chunk decompression</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Compression ratio and stored size</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Checksum validation (Jenkins lookup3)</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Format-feature profile of a file</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Reporting missing sources of a virtual dataset</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+</table>
+<p><b>Every read feature present in jHDF 0.5.11 is covered</b>, without exception.</p>
+
+<h2 id="a2">How this was measured</h2>
+<p><b>Two kinds of measurement underlie this comparison.</b> The large one is the run over The HDF Group's 460 official test files (section 2.1); it dates from 2026-08-26 and underpins the feature tables above. The small one was added on 2026-09-05, when this document was brought into the common form: four own test files and five netCDF-4 anchors, each through <b>both</b> readers.</p>
+<p><b>The 2026-09-05 run in detail.</b> <code>probe_grundlagen.h5</code>, <code>probe_gepackt.h5</code>, <code>probe_messreihe.h5</code>, <code>probe_verbund.h5</code> from <code>envisionz-app-hdf5reader/proben</code> and the five anchors from <code>Netcdf4anker</code> were run through <code>envisionz.fileformats.hdf5</code> and through h5py 3.16; the netCDF-4 anchors additionally through netCDF4 1.7.4. Dataset paths, types, shapes and values were compared. <b>Exactly one kind of divergence came out</b> — and it sits not in the HDF5 reader but in the table view above it: see LF1.</p>
+<p>With the netCDF-4 anchors one difference stands out that <b>is none</b>: netCDF4 1.7.4 shows two variables in <code>gruppen.nc</code>, h5py four datasets. The reason is that netCDF treats the dimension variables (<code>i</code>, <code>j</code>) as axes rather than variables — same file, two views. Our reader carries them as axis columns and thereby arrives at the same two tables as netCDF4. Anyone placing such numbers side by side without knowing the views finds a bug where there is none.</p>
+<h3>The 460 official test files of The HDF Group</h3>
+<p>From the source archive of <code>HDFGroup/hdf5</code>, branch <code>develop</code>.</p>
+<p><b>Element-by-element comparison against h5py</b>, which uses the reference library:</p>
+<table>
+  <tr><th></th><th></th></tr>
+  <tr><td><b>1517</b> datasets</td><td>value for value <b>exact</b></td></tr>
+  <tr><td><b>0</b></td><td>deviating</td></tr>
+  <tr><td><b>450764</b> numbers</td><td>compared</td></tr>
+  <tr><td><b>413</b> files</td><td>fully readable, 32 partially, 15 not at all</td></tr>
+  <tr><td><b>all 460</b></td><td><b>bit-identical</b> after reading</td></tr>
+</table>
+<p><b>Raw chunks against <code>read_direct_chunk</code></b> — length, content and filter mask:</p>
+<table>
+  <tr><th></th><th></th></tr>
+  <tr><td><b>2146</b> chunks</td><td>byte-identical, 3.8 MB</td></tr>
+  <tr><td><b>0</b></td><td>deviating</td></tr>
+</table>
+<p><b>Against The HDF Group's own expected outputs</b> (<code>h5dump</code> reference dumps, 204 of them, independent of any library):</p>
+<table>
+  <tr><th></th><th></th></tr>
+  <tr><td><b>92</b> datasets</td><td>value for value <b>exact</b></td></tr>
+  <tr><td><b>152839</b> numbers</td><td>compared</td></tr>
+  <tr><td><b>0</b></td><td>genuine deviations</td></tr>
+</table>
+<p>Three apparent deviations are h5dump's <b>print precision</b>: it emits <code>1.031</code> where the exact binary32 value is <code>1.03125</code> — our value is the correct one.</p>
+<h4>What the 15 unreadable files hang on</h4>
+<table>
+  <tr><th>Count</th><th>Reason</th><th>Assessment</th></tr>
+  <tr><td>7</td><td>Member files of multi/split <b>without a superblock</b></td><td><b>correct</b> — the entry point is the <code>-s</code> or <code>-m</code> file</td></tr>
+  <tr><td>3</td><td>Deliberately corrupted (<code>corrupt_stab_msg</code>, <code>bad_offset</code>, <code>3790_infinite_loop</code>)</td><td><b>correct</b> — The HDF Group uses these to test error handling</td></tr>
+  <tr><td>2</td><td>Subfiling driver</td><td>Layout lives in a companion file, not in the format</td></tr>
+  <tr><td>2</td><td><code>h5clear_fsm_persist_*</code>: <b>empty root header</b></td><td>Never finished writing; the consistency flag says "open for write". That is precisely what <code>h5clear</code> exists for. <b>Correct</b></td></tr>
+  <tr><td>1</td><td>Other</td><td>open</td></tr>
+</table>
+<p><b>Fourteen of the fifteen are the expected behaviour.</b></p>
+<h4>What the 32 partially readable files hang on</h4>
+<table>
+  <tr><th>Datasets / files</th><th>Reason</th><th>Assessment</th></tr>
+  <tr><td>13 / 7</td><td>Filter szip</td><td><b>C3b</b> — readable since 2026-09-25, not re-measured on these seven files</td></tr>
+  <tr><td>12 / 6</td><td>Filter <b>plugins</b></td><td>Not part of the format</td></tr>
+  <tr><td>7 / 7</td><td>External raw data files that do not exist</td><td>The test suite creates them at run time — failing is <b>correct</b></td></tr>
+  <tr><td>1 / 1</td><td>An LZ4 variant with a different block header</td><td>h5py itself cannot read this file here</td></tr>
+</table>
+<h3>Own test files</h3>
+<p>41 files from h5py 3.16 / HDF5 2.0, including file chains and virtual datasets:</p>
+<ul>
+  <li><b>86403 numbers from 3092 datasets exact</b> - <b>375 raw chunks</b> byte-identical with <code>read_direct_chunk</code> - Virtual datasets element-by-element against h5py: stacked, interleaved, with point selection, with a missing source, with printf-style names, with open extent - Region references element-by-element against h5py - Dense groups of 200 / 300 / 500 / 2000 entries - Huge heap objects with names 5003 characters long - Dense attributes, 40 and 60 - File chains across four files including a cycle - Sixteen concurrent reads of the same dataset — all identical - All files <b>bit-identical</b> after reading - <code>ReadOnlyAudit</code>: clean - Checksum arithmetic against Jenkins' own test vectors (<code>hashlittle("Four score and seven years ago") = 0x17770551</code>)</li>
+</ul>
+
+<h2 id="a3">What is hard about the format</h2>
+<p>This assessment comes from building this reader and checking it against 460 official test files. Every point below either caused a bug in this module or surfaced during that comparison — it is not a literature review.</p>
+<h3>The sheer number of variants</h3>
+<p>Four superblock versions, five layout versions, five chunk index kinds, three ways to store groups, three for attributes, two B-tree generations, three encodings of dataspace selection — and the combinations multiply.</p>
+<p>A reader that handles 95 % of files may still fail on the next one. This module's bugs sat almost exclusively in rare corners: layout version 1 with chunks, shared messages version 1, filtered array indexes. All correctly specified, all rare, all undetected until the reference files.</p>
+<p>For a format meant to carry data across decades this is the wrong direction: every new variant increases the chance that a future reader will not know it.</p>
+<h3>Missing self-description at decisive points</h3>
+<p>Repeatedly a number that is needed is not stated but must be derived:</p>
+<ul>
+  <li>How many <b>members</b> a multi file has is stated nowhere — one counts the distinct values in the mapping table. - How far an <b>unlimited virtual dataset</b> extends is not in the dataset but follows from how many source files happen to be present. - The <b>width of the size field</b> in filtered array entries follows a rule ("one byte more than needed, at most eight") instead of simply being stated.</li>
+</ul>
+<p>A value that must be computed is a value that two readers can compute differently.</p>
+<h3>Checksums where they are least needed</h3>
+<p>The newer structures — B-tree v2, fractal heap, array indexes, object header v2 — all carry a Jenkins checksum. The older ones — superblock v0 and v1, B-tree v1, symbol tables, local heap, object header v1 — carry <b>none at all</b>.</p>
+<p>Precisely the old files, which have been sitting longest and are most likely to have accumulated bit rot, are unprotected. And the <b>raw data</b> always is, unless <code>fletcher32</code> is explicitly enabled.</p>
+<h3>No referential integrity across file boundaries</h3>
+<p>External links, externally stored raw data and virtual datasets point at other files. If one is missing, the library <b>silently returns fill values</b> — no message, no marker in the data model.</p>
+<p>A dataset that is half measurements and half zeros looks exactly like one that genuinely contains zeros. This module therefore has <code>missingSources()</code> and prefers to refuse when the extent cannot be determined — a workaround for a format problem.</p>
+<h3>Filter plugins defeat readability</h3>
+<p>A file can become unreadable to <b>every conforming reader</b> through a foreign filter. Bitshuffle, blosc, zstd and BitGroom are binary extensions loaded at run time; without the filter the data is gone. In the 460 official test files this affects twelve datasets.</p>
+<p>For a format that advertises long-term archiving this is a fundamental contradiction: the file describes itself, but its payload can only be decompressed by one particular software installation.</p>
+<h3>Valid files that look destroyed</h3>
+<p><code>h5clear_mdc_image.h5</code> is perfectly valid — but its root header lives in the metadata cache image, and at the address named by the superblock there are nothing but zeros. Anyone who has not implemented chapter III.J will consider the file destroyed. That a performance mechanism can undermine the file's basic structure is a design flaw.</p>
+<h3>Rounding is not specified</h3>
+<p>With the <code>scaleoffset</code> filter for floating point, whether one computes the inverse in single or double precision decides the last bit. The specification says nothing about it; it had to be determined empirically. Two conforming readers can therefore return different numbers — for a scientific data format, not a trifle.</p>
+<h3>The tree is a graph</h3>
+<p>Groups may carry hard links to their own ancestors; the reference count even says so. This module's tree traversal promptly ran into a stack overflow. That was our own bug — but the word "tree" throughout the documentation invites it.</p>
+<h3>Addresses right up against the numeric range</h3>
+<p>The multi driver places its members at <code>0x1999999999999999</code>, <code>0x3333…</code> through <code>0x7FFFFFFFFFFFFFFD</code>. The test "address less than start plus size" overflows into negative territory there. A layout that deliberately runs to the edge of the numeric range is an invitation to overflow.</p>
+<h3>What is good about it</h3>
+<p>The core is soundly built: the chunk indexes cover the range from one block to billions with structures suited to each, fractal heaps scale cleanly from ten to millions of entries, and factoring out shared messages saves substantially when many datasets are alike.</p>
+<p>Above all, the format specification is <b>complete enough</b> that an independent reader can be built from it — by no means a given with binary formats. The 641 expected-output files make the result verifiable. That is exactly why this module reads 413 of 460 official files without a single line of foreign code.</p>
+<p>The criticism aims at one thing: the format has grown for over thirty years and has thrown away almost nothing along the way. The burden of that growth falls on the readers.</p>
+
+<h2 id="a4">Not provided</h2>
+<p>Writing, in any form. <code>Hdf5Source</code> is the module's only opening point and opens exclusively with <code>READ</code>; <code>ReadOnlyAudit</code> scans the source at build time for write access; a tripwire compares size and timestamp on close.</p>
+
+<h2 id="a5">The items</h2>
+<p>The <i>Note</i> column names the kind in front of the identifier. Only the <b>gaps</b> are work; they are listed individually in <code>OFFENE-PUNKTE.md</code>. Everything listed here announces itself <b>by name</b> when reading — none of it silently returns wrong values.</p>
+<h3>Our open gaps — this is the work</h3>
+<p><b>Since 2026-09-25 nothing is left here.</b> All six gaps carried the same block: without a file to check the result against, nothing gets built — an unpacker that returns plausible-looking wrong numbers is worse than none. The files now exist (<code>NACHTRAG7-README.md</code> in <code>envisionz-app-hdf5reader/proben/referenz/</code>), written by HDF5 2.0 itself; the six items stand under 5.3.</p>
+<h3>Deliberate decisions — nothing to do</h3>
+<p><b>H1</b> (decided) — The subfiling driver</p>
+<p>A virtual file driver from HDF5 1.14 for parallel I/O: the logical file is split into "subfiles" whose count and stripe size live in a <b>companion file</b>, not in the format. Unlike Family and Multi, the split is therefore nowhere in the HDF5 file itself — it is a matter for the runtime and <b>not part of the format specification</b>. Affects 2 of the 460 files.</p>
+<p><b>H2</b> (decided) — Filter plugins</p>
+<p>bitshuffle, blosc, zstd, <code>dynlib*</code>, <code>myfilter</code>, BitGroom, Granular BitRound: application-specific extensions loaded at runtime. A format reader <b>fundamentally</b> cannot know them — the algorithm lives in a foreign library, not in the file. Affects 12 datasets in 6 files. That one of them is called zstd, and that this workspace has been able to read zstd since 2026-09-05, changes nothing: the HDF5 filter identifier does not say which flavour of zstd is meant.</p>
+<p><b>H3</b> (decided) — Writing</p>
+<p>Not a gap but a guarantee resting on four levels and measured: channel opened read-only, no writing method, <code>Nurlesenprobe</code> searches the source, and size and modification time are remembered on open and compared on close. h5py and jHDF write.</p>
+<h3>Properties and closed items</h3>
+<p><b>C3b</b> (property) — The szip filter — closed on 2026-09-25</p>
+<p>Own decoder <code>Hdf5Szip</code> for the adaptive entropy coding of CCSDS 121.0-B, inside the frame HDF5 puts in front (4-byte size). The format specification does not describe szip; measured against <code>g7_szip.h5</code>, written by HDF5 2.0.0 with libaec 1.1.4: seven datasets, 19 compressed chunks, byte-identical. They cover all four block kinds (82 second extension, 282 zero-block runs, 250 uncompressed, 1330 split blocks), both byte orders, with and without preprocessing, 8, 16, 32 and 64 bits. Two places are not in the standard but in the implementation and were checked against libaec (<code>sz_compat.c</code>): at <b>32 and 64 bits</b> the values are split into bytes and interleaved by position before packing, and a <b>scanline</b> that does not divide into blocks is padded with its last value. The counter-check reads the same chunk as a 16-bit stream and gets different bytes.</p>
+<p><b>C5</b> (property) — Complex data type (class 11) — closed on 2026-09-25</p>
+<p>Read following <code>H5Odtype.c</code>: bit 0 homogeneous, bits 1–2 form (only rectangular is described), then the floating-point type of one part. <code>Hdf5Dataset.readComplex()</code> returns real and imaginary parts alternately, <code>readString()</code> the number as text <code>1.0+2.0i</code>; <code>readDouble()</code> reports that the series is not numeric instead of silently dropping one part. Measured on <code>g7_komplex.h5</code> (64-bit little-endian, 32-bit big-endian, 2 × 2). h5py writes <code>complex128</code> as a compound by default — class 11 only arises through the <code>COMPLEX_IEEE_*</code> types.</p>
+<p><b>C1b</b> (property) — Virtual datasets with shared names — closed on 2026-09-25</p>
+<p>From library low bound 2.0 HDF5 writes the mapping heap block in version 1: one flag byte per entry, and a name that already occurred is given as the number of the earlier entry (<code>H5Dvirtual.c</code>). Measured on <code>g7_vds_geteilt.h5</code>: four mappings, three from the same source, one from the file itself; each of the hundred cells as h5py. <b>Found and fixed on the way: hyperslab selection version 3 was read wrongly.</b> After the flags comes one byte of encoding width; four were read — none of the older files carried version 3, which only arises from low bound 1.12. Unlimited is the maximum of the respective width.</p>
+<p><b>C6b</b> (property) — Reference encoding from HDF5 1.12 — closed on 2026-09-25</p>
+<p>New class <code>Hdf5Reference</code>. Each element carries its own kind and flags — <b>one dataset mixes object, region and attribute references</b>; an object reference into the same file has its target in the element, everything else lives in the global heap (<code>H5Tref.c</code>, <code>H5Rint.c</code>). <code>readReferences()</code> returns the object per element, <code>readRegions()</code> the regions, the new <code>readAttributeReferences()</code> the attributes; a reference into another file is named, not followed. <b>Silently wrong until then:</b> kind 2 was read as an old object reference, the first eight bytes <code>02 00 08 b3 …</code> as an address. Measured on <code>g7_verweis2.h5</code>, written via <code>H5Rcreate_*</code> — h5py 3.16 does not know this kind, hence <i>partial</i> in the h5py column.</p>
+<p><b>C7c</b> (property) — Fractal heap with filters on the blocks — closed on 2026-09-25</p>
+<p>If the heap header carries a filter pipeline, every direct block is compressed <b>as a whole</b> — signature and header included (<code>H5HFcache.c</code>). Indirect-block entries then also give the compressed size and filter mask; for the root direct block both sit in the heap header. Decompression uses the same pipeline as datasets, after which the blocks live in memory; the checksum is computed on the decompressed block. Measured on <code>g7_heapfilter.h5</code>: a group with 40 entries in dense storage and deflate on the group creation property list; the <code>FHDB</code> signature does not occur in the file.</p>
+<p><b>D9</b> (property) — Free space index, complete — closed on 2026-09-25</p>
+<p>With <code>fs_persist</code> the addresses of up to thirteen free-space managers stand in the file space message. <code>Hdf5FileInfo.freeSections()</code> reads each manager's <code>FSHD</code> header and its <code>FSSE</code> section list — grouped by size, count, size and address in the narrowest widths that hold the maxima from the header (<code>H5FScache.c</code>). Measured on <code>g7_freiraum.h5</code>: six sections, 6183 bytes in total, the same and in the same order as <code>H5Fget_free_sections</code>. Fixed on the way: file space message <b>version 0</b> was read like version 1. Managers belonging to a fractal heap are counted, not listed.</p>
+<p><b>FB1</b> (property) — The row stood the wrong way round — corrected on 2026-09-06</p>
+<p>The row was called "third-party libraries required" and stood at <i>partial</i> for all three. Both were wrong. <b>First the direction:</b> in this table ✔ means "present", that is something good — with a row of that name ✔ would have meant "needs some", making the one row in the document that must be read the other way round precisely the one not marked as such. It is now called <b>"works without a third-party library"</b>, and ✔ means the same as everywhere else.</p>
+<p><b>Second the values.</b> For us it now reads <b>yes</b>: this reader needs none, and that is not a claim but measured — the probe compiles it against an empty classpath. For <b>h5py no</b>: it talks to the HDF Group's C library, that is its entire nature. For <b>jHDF no</b>, and this was measured on 2026-09-06: <code>jhdf-0.13.0.jar</code> alone on the classpath throws <code>NoClassDefFoundError: org/slf4j/LoggerFactory</code>, and with slf4j behind it <code>org/apache/commons/lang3/concurrent/LazyInitializer</code>. It is a pure Java reimplementation, but not one without dependencies.</p>
+<p>The finding is small and instructive: a table row whose name inverts the meaning of the ticks will sooner or later be filled in wrongly — here it had been, since day one, in all three columns.</p>
+<p><b>LF1</b> (property) — String columns in the Langform view — closed on 2026-09-06</p>
+<p><b>Closed, and the gap was smaller than the item said.</b> A standalone string dataset was already carried as a text column. What was skipped were only the <b>string members of a compound</b> — on the grounds that <code>readMemberDouble</code> cannot interpret them. True, and the wrong question: the HDF5 reader underneath has always had <code>readMemberString</code>. The gap sat in the view, not in the reader, and exactly one branch was missing.</p>
+<p><b>For a measurement series with a name column that is the column one misses first</b> — and the compound is the usual packaging in real holdings. The probe measures not only that the column is there but that each string belongs to the <b>right row</b>: <code>readMemberString</code> cuts the column out of the compound's raw block, and whoever is off by the member offset gets letters — and letters look like letters. Two mutations go red.</p>
+<p>Fixed along the way: the first mutation made the section crash with <code>IndexOutOfBounds</code> instead of turning it red. Section clamp added, access to the column list guarded. And this document's section numbering is aligned with the other twenty-eight — 5.3 here used to be the upstream findings, everywhere else the properties.</p>
+<h3>Findings against the reference implementation</h3>
+<p><b>None.</b> In the four own test files and the five netCDF-4 anchors, h5py 3.16 produced nothing that diverges from our reader with h5py in the wrong. That is no surprise: h5py sits on The HDF Group's library, and that library is the specification in executable form. A finding against it would be a finding against the standard.</p>
+<p>For jHDF <b>nothing</b> can be said here, because it could not be measured.</p>
+
+<h2 id="a6">The wider field — what else reads and writes these files</h2>
+<p>This table does <b>not</b> count towards the coverage figures. It says nothing about this reader but about the field in which such a file comes into being — and when reading a foreign file that is the more important information: <b>whoever wrote it decides which variant is inside.</b> A reader that only knows the files of a single writer mistakes that writer's habits for the format.</p>
+<table>
+  <tr><th>Program</th><th>reads</th><th>writes</th><th>Note</th></tr>
+  <tr><td><b>HDF5-C-Bibliothek</b> (HDF Group)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The reference. <code>h5dump</code>, <code>h5ls</code> and <code>h5repack</code> are the tools one first inspects a foreign file with.</td></tr>
+  <tr><td><b>h5py</b>, <b>PyTables</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>h5py is this comparison's reference product.</td></tr>
+  <tr><td><b>MATLAB</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>From <code>-v7.3</code> on, MAT files are HDF5; <code>h5read</code>/<code>h5write</code> are built in as well.</td></tr>
+  <tr><td><b>jHDF</b> (Java)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>The second reference product — also a reimplementation without the C library.</td></tr>
+  <tr><td><b>netCDF-4</b>, <b>Exodus</b>, <b>CGNS</b>, <b>MATLAB 7.3</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Four formats that use HDF5 as a <b>container</b>. Whoever reads HDF5 reads the substrate of all four.</td></tr>
+</table>
+<p>The list is <b>not exhaustive</b> and does not try to be. It names what one actually encounters with this format and leaves out what could do it too but nobody uses for it.</p>
+
+<h2 id="a7">The Java implementation — where this reader stands among its own kind</h2>
+<p><b>Why this section.</b> Every other comparison in this module measures against a tool in a <b>different</b> language. That is good against misunderstandings of the format and says nothing about where this reader stands among its own kind — and that is the question a Java developer asks first. The distinction that matters is between a <b>pure reimplementation in Java</b> and a <b>wrapper around the original C library</b>: only the reimplementation solves the same task under the same conditions as this reader; a wrapper calls the original.</p>
+<p><b>Measured on 2026-09-06 against netcdf-java 5.10.0</b> (<code>ucar.nc2</code>) — a <b>pure Java reimplementation</b>: Unidata's reader has its own HDF5 access (<code>ucar.nc2.iosp.hdf5</code>) and does not need the C library for reading. Five test files from <code>envisionz-app-hdf5reader/proben</code>; compared were the set of dataset paths, their shapes and the values of all numeric datasets.</p>
+<p><b>Result: not a single divergence in the values.</b> <code>probe_container.h5</code> 7 of 7 numeric datasets equal, <code>probe_gepackt.h5</code> 4 of 4, <code>probe_grundlagen.h5</code> 9 of 9, <code>probe_messreihe.h5</code> 6 of 6. Paths and shapes agree too — including the group nesting <code>/tief/eins/zwei/drei/wert</code> and the compressed datasets.</p>
+<p><b>A single difference, and it is in our favour:</b> in <code>probe_verbund.h5</code> we carry the dataset <code>/punkte_leer</code>, netcdf-java does not. It is an empty dataset — we name it, the reference omits it. A dataset that exists deserves to be named; whether it carries values is a second question.</p>
+<p><b>And measured against jHDF 0.13.0 on 2026-09-06 — that was the one unmeasured place in this collection.</b> Five test files through both readers, comparing dataset paths, shapes and all numeric values. Result: <b>24 numeric datasets equal, none different</b>, and the path sets agree in all five files. In <code>probe_verbund.h5</code> jHDF also finds the empty dataset <code>/punkte_leer</code> that netcdf-java omits — of the two Java implementations, jHDF is the closer to ours.</p>
+<p><b>A finding one only makes by measuring.</b> jHDF does <b>not</b> read the two compressed datasets in <code>probe_gepackt.h5</code> — it throws <code>NoClassDefFoundError: com/ning/compress/lzf/LZFException</code>. The remarkable part is that one of those datasets is <b>gzip</b>-compressed and has nothing to do with LZF: jHDF's <code>FilterManager</code> touches the LZF classes in its static initialiser, and when that jar is missing the <b>entire filter chain</b> fails — the second dataset then reports only "Could not initialize class io.jhdf.filter.FilterManager". The dependency is therefore not optional per filter but all or nothing.</p>
+<p>That is not a criticism of the reimplementation but an operational fact: whoever uses jHDF needs <code>slf4j-api</code>, <code>commons-lang3</code> <b>and</b> <code>compress-lzf</code> on the classpath, otherwise reading breaks at the first compressed place — and in real holdings almost everything is compressed. This reader needs none of them; see item FB1.</p>
+<p><b>This measurement lives outside the module</b>, in <code>javavergleich/Javavergleich.java</code>, because <code>envisionz-framework-fileformats</code> has the rule "no foreign libraries" — and it still holds. Only the result goes into the module, with date and version. The single exception is <code>javax.imageio</code> for the image formats: that sits in the JDK and therefore measures along as a permanent probe.</p>
+
+<footer>
+Generated from <code>envisionz-framework-fileformats/docs/hdf5/COMPARISON.md</code> · back to the <a href="index.html#behaelter">overview</a> · all formats in the <a href="abgleich.html">comparison</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

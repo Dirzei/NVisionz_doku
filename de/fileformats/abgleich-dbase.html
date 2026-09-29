@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dBASE .dbf — Abgleich gegen Spezifikation und dbfread – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite aktiv" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › dBASE .dbf — Abgleich gegen Spezifikation und dbfread</span><a class="sprachwahl" href="../../en/fileformats/abgleich-dbase.html">English</a></div>
+<!-- erzeugt aus dbase/ABGLEICH.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · Abgleich</div>
+  <h1>dBASE <code>.dbf</code> — Abgleich gegen Spezifikation und dbfread</h1>
+</header>
+
+<p><b>Stand:</b> 2026-09-05<br><b>Unsere Umsetzung:</b> <code>envisionz.fileformats.dbase</code> — <code>DbaseQuelle</code>, <code>DbaseKopf</code>, <code>DbaseFeld</code>, <code>Memodatei</code>, <code>Sprachtreiber</code>, rein lesend<br><b>Spezifikation:</b> Die xBase-Formatbeschreibungen (dBASE III/IV/V, FoxPro, Visual FoxPro) — öffentlich und in mehreren Fassungen; die Fundstellen nennen Kopfbytes und Feldkennzeichen<br><b>Verglichen mit:</b> dbfread 2.0.7 (Python)<br><b>Prüfstand:</b> <code>Datenprobe</code> (dBASE-Kern), <code>Memoprobe</code> 37, <code>Indexprobe</code> 40</p>
+<p><b>Das Vergleichsprodukt.</b> <b>dbfread</b> ist eine kleine, reine Python-Bibliothek von <b>Ole Martin Bjoerndalen</b>, ausschliesslich lesend. Sie ist eine <b>unabhaengige Nachimplementierung</b> eines historischen Herstellerformats: dBASE kam von Ashton-Tate, ging ueber Borland weiter, und einen aktiven Eigner mit eigener Bibliothek gibt es nicht mehr. Es gibt deshalb keine Referenz, gegen die man messen koennte — nur mehrere unabhaengige Lesarten desselben Altbestands.</p>
+<p><b>Warum ausgerechnet dieses.</b> Weil es nichts Besseres gibt. dBASE hat keinen Eigner mehr und keine Norm; was kursiert, sind mehrere teils widerspruechliche Beschreibungen und eine Handvoll unabhaengiger Leser. dbfread ist der aufgeraeumteste davon und deckt die verbreiteten Spielarten ab. Jeder Unterschied ist hier ausdruecklich ein <b>Befund</b> und keine Fehlerzuweisung — es gibt keine Instanz, die entscheiden koennte.</p>
+<p><b>Deckung, aus den Zeilen unten gerechnet:</b> von 34 Merkmalen sind bei uns 33 vorhanden, 0 teilweise und 1 nicht vorhanden; beim Vergleichsstueck 21 / 5 / 8.</p>
+<p><span class="ampel gruen">●</span> vorhanden · <span class="ampel rot">●</span> nicht vorhanden · <span class="ampel gelb">●</span> teilweise · – nicht zutreffend</p>
+<p><b>Die Spalte <i>Anmerkung</b></i> verweist auf Abschnitt 5 dieses Dokuments — nicht auf die Punkteliste des Arbeitsbereichs. Das Wort davor sagt, <i>worum es sich handelt</i>: <b>Lücke</b> ist etwas, das uns fehlt und offen ist; <b>entschieden</b> ist etwas, das wir absichtlich nicht tun; <b>Merkmal</b> ist eine Eigenschaft des Formats, die beide Umsetzungen betrifft; <b>dort offen</b> ist eine Lücke des Vergleichsprodukts. Nur die Lücken sind Arbeit — sie stehen gesammelt in Abschnitt 5.1 und als <i>ein</i> Punkt in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Merkmalsvergleich</h2>
+<h3>Kopf und Sätze</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>dbfread 2.0.7</th><th>Anmerkung</th></tr>
+  <tr><td>Fassungsbyte, elf bekannte Spielarten</td><td>Byte 0</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Satzzahl, Kopflänge, Satzlänge</td><td>Byte 4–11</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Gelesen wird nach der <b>Dateilänge</b>, nicht nach der Satzzahl</td><td>Byte 4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen D1</td></tr>
+  <tr><td>Abweichung zwischen Satzzahl und Dateilänge wird gemeldet</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen D1</td></tr>
+  <tr><td>Fehlendes Dateiendezeichen <code>0x1A</code> wird gemeldet</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen D1</td></tr>
+  <tr><td>Angeschnittener letzter Satz wird gemeldet und nicht gelesen</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>dort offen D1</td></tr>
+  <tr><td>Gelöschte Sätze werden übersprungen</td><td>Byte 0 je Satz</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Gelöschte Sätze auf Verlangen mitlesen</td><td>Byte 0 je Satz</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden D2</td></tr>
+  <tr><td>Sprachtreiber (Zeichensatz) aus Byte 29</td><td>Byte 29</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Fehlender Sprachtreiber wird gemeldet</td><td>Byte 29</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen D1</td></tr>
+</table>
+<h3>Feldtypen</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>dbfread 2.0.7</th><th>Anmerkung</th></tr>
+  <tr><td><code>C</code> Text</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>N</code> Zahl als Text</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden D3</td></tr>
+  <tr><td><code>F</code> Gleitkomma als Text</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>L</code> Wahrheitswert</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>D</code> Datum <code>JJJJMMTT</code></td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>M</code> Memo</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>dort offen D4</td></tr>
+  <tr><td><code>I</code> Ganzzahl binär</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>T</code> Zeitpunkt</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>Y</code> Währung</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>B</code> Doppelte Genauigkeit</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>G</code> Allgemein (OLE) — Rohbytes, Inhalt benannt</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal D5</td></tr>
+  <tr><td><code>P</code> Bild — Rohbytes, Bildart benannt</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal D5</td></tr>
+  <tr><td><code>O</code> Doppelte Genauigkeit (VFP)</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>V</code> Varchar (VFP)</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal D6</td></tr>
+  <tr><td><code>+</code> Autoinkrement</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D7</td></tr>
+  <tr><td><code>@</code> Zeitstempel</td><td>Feldkennzeichen</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D7</td></tr>
+</table>
+<h3>Begleitdateien</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>dbfread 2.0.7</th><th>Anmerkung</th></tr>
+  <tr><td>Memo <code>.dbt</code> in der dBASE-III-Bauart</td><td>.dbt</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Memo <code>.dbt</code> in der dBASE-IV-Bauart</td><td>.dbt</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Memo <code>.fpt</code> in der FoxPro-Bauart</td><td>.fpt</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D8</td></tr>
+  <tr><td>Blocknummer als ASCII-Ziffern <b>und</b> binär</td><td>Memofeld</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Merkmal D8</td></tr>
+  <tr><td>Fehlende Memodatei — das Feld liefert die Blocknummer</td><td>.dbt</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen D9</td></tr>
+  <tr><td>Indexdatei <code>.ndx</code></td><td>.ndx</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen D10</td></tr>
+  <tr><td>Indexdatei <code>.cdx</code></td><td>.cdx</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen D10</td></tr>
+  <tr><td>Schreiben</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel rot">●</span></td><td>entschieden D11</td></tr>
+</table>
+
+<h2 id="a2">Was gemessen wurde</h2>
+<p>Zwei Prüfstücke, <b>nach der Formatbeschreibung von Hand gebaut</b> und nicht aus einem der beiden Leser abgeleitet: eine <code>.dbf</code> der Fassung <code>0x03</code> mit den Feldtypen <code>C</code>, <code>N</code>, <code>L</code>, <code>D</code> über drei Sätze — darunter ein leeres <code>N</code>-Feld, ein unbestimmtes <code>L</code> (<code>?</code>) und ein leeres Datum — und eine <code>.dbf</code> <b>ohne einen einzigen Satz</b>.</p>
+<p><b>Beide Leser stimmen überein</b>, auch in den drei heiklen Zellen: das leere <code>N</code> ist <code>LEER</code> und nicht null, das <code>?</code> im <code>L</code>-Feld ist <code>LEER</code> und nicht falsch, das Datum aus acht Leerzeichen ist <code>LEER</code> und nicht der 1. Januar 1900. Unser Leser meldet zusätzlich, dass Byte 29 keinen Sprachtreiber nennt — die Zeichenkodierung ist damit <b>nicht angegeben</b>, und das ist bei einer Datei mit Umlauten die wichtigste Auskunft überhaupt.</p>
+<p>Die Zeilen zu Memo-, Index- und Visual-FoxPro-Feldern sind <b>nicht an diesen beiden Dateien gemessen</b>, sondern aus dem Quelltext beider Umsetzungen abgeleitet; die zugehörigen Prüfstücke liegen im Prüfstand des Moduls (<code>Memoschreiber</code>, <code>Indexschreiber</code>) und nicht in dieser Messreihe.</p>
+
+<h2 id="a3">Was am Format schwierig ist</h2>
+<p><b>Zahlen liegen als Text vor.</b> Ein leeres <code>N</code>-Feld ist eine Reihe Leerzeichen, <b>nicht die Null</b>. Wer daraus 0 macht, verfälscht jede Summe — und zwar nach unten, gleichmässig, unauffällig. Ein übergelaufenes Feld schreibt dBASE als <code>*****</code>; auch das ist kein Wert.</p>
+<p><b>Der Kopf lügt über die Satzzahl.</b> Viele Werkzeuge hängen Sätze an, ohne den Zähler nachzuführen. Wer ihm glaubt, liest die angehängten Sätze nicht — und merkt nichts, weil die Datei sonst in Ordnung ist.</p>
+<p><b>Gelöscht heisst markiert.</b> Byte 0 jedes Satzes ist <code>*</code>, die Daten stehen unverändert weiter da. Für eine Auswertung sind sie zu überspringen; für eine Forensik sind sie oft der interessante Teil. Ein Leser, der sie gar nicht anbietet, entscheidet das für den Aufrufer.</p>
+<p><b>Was gut ist:</b> dBASE ist nach vierzig Jahren immer noch in einem Hexeditor zu lesen. Kopf, Feldliste, Sätze — feste Längen, keine Verweise, kein Verzeichnis. Es gibt kein zweites Datenformat dieser Verbreitung, bei dem eine beschädigte Datei so leicht von Hand zu retten wäre.</p>
+
+<h2 id="a4">Die Punkte</h2>
+<p>Die Spalte <i>Anmerkung</i> nennt die Art vor der Kennung. Nur die <b>Lücken</b> sind Arbeit.</p>
+<h3>Unsere offenen Lücken — das ist die Arbeit</h3>
+<p><b>D11</b> (entschieden) — Schreiben</p>
+<p>Weder wir noch dbfread schreiben. Bei uns ist das eine Zusage, die auf vier Ebenen ruht und gemessen wird; bei dbfread ist es der Zuschnitt der Bibliothek. Die Zeile steht in der Tabelle mit <b>nein/nein</b>, damit niemand aus dem leeren Feld auf ein Versehen schliesst.</p>
+<p><b>Umgehängt am 2026-09-06.</b> Der Punkt stand als <i>Lücke</i>, obwohl schon sein eigener Titel „hier ausdrücklich keine Lücke" lautete — und obwohl <b>alle sechsundzwanzig anderen Formate</b> dieser Sammlung „Schreiben" als bewusste Entscheidung führen. Er war der einzige Ausreisser. Nur lesend zu sein ist der Zuschnitt dieses Moduls und keine unerledigte Arbeit; ein solcher Punkt in der Lückenliste stellt die Zusage als Versäumnis dar und lädt dazu ein, sie zu brechen.</p>
+<p><b>D2</b> (entschieden) — Gelöschte Sätze werden angeboten, nicht aufgedrängt</p>
+<p>Voreingestellt übersprungen, über <code>mitGeloeschten()</code> mitlesbar. Beide Wege sind nötig: für eine Auswertung sind gelöschte Sätze Rauschen, für eine Forensik sind sie der Gegenstand. dbfread hat dasselbe über <code>DBF(..., raw=False)</code> und die <code>deleted</code>-Sicht.</p>
+<p><b>D3</b> (entschieden) — Der Rohstand bleibt neben dem Wert stehen</p>
+<p>Ein <code>Wert</code> trägt die Deutung <b>und</b> die Bytes, aus denen sie kam. Bei dBASE ist das kein Luxus: ein Datum <code>00000000</code>, eine Zahl mit führenden Leerzeichen, ein Textfeld mit Füllbytes — ein Leser, der nur deutet, verliert genau dann Information, wenn es darauf ankommt.</p>
+<p><b>D5</b> (Merkmal) — Allgemein- und Bildfelder — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen, und zwar als Benennung und nicht als Auspacken.</b> <code>G</code> und <code>P</code> verweisen wie ein Memofeld in die Begleitdatei, tragen dort aber ein eingebettetes OLE-Objekt beziehungsweise ein Bild. Der <b>Wert bleibt der ganze Block</b> — nichts wird weggeschnitten —, aber was darin steht, wird jetzt gesagt: <code>Olekunde</code> liest den OLE-1.0-Rahmen (Fassung, Art, Klassenname, Thema, Element, Nutzlast), erkennt das Bild darin und nennt <b>Stelle und Länge der Nutzlast</b> im Block. Der Feldtyp ist dabei von <code>GANZZAHL</code> auf <code>BYTES</code> gewechselt: die Blocknummer steht im <i>Satz</i>, heraus kommt der <i>Inhalt</i>.</p>
+<p><b>Warum benennen und nicht auspacken.</b> Ein Modul, das nur liest, darf nichts wegwerfen. Der OLE-Rahmen trägt den Klassennamen — <code>PBrush</code>, <code>Word.Document.8</code>, <code>METAFILEPICT</code> —, und das ist oft die einzige Angabe darüber, welches Programm das Objekt geschrieben hat. Wer nur die Nutzlast herausgibt, liefert ein Bild und verliert die Herkunft. Wer die Stelle nennt, gibt beides.</p>
+<p><b>Erkannt werden</b> BMP, PNG, JPEG, GIF, beide Windows-Metafile-Kennungen (die plazierbare <code>D7 CD C6 9A</code> und die blosse <code>01 00 09 00</code>), das erweiterte Metafile und ein OLE-2-Verbunddokument — dazu der Fall ohne Rahmen, in dem das Bild unmittelbar im Block steht. Die Längen im OLE-Rahmen stehen <b>wenigstwertiges Byte zuerst</b>; wer sie andersherum liest, findet den Klassennamen nicht und hält das Ganze für Rohbytes. Genau daran hängt die Gegenprobe.</p>
+<p>dbfread tut nach wie vor dasselbe wie vorher: Rohbytes ohne Auskunft. Der Unterschied steht damit nicht mehr in der Lückenliste, sondern in der Merkmalstafel.</p>
+<h3>Eigenschaften des Formats — beide betreffend</h3>
+<p><b>D7</b> (Merkmal) — Autoinkrement und Zeitstempel — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen, aber anders als erwartet.</b> Der Punkt sagte, die Visual-FoxPro-Kennzeichen <code>+</code> und <code>@</code> fehlten. Sie fehlten nicht — sie standen seit dem Bau im Leser, <code>+</code> als Ganzzahl wie <code>I</code>, <code>@</code> als Zeitstempel wie <code>T</code>. Was fehlte, war die <b>Messung</b>: keine Probe hatte je ein binäres Feldkennzeichen angefasst.</p>
+<p><b>Und die Messung fand sofort einen Fehler</b>, den der Punkt gar nicht behauptet hatte: <code>I</code> und <code>+</code> wurden <b>ohne Vorzeichen</b> gelesen. Aus −1234 kam 4294966062. Die Formatbeschreibung sagt vorzeichenbehaftet, dbfread liest es so, und keine Probe hatte je eine negative Zahl in ein <code>I</code>-Feld gelegt. Das ist der unangenehmere der beiden Fälle: eine Lücke, die keine ist, lässt sich nachsehen — eine Umsetzung, die niemand misst, sieht genauso aus wie eine richtige.</p>
+<p>Gemessen werden jetzt alle sechs binären Kennzeichen — <code>I</code>, <code>+</code>, <code>B</code>, <code>Y</code>, <code>T</code>, <code>@</code> — an einem Prüfstück aus rohen Bytes (<code>Dbaseschreiber.rohSatz</code>), weil Zahlen in kleinstwertiger Byte-Reihenfolge durch eine Zeichenkodierung geschickt nicht mehr messbar sind. Der julianische Tag und die Millisekunden sind von Hand gerechnet und nicht aus dem Leser abgelesen.</p>
+<p><b>D8</b> (Merkmal) — Die FoxPro-Zahlen stehen andersherum</p>
+<p>In der <code>.dbf</code> liegt alles niederwertigstes Byte zuerst, in der <code>.fpt</code> daneben <b>höchstwertiges zuerst</b> — dieselbe Datei, zwei Byte-Reihenfolgen. Dazu steht die Blocknummer im Satz mal als zehn ASCII-Ziffern, mal als vier Byte binär, und der Feldtyp verrät nicht welches. Beides zugleich zu treffen ist die eigentliche Arbeit an den Memofeldern.</p>
+<p><b>D6</b> (Merkmal) — Varchar braucht die Nullflaggenspalte</p>
+<p>Ein <code>V</code>-Feld in Visual FoxPro trägt seine wirkliche Länge im <b>letzten Byte des Feldes</b> — es sei denn, das Feld ist als leer gekennzeichnet, und das steht in einer versteckten Spalte <code>_NullFlags</code>. Wer nur das Längenbyte liest, hält eine leere Zelle für eine volle.</p>
+<h3>Befunde am Vergleichsprodukt</h3>
+<p><b>D1</b> (dort offen) — Fünf Zustände, die dbfread nicht meldet</p>
+<p>Satzzahl gegen Dateilänge, fehlendes <code>0x1A</code>, angeschnittener letzter Satz, fehlender Sprachtreiber, gelesene Memodatei mit Bauart und Blockgrösse. Keiner dieser Zustände macht eine Datei unlesbar; jeder einzelne ändert aber, wie sehr man dem Ergebnis trauen darf. dbfread liest schweigend darüber hinweg.</p>
+<p><b>D4</b> (dort offen) — Memofelder ohne Begleitdatei</p>
+<p>Liegt keine <code>.dbt</code>/<code>.fpt</code> daneben, liefert unser Leser <b>die Blocknummer</b> und meldet es. dbfread liefert ohne <code>ignore_missing_memofile=True</code> gar nichts und mit dieser Flagge einen leeren Text. Ein leerer Text sieht aus, als gäbe es nichts zu holen; eine Blocknummer sagt, dass es etwas gibt und wo.</p>
+<p><b>D9</b> (dort offen) — Die Meldung statt der Leere</p>
+<p>Siehe D4 — dieselbe Sache aus der Sicht der Tabelle: eine Spalte, die überall leer ist, sieht aus wie eine Spalte ohne Inhalt.</p>
+<p><b>D10</b> (dort offen) — Indexdateien</p>
+<p><code>.ndx</code> und <code>.cdx</code> werden von uns gelesen (<code>Indexprobe</code>, 40 Prüfungen) — nicht um schneller zu suchen, sondern um zu <b>sehen</b>, was ein Bestand an Indizes mitbringt. dbfread liest sie nicht. Für eine Auswertung ist das gleichgültig; für die Frage „gehört diese <code>.cdx</code> zu dieser <code>.dbf</code>?" ist es die ganze Antwort.</p>
+
+<h2 id="a5">Das Umfeld — womit diese Dateien sonst gelesen und geschrieben werden</h2>
+<p>Diese Tafel zaehlt <b>nicht</b> in die Deckung. Sie sagt nichts ueber diesen Leser, sondern ueber das Umfeld, in dem eine solche Datei entsteht — und das ist beim Lesen einer fremden Datei die wichtigere Auskunft: <b>wer sie geschrieben hat, entscheidet, welche Spielart darin steht.</b> Ein Leser, der nur die Dateien eines einzigen Schreibers kennt, haelt dessen Gewohnheiten fuer das Format.</p>
+<table>
+  <tr><th>Programm</th><th>liest</th><th>schreibt</th><th>Bemerkung</th></tr>
+  <tr><td><b>dBASE</b>, <b>FoxPro</b>, <b>Visual FoxPro</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Der Ursprung. Alle drei sind eingestellt; einen aktiven Eigner gibt es nicht mehr.</td></tr>
+  <tr><td><b>QGIS</b>, <b>GDAL/OGR</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die groesste lebende Quelle: eine Shapefile-Sammlung besteht aus <code>.shp</code>, <code>.shx</code> <b>und <code>.dbf</code></b>.</td></tr>
+  <tr><td><b>LibreOffice Calc</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Oeffnet <code>.dbf</code> als Tabelle; schreibt eine sehr schlichte Spielart.</td></tr>
+  <tr><td><b>dbfread</b>, <b>dbf</b>, <b>simpledbf</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>dbfread ist das Vergleichsprodukt dieses Abgleichs.</td></tr>
+  <tr><td><b>ArcGIS</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Ebenfalls ueber Shapefiles.</td></tr>
+</table>
+<p>Die Liste ist <b>nicht vollstaendig</b> und will es nicht sein. Sie nennt, was einem bei diesem Format tatsaechlich begegnet, und laesst weg, was es zwar auch kann, aber niemand dafuer benutzt.</p>
+
+<h2 id="a6">Die Java-Umsetzung — wo dieser Leser unter seinesgleichen steht</h2>
+<p><b>Warum dieser Abschnitt.</b> Alle übrigen Abgleiche dieses Moduls messen gegen ein Werkzeug in einer <b>anderen</b> Sprache. Das ist gut gegen Irrtümer über das Format und sagt nichts darüber, wo dieser Leser unter seinesgleichen steht — und das ist die Frage, die einen Java-Entwickler zuerst umtreibt. Wichtig ist dabei die Unterscheidung zwischen einem <b>reinen Nachbau in Java</b> und einem <b>Mantel um die originale C-Bibliothek</b>: nur der Nachbau löst dieselbe Aufgabe unter denselben Bedingungen wie dieser Leser hier; ein Mantel ruft das Original.</p>
+<p><b>Gemessen am 2026-09-06 gegen javadbf 1.14.1</b> — ein <b>reiner Java-Nachbau</b> (100 % Java, keine externen Abhängigkeiten), die verbreitetste Java-Umsetzung für <code>.dbf</code>. Dasselbe Prüfstück durch beide Leser: Text, Zahl, Datum und Wahrheitswert, dazu jede Spalte einmal leer.</p>
+<p><b>Die Werte stimmen, die Darstellung unterscheidet sich</b> — und das ist keine Abweichung, sondern eine Entwurfsentscheidung. Wir geben <code>12.5</code> als Zahl, javadbf <code>12.50</code> als <code>BigDecimal</code> mit Nachkommastellen; wir geben <code>2026-09-06</code> als <code>LocalDate</code>, javadbf ein <code>java.util.Date</code> mit Zeitzone — bei einem dBASE-Datum, das keine Zeitzone hat.</p>
+<p><b>Ein echter Befund gegen javadbf, und er ist von der Sorte, die zählt.</b> Ein leeres Datumsfeld kommt in zwei Formen vor: acht Leerzeichen oder acht Nullen. javadbf 1.14.1 behandelt die Leerzeichen richtig und liefert <code>null</code> — aus <code>00000000</code> macht es dagegen <b>den 30. November des Jahres 2</b>. Ein erfundenes Datum, das wie ein Datum aussieht: in einer Auswertung fällt es nicht auf, und in einer Sortierung steht es vorn. Wir liefern in beiden Formen <code>LEER</code>. Nachstellen: ein <code>.dbf</code> mit drei <code>D</code>-Feldern und dem Satz <code>20260906</code> / <code>00000000</code> / acht Leerzeichen, dann <code>new DBFReader(...).nextRecord()</code>.</p>
+<p>Dieser Befund steht <b>hier</b> und nicht unter 5.4: dort geht es um dbfread, das Vergleichsprodukt dieses Abgleichs. javadbf ist ein anderes Werkzeug, und die Zählung der Fremdbefunde soll sagen, was gegen <i>dbfread</i> steht.</p>
+<p><b>Diese Messung liegt ausserhalb des Moduls</b>, in <code>javavergleich/Javavergleich.java</code>, denn <code>envisionz-framework-fileformats</code> hat die Regel „keine Fremdbibliotheken“ — und die gilt weiter. Ins Modul wandert nur das Ergebnis, mit Datum und Fassung. Die einzige Ausnahme ist <code>javax.imageio</code> bei den Bildformaten: das steckt im JDK und misst deshalb als bleibende Probe mit.</p>
+
+<footer>
+Erzeugt aus <code>envisionz-framework-fileformats/docs/dbase/ABGLEICH.md</code> · zurück zur <a href="index.html#tabellen">Übersicht</a> · alle Formate im <a href="abgleich.html">Abgleich</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

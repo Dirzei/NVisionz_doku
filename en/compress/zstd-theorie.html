@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zstandard – frame, literals and sequences – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite aktiv" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › Zstandard – frame, literals and sequences</span><a class="sprachwahl" href="../../de/compress/zstd-theorie.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.zstd</div>
+  <h1>Zstandard – frame, literals and sequences</h1>
+  <p class="unter">How a zstd stream (RFC 8878) is built and how <code>Zstd</code> and <code>Zstdblock</code> read it: frame header with window and content size, the three block types, the literals section with one or four Huffman streams, the sequences section with three FSE tables, the three repeat offsets with their exception, the state carried across blocks, checksum and dictionaries. The entropy coding itself is on the page <a href="zstd-fse.html">FSE and Huffman</a>.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>Like Deflate, zstd belongs to the LZ77 family: literals and back-references. The difference is the arrangement. Deflate writes literals and back-references <b>interleaved</b> into one stream with a common code. zstd separates them: every block has a section with all literals one after the other and a section of <b>sequences</b>, each a triple</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo stretchy="false">(</mo><mtext>literal length</mtext><mo>,</mo><mspace width="0.3333em"/><mtext>offset</mtext><mo>,</mo><mspace width="0.3333em"/><mtext>match length</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(\text{literal length},\ \text{offset},\ \text{match length})</annotation></semantics></math></p>
+<p>“take this many literals, then copy this many bytes from this far back”. Literals are text, lengths are numbers; separated, each can be encoded better – literals with Huffman, the three kinds of numbers with one FSE table each.</p>
+
+<h2 id="rahmen">The frame</h2>
+<p>A file is a sequence of frames. A frame begins with the magic number <code>28 B5 2F FD</code>, then the descriptor byte:</p>
+<table>
+  <tr><th>Bits</th><th>field</th><th>meaning</th></tr>
+  <tr><td>7–6</td><td>size flag</td><td>length of the content size: 0 → 0 bytes (1 with single segment), 1 → 2, 2 → 4, 3 → 8</td></tr>
+  <tr><td>5</td><td>single segment</td><td>no window byte; the window is the content size</td></tr>
+  <tr><td>3</td><td>reserved</td><td>must be 0</td></tr>
+  <tr><td>2</td><td>checksum</td><td>4 bytes of checksum at the end of the frame</td></tr>
+  <tr><td>1–0</td><td>dictionary flag</td><td>length of the dictionary ID: 0, 1, 2 or 4 bytes</td></tr>
+</table>
+<p>The <b>window byte</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math> gives the window size with exponent <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo>=</mo><mo stretchy="false">⌊</mo><mi>w</mi><mo>/</mo><mn>8</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">e = \lfloor w/8 \rfloor</annotation></semantics></math> and mantissa <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>=</mo><mi>w</mi><mi>mod</mi><mn>8</mn></mrow><annotation encoding="application/x-tex">m = w \operatorname{mod} 8</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>F</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>10</mn><mo>+</mo><mi>e</mi></mrow></msup><mo>+</mo><mfrac><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>10</mn><mo>+</mo><mi>e</mi></mrow></msup></mrow><mrow><mn>8</mn></mrow></mfrac><mo>⋅</mo><mi>m</mi></mrow><annotation encoding="application/x-tex">F = 2^{10+e} + \frac{2^{10+e}}{8} \cdot m</annotation></semantics></math></p>
+<p>The <b>content size</b> is least significant byte first; with two bytes, 256 is added (the values 0 to 255 already fit in one byte). This exception is in the specification, not in the header. After the blocks follow, if announced, the <b>lower 32 bits</b> of an XXH64 over the content (seed 0).</p>
+<p>Between frames there may be <b>skippable frames</b> (magic <code>184D2A50</code> to <code>184D2A5F</code>, then a 32-bit length); they are skipped. If only zero bytes follow the last frame, the file has ended.</p>
+
+<h3>Blocks</h3>
+<p>Every block has a 3-byte header (least significant first): bit 0 “last block”, bits 1–2 the type, bits 3–23 the size.</p>
+<ul>
+  <li><b>Type 0, raw:</b> size bytes unchanged.</li>
+  <li><b>Type 1, RLE:</b> a single byte, repeated size times.</li>
+  <li><b>Type 2, compressed:</b> literals and sequences section, together size bytes.</li>
+  <li><b>Type 3:</b> reserved, error.</li>
+</ul>
+
+<h2 id="literale">The literals section</h2>
+<p>The first byte carries the literal type in bits 0–1 (0 raw, 1 RLE, 2 Huffman with tree, 3 Huffman without tree – the tree of the previous block) and the size format in bits 2–3. The sizes are spread over the following bytes:</p>
+<table>
+  <tr><th>Type</th><th>format</th><th>header</th><th>sizes</th><th>streams</th></tr>
+  <tr><td>raw, RLE</td><td>0 or 2</td><td>1 byte</td><td>raw: 5 bits</td><td>–</td></tr>
+  <tr><td>raw, RLE</td><td>1</td><td>2 bytes</td><td>raw: 12 bits</td><td>–</td></tr>
+  <tr><td>raw, RLE</td><td>3</td><td>3 bytes</td><td>raw: 20 bits</td><td>–</td></tr>
+  <tr><td>Huffman</td><td>0</td><td>3 bytes</td><td>raw and compressed: 10 bits each</td><td>1</td></tr>
+  <tr><td>Huffman</td><td>1</td><td>3 bytes</td><td>10 bits each</td><td>4</td></tr>
+  <tr><td>Huffman</td><td>2</td><td>4 bytes</td><td>14 bits each</td><td>4</td></tr>
+  <tr><td>Huffman</td><td>3</td><td>5 bytes</td><td>18 bits each</td><td>4</td></tr>
+</table>
+<p>Example from the <code>Zstdblockprobe</code>: 300 raw literals have the header <code>C4 12</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>0xC4</mtext><mo>=</mo><mn>1100</mn><mspace width="0.1667em"/><msub><mn>0100</mn><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\text{0xC4} = 1100\,0100_2</annotation></semantics></math>, type 0, format 1, size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mtext>0xC4</mtext><mo>/</mo><mn>16</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>16</mn><mo>⋅</mo><mtext>0x12</mtext><mo>=</mo><mn>12</mn><mo>+</mo><mn>288</mn><mo>=</mo><mn>300</mn></mrow><annotation encoding="application/x-tex">\lfloor \text{0xC4}/16 \rfloor + 16 \cdot \text{0x12} = 12 + 288 = 300</annotation></semantics></math>.</p>
+<p>With <b>four streams</b>, three lengths of 2 bytes each follow the tree description; the fourth follows from the remainder. The output is split into four equal pieces of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌈</mo><mi>n</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil n/4 \rceil</annotation></semantics></math> literals, only the last may be shorter. Each stream is a backward bit stream of its own with end marker, and after the last literal of each stream it must be exhausted exactly.</p>
+
+<h2 id="sequenzen">The sequences section</h2>
+<p>The <b>number of sequences</b> takes 1 to 3 bytes: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">b_0 = 0</annotation></semantics></math> means none (then the literals are the whole block); <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>&lt;</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">b_0 &lt; 128</annotation></semantics></math> is the number; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>&lt;</mo><mn>255</mn></mrow><annotation encoding="application/x-tex">b_0 &lt; 255</annotation></semantics></math> means <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>256</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>−</mo><mn>128</mn><mo stretchy="false">)</mo><mo>+</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">256\,(b_0 - 128) + b_1</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>255</mn></mrow><annotation encoding="application/x-tex">b_0 = 255</annotation></semantics></math> means <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><mn>256</mn><mspace width="0.1667em"/><msub><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>+</mo><mtext>0x7F00</mtext></mrow><annotation encoding="application/x-tex">b_1 + 256\,b_2 + \text{0x7F00}</annotation></semantics></math>. Then comes the <b>modes byte</b>: 2 bits each for the LL, OF and ML table (bits 7–6, 5–4, 3–2); the lower two bits must be 0.</p>
+<table>
+  <tr><th>Mode</th><th>table</th><th>bytes in the stream</th></tr>
+  <tr><td>0</td><td>predefined distribution from the specification (LL, ML accuracy 6, OF 5)</td><td>0</td></tr>
+  <tr><td>1</td><td>RLE: a single symbol, accuracy 0</td><td>1</td></tr>
+  <tr><td>2</td><td>FSE distribution in the stream</td><td>its length</td></tr>
+  <tr><td>3</td><td>the table of the previous block</td><td>0</td></tr>
+</table>
+<p>The tables appear in the order LL, OF, ML. Behind them, up to the end of the block, the backward sequence bit stream.</p>
+
+<h3>Codes and extra bits</h3>
+<p>Each FSE table delivers a <b>code</b>; the value follows from baseline and extra bits:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>LL</mtext><mo>=</mo><msub><mrow><mtext>base</mtext></mrow><mrow><mi>L</mi><mi>L</mi></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo>+</mo><mtext>bits</mtext><mo stretchy="false">(</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>L</mi><mi>L</mi></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mtext>ML</mtext><mo>=</mo><msub><mrow><mtext>base</mtext></mrow><mrow><mi>M</mi><mi>L</mi></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo>+</mo><mtext>bits</mtext><mo stretchy="false">(</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>M</mi><mi>L</mi></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mtext>OV</mtext><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>c</mi></mrow></msup><mo>+</mo><mtext>bits</mtext><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{LL} = \text{base}_{LL}(c) + \text{bits}(z_{LL}(c)), \qquad \text{ML} = \text{base}_{ML}(c) + \text{bits}(z_{ML}(c)), \qquad \text{OV} = 2^{c} + \text{bits}(c)</annotation></semantics></math></p>
+<table>
+  <tr><th>LL code</th><th>base</th><th>extra bits</th><th>ML code</th><th>base</th><th>extra bits</th></tr>
+  <tr><td>0 … 15</td><td>0 … 15</td><td>0</td><td>0 … 31</td><td>3 … 34</td><td>0</td></tr>
+  <tr><td>16, 17, 18, 19</td><td>16, 18, 20, 22</td><td>1</td><td>32 … 35</td><td>35, 37, 39, 41</td><td>1</td></tr>
+  <tr><td>20, 21</td><td>24, 28</td><td>2</td><td>36, 37</td><td>43, 47</td><td>2</td></tr>
+  <tr><td>22, 23</td><td>32, 40</td><td>3</td><td>38, 39</td><td>51, 59</td><td>3</td></tr>
+  <tr><td>24</td><td>48</td><td>4</td><td>40, 41</td><td>67, 83</td><td>4</td></tr>
+  <tr><td>25 … 35</td><td>64 … 65,536</td><td>6 … 16</td><td>42 … 52</td><td>99 … 65,539</td><td>5 … 16</td></tr>
+</table>
+<p>From 4 on, the offset value OV is a real offset <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>OV</mtext><mo>−</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\text{OV} - 3</annotation></semantics></math>; the values 1 to 3 refer to the <b>repeat offsets</b>.</p>
+
+<h3>The orders</h3>
+<p>Three orders are specified and differ – any swap gives well-formed, wrong numbers:</p>
+<ul>
+  <li>Initial states: LL, then OF, then ML.</li>
+  <li>Extra bits per sequence: offset, then match length, then literal length.</li>
+  <li>State update after every sequence except the last: LL, then ML, then OF.</li>
+</ul>
+
+<h3>Pseudocode – executing sequences (<code>Zstdblock.entpacke</code>)</h3>
+<pre class="pseudo">ll ← anfang(LL);  of ← anfang(OF);  ml ← anfang(ML)
+<b>for</b> i ← 1 <b>to</b> anzahl:
+    cl ← symLL(ll);  cm ← symML(ml);  co ← symOF(of)
+    ov  ← 2^co + bits(co)                          <i>offset first</i>
+    bez ← ML_GRUND[cm] + bits(ML_ZUSATZ[cm])
+    lit ← LL_GRUND[cl] + bits(LL_ZUSATZ[cl])
+    d ← abstandAusfuehren(gemerkt, ov, lit)
+    <b>if</b> litStelle + lit > number of literals: error
+    copy lit literals to the end of the output
+    <b>if</b> d > n: error "back-reference before the start"
+    copy bez bytes from n − d, byte by byte      <i>overlap allowed</i>
+    <b>if</b> i &lt; anzahl:  ll ← weiter(ll);  ml ← weiter(ml);  of ← weiter(of)
+append the remaining literals</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/zstd/Zstdblock.java</code> (<code>entpacke</code>, <code>tabelle</code>, <code>stroeme</code>, <code>lies</code>).</p>
+
+<h2 id="wiederhol">The repeat offsets</h2>
+<p>zstd keeps the three most recently used offsets <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>,</mo><msub><mrow><mi>r</mi></mrow><mrow><mn>3</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(r_1, r_2, r_3)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>4</mn><mo>,</mo><mn>8</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1, 4, 8)</annotation></semantics></math> at the start of the frame. The rule for OV ≤ 3 has an exception within the exception: if the sequence has <b>no literals</b>, the meaning shifts by one, since a sequence without literals repeating the same offset as its predecessor practically never happens.</p>
+<table>
+  <tr><th>OV</th><th>with literals</th><th>without literals</th></tr>
+  <tr><td>1</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_1</annotation></semantics></math>, nothing changes</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_2</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_2</annotation></semantics></math> swap</td></tr>
+  <tr><td>2</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_2</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_2</annotation></semantics></math> swap</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_3</annotation></semantics></math>, moves to the front</td></tr>
+  <tr><td>3</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_3</annotation></semantics></math>, moves to the front</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r_1 - 1</annotation></semantics></math>, moves to the front</td></tr>
+  <tr><td>≥ 4</td><td colspan="2"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>OV</mtext><mo>−</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\text{OV} - 3</annotation></semantics></math>, new at the front, the others move down</td></tr>
+</table>
+<p><b>Worked example</b> following <code>abstandAusfuehren</code>, start <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>4</mn><mo>,</mo><mn>8</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1, 4, 8)</annotation></semantics></math>:</p>
+<ol>
+  <li>2 literals, OV = 5 → offset 2, remembered <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>4</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(2, 1, 4)</annotation></semantics></math>.</li>
+  <li>0 literals, OV = 1 → meant is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r_2 = 1</annotation></semantics></math>; swap → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>4</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1, 2, 4)</annotation></semantics></math>.</li>
+  <li>3 literals, OV = 3 → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>3</mn></mrow></msub><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">r_3 = 4</annotation></semantics></math>, moves to the front → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>4</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(4, 1, 2)</annotation></semantics></math>.</li>
+  <li>0 literals, OV = 3 → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>−</mo><mn>1</mn><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">r_1 - 1 = 3</annotation></semantics></math> → <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>3</mn><mo>,</mo><mn>4</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(3, 4, 1)</annotation></semantics></math>.</li>
+</ol>
+<p>If <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r_1 - 1</annotation></semantics></math> gave the value 0, that is an error: 0 is not an offset.</p>
+
+<h2 id="vortrag">What a block leaves to the next</h2>
+<p>Within a frame the following carry across block boundaries: the most recently read Huffman tree (for literal type 3), the three most recently used sequence tables (for mode 3) and the three repeat offsets. <code>Zstdblock.Vortrag</code> carries them. As soon as a file exceeds the largest block size of 128 KiB, practically all blocks from the second on refer to them; without this carry-over no such file would be readable. Nothing is carried between frames.</p>
+
+<h2 id="woerterbuch">Dictionaries</h2>
+<p>A zstd dictionary (<code>Zstdwoerterbuch.lies</code>) is either <b>raw content</b> (ID 0, repeat offsets 1, 4, 8) or <b>formatted</b>: magic <code>37 A4 30 EC</code>, 32-bit dictionary ID, a Huffman description, the FSE distributions for OF, ML and LL, three repeat offsets (4 bytes each, each 1 to content length) and the content. When unpacking, the content stands before the output, back-references may reach into it, and at the end it is cut off; tree, tables and offsets count as those “of the previous block”.</p>
+<div class="hinweis"><b>Convention in the framework:</b> If a frame names a dictionary ID, the dictionary passed in must carry exactly that ID; without a dictionary the call aborts with the ID in the message. A frame without ID (<code>--no-dict-id</code>) gets a dictionary passed in; there the caller decides. At most 16 MiB are allocated up front, whatever the content size says.</div>
+
+<h3>Pseudocode – <code>Zstd.liesRahmen</code> (abridged)</h3>
+<pre class="pseudo">fhd ← descriptor byte;  check bit 3 = 0
+<b>if not</b> single segment: F ← from window byte
+wb ← dictionary ID (0/1/2/4 bytes);  size ← content size (0/1/2/4/8 bytes, +256 for 2)
+<b>if</b> single segment: F ← size
+check dictionary ID against the dictionary passed in
+aus ← [dictionary content];  vortrag ← new carry-over (from the dictionary if any)
+<b>repeat</b>:
+    header ← 3 bytes;  last ← bit 0;  type ← bits 1–2;  n ← bits 3–23
+    type = raw: append n bytes;  type = RLE: append one byte n times
+    type = compressed: Zstdblock.entpacke(n bytes, vortrag);  type = 3: error
+<b>until</b> last
+content ← aus without the dictionary content
+<b>if</b> size known <b>and</b> ≠ length(content): error
+<b>if</b> checksum: compare 4 bytes with (XXH64(content) and 0xFFFFFFFF)</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/zstd/Zstd.java</code>, <code>Zstdwoerterbuch.java</code>.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Zstdprobe</code> (82 checks):</b> XXH64 against <code>python-xxhash</code> across the loop boundaries (31, 32, 33, 63, 64, 65 bytes) and with seeds; fourteen anchors from libzstd 1.5.7 – Huffman in four streams, single segment with content size and checksum, raw block, predefined tables, two frames, the empty content, a skippable frame, three blocks with offsets across block boundaries, literals without sequence, mixed modes, RLE blocks, RLE tables, all three tables repeated, literals without tree; the back-reference with offset 1 and length 99,998 (100,000 × <code>Q</code>); self-built frames for paths libzstd does not take (RLE literals, skippable frame in the middle); eleven kinds of damage.</li>
+  <li><b><code>Zstdblockprobe</code> (41 checks):</b> hand-built blocks: all literal header formats, RLE literals, an overlapping back-reference, the table values LL17 = 18 + 1 bit and ML38 = 51 + 3 bits, the order of the extra bits (with counter-probe), three consecutive blocks with repeat offsets (“without literals, 1 means the second remembered”), seven blocks against a reference model of the RFC rules of its own, all limits of the sequence count (127, 128, 32,511, 32,512), four Huffman streams, literal type 3.</li>
+  <li><b><code>Zstdwoerterbuchprobe</code> (18 checks):</b> two dictionaries and six streams from python-zstandard 0.25.0 with libzstd 1.5.7, each compared via SHA-256; raw content, frame without ID, wrong and missing dictionary, broken tables.</li>
+  <li>Outside the probes: 120 random cases (levels 1 to 22, with and without checksum, 0 to 200,000 bytes) against <code>python-zstandard</code>, all identical byte for byte.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Read-only.</li>
+  <li>The window size is read and reported but not enforced as a limit for back-references; the limit is the output so far and the <a href="index.html#grenze">decompression limit</a>.</li>
+  <li>The repeat offsets of a dictionary are read and applied; on real data this is not distinguishable, because libzstd writes the default 1, 4, 8.</li>
+  <li>The output lies completely in memory; no streaming mode.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#zstd">Zstandard</a> · see also <a href="zstd-fse.html">FSE and Huffman</a> · Probes: <code>Zstdprobe</code>, <code>Zstdblockprobe</code>, <code>Zstdwoerterbuchprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

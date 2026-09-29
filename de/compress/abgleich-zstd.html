@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zstandard — Abgleich gegen RFC 8878 und libzstd – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#grenze">Grenze gegen Entpackbomben</a>
+<a class="unterseite" href="grenze-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#deflate">Deflate und zlib, hin und zurück</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – Abgleich</a>
+<a class="unterseite" href="deflate-packer.html">Der eigene Packer</a>
+<a class="unterseite" href="deflate-theorie.html">Format und Entpacker</a>
+<a class="rubrik" href="index.html#behaelter">gzip und ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – Abgleich</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – Abgleich</a>
+<a class="unterseite" href="behaelter-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – Abgleich</a>
+<a class="unterseite" href="lzma-theorie.html">Bereichskodierer und LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ und Vorfilter</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Abgleich</a>
+<a class="unterseite" href="bzip2-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite aktiv" href="abgleich-zstd.html">Abgleich</a>
+<a class="unterseite" href="zstd-fse.html">FSE und Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Rahmen und Sequenzen</a>
+<a class="rubrik" href="index.html#schnell">Schnelle Packer der Datenformate</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – Abgleich</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – Abgleich</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – Abgleich</a>
+<a class="unterseite" href="schnell-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Abgleich</a>
+<a class="unterseite" href="brotli-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzw">LZW für PDF, TIFF und GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#pruef">Prüfsummen</a>
+<a class="unterseite" href="pruef-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, Lauflänge</a>
+<a class="unterseite" href="bausteine-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-compress</a> › Zstandard — Abgleich gegen RFC 8878 und libzstd</span><a class="sprachwahl" href="../../en/compress/abgleich-zstd.html">English</a></div>
+<!-- erzeugt aus zstd/ABGLEICH.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · Abgleich</div>
+  <h1>Zstandard — Abgleich gegen RFC 8878 und libzstd</h1>
+</header>
+
+<p><b>Stand:</b> 2026-09-26<br><b>Unsere Umsetzung:</b> <code>envisionz.compress.zstd.Zstd</code> mit <code>Zstdblock</code>, <code>Zstdfse</code>, <code>Zstdhuff</code> — nur lesend<br><b>Spezifikation:</b> <i>RFC 8878</i>, öffentlich und ungewöhnlich genau<br><b>Verglichen mit:</b> libzstd 1.5.7 (über Pythons <code>zstandard</code>)<br><b>Prüfstand:</b> <code>envisionz.compress.Zstdprobe</code> — 82 Prüfungen, vierzehn Fremdanker; <code>Zstdwoerterbuchprobe</code> — 18 Prüfungen gegen libzstd 1.5.7 (ZS1)</p>
+<p><b>Das Vergleichsprodukt.</b> <b>libzstd</b> von Yann Collet und Meta ist Referenz und Herausgeber in einem; RFC 8878 beschreibt sie.</p>
+<p><b>Warum ausgerechnet dieses.</b> Weil zstd der heutige Regelfall bei Parquet ist und jede Datei dort von libzstd stammt.</p>
+<p><b>Deckung, aus den Zeilen unten gerechnet:</b> von 14 Merkmalen sind bei uns 13 vorhanden, 0 teilweise und 1 nicht vorhanden; beim Vergleichsstueck 14 / 0 / 0.</p>
+<p><span class="ampel gruen">●</span> vorhanden · <span class="ampel rot">●</span> nicht vorhanden · <span class="ampel gelb">●</span> teilweise · – nicht zutreffend</p>
+<p><b>Die Spalte <i>Anmerkung</b></i> verweist auf Abschnitt 5 dieses Dokuments — nicht auf die Punkteliste des Arbeitsbereichs. Das Wort davor sagt, <i>worum es sich handelt</i>: <b>Lücke</b> ist etwas, das uns fehlt und offen ist; <b>entschieden</b> ist etwas, das wir absichtlich nicht tun; <b>Merkmal</b> ist eine Eigenschaft des Formats, die beide Umsetzungen betrifft; <b>dort offen</b> ist eine Lücke des Vergleichsprodukts. Nur die Lücken sind Arbeit — sie stehen gesammelt in Abschnitt 5.1 und als <i>ein</i> Punkt in <code>OFFENE-PUNKTE.md</code>.</p>
+<p><b>Zwei Entropiekodierer in einem Format.</b> Huffman für die Literale, FSE (eine Bauart der arithmetischen Kodierung) für Längen, Versätze und Symbolarten. Beide bringen ihre Tafeln mit, beide dürfen die Tafel des vorigen Blocks weiterbenutzen, und FSE liest seinen Strom <b>rückwärts</b>.</p>
+<p>Die Falle, die am häufigsten zuschlägt: <b>das Fenster-Byte fehlt, wenn <code>Single_Segment</code> gesetzt ist</b>. Dann steht die Fenstergrösse nicht da, sondern folgt aus der angesagten Inhaltsgrösse. Wer das Byte trotzdem liest, ist ab da um eines verschoben — und liest lauter gültige Blöcke an falscher Stelle.</p>
+
+<h2 id="a1">Merkmalsvergleich</h2>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>libzstd 1.5.7</th><th>das JDK allein</th><th>Anmerkung</th></tr>
+  <tr><td>Rahmenkopf mit Kennung <code>28 B5 2F FD</code></td><td>RFC 8878 3.1.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td><code>Single_Segment</code> ohne Fenster-Byte</td><td>3.1.1.1.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Ungepackte Blöcke (<code>Raw_Block</code>)</td><td>3.1.1.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Wiederholte Blöcke (<code>RLE_Block</code>)</td><td>3.1.1.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Gepackte Blöcke (<code>Compressed_Block</code>)</td><td>3.1.1.3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Huffman für die Literale, mit eigener Tafel</td><td>3.1.1.3.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Huffman-Tafel des vorigen Blocks weiterbenutzt</td><td>3.1.1.3.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>FSE für Längen, Versätze und Arten</td><td>3.1.1.3.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Vier Huffman-Ströme in einem Block</td><td>3.1.1.3.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Wiederholte Versätze (<code>Repeat_Offset</code>)</td><td>3.1.1.3.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Inhaltsprüfsumme (xxHash64)</td><td>3.1.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Übersprungene Rahmen</td><td>3.1.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td></td></tr>
+  <tr><td>Wörterbücher</td><td>5</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Merkmal ZS1</td></tr>
+  <tr><td>Schreiben</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>entschieden ZS2</td></tr>
+</table>
+
+<h2 id="a2">Die Punkte</h2>
+<h3>Unsere offenen Lücken</h3>
+<p><b>Seit dem 2026-09-26 steht hier nichts mehr.</b> ZS1, die Wörterbücher, ist gebaut und steht jetzt unter 5.3.</p>
+<h3>Bewusste Entscheidungen</h3>
+<p><b>ZS2</b> (entschieden) — Geschrieben wird nicht</p>
+<p>Dieses Modul liest. Ein Schreiber wäre um ein Vielfaches mehr Arbeit als der Leser — er muss nicht nur das Format kennen, sondern gut <i>wählen</i> —, und niemand hier braucht ihn: gepackt wird nichts, entpackt wird alles.</p>
+<h3>Eigenschaften des Formats — beide betreffend</h3>
+<p><b>ZS1</b> (Merkmal) — Wörterbücher: der Inhalt steht vor der Ausgabe, die Tabellen gelten als die des vorigen Blocks</p>
+<p><code>Zstdwoerterbuch.lies</code> liest ein aufbereitetes Wörterbuch (Kennung <code>37 A4 30 EC</code>: Huffman-Tabelle, FSE-Tabellen <b>in der Reihenfolge OF, ML, LL</b> — im Block heisst es LL, OF, ML —, drei gemerkte Abstände, Inhalt) oder nimmt alles andere als Rohinhalt. <code>Zstd.entpacke(daten, woerterbuch)</code> stellt den Inhalt vor die Ausgabe, damit Rückbezüge hineingreifen können, und gibt dem ersten Block die Tabellen des Wörterbuchs als „vorige" — ein erster Block darf also schon Literalart 3 und Betriebsart 3 benutzen. Nennt der Rahmen eine Kennung, muss sie passen; ein falsches Wörterbuch ergäbe Daten, die wie richtige aussehen. Ohne Kennung (<code>--no-dict-id</code>) entscheidet der Aufrufer. Gemessen an sechs Strömen von libzstd 1.5.7, darunter einer über mehrere Blöcke (314 KB) und einer mit Rohinhalt.</p>
+
+<footer>
+Erzeugt aus <code>envisionz-framework-compress/docs/zstd/ABGLEICH.md</code> · zurück zur <a href="index.html#zstd">Übersicht</a> · alle Formate im <a href="abgleich.html">Abgleich</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LZ4, Snappy und LZO1X – schnelle Packer ohne Entropiekodierung – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#grenze">Grenze gegen Entpackbomben</a>
+<a class="unterseite" href="grenze-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#deflate">Deflate und zlib, hin und zurück</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – Abgleich</a>
+<a class="unterseite" href="deflate-packer.html">Der eigene Packer</a>
+<a class="unterseite" href="deflate-theorie.html">Format und Entpacker</a>
+<a class="rubrik" href="index.html#behaelter">gzip und ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – Abgleich</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – Abgleich</a>
+<a class="unterseite" href="behaelter-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – Abgleich</a>
+<a class="unterseite" href="lzma-theorie.html">Bereichskodierer und LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ und Vorfilter</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Abgleich</a>
+<a class="unterseite" href="bzip2-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Abgleich</a>
+<a class="unterseite" href="zstd-fse.html">FSE und Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Rahmen und Sequenzen</a>
+<a class="rubrik" href="index.html#schnell">Schnelle Packer der Datenformate</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – Abgleich</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – Abgleich</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – Abgleich</a>
+<a class="unterseite aktiv" href="schnell-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Abgleich</a>
+<a class="unterseite" href="brotli-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#lzw">LZW für PDF, TIFF und GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#pruef">Prüfsummen</a>
+<a class="unterseite" href="pruef-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, Lauflänge</a>
+<a class="unterseite" href="bausteine-theorie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-compress</a> › LZ4, Snappy und LZO1X – schnelle Packer ohne Entropiekodierung</span><a class="sprachwahl" href="../../en/compress/schnell-theorie.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.lz4 · .snappy · .lzo</div>
+  <h1>LZ4, Snappy und LZO1X – schnelle Packer ohne Entropiekodierung</h1>
+  <p class="unter">Drei Verfahren, die auf Geschwindigkeit gebaut sind: Rückbezüge und Literale stehen als ganze Bytes im Strom, ohne Huffman und ohne Wahrscheinlichkeiten. Aufbau der Befehle, Rahmenformate mit xxHash32 und maskierter CRC-32C, der Zustand von LZO, Pseudocode nach <code>Lz4Block</code>, <code>Lz4</code>, <code>Snappy</code>, <code>SnappyRahmen</code> und <code>Lzo1x</code>, Rechenbeispiele und Proben.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Deflate, zstd und LZMA gewinnen einen großen Teil ihrer Packrate aus der Entropiekodierung: häufige Symbole bekommen kurze Codes. Das kostet beim Lesen Arbeit je Bit. LZ4, Snappy und LZO verzichten darauf. Ein Befehl besteht aus ganzen Bytes: ein Kennbyte, dessen Bits Art, Länge und einen Teil des Abstands tragen, dann gegebenenfalls weitere Längen- oder Abstandsbytes, dann die Literale. Das Entpacken ist im Kern eine Folge von Kopiervorgängen. Diese Verfahren stecken in Parquet, Arrow, Avro, ORC, LevelDB und Hadoop-Beständen.</p>
+<p>Gemeinsam ist allen dreien: der <b>Rückbezug darf sich überlappen</b>. Ist der Abstand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> kleiner als die Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi></mrow><annotation encoding="application/x-tex">l</annotation></semantics></math>, liest die Kopie Bytes, die sie selbst gerade geschrieben hat; das Ergebnis ist ein Muster der Periode <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>n</mi><mo>+</mo><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>n</mi><mo>+</mo><mi>k</mi><mo>−</mo><mi>d</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>=</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>l</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">y_{n+k} = y_{n+k-d}, \qquad k = 0, 1, \dots, l - 1</annotation></semantics></math></p>
+<p>Deshalb wird in allen drei Klassen Byte für Byte kopiert. <code>System.arraycopy</code> nähme Quelle und Ziel als getrennt an und lieferte die richtige Länge mit falschem Inhalt.</p>
+
+<h2 id="lz4">LZ4</h2>
+<h3>Das Blockformat</h3>
+<p>Ein LZ4-Block ist eine Folge von Sequenzen. Jede beginnt mit einem <b>Token</b>: die oberen vier Bit sind die Zahl der Literale, die unteren vier die Länge des Rückbezugs minus 4. Steht ein Feld auf 15, folgen Zusatzbytes, die addiert werden, bis eines kleiner als 255 ist:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Länge</mtext><mo>=</mo><mn>15</mn><mo>+</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>b</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mo>…</mo><mo>=</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>=</mo><mn>255</mn><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>b</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>&lt;</mo><mn>255</mn></mrow><annotation encoding="application/x-tex">\text{Länge} = 15 + \sum_{i} b_i, \qquad b_1 = \dots = b_{k-1} = 255,\ b_k &lt; 255</annotation></semantics></math></p>
+<p>Nach dem Token (und seinen Literal-Zusatzbytes) kommen die Literale, dann der Abstand als 2 Byte (niederwertig zuerst, 1 bis 65 535), dann die Zusatzbytes der Bezugslänge. Die letzte Sequenz eines Blocks hat keinen Rückbezug: sie endet nach ihren Literalen.</p>
+<p><b>Rechenbeispiel.</b> 6000 Byte <code>abcabc…</code> lassen sich als eine einzige Sequenz schreiben: drei Literale, dann Abstand 3, Länge 5997. Die Bezugslänge ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>5997</mn><mo>−</mo><mn>4</mn><mo>=</mo><mn>5993</mn><mo>=</mo><mn>15</mn><mo>+</mo><mn>23</mn><mo>⋅</mo><mn>255</mn><mo>+</mo><mn>113</mn></mrow><annotation encoding="application/x-tex">5997 - 4 = 5993 = 15 + 23 \cdot 255 + 113</annotation></semantics></math>:</p>
+<pre><code>3F | 61 62 63 | 03 00 | FF × 23 | 71</code></pre>
+<p>Das sind 30 Byte; <code>Lz4Block.entpacke(block, 6000)</code> liefert daraus die 6000 Byte zurück (nachgerechnet). Der Fremdanker <code>f4</code> aus lz4 1.9.4 packt denselben Inhalt als Rahmen in 63 Byte.</p>
+
+<h3>Pseudocode – <code>Lz4Block.entpacke(quelle, ab, laenge, ziel, zielAb, hoechstens)</code></h3>
+<pre class="pseudo">p ← ab;  n ← zielAb;  grenze ← zielAb + hoechstens
+<b>solange</b> p &lt; ende:
+    t ← quelle[p++]
+    lit ← t >>> 4
+    <b>wenn</b> lit = 15: <b>wiederhole</b> b ← quelle[p++]; lit ← lit + b <b>solange</b> b = 255
+    <b>wenn</b> p + lit > ende <b>oder</b> n + lit > grenze: Fehler
+    kopiere lit Literale;  p ← p + lit;  n ← n + lit
+    <b>wenn</b> p ≥ ende: <b>abbrechen</b>                       <i>letzte Sequenz: kein Rückbezug</i>
+    d ← 2 Byte, niederwertig zuerst
+    <b>wenn</b> d = 0 <b>oder</b> d > n: Fehler
+    ℓ ← (t und 15) + 4
+    <b>wenn</b> (t und 15) = 15: <b>wiederhole</b> b ← quelle[p++]; ℓ ← ℓ + b <b>solange</b> b = 255
+    <b>wenn</b> n + ℓ > grenze: Fehler
+    <b>für</b> i ← 1 <b>bis</b> ℓ: ziel[n] ← ziel[n − d];  n ← n + 1      <i>Byte für Byte</i>
+<b>gib</b> n − zielAb</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/lz4/Lz4Block.java</code>. Der Abstand wird gegen den Schreibstand im ganzen Puffer geprüft, nicht gegen den Blockanfang: bei verketteten Blöcken darf ein Rückbezug in den vorigen Block zeigen.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die Regeln, dass die letzten fünf Byte eines Blocks Literale sind und der letzte Rückbezug mindestens zwölf Byte vor dem Ende endet, muss nur ein Schreiber einhalten; der Leser verlässt sich nicht darauf. Die Längenfelder sind unbegrenzt; gerechnet wird deshalb gegen die bekannte Zielgröße, und <code>entpacke(block, groesse)</code> weist eine Zielgröße über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn><mo>⋅</mo><mtext>Blocklänge</mtext><mo>+</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">255 \cdot \text{Blocklänge} + 64</annotation></semantics></math> ab.</div>
+
+<h3>Das Rahmenformat <code>.lz4</code></h3>
+<table>
+  <tr><th>Feld</th><th>Länge</th><th>Inhalt</th></tr>
+  <tr><td>Kennung</td><td>4</td><td><code>04 22 4D 18</code> (0x184D2204)</td></tr>
+  <tr><td>FLG</td><td>1</td><td>Bits 7–6 Fassung = 01; Bit 5 unabhängige Blöcke; Bit 4 Blockprüfsummen; Bit 3 Inhaltsgröße; Bit 2 Inhaltsprüfsumme; Bit 1 vorbehalten; Bit 0 Wörterbuchkennung</td></tr>
+  <tr><td>BD</td><td>1</td><td>Bits 6–4 größte Blockgröße: 4 → 64 KiB, 5 → 256 KiB, 6 → 1 MiB, 7 → 4 MiB; übrige Bits 0</td></tr>
+  <tr><td>[Inhaltsgröße]</td><td>8</td><td>niederwertig zuerst</td></tr>
+  <tr><td>[Wörterbuchkennung]</td><td>4</td><td></td></tr>
+  <tr><td>HC</td><td>1</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mtext>XXH32</mtext><mo stretchy="false">(</mo><mtext>FLG</mtext><mo>…</mo><mo stretchy="false">)</mo><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>8</mn></mrow></msup><mo stretchy="false">⌋</mo><mi>mod</mi><mn>256</mn></mrow><annotation encoding="application/x-tex">\lfloor \text{XXH32}(\text{FLG} \dots) / 2^8 \rfloor \operatorname{mod} 256</annotation></semantics></math> – das <b>zweite</b> Byte der Summe über die Beschreibung</td></tr>
+  <tr><td>Blöcke</td><td>…</td><td>je 4 Byte Größe (Bit 31 = liegt ungepackt; die Größe darf – gepackt wie ungepackt – die größte Blockgröße aus BD nicht überschreiten), Daten, ggf. 4 Byte XXH32 der Blockdaten</td></tr>
+  <tr><td>Schlussmal</td><td>4</td><td><code>00 00 00 00</code></td></tr>
+  <tr><td>[Inhaltsprüfsumme]</td><td>4</td><td>XXH32 über den ganzen Inhalt</td></tr>
+</table>
+<p>Sind die Blöcke <b>verkettet</b> (Bit 5 = 0, die Vorgabe von lz4), darf ein Rückbezug in die vorigen Blöcke greifen; <code>Lz4</code> entpackt deshalb alle Blöcke in einen durchgehenden Puffer. Eine Datei darf aus mehreren Rahmen bestehen, und überspringbare Fremdrahmen (<code>184D2A50</code> bis <code>184D2A5F</code>) werden übersprungen. Ein vorgegebenes Wörterbuch (höchstens die letzten 64 KiB) steht vor der Ausgabe; bei unabhängigen Blöcken vor jedem Block.</p>
+
+<h2 id="snappy">Snappy</h2>
+<p>Ein Snappy-Rohstrom beginnt mit der entpackten Länge als <b>Varint</b> (7 Bit je Byte, niederwertige Gruppe zuerst – andersherum als bei SQLite). Dann folgen Elemente; die unteren zwei Bit des Kennbytes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> sagen, welches:</p>
+<table>
+  <tr><th>Bits</th><th>Art</th><th>Länge</th><th>Abstand</th><th>Bytes</th></tr>
+  <tr><td>00</td><td>Literal</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lfloor t/4 \rfloor + 1</annotation></semantics></math>; bei 60…63 steht die Länge − 1 in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>−</mo><mn>59</mn></mrow><annotation encoding="application/x-tex">\lfloor t/4 \rfloor - 59</annotation></semantics></math> Folgebytes</td><td>–</td><td>1 + (0…4) + Länge</td></tr>
+  <tr><td>01</td><td>Kopie</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>+</mo><mo stretchy="false">(</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">4 + (\lfloor t/4 \rfloor \operatorname{mod} 8)</annotation></semantics></math>, also 4…11</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>256</mn><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>32</mn><mo stretchy="false">⌋</mo><mo>+</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">256 \lfloor t/32 \rfloor + b_1</annotation></semantics></math>, 11 Bit</td><td>2</td></tr>
+  <tr><td>10</td><td>Kopie</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lfloor t/4 \rfloor + 1</annotation></semantics></math>, 1…64</td><td>2 Byte</td><td>3</td></tr>
+  <tr><td>11</td><td>Kopie</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lfloor t/4 \rfloor + 1</annotation></semantics></math>, 1…64</td><td>4 Byte</td><td>5</td></tr>
+</table>
+<p><b>Rechenbeispiel.</b> Der Strom <code>0C 08 61 62 63 15 03</code> (nachgerechnet mit <code>Snappy.entpacke</code>): Varint <code>0C</code> = 12 Byte Ziel. <code>08</code> = Literal, Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">2 + 1 = 3</annotation></semantics></math>: <code>abc</code>. <code>15</code> = <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0001</mn><mspace width="0.1667em"/><msub><mn>0101</mn><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">0001\,0101_2</annotation></semantics></math>: Art 01, Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>+</mo><mn>5</mn><mo>=</mo><mn>9</mn></mrow><annotation encoding="application/x-tex">4 + 5 = 9</annotation></semantics></math>, Abstand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>256</mn><mo>⋅</mo><mn>0</mn><mo>+</mo><mn>3</mn><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">256 \cdot 0 + 3 = 3</annotation></semantics></math>. Ergebnis <code>abcabcabcabc</code>.</p>
+
+<h3>Pseudocode – <code>Snappy.entpacke</code></h3>
+<pre class="pseudo">ziel ← Varint;  <b>wenn</b> ziel > 32·Eingang + 64: Fehler;  prüfe gegen die Entpackgrenze
+<b>solange</b> p &lt; ende:
+    t ← daten[p];  art ← t und 3
+    <b>wenn</b> art = 0:
+        len ← t >>> 2;  p ← p + 1
+        <b>wenn</b> len ≥ 60: len ← (len − 59) Byte, niederwertig zuerst
+        len ← len + 1;  kopiere len Literale
+    <b>sonst</b>:
+        art 1: len ← 4 + ((t >>> 2) und 7);  d ← ((t >>> 5) &lt;&lt; 8) + daten[p+1];  p ← p + 2
+        art 2: len ← (t >>> 2) + 1;  d ← 2 Byte;  p ← p + 3
+        art 3: len ← (t >>> 2) + 1;  d ← 4 Byte;  p ← p + 5
+        <b>wenn</b> d ≤ 0 <b>oder</b> d > n: Fehler
+        kopiere len Byte ab n − d, Byte für Byte
+<b>wenn</b> n ≠ ziel: Fehler</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/snappy/Snappy.java</code>.</p>
+
+<h3>Das Rahmenformat</h3>
+<p>Das Rahmenformat zerlegt einen Strom in Abschnitte mit 1 Byte Art und 3 Byte Länge. Der erste ist die Stromkennung (Art <code>0xFF</code>, Inhalt <code>sNaPpY</code>). Art <code>0x00</code> ist ein gepackter, <code>0x01</code> ein ungepackter Abschnitt, jeweils mit 4 Byte <b>maskierter CRC-32C</b> der entpackten Daten vorneweg; <code>0x02</code> bis <code>0x7F</code> sind vorbehalten und dürfen nicht übersprungen werden; <code>0x80</code> bis <code>0xFE</code> werden übersprungen und als Befund gemeldet. Die Maskierung ist</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>m</mi><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>rotr</mi></mrow><mrow><mn>15</mn></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo>+</mo><mtext>0xA282EAD8</mtext><mo stretchy="false">)</mo><mi>mod</mi><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">m = \Big(\operatorname{rotr}_{15}(c) + \text{0xA282EAD8}\Big) \operatorname{mod} 2^{32}</annotation></semantics></math></p>
+<p>mit der Rotation um 15 Bit nach rechts. Sie verhindert, dass eine CRC über Daten, die ihre eigene CRC enthalten, auf einen festen Wert fällt. Einzelheiten zur CRC-32C auf der Seite <a href="pruef-theorie.html#castagnoli">Prüfsummen</a>.</p>
+
+<h2 id="lzo">LZO1X</h2>
+<p>LZO1X liest keine Bits, sondern Befehlsbytes. Welcher Befehl gemeint ist, ergibt sich aus dem Wert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> des Bytes <b>und</b> daraus, was davor kam.</p>
+<table>
+  <tr><th>Befehl</th><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></th><th>Länge</th><th>Abstand</th></tr>
+  <tr><td>M2</td><td>64 … 255</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>32</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lfloor t/32 \rfloor + 1</annotation></semantics></math> (3…8)</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false">(</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo><mo>+</mo><mn>8</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">1 + (\lfloor t/4 \rfloor \operatorname{mod} 8) + 8b</annotation></semantics></math>, bis 2048</td></tr>
+  <tr><td>M3</td><td>32 … 63</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>t</mi><mi>mod</mi><mn>32</mn><mo stretchy="false">)</mo><mo>+</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">(t \operatorname{mod} 32) + 2</annotation></semantics></math>, bei 0 langes Feld</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false">⌊</mo><mi>a</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>64</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">1 + \lfloor a/4 \rfloor + 64b</annotation></semantics></math>, bis 16 384</td></tr>
+  <tr><td>M4</td><td>16 … 31</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>t</mi><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo><mo>+</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">(t \operatorname{mod} 8) + 2</annotation></semantics></math>, bei 0 langes Feld</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>16384</mn><mo>+</mo><mn>16384</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>8</mn><mo stretchy="false">⌋</mo><mi>mod</mi><mn>2</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">⌊</mo><mi>a</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>64</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">16384 + 16384\,(\lfloor t/8 \rfloor \operatorname{mod} 2) + \lfloor a/4 \rfloor + 64b</annotation></semantics></math></td></tr>
+  <tr><td>M1</td><td>0 … 15 nach Rückbezug</td><td>2</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>4</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">1 + \lfloor t/4 \rfloor + 4b</annotation></semantics></math>, bis 1024</td></tr>
+  <tr><td>M1'</td><td>0 … 15 direkt nach Literallauf</td><td>3</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2049</mn><mo>+</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><mn>4</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>4</mn><mi>b</mi></mrow><annotation encoding="application/x-tex">2049 + \lfloor t/4 \rfloor + 4b</annotation></semantics></math></td></tr>
+  <tr><td>Literallauf</td><td>0 … 15 sonst</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>+</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">t + 3</annotation></semantics></math>, bei 0 langes Feld</td><td>–</td></tr>
+</table>
+<p>Dabei sind <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>,</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a, b</annotation></semantics></math> die folgenden Bytes. Bei M4 ist das Bit 3 von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math> das oberste Abstandsbit (Beitrag 16 384); M4 mit Abstandsteil null ist die <b>Endmarke</b> <code>11 00 00</code>. Ein langes Längenfeld zählt Nullbytes zu je 255 und addiert dann den Grundwert (15, 31 oder 7) und das erste Byte ungleich null.</p>
+<p>Der eigentliche Kniff ist der <b>Zustand</b>: nach jedem Rückbezug sagen die unteren zwei Bit des <b>vorletzten</b> gelesenen Bytes, wie viele Literale (0 bis 3) ohne eigenen Befehl folgen. Ist das allererste Byte größer als 17, ist es selbst ein Literallauf von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>−</mo><mn>17</mn></mrow><annotation encoding="application/x-tex">t - 17</annotation></semantics></math> Byte.</p>
+<p><b>Rechenbeispiele</b> (nachgerechnet mit <code>Lzo1x.entpacke</code>): <code>15 61 62 63 64 11 00 00</code> ergibt <code>abcd</code> – erstes Byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>21</mn><mo>−</mo><mn>17</mn><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">21 - 17 = 4</annotation></semantics></math> Literale, dann die Endmarke. <code>15 61 62 63 64 6C 00 11 00 00</code> ergibt <code>abcdabcd</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>0x6C</mtext><mo>=</mo><mn>108</mn></mrow><annotation encoding="application/x-tex">\text{0x6C} = 108</annotation></semantics></math> ist M2 mit Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mn>108</mn><mo>/</mo><mn>32</mn><mo stretchy="false">⌋</mo><mo>+</mo><mn>1</mn><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">\lfloor 108/32 \rfloor + 1 = 4</annotation></semantics></math> und Abstand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mo stretchy="false">(</mo><mn>27</mn><mi>mod</mi><mn>8</mn><mo stretchy="false">)</mo><mo>+</mo><mn>0</mn><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">1 + (27 \operatorname{mod} 8) + 0 = 4</annotation></semantics></math>; die unteren zwei Bit von <code>6C</code> sind 0, also keine Nachliterale.</p>
+
+<h3>Pseudocode – <code>Lzo1x.Lauf</code> (gekürzt)</h3>
+<pre class="pseudo"><b>wenn</b> erstes Byte > 17:
+    t ← Byte − 17;  kopiere t Literale
+    <b>wenn</b> t &lt; 4: innen(nächstes Byte) <b>sonst</b>: nachLiterallauf()
+<b>wiederhole</b>:
+    t ← nächstes Byte
+    <b>wenn</b> t ≥ 16: innen(t);  <b>weiter</b>
+    <b>wenn</b> t = 0: t ← langesFeld(15)
+    kopiere t + 3 Literale;  nachLiterallauf()
+
+<b>funktion</b> nachLiterallauf():
+    t ← nächstes Byte
+    <b>wenn</b> t ≥ 16: <b>gib</b> innen(t)
+    Rückbezug(Abstand 1 + 0x800 + (t >>> 2) + 4·nächstes Byte, Länge 3)
+    n ← Byte[ip − 2] und 3;  <b>wenn</b> n > 0: kopiere n Literale; innen(nächstes Byte)
+
+<b>funktion</b> innen(t):
+    <b>wiederhole</b>:
+        M2 / M3 / M4 / M1 je nach t (Tabelle oben);  M4 mit Abstand 0: <b>Ende</b>
+        Rückbezug(abstand, länge)                      <i>Byte für Byte</i>
+        n ← Byte[ip − 2] und 3                         <i>Nachliterale aus dem vorletzten Byte</i>
+        <b>wenn</b> n = 0: <b>zurück</b> (Literallauf fällig)
+        kopiere n Literale;  t ← nächstes Byte</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/lzo/Lzo1x.java</code>. Ein langes Längenfeld über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{24}</annotation></semantics></math> wird als beschädigt abgewiesen. Ist eine erwartete Größe genannt, muss die Ausgabe am Ende genau so lang sein, sonst Fehler („erwartet waren …“).</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> LZO hat keine Prüfsumme. Die <code>Lzoprobe</code> hält das als Befund fest: ein verdrehtes Byte ändert die Länge nicht, wohl aber den Inhalt, und niemand merkt es. Die erwartete Größe legt den Ausgabepuffer vorab an (höchstens 16 MiB) und wird seit 2026-09-28 am Ende verglichen – sie ist das Einzige, woran ein Aufrufer einen falschen Block erkennt, wenn sich dabei die Länge ändert.</div>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b><code>Lz4probe</code> (67 Prüfungen):</b> xxHash32 gegen <code>python-xxhash</code> (leer, 1, 3, 4, 16, 31, 32, 100, 1000 Byte, Saat 0 und 1, Ausschnitte); ein nackter Block; fünf Rahmenanker von lz4 1.9.4 (unabhängige Blöcke, mit Größe und Inhaltsprüfsumme, mit Blockprüfsummen, <code>f4</code> mit Abstand 3 und Länge 5997, <code>f5</code> drei verkettete Blöcke über 139 122 Byte); zwei Rahmen hintereinander; ungepackte Blöcke aus einem eigenen Schreiber; überspringbare Fremdrahmen; zwölf Beschädigungen; ein ungepackter Block genau an der Blockgrenze (64 KiB) wird gelesen, einer darüber abgewiesen. Die Probe fand zwei eigene Annahmen falsch: <code>f1</code> hatte unabhängige statt verkettete Blöcke, und kein Anker enthielt einen ungepackten Block.</li>
+  <li><b><code>Lz4woerterbuchprobe</code> (9 Prüfungen):</b> Wörterbuch bei verketteten und unabhängigen Blöcken, mit und ohne Kennung, langes Wörterbuch, Gegenproben.</li>
+  <li><b><code>SnappySelfTest</code> (40 Prüfungen):</b> CRC-32C („123456789“ = <code>E3069283</code>, tabelliert gegen bitweise über 200 Zufallsblöcke, in Stücken), Maskierung hin und zurück; Literale von 60, 61, 300 und 70 000 Byte (keine bis drei Längenbytes); alle Kopierarten; überlappende Kopien mit Abstand 1, 2, 3; kaputte Ströme; das Rahmenformat mit wiederholter Stromkennung, überspringbaren und vorbehaltenen Abschnitten, falscher Prüfsumme.</li>
+  <li><b><code>Lzoprobe</code> (25 Prüfungen):</b> zwölf Anker von liblzo2 über python-lzo – ein reiner Literallauf, dichte kurze Rückbezüge, lange mit großem Abstand, durchgehend überlappend, Zufall (gepackt größer als roh), lange Längenfelder, ein einziges Byte, alle vier Befehlsarten, 30 000 gleiche Byte, der kurze Rückbezug direkt nach einem Literallauf, über 20 000 und über 40 000 Byte zurück (oberstes Abstandsbit); dazu drei Fehlerfälle, eine zu große und eine zu kleine erwartete Größe (beide gemeldet) und der Befund zur fehlenden Prüfsumme.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Alle drei nur lesend.</li>
+  <li>Die Snappy-Schranke <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32</mn><mo>⋅</mo><mi>n</mi><mo>+</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">32 \cdot n + 64</annotation></semantics></math> hat Luft über dem wahren Höchstverhältnis (Art 10: 3 Byte → 64 Byte, etwa 21,3). Der Kommentar im Quelltext nennt das seit 2026-09-28 so (vorher stand dort „ein Kopierbefehl von zwei Byte ergibt bis zu 64“; ein Zwei-Byte-Befehl der Art 01 ergibt höchstens 11).</li>
+  <li>LZ4: bei unabhängigen Blöcken ohne Wörterbuch wird nicht verhindert, dass ein Rückbezug in den vorigen Block greift. (Ungepackte Blöcke werden seit 2026-09-28 wie gepackte gegen die Blockgrenze aus dem Kopf geprüft.)</li>
+  <li>LZO: ohne genannte erwartete Größe (0) bleibt die Länge ungeprüft.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Hintergrund zu <a href="index.html#schnell">Schnelle Packer der Datenformate</a> · Proben: <code>Lz4probe</code>, <code>Lz4woerterbuchprobe</code>, <code>SnappySelfTest</code>, <code>Lzoprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bzip2 – Burrows-Wheeler and the layers above it – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite aktiv" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › bzip2 – Burrows-Wheeler and the layers above it</span><a class="sprachwahl" href="../../de/compress/bzip2-theorie.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.bzip2</div>
+  <h1>bzip2 – Burrows-Wheeler and the layers above it</h1>
+  <p class="unter">bzip2 does not pack with back-references but reorders until packing pays off. This page explains the Burrows-Wheeler transform and its inversion in linear time, move-to-front, the run lengths RUNA/RUNB as a bijective numeral system, the Huffman tables with selector list, the RLE1 pre-stage, the checksums and the old randomisation – with pseudocode following <code>Bzip2</code>.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>Deflate and LZMA look for repetitions and refer to them. bzip2 takes another route: it reorders the block so that equal characters stand together in <b>runs</b>, turns the runs into small numbers and encodes those with Huffman. When unpacking, the layers run backwards:</p>
+<figure>
+<svg viewBox="0 0 640 90" width="640" font-family="sans-serif" font-size="12">
+  <rect x="10" y="25" width="90" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="18" y="46" fill="#1f5f8b">Huffman</text>
+  <rect x="130" y="25" width="100" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="136" y="46" fill="#1f5f8b">RUNA/RUNB</text>
+  <rect x="260" y="25" width="100" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="266" y="46" fill="#1f5f8b">move-to-front</text>
+  <rect x="390" y="25" width="110" height="34" fill="#1f5f8b" stroke="#1f5f8b"/><text x="396" y="46" fill="#ffffff">inverse BWT</text>
+  <rect x="530" y="25" width="60" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="540" y="46" fill="#1f5f8b">RLE1</text>
+  <line x1="100" y1="42" x2="128" y2="42" stroke="#5b6475" stroke-width="2"/>
+  <line x1="230" y1="42" x2="258" y2="42" stroke="#5b6475" stroke-width="2"/>
+  <line x1="360" y1="42" x2="388" y2="42" stroke="#5b6475" stroke-width="2"/>
+  <line x1="500" y1="42" x2="528" y2="42" stroke="#5b6475" stroke-width="2"/>
+  <text x="10" y="80" fill="#5b6475">bits</text><text x="590" y="80" fill="#5b6475">data</text>
+</svg>
+<figcaption>The layers of a bzip2 block in reading order. Only the first reads bits; all the others work on numbers and bytes.</figcaption>
+</figure>
+
+<h2 id="bwt">The Burrows-Wheeler transform</h2>
+<p>Write all <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> cyclic rotations of a block one below the other, sort them and take the <b>last column</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> together with the number <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> of the row holding the original block. Example <code>banana</code>:</p>
+<table>
+  <tr><th>Row</th><th>sorted rotation</th><th>first column <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi></mrow><annotation encoding="application/x-tex">F</annotation></semantics></math></th><th>last column <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></th></tr>
+  <tr><td>0</td><td><code>abanan</code></td><td>a</td><td>n</td></tr>
+  <tr><td>1</td><td><code>anaban</code></td><td>a</td><td>n</td></tr>
+  <tr><td>2</td><td><code>ananab</code></td><td>a</td><td>b</td></tr>
+  <tr><td>3</td><td><code>banana</code> ← <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">z = 3</annotation></semantics></math></td><td>b</td><td>a</td></tr>
+  <tr><td>4</td><td><code>nabana</code></td><td>n</td><td>a</td></tr>
+  <tr><td>5</td><td><code>nanaba</code></td><td>n</td><td>a</td></tr>
+</table>
+<p>Result: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo></mrow><annotation encoding="application/x-tex">L =</annotation></semantics></math> <code>nnbaaa</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">z = 3</annotation></semantics></math>. The last column contains the same characters as the block, only reordered: every character stands before the remaining text by which its row is sorted. In a text, almost always the same letters precede “<code>he </code>” – which is why <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> forms runs although the block itself has none.</p>
+
+<h3>Inversion in linear time</h3>
+<p>The illustrative inversion – repeatedly prepending columns and sorting – takes hours for a 900 KB block. The practical one uses two facts:</p>
+<ol>
+  <li>The first column <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi></mrow><annotation encoding="application/x-tex">F</annotation></semantics></math> is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> sorted; it therefore follows from the character counts of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>.</li>
+  <li>The <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>-th occurrence of a character <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> and the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>-th occurrence of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi></mrow><annotation encoding="application/x-tex">F</annotation></semantics></math> are the <b>same</b> character of the text. (The rows beginning with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> are sorted by their remainder; the rows ending with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> by the same remainder, only rotated by one – so the order is the same.)</li>
+</ol>
+<p>If row <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math> begins at text position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math>, then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo stretchy="false">[</mo><mi>r</mi><mo stretchy="false">]</mo><mo>=</mo><mi>T</mi><mo stretchy="false">[</mo><mi>t</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">F[r] = T[t]</annotation></semantics></math>. The same character appears in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> in the row that begins at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">t + 1</annotation></semantics></math>. The table <code>weiter</code> therefore assigns to each row <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math> the row that begins <b>one text position later</b>. With the cumulative counts <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo stretchy="false">[</mo><mi>c</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">C[c]</annotation></semantics></math> (number of characters smaller than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math>) it is built in one pass over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>weiter</mtext><mo stretchy="false">[</mo><mi>C</mi><mo stretchy="false">[</mo><msub><mrow><mi>L</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">]</mo><mo>+</mo><msub><mrow><mtext>rank</mtext></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>L</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">]</mo><mo>=</mo><mi>i</mi></mrow><annotation encoding="application/x-tex">\text{weiter}\big[C[L_i] + \text{rank}_i(L_i)\big] = i</annotation></semantics></math></p>
+<p>with the rank <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mtext>rank</mtext></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{rank}_i(c)</annotation></semantics></math> = number of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>L</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>…</mo><msub><mrow><mi>L</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">L_0 \dots L_{i-1}</annotation></semantics></math>. From row <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">z</annotation></semantics></math> (text position 0), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mtext>weiter</mtext><mo stretchy="false">[</mo><mi>z</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">p = \text{weiter}[z]</annotation></semantics></math> gives the row beginning at position 1; its last character <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo stretchy="false">[</mo><mi>p</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">L[p]</annotation></semantics></math> is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo stretchy="false">[</mo><mn>0</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">T[0]</annotation></semantics></math>. And so on, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> times.</p>
+<p><b>Worked example</b> (recomputed with <code>Bzip2.rueckBwt</code> via reflection): <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo></mrow><annotation encoding="application/x-tex">L =</annotation></semantics></math> <code>nnbaaa</code> gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo stretchy="false">[</mo><mi>a</mi><mo stretchy="false">]</mo><mo>=</mo><mn>0</mn><mo>,</mo><mi>C</mi><mo stretchy="false">[</mo><mi>b</mi><mo stretchy="false">]</mo><mo>=</mo><mn>3</mn><mo>,</mo><mi>C</mi><mo stretchy="false">[</mo><mi>n</mi><mo stretchy="false">]</mo><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">C[a] = 0, C[b] = 3, C[n] = 4</annotation></semantics></math> and <code>weiter</code> = [3, 4, 5, 2, 0, 1]. From <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">z = 3</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>2</mn><mo>→</mo></mrow><annotation encoding="application/x-tex">p = 2 \to</annotation></semantics></math> <code>b</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>5</mn><mo>→</mo></mrow><annotation encoding="application/x-tex">p = 5 \to</annotation></semantics></math> <code>a</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>1</mn><mo>→</mo></mrow><annotation encoding="application/x-tex">p = 1 \to</annotation></semantics></math> <code>n</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>4</mn><mo>→</mo></mrow><annotation encoding="application/x-tex">p = 4 \to</annotation></semantics></math> <code>a</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0</mn><mo>→</mo></mrow><annotation encoding="application/x-tex">p = 0 \to</annotation></semantics></math> <code>n</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>3</mn><mo>→</mo></mrow><annotation encoding="application/x-tex">p = 3 \to</annotation></semantics></math> <code>a</code> – i.e. <code>banana</code>.</p>
+
+<h3>Pseudocode – <code>Bzip2.rueckBwt(bwt, n, zeiger)</code></h3>
+<pre class="pseudo">anfang[0..256] ← 0
+<b>for</b> i ← 0 <b>to</b> n−1:  anfang[bwt[i] + 1] ← anfang[bwt[i] + 1] + 1
+<b>for</b> c ← 1 <b>to</b> 256:  anfang[c] ← anfang[c] + anfang[c−1]       <i>cumulative: C[c]</i>
+<b>for</b> i ← 0 <b>to</b> n−1:  weiter[anfang[bwt[i]]++] ← i
+p ← weiter[zeiger]
+<b>for</b> k ← 0 <b>to</b> n−1:  aus[k] ← bwt[p];  p ← weiter[p]</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/bzip2/Bzip2.java</code>. Cost <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>n</mi><mo>+</mo><mn>256</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(n + 256)</annotation></semantics></math> time and one <code>int</code> array of block length.</p>
+
+<h2 id="mtf">Move-to-front</h2>
+<p>Move-to-front replaces every character by its position in a list and then moves it to the front. Runs of equal characters thus become runs of zeros, frequent characters small numbers. The initial list is the bytes occurring in the block in ascending order. Example, list (a, b, n):</p>
+<table>
+  <tr><th>Character</th><th>n</th><th>n</th><th>b</th><th>a</th><th>a</th><th>a</th></tr>
+  <tr><td>position</td><td>2</td><td>0</td><td>2</td><td>2</td><td>0</td><td>0</td></tr>
+  <tr><td>list after</td><td>n a b</td><td>n a b</td><td>b n a</td><td>a b n</td><td>a b n</td><td>a b n</td></tr>
+</table>
+
+<h2 id="runab">RUNA and RUNB</h2>
+<p>Zeros from move-to-front are not encoded one by one but as a run length with two symbols of their own. The run length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>≥</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r \ge 1</annotation></semantics></math> is written in the <b>bijective base-2 numeral system</b>, with digits 1 (RUNA) and 2 (RUNB), lowest position first:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>r</mi><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>m</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>d</mi></mrow><mrow><mi>k</mi></mrow></msub><mspace width="0.1667em"/><msup><mrow><mn>2</mn></mrow><mrow><mi>k</mi></mrow></msup><mo>,</mo><mspace width="2em"/><msub><mrow><mi>d</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>∈</mo><mo stretchy="false">{</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">r = \sum_{k=0}^{m-1} d_k \, 2^k, \qquad d_k ∈ \{1, 2\}</annotation></semantics></math></p>
+<p>There is no digit 0; hence every length has exactly one representation, and length 0 needs no symbol.</p>
+<table>
+  <tr><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math></th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+  <tr><td>sequence</td><td>A</td><td>B</td><td>A A</td><td>B A</td><td>A B</td><td>B B</td><td>A A A</td><td>B A A</td></tr>
+</table>
+<p>Whoever reads the sequence as an ordinary binary number (A = 0, B = 1) gets almost right lengths – and thus silently shifted data. The remaining move-to-front values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>≥</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">j \ge 1</annotation></semantics></math> are written as symbol <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">j + 1</annotation></semantics></math>; the last symbol of the alphabet, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>number of characters</mtext><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\text{number of characters} + 1</annotation></semantics></math>, is the end of block (EOB). The example above, MTF sequence 2 0 2 2 0 0, becomes the symbols 3, A, 3, 3, B, EOB.</p>
+
+<h2 id="huffman">Huffman tables with selector list</h2>
+<p>A block carries two to six Huffman tables over the same alphabet. Every 50 symbols the table may change; which one applies is given by the <b>selector list</b>. It is itself move-to-front coded and each entry written in unary (as many ones as the value, then a zero). The code lengths of each table are <b>delta coded</b>: a start value of 5 bits, then per symbol a sequence of steps “10” (+1) and “11” (−1), closed by “0”. Lengths from 1 to 20 are allowed. The canonical code is read from the most significant bit, using two tables per length: <code>grenze[ℓ]</code> (largest code value of length ℓ) and <code>basis[ℓ]</code> (offset into the symbol sequence sorted by length).</p>
+<div class="hinweis"><b>Convention in the framework:</b> The code lengths need <b>not form a complete tree</b> – the Kraft sum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>s</mi></mrow></munder><msup><mrow><mn>2</mn></mrow><mrow><mo>−</mo><msub><mrow><mi mathvariant="normal">ℓ</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow></msup></mrow><annotation encoding="application/x-tex">\sum_s 2^{-\ell_s}</annotation></semantics></math> is not checked when the tables are built, neither for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">= 1</annotation></semantics></math> nor for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≤</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\le 1</annotation></semantics></math>. That is how libbzip2 1.0.8 does it (<code>BZ2_hbCreateDecodeTables</code> checks nothing), and the reader follows it. A stream is rejected only when it actually reads into a gap: if a code does not fit even at the tree's largest length, <code>symbol</code> reports “the code lengths do not form a complete tree” (<i>keinen vollstaendigen Baum</i>). Example: lengths 2, 2, 2 (Kraft sum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>/</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">3/4</annotation></semantics></math>) occupy <code>00</code>, <code>01</code>, <code>10</code>; a stream containing <code>11</code> is rejected, one without it is read – both as in libbzip2 (cross-checked with Python's <code>bz2</code>). Until 2026-09-28 there was a check here that only counted the symbols and never fired; the gap was only noticed after 23 bits had been read.</div>
+<p>Which bytes occur in the block at all is stated in two stages: 16 bits say which groups of sixteen are in use, and only for those follow 16 bits each with the individual bytes.</p>
+
+<h3>Pseudocode – <code>Bzip2.liesBlock</code> (abridged)</h3>
+<pre class="pseudo">crc ← 32 bits;  randomised ← 1 bit;  zeiger ← 24 bits
+zeichen ← character map from 16 + 16·(groups in use) bits;  alphabet ← count + 2
+nTrees ← 3 bits (2 … 6);  nSelectors ← 15 bits (≥ 1)
+<b>for</b> each selector: j ← number of ones before the zero;  selector ← MTF⁻¹(j)
+<b>for</b> each tree: ℓ ← 5 bits;  <b>for</b> each symbol: <b>while</b> bit = 1: ℓ ← ℓ + (bit = 0 ? 1 : −1)
+                                          check 1 ≤ ℓ ≤ 20
+<b>for</b> each tree: grenze, basis, folge from the lengths (canonical);  ℓmax ← largest length
+mtf ← zeichen;  lauf ← 0;  stelle ← 1
+<b>repeat</b>:
+    <b>every</b> 50 symbols: tree ← next selector
+    s ← Huffman symbol(tree)                <i>value does not fit up to ℓmax: error “no complete tree”</i>
+    <b>if</b> s ∈ {RUNA=0, RUNB=1}:  lauf ← lauf + (s+1)·stelle;  stelle ← 2·stelle;  <b>continue</b>
+    <b>if</b> lauf > 0:  write mtf[0] lauf times;  lauf ← 0;  stelle ← 1
+    <b>if</b> s = EOB: <b>break</b>
+    c ← mtf[s−1];  shift mtf[0..s−2] back by one;  mtf[0] ← c;  write c
+<b>if</b> zeiger ≥ n: error
+roh ← rueckBwt(bwt, n, zeiger)
+<b>if</b> randomised: entwuerfle(roh)
+daten ← rueckRle1(roh)
+<b>if</b> Crc32Bzip2(daten) ≠ crc: error</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/bzip2/Bzip2.java</code> (<code>liesBlock</code>, <code>tabellen</code>, <code>symbol</code>). Everywhere the block size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>100,000</mn><mo>⋅</mo><mtext>level</mtext></mrow><annotation encoding="application/x-tex">100{,}000 \cdot \text{level}</annotation></semantics></math> is checked: a zero run or a symbol beyond it is an error.</p>
+
+<h2 id="rle1">RLE1 and the block size</h2>
+<p>Before the reordering lies a first run-length stage: after <b>exactly four</b> equal bytes a count byte follows with the number of <i>further</i> repetitions, 0 to 255 – even when it is 0. A run thus holds at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>+</mo><mn>255</mn><mo>=</mo><mn>259</mn></mrow><annotation encoding="application/x-tex">4 + 255 = 259</annotation></semantics></math> bytes.</p>
+<pre class="pseudo"><b>while</b> i &lt; n:
+    gleich ← number of equal bytes from i, at most 4
+    <b>if</b> gleich &lt; 4: write them;  i ← i + gleich
+    <b>otherwise</b>: <b>if</b> i + 4 ≥ n: error "count byte missing"
+               write the byte (4 + roh[i+4]) times;  i ← i + 5</pre>
+<p class="quelle">Source: <code>Bzip2.rueckRle1</code>.</p>
+<p>The block size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>100,000</mn><mo>⋅</mo><mtext>level</mtext></mrow><annotation encoding="application/x-tex">100{,}000 \cdot \text{level}</annotation></semantics></math> counts the bytes <b>after</b> RLE1. libbzip2 leaves 19 bytes of headroom per block (<code>nblockMAX = 100000·level − 19</code>); the multi-block anchor <code>b4</code> has blocks of 99,981, 99,981 and 50,038 bytes. The level digit only fixes the upper limit: the same content at level 1 and level 9 gives files that differ in exactly one byte – the digit.</p>
+
+<h2 id="pruefsummen">Checksums, markers, randomisation</h2>
+<ul>
+  <li>Every block begins with the 48-bit marker <code>314159265359</code> (the digits of π), the stream ends with <code>177245385090</code> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi mathvariant="normal">π</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{\pi}</annotation></semantics></math>). Blocks do not begin on byte boundaries; only the signature <code>BZh</code> and the level digit are aligned. Several streams in a row each begin on a byte boundary again.</li>
+  <li>The block checksum is a CRC-32 with the polynomial <code>04C11DB7</code>, but <b>unreflected</b> (<code>Crc32Bzip2</code>, see <a href="pruef-theorie.html#bzip2">checksums</a>).</li>
+  <li>The combined checksum at the end of the stream is not a checksum over the data but a chaining: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><mo>←</mo><msub><mrow><mi>rotl</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>G</mi><mo stretchy="false">)</mo><mi>xor</mi><msub><mrow><mi>c</mi></mrow><mrow><mtext>block</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">G \leftarrow \operatorname{rotl}_1(G) \operatorname{xor} c_{\text{block}}</annotation></semantics></math>, starting from 0. It depends on the order of the blocks.</li>
+  <li>Up to bzip2 0.9.0 a block could be <b>randomised</b>: before sorting, the lowest bit was flipped at certain positions so that very uniform blocks would not slow down the sort. The distances between the positions are in a table of 512 numbers (<code>BZ2_rNums</code>). <code>entwuerfle</code> flips the same bits back after the inverse BWT.</li>
+</ul>
+<div class="hinweis"><b>Convention in the framework:</b> Bits are read from the most significant end (<code>BitLeserMsb</code>, position kept in bits). With the Deflate reader not even the block marker would match. The reader throws on an access beyond the end before consuming a bit.</div>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Bzip2probe</code> (60 checks):</b> the CRC variant (<code>123456789</code> → <code>FC891918</code>, different from <code>CBF43926</code>; empty text, zero byte, all byte values; the chaining is not commutative); six anchors from libbzip2: <code>b1</code>/<code>b2</code> the same content at levels 9 and 1 (same length, exactly one byte different), <code>b3</code> for RLE1 (300 × A, four C with count byte 0, five D, 259 E in one run, 260 F in two), <code>b4</code> three blocks in one stream (the combined checksum is the chaining, not the checksum over everything), <code>b5</code> two streams in one file, <code>b6</code> the empty content without a single block; damage (signature, level digit, block marker, block and combined checksum, flipped byte, truncated, too short, randomised bit set), and the message names the right stream; two hand-set streams with an incomplete tree (lengths 2, 2, 2): read when the gap is not hit, rejected with “no complete tree” when it is.</li>
+  <li><b><code>Bzip2verwuerfeltprobe</code> (4 checks):</b> randomised blocks are recognised and read correctly; without derandomising, the block checksum fails.</li>
+  <li><b><code>Msbleserprobe</code> (23 checks):</b> the MSB bit reader against slices of a <code>BigInteger</code> over the same byte array (400 cases), against <code>ByteBuffer.getLong</code> (50 cases), the 48-bit marker, and a failed access at the end consumes nothing.</li>
+  <li>Counter-probes, all red: RUNA/RUNB binary instead of bijective, move-to-front left out, jump table swapped, RLE1 count byte ignored, CRC reflected, combined checksum without rotation; the gap reported only after 23 bits (<code>bzip2-luecke</code>).</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Read-only. An encoder would need suffix sorting over up to 900 KB per block.</li>
+  <li>As in libbzip2, an incomplete tree is rejected only when an unassigned code is read, not when the tables are built. An over-subscribed tree (Kraft sum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">&gt; 1</annotation></semantics></math>) is read with the same tables as in libbzip2; some symbols are then unreachable.</li>
+  <li>bzip2 inside a ZIP container (method 12) is not read, only named.</li>
+  <li>All blocks and streams are held in memory at once; capped by the <a href="index.html#grenze">decompression limit</a>.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>M. Burrows, D. J. Wheeler: A Block-sorting Lossless Data Compression Algorithm. Digital SRC Research Report 124, 1994.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#bzip2">bzip2</a> · Probes: <code>Bzip2probe</code>, <code>Bzip2verwuerfeltprobe</code>, <code>Msbleserprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

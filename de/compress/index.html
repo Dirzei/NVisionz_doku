@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jedes Packformat selbst entpackt – ohne java.util.zip – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="#grenze">Grenze gegen Entpackbomben</a>
+<a class="unterseite" href="grenze-theorie.html">Hintergrund</a>
+<a class="rubrik" href="#deflate">Deflate und zlib, hin und zurück</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – Abgleich</a>
+<a class="unterseite" href="deflate-packer.html">Der eigene Packer</a>
+<a class="unterseite" href="deflate-theorie.html">Format und Entpacker</a>
+<a class="rubrik" href="#behaelter">gzip und ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – Abgleich</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – Abgleich</a>
+<a class="unterseite" href="behaelter-theorie.html">Hintergrund</a>
+<a class="rubrik" href="#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – Abgleich</a>
+<a class="unterseite" href="lzma-theorie.html">Bereichskodierer und LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ und Vorfilter</a>
+<a class="rubrik" href="#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Abgleich</a>
+<a class="unterseite" href="bzip2-theorie.html">Hintergrund</a>
+<a class="rubrik" href="#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Abgleich</a>
+<a class="unterseite" href="zstd-fse.html">FSE und Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Rahmen und Sequenzen</a>
+<a class="rubrik" href="#schnell">Schnelle Packer der Datenformate</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – Abgleich</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – Abgleich</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – Abgleich</a>
+<a class="unterseite" href="schnell-theorie.html">Hintergrund</a>
+<a class="rubrik" href="#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Abgleich</a>
+<a class="unterseite" href="brotli-theorie.html">Hintergrund</a>
+<a class="rubrik" href="#lzw">LZW für PDF, TIFF und GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Hintergrund</a>
+<a class="rubrik" href="#pruef">Prüfsummen</a>
+<a class="unterseite" href="pruef-theorie.html">Hintergrund</a>
+<a class="rubrik" href="#bausteine">Bits, Huffman, Lauflänge</a>
+<a class="unterseite" href="bausteine-theorie.html">Hintergrund</a>
+<a class="rubrik" href="#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › framework-compress</span><a class="sprachwahl" href="../../en/compress/index.html">English</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress</div>
+  <h1>Jedes Packformat selbst entpackt – ohne java.util.zip</h1>
+  <p class="unter">Funktionsübersicht für die Präsentation des envisionz-Frameworks, Stand 28.09.2026. Deflate und zlib hin und zurück,
+  gzip und ZIP, XZ und LZMA, bzip2, Zstandard, LZ4, Snappy, LZO, Brotli und LZW lesend, dazu sieben Prüfsummen und eine Grenze gegen
+  Entpackbomben. Je Verfahren: Zweck, Methoden, Einsatz im Framework, Anwendungen, Beispiele. Die Beispiele sind gekürzt.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>10</b><span>Formate mit eigenem Abgleichdokument, 110 Merkmalszeilen</span></div>
+  <div class="zahl"><b>7</b><span>Prüfsummen, von Adler-32 bis xxHash64</span></div>
+  <div class="zahl"><b>0</b><span>Abhängigkeiten, auch nichts aus <code>java.util.zip</code></span></div>
+  <div class="zahl"><b>50</b><span>Klassen in 16 Paketen</span></div>
+  <div class="zahl"><b>23</b><span>Probenklassen</span></div>
+  <div class="zahl"><b>11</b><span>Gegenproben</span></div>
+</div>
+
+<h2 id="grundsaetze">Grundsätze des Moduls</h2>
+<div class="grundsatz">
+  <div><b>Kein <code>java.util.zip</code>.</b> Eigener Code statt einer Hülle um <code>Deflater</code>. <code>java.util.zip</code> dient nur in den Proben als Gegenreferenz; aus dem JDK kommt allein SHA-256 für XZ (<code>java.security</code>).</div>
+  <div><b>Kreuzprobe statt Hin-und-zurück.</b> Eigener Kodierer und eigener Dekodierer können sich gleich irren. Deshalb geht der eigene Strom durch den <code>Inflater</code> des JDK und die Ströme des JDK durch den eigenen <code>Inflate</code>; für die übrigen Formate stehen fremde Anker aus libzstd, libbzip2, lz4 und Python bereit.</div>
+  <div><b>Lesen ist die Regel.</b> Gepackt wird nur Deflate/zlib und PackBits. gzip, ZIP, bzip2, XZ, zstd, LZ4, Snappy, LZO, Brotli und LZW werden nur gelesen – Packer wären je ein eigener Punkt.</div>
+  <div><b>Rückbezüge Byte für Byte.</b> Abstand 1 und Länge 258 heißt „dasselbe Byte 258-mal“. Mit <code>System.arraycopy</code> entstünde die richtige Länge mit falschem Inhalt; in Deflate, LZ4, Snappy und LZO wird deshalb byteweise kopiert.</div>
+  <div><b>Jede Prüfsumme wird nachgerechnet.</b> ZIP-Einträge gegen ihre CRC-32, XZ in allen vier Prüfarten, gzip über jedes Glied. Eine Datei, die sich entpacken lässt, aber falschen Inhalt hat, fällt so auf.</div>
+  <div><b>Grenze gegen Entpackbomben.</b> Kein Kopf darf mehr Speicher anlegen lassen als die <code>Entpackgrenze</code> (Vorgabe 1 GiB), und auch die tatsächliche Ausgabe wird dagegen geprüft.</div>
+</div>
+
+<!-- =============================================================== GRENZE -->
+<h2 id="grenze">Grenze gegen Entpackbomben <span class="paket">envisionz.compress</span></h2>
+
+<div class="karte">
+  <h3><code>Entpackgrenze</code> – höchstens so viel, wie erlaubt ist</h3>
+  <p class="zweck">Vier Byte zstd können einen Block von 128 KB ergeben, einige hundert Kilobyte gzip ein Gigabyte Nullen. Die Grenze gilt für die Ausgabe eines Aufrufs, zweifach: für das, was ein Kopf ankündigt, und für das, was tatsächlich entsteht. Vorrang: Grenze für einen Abschnitt eines Fadens, dann die Systemeigenschaft <code>envisionz.entpacken.max</code>, dann die Einstellung des Anwenders, dann die Vorgabe. Die Einstellung kommt über eine Systemeigenschaft herein, damit framework-swing compress nicht kennen muss. <a class="vertiefung" href="grenze-theorie.html">Hintergrund, Formeln und Pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>grenze()</code>, <code>mit(grenze, arbeit)</code> – Grenze für einen Abschnitt</li>
+      <li><code>setzeGrenze(bytes)</code>, <code>eingestellteGrenze()</code>, <code>ausEigenschaft()</code></li>
+      <li><code>pruefe(groesse, verfahren)</code>, <code>wachse(jetzt, gebraucht, verfahren)</code>, <code>vorab(angekuendigt, vorab, verfahren)</code></li>
+      <li>Konstanten <code>VORGABE</code> (1 GiB), <code>EIGENSCHAFT</code>, <code>EINGESTELLT</code>; Ausnahme <code>Grenzueberschreitung</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-settings: SicherheitKarte (16 … 2047 MiB)</span><span class="chip">intern: alle Entpacker</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Fremde Dateien öffnen, ohne dass eine präparierte Datei die Anwendung mit einem <code>OutOfMemoryError</code> abreißt.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – für einen Aufruf enger fassen</h4>
+<pre><code>byte[] roh = Entpackgrenze.mit(64L &lt;&lt; 20, () -&gt; Gzip.entpacke(gz));   // höchstens 64 MiB</code></pre></div>
+</div>
+
+<!-- =============================================================== DEFLATE -->
+<h2 id="deflate">Deflate und zlib, hin und zurück <span class="paket">envisionz.compress.deflate</span></h2>
+
+<div class="karte">
+  <h3><code>Deflate</code>, <code>Inflate</code>, <code>Zlib</code> – RFC 1951 und 1950</h3>
+  <p class="zweck">Der Packer: LZ77 mit dynamischem Huffman, drei Suchstufen, träge Übereinstimmung, vor jedem Block der Vergleich mit dem gespeicherten Block (Zufallsdaten wachsen so um weniger als ein Prozent). Der Entpacker liest alle drei Blockarten. Gemessen an Dateien des Arbeitsbereichs: durchweg innerhalb weniger Prozent des JDK, auf einer WAV-Datei sogar darunter (4 575 536 gegen 4 583 829 Byte); 5 MB in 0,7 s auf Stufe <code>NORMAL</code>. <a class="vertiefung" href="deflate-theorie.html">Format und Entpacker: Hintergrund, Formeln und Pseudocode →</a> <a class="vertiefung" href="deflate-packer.html">Der eigene Packer: Hintergrund, Formeln und Pseudocode →</a></p>
+  <p class="abgleiche"><b>Abgleich gegen Spezifikation und Vergleichsprodukt:</b> <a href="abgleich-deflate.html">DEFLATE/zlib</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Deflate.packe(daten[, stufe])</code>, <code>Deflate.Stufe</code>: <code>SCHNELL</code>, <code>NORMAL</code>, <code>GRUENDLICH</code></li>
+      <li><code>Inflate.entpacke(daten[, ab, laenge[, woerterbuch]])</code></li>
+      <li><code>Inflate.entpackeMitEnde(daten, ab, laenge)</code> → <code>Ergebnis(daten, ende)</code> – wo der Strom endet</li>
+      <li><code>Zlib.packe(daten[, stufe])</code>, <code>Zlib.entpacke(daten[, woerterbuch])</code> – Rahmen mit Adler-32</li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: PNG, TIFF, MDF, MATLAB, VTU</span><span class="chip">fileformats: HDF5-Filter, HDF4, Parquet, Avro</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Der Unterbau fast aller Bild-, Mess- und Behälterformate; eigenes Packen, wo eine Anwendung zlib schreiben muss.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – packen und wieder lesen</h4>
+<pre><code>byte[] z    = Zlib.packe(daten, Deflate.Stufe.GRUENDLICH);
+byte[] roh  = Zlib.entpacke(z);
+Inflate.Ergebnis e = Inflate.entpackeMitEnde(strom, ab, laenge);   // e.ende(): erstes Byte dahinter</code></pre></div>
+  <div class="hinweis">framework-pdf entpackt <code>FlateDecode</code> noch mit dem <code>Inflater</code> des JDK; der Umzug auf <code>Inflate</code> ist als erster sinnvoller Schritt genannt, aber nicht vollzogen.</div>
+</div>
+
+<!-- =============================================================== BEHAELTER -->
+<h2 id="behaelter">gzip und ZIP <span class="paket">envisionz.compress.gzip · envisionz.compress.zip</span></h2>
+
+<div class="karte">
+  <h3><code>Gzip</code> – RFC 1952, alle Glieder</h3>
+  <p class="zweck">Zwei aneinandergehängte gzip-Dateien sind ein gültiges gzip. Ein Leser, der nach dem ersten Glied aufhört, gibt still die Hälfte zurück – hier werden alle Glieder gelesen. Die Längenangabe am Ende gilt modulo 2<sup>32</sup>, die Zusatzfelder stehen in fester Folge, FHCRC prüft nur den Kopf. Gegen drei Anker aus Pythons <code>gzip</code> und alle sechzehn Verbindungen der Zusatzfelder geprüft. <a class="vertiefung" href="behaelter-theorie.html">Hintergrund, Formeln und Pseudocode →</a></p>
+  <p class="abgleiche"><b>Abgleich gegen Spezifikation und Vergleichsprodukt:</b> <a href="abgleich-gzip.html">gzip</a> · <a href="abgleich-zip.html">ZIP</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Gzip.entpacke(gz)</code> – alle Glieder hintereinander</li>
+      <li><code>Gzip.glieder(gz)</code> → <code>Glied</code>: <code>name</code>, <code>kommentar</code>, <code>zeit</code>, <code>daten</code>, <code>crc</code>, <code>laenge</code>, <code>systemname()</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: FITS (GZIP_1, GZIP_2)</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p><code>.gz</code>-Dateien und gzip-gepackte Bildkacheln in FITS.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>Zipdatei</code>, <code>Zipeintrag</code> – ZIP rein lesend</h3>
+  <p class="zweck">Das Verzeichnis steht am Ende, dahinter darf ein Kommentar von bis zu 65 535 Byte stehen – auch mit der Endkennung darin. Gesucht wird deshalb vom Ende her die erste Stelle, an der die Angaben zueinander passen. Gelesen werden gespeicherte und Deflate-Einträge, Zip64, Namen als UTF-8 oder CP437; jeder Eintrag wird gegen seine CRC-32 gerechnet. Verschlüsselte Einträge, bzip2, LZMA, zstd, XZ und PPMd im ZIP werden benannt, nicht gelesen. Ein Prüfanker, den Pythons <code>zipfile</code> nicht mehr öffnet, wird gelesen.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Zipdatei.oeffne(pfad)</code> (<code>AutoCloseable</code>), <code>eintraege()</code>, <code>finde(name)</code></li>
+      <li><code>bytes(eintrag)</code>, <code>bytes(name)</code>, <code>kommentar()</code>, <code>befunde()</code></li>
+      <li><code>Zipeintrag</code>: <code>name</code>, <code>methode</code>, <code>gepackt</code>, <code>ungepackt</code>, <code>pruefsumme</code>, <code>verschluesselt</code>, <code>verfahren()</code>, <code>istVerzeichnis()</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: XLSX, PPTX, Folienplan, NPZ</span><span class="chip">fileformats: ZipQuelle, Formaterkennung</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Office-Dateien, NumPy-Archive, JAR und gewöhnliche ZIP-Behälter öffnen, ohne dass eine manipulierte Datei eine andere Dateiliste zeigt.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – Inhalt einer XLSX-Datei</h4>
+<pre><code>try (Zipdatei zip = Zipdatei.oeffne(Path.of("tabelle.xlsx"))) {
+    for (Zipeintrag e : zip.eintraege()) System.out.println(e.name() + "  " + e.verfahren());
+    byte[] xml = zip.bytes("xl/workbook.xml");
+    zip.befunde().forEach(System.out::println);
+}</code></pre></div>
+</div>
+
+<!-- =============================================================== LZMA -->
+<h2 id="lzma">XZ, LZMA, LZMA2 <span class="paket">envisionz.compress.lzma</span></h2>
+
+<div class="karte">
+  <h3><code>Xz</code>, <code>Lzma</code>, <code>Lzma2</code> – der Bereichskodierer und sein Behälter</h3>
+  <p class="zweck">Der LZMA-Kern entscheidet jedes Bit über einen Bereichsleser mit anpassenden Modellen, zwölf Zuständen und vier gemerkten Abständen. LZMA2 legt Stücke darüber, XZ den Behälter: vielfach kodierte Ganzzahlen, Auffüllung auf Vielfache von vier (die Füllbytes müssen null sein), Prüfart none, CRC32, CRC64 oder SHA-256. Geprüft werden alle vier CRC32 des Rahmens, die Größen im Verzeichnis und der Prüfwert der Daten. Vorfilter Delta und BCJ (x86, PowerPC, IA-64, ARM, ARM-Thumb, SPARC, ARM64) werden zurückgerechnet; RISC-V wird benannt, nicht angewandt. <a class="vertiefung" href="lzma-theorie.html">Bereichskodierer und LZMA: Hintergrund, Formeln und Pseudocode →</a> <a class="vertiefung" href="xz-theorie.html">LZMA2, XZ und Vorfilter: Hintergrund, Formeln und Pseudocode →</a></p>
+  <p class="abgleiche"><b>Abgleich gegen Spezifikation und Vergleichsprodukt:</b> <a href="abgleich-xz.html">XZ/LZMA</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Xz.entpacke(roh)</code>, <code>Xz.lies(roh)</code> → <code>Ergebnis(daten, pruefart, bloecke, stroeme, geprueft)</code>, <code>istXz(roh)</code></li>
+      <li><code>Lzma.entpackeAlone(daten)</code> – das alte <code>.lzma</code>-Format</li>
+      <li><code>Lzma.roh(daten, ab, ende, lc, lp, pb, mass, woerterbuch)</code>, <code>eigenschaften(p)</code></li>
+      <li><code>Lzma2.entpacke(daten, ab, ende)</code>, <code>Lzma2.lies(...)</code> → <code>Ergebnis(daten, ende)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: Avro (xz)</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p><code>.xz</code>- und <code>.lzma</code>-Archive, Avro-Blöcke, Softwarepakete mit Sprungziel-Filtern.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – XZ lesen und die Prüfung ansehen</h4>
+<pre><code>Xz.Ergebnis r = Xz.lies(Files.readAllBytes(Path.of("messung.csv.xz")));
+System.out.println(r.pruefart() + ", " + r.bloecke() + " Blöcke, geprüft: " + r.geprueft());</code></pre></div>
+</div>
+
+<!-- =============================================================== BZIP2 -->
+<h2 id="bzip2">bzip2 <span class="paket">envisionz.compress.bzip2</span></h2>
+
+<div class="karte">
+  <h3><code>Bzip2</code> – vier Schichten übereinander</h3>
+  <p class="zweck">Von den Bits zu den Daten: Huffman (bis zu sechs Bäume je Block) → RLE2 mit RUNA/RUNB → Move-to-Front → Burrows-Wheeler, darunter RLE1. RUNA/RUNB ist ein bijektives Zahlensystem zur Basis zwei; die BWT-Umkehrung läuft über eine Sprungtabelle aus einem Durchlauf, nicht über Sortieren. Bits kommen vom höchstwertigen Ende (<code>BitLeserMsb</code>), die Prüfsumme ist die ungespiegelte CRC-32 (<code>Crc32Bzip2</code>). Geprüft gegen sechs Anker aus libbzip2, auch mehrere Blöcke und mehrere Ströme in einer Datei. <a class="vertiefung" href="bzip2-theorie.html">Hintergrund, Formeln und Pseudocode →</a></p>
+  <p class="abgleiche"><b>Abgleich gegen Spezifikation und Vergleichsprodukt:</b> <a href="abgleich-bzip2.html">bzip2</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Bzip2.entpacke(bz)</code> – alle Ströme hintereinander</li>
+      <li><code>Bzip2.stroeme(bz)</code> → <code>Strom(bloecke, stufe, blockgroesse, gesamtcrc, endeBit)</code>, <code>inhalt()</code></li>
+      <li><code>Block(daten, crc, zeiger, zeichen, baeume, auswahlen, verwuerfelt)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: Avro (bzip2)</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p><code>.bz2</code>-Archive, Avro-Blöcke, ältere Datenlieferungen.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== ZSTD -->
+<h2 id="zstd">Zstandard <span class="paket">envisionz.compress.zstd</span></h2>
+
+<div class="karte">
+  <h3><code>Zstd</code> und <code>Zstdwoerterbuch</code> – RFC 8878</h3>
+  <p class="zweck">Rückwärts gelesener Bitstrom, FSE-Tabellen, Huffman über Gewichte statt Codelängen, drei gemerkte Abstände und ein Vortrag über Blockgrenzen hinweg – ohne ihn wäre keine Datei über 128 KB lesbar. Wörterbücher aufbereitet oder roh. Geprüft gegen vierzehn Anker aus libzstd 1.5.7 und außerhalb der Probe 120 Zufallsfälle gegen <code>python-zstandard</code>, alle Byte für Byte gleich. <a class="vertiefung" href="zstd-fse.html">FSE und Huffman: Hintergrund, Formeln und Pseudocode →</a> <a class="vertiefung" href="zstd-theorie.html">Rahmen, Literale und Sequenzen: Hintergrund, Formeln und Pseudocode →</a></p>
+  <p class="abgleiche"><b>Abgleich gegen Spezifikation und Vergleichsprodukt:</b> <a href="abgleich-zstd.html">Zstandard</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Zstd.entpacke(z[, wb])</code>, <code>Zstd.rahmen(z[, wb])</code> → <code>Rahmen(inhalt, bloecke, genannteGroesse, fenster, …)</code></li>
+      <li><code>Zstd.Blockart</code>, Konstante <code>KENNUNG</code></li>
+      <li><code>Zstdwoerterbuch.lies(bytes)</code>, <code>kennung()</code>, <code>aufbereitet()</code>, <code>gemerkt()</code>, <code>inhalt()</code></li>
+      <li>intern: <code>Zstdbits</code>, <code>Zstdfse</code>, <code>Zstdhuff</code>, <code>Zstdblock</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: Parquet, Arrow, Avro</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Moderne Datenformate und Archive; Ströme, die mit einem gemeinsamen Wörterbuch gepackt sind.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – mit Wörterbuch entpacken</h4>
+<pre><code>Zstdwoerterbuch wb = Zstdwoerterbuch.lies(Files.readAllBytes(Path.of("woerterbuch.bin")));
+byte[] roh = Zstd.entpacke(gepackt, wb);</code></pre></div>
+</div>
+
+<!-- =============================================================== SCHNELL -->
+<h2 id="schnell">Schnelle Packer der Datenformate <span class="paket">envisionz.compress.lz4 · .snappy · .lzo</span></h2>
+
+<div class="karte">
+  <h3><code>Lz4Block</code>, <code>Lz4</code>, <code>Snappy</code>, <code>SnappyRahmen</code>, <code>Lzo1x</code></h3>
+  <p class="zweck">Die Verfahren, die in Parquet, Arrow und Avro stecken. LZ4 zweifach: das nackte Blockformat und das Rahmenformat <code>.lz4</code> mit verketteten Blöcken, überspringbaren Fremdrahmen und xxHash32-Prüfsummen. Snappy roh und im Rahmenformat mit maskierter CRC-32C. LZO1X liest keine Bits, sondern Befehlsbytes; der Folgezustand steckt in den unteren Bits des vorletzten Bytes. Anker aus lz4 1.9.4, google/snappy und liblzo2. <a class="vertiefung" href="schnell-theorie.html">Hintergrund, Formeln und Pseudocode →</a></p>
+  <p class="abgleiche"><b>Abgleich gegen Spezifikation und Vergleichsprodukt:</b> <a href="abgleich-lz4.html">LZ4</a> · <a href="abgleich-snappy.html">Snappy</a> · <a href="abgleich-lzo.html">LZO</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Lz4Block.entpacke(block, groesse)</code>, <code>entpacke(quelle, ab, laenge, ziel, zielAb, hoechstens)</code></li>
+      <li><code>Lz4.entpacke(lz[, woerterbuch])</code>, <code>Lz4.rahmen(lz)</code> → <code>Rahmen</code></li>
+      <li><code>Snappy.entpacke(daten[, ab, laenge])</code>; <code>SnappyRahmen.entpacke(daten[, befunde])</code>, <code>istRahmen(daten)</code></li>
+      <li><code>Lzo1x.entpacke(d[, ab, laenge], erwartet)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: Parquet (Snappy, LZ4, LZ4_RAW, LZO)</span><span class="chip">fileformats: Arrow (LZ4)</span><span class="chip">fileformats: Avro (Snappy)</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Big-Data-Exporte und Hadoop-Bestände lesen, ohne native Bibliotheken.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – eine Parquet-Seite, deren ungepackte Größe bekannt ist</h4>
+<pre><code>byte[] seite = Lz4Block.entpacke(gepackt, ungepackteGroesse);
+byte[] alt   = Lzo1x.entpacke(gepacktLzo, ungepackteGroesse);</code></pre></div>
+</div>
+
+<!-- =============================================================== BROTLI -->
+<h2 id="brotli">Brotli <span class="paket">envisionz.compress.brotli</span></h2>
+
+<div class="karte">
+  <h3><code>Brotli</code>, <code>Brotlibaum</code>, <code>Brotliwoerterbuch</code></h3>
+  <p class="zweck">Brotli bringt 122 784 Byte Text mit und verweist darauf wie auf schon Geschriebenes; ohne dieses Wörterbuch gäbe ein Leser auf dem ersten echten Text Unsinn aus. Drei unabhängige Blockeinteilungen (Literale, Befehle, Abstände), Kontext aus den zwei vorigen Bytes, vier gemerkte Abstände. Im JDK gibt es dafür keine einzige Klasse. <a class="vertiefung" href="brotli-theorie.html">Hintergrund, Formeln und Pseudocode →</a></p>
+  <p class="abgleiche"><b>Abgleich gegen Spezifikation und Vergleichsprodukt:</b> <a href="abgleich-brotli.html">Brotli</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Brotli.entpacke(daten[, anfang, laenge])</code> – wirft <code>BrotliException</code></li>
+      <li><code>Brotlibaum.ausLaengen(laengen)</code>, <code>lies(bitleser, alphabetGroesse)</code>, <code>symbol(bitleser)</code></li>
+      <li><code>Brotliwoerterbuch.wort(laenge, nummer)</code>, <code>umgeformt(laenge, nummer, umformung)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: Parquet (BROTLI)</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Parquet-Spalten, Web-Inhalte, alles, was mit Brotli ausgeliefert wird.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== LZW -->
+<h2 id="lzw">LZW für PDF, TIFF und GIF <span class="paket">envisionz.compress.lzw</span></h2>
+
+<div class="karte">
+  <h3><code>Lzw</code> – ein Entpacker für drei Formate</h3>
+  <p class="zweck">Löst drei frühere Dekoder ab (<code>PdfFilters.lzw</code>, <code>Giflzw</code>, <code>Tifflzw</code>) und kennt ihre Unterschiede als Schalter: Bitfolge, wann die Codebreite wächst, Anfangsbreite, und wie streng ein kaputter Strom genommen wird. Meldungen erzeugt der Kern nicht; er sagt im Ergebnis, wie der Strom endete, und die Aufrufer melden selbst. Die Probe stellt ihn gegen den alten Wortlaut aller drei Dekoder und das Beispiel aus PDF 32000-1. <a class="vertiefung" href="lzw-theorie.html">Hintergrund, Formeln und Pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Lzw.entpacke(d, ab, laenge, einstellung)</code> → <code>Ergebnis(daten, erzeugt, ende, code, naechst)</code></li>
+      <li><code>Einstellung</code>: <code>lsbZuerst</code>, <code>frueh</code>, <code>anfangsbits</code>, <code>streng</code>, <code>ungueltigUeberspringen</code>, <code>hoechstens</code></li>
+      <li><code>Ende</code>: <code>ENDCODE</code>, <code>DATENENDE</code>, <code>UNGUELTIG</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">framework-pdf: PdfFilters.lzw</span><span class="chip">fileformats: Giflzw, Tifflzw</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>LZW-Ströme in PDF, TIFF und GIF mit einem einzigen, einmal geprüften Kern.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – die Schalter von PDF (so ruft <code>PdfFilters</code>)</h4>
+<pre><code>Lzw.Einstellung e = new Lzw.Einstellung();      // Vorgaben wie PDF und TIFF
+e.frueh = earlyChange != 0 ? 1 : 0;
+e.ungueltigUeberspringen = true;
+byte[] roh = Lzw.entpacke(in, 0, in.length, e).daten();</code></pre></div>
+</div>
+
+<!-- =============================================================== PRUEF -->
+<h2 id="pruef">Prüfsummen <span class="paket">envisionz.compress.pruef</span></h2>
+
+<div class="karte">
+  <h3><code>Adler32</code>, <code>Crc32</code>, <code>Crc32c</code>, <code>Crc32Bzip2</code>, <code>Crc64</code>, <code>XxHash32</code>, <code>XxHash64</code></h3>
+  <p class="zweck">Sieben Prüfsummen, deren Verwechslung still falsche Ergebnisse gibt: CRC-32C (Castagnoli) ist nicht CRC-32 (IEEE), die bzip2-Variante ist ungespiegelt, zstd legt die unteren 32 Bit einer XXH64 ab, LZ4 als Kopfprüfsumme das zweite Byte einer xxHash32. Adler-32 läuft in Javas <code>int</code> über – gefunden erst beim Vergleich mit dem JDK über 300 kB. <a class="vertiefung" href="pruef-theorie.html">Hintergrund, Formeln und Pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Crc32.von(daten)</code>, fortlaufend <code>new Crc32()</code>, <code>nimm(...)</code>, <code>wert()</code>; ebenso <code>Adler32</code>, <code>Crc64</code></li>
+      <li><code>Crc32c.von(daten[, ab, laenge])</code>, <code>maskiere(c)</code>, <code>entmaskiere(m)</code> (Snappy)</li>
+      <li><code>Crc32Bzip2.von(...)</code>, <code>verbinde(bisher, block)</code></li>
+      <li><code>XxHash32.von(daten[, ab, laenge, saat])</code>, <code>XxHash64.von(daten[, ab, laenge, saat])</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">fileformats: PNG, Avro</span><span class="chip">intern: gzip, ZIP, XZ, zlib, Snappy, LZ4, zstd, bzip2</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Unversehrtheit von Dateien und Blöcken prüfen, auch außerhalb eines Packformats.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – Prüfwerte</h4>
+<pre><code>int  crc  = Crc32.von("123456789".getBytes(StandardCharsets.US_ASCII));   // CBF43926
+int  bz   = Crc32Bzip2.von("123456789".getBytes(StandardCharsets.US_ASCII)); // FC891918
+long xxh  = XxHash64.von(daten);</code></pre></div>
+</div>
+
+<!-- =============================================================== BAUSTEINE -->
+<h2 id="bausteine">Bits, Huffman, Lauflänge <span class="paket">envisionz.compress.bits · .huffman · .rle</span></h2>
+
+<div class="karte">
+  <h3><code>BitLeser</code>, <code>BitLeserMsb</code>, <code>BitSchreiber</code>, <code>HuffmanCode</code>, <code>HuffmanDekoder</code>, <code>Rle</code></h3>
+  <p class="zweck">Die Bausteine darunter. Huffman-Längen per Paketverschmelzung (Larmore/Hirschberg): der optimale Code <em>unter</em> einer Längengrenze – Deflate erlaubt höchstens 15 Bit, die Codelängen-Tabelle 7. <code>BitSchreiber.huffman()</code> dreht die Codes um, denn Deflate füllt Bytes von unten und Huffman-Codes werden von oben gelesen. <code>Rle</code> ist PackBits, als Vorstufe gedacht. <a class="vertiefung" href="bausteine-theorie.html">Hintergrund, Formeln und Pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>BitLeser(daten[, ab, laenge])</code>: <code>bits(n)</code>, <code>bit()</code>, <code>aufBytegrenze()</code>, <code>byteStelle()</code>; <code>BitLeserMsb</code>: <code>bitsLang(n)</code>, <code>uebrig()</code></li>
+      <li><code>BitSchreiber</code>: <code>bits(wert, n)</code>, <code>huffman(code, laenge)</code>, <code>bytes(...)</code>, <code>fertig()</code></li>
+      <li><code>HuffmanCode.laengen(haeufigkeit, maxLaenge)</code>, <code>codes(laenge)</code>, <code>vollstaendig(laenge)</code></li>
+      <li><code>new HuffmanDekoder(laenge).lies(leser)</code>; <code>Rle.packe(daten)</code>, <code>Rle.entpacke(daten)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip frei">bereit, noch ohne Aufrufer außerhalb der Proben</span><span class="chip">intern: Deflate, Inflate, Brotli, bzip2, zstd</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Eigene Bitformate lesen und schreiben, längenbegrenzte Huffman-Codes für neue Packverfahren.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – kanonischer Code unter 15 Bit</h4>
+<pre><code>int[] laenge = HuffmanCode.laengen(haeufigkeit, 15);
+int[] code   = HuffmanCode.codes(laenge);
+boolean ok   = HuffmanCode.vollstaendig(laenge);          // Kraft-Prüfung</code></pre></div>
+</div>
+
+<!-- =============================================================== ABGLEICH -->
+<h2 id="abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</h2>
+
+<p class="einl">Jedes Format ist Merkmal für Merkmal gegen seine Spezifikation und gegen eine verbreitete, unabhängige Umsetzung geprüft – mit Fundstelle, Ampel für beide Seiten und einer Begründung zu jeder Abweichung. Wo das Vergleichsprodukt irrt, steht dabei, wie man es nachstellt. <a class="vertiefung" href="abgleich.html">Alle Formate mit ihrer Deckung →</a></p>
+
+<!-- =============================================================== EINSATZ -->
+<h2 id="einsatz">Einsatzmatrix im Framework</h2>
+<p class="einl">Welche Module welche Teile heute nutzen, im Quelltext gezählt (ohne Proben).</p>
+<table>
+  <tr><th>Modul</th><th>Grenze</th><th>Deflate / zlib</th><th>gzip / ZIP</th><th>XZ</th><th>bzip2</th><th>zstd</th><th>LZ4 / Snappy / LZO</th><th>Brotli</th><th>LZW</th><th>Prüf&shy;summen</th><th>Wofür</th></tr>
+  <tr><td>framework-fileformats</td><td></td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td>Bilder, Messdaten, HDF5/HDF4, Parquet, Arrow, Avro, Office-Dateien, NPZ, FITS</td></tr>
+  <tr><td>framework-pdf</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td></td><td>LZWDecode</td></tr>
+  <tr><td>app-settings</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Einstellkarte Sicherheit</td></tr>
+</table>
+<div class="hinweis">Bis auf die Einstellkarte greift heute nur die Formatschicht auf dieses Modul zu – so ist es gedacht. Die Packer (<code>Deflate.packe</code>, <code>Zlib.packe</code>, <code>Rle.packe</code>) haben außerhalb der Proben noch keinen Aufrufer; <code>PdfWriter</code> und <code>PdfFilters.inflate</code> benutzen weiter <code>java.util.zip</code>.</div>
+
+<footer>
+envisionz-framework-compress · 50 Klassen in 16 Paketen · Formatübersicht <code>docs/INDEX.md</code> (DE) und <code>docs/INDEX-EN.md</code> (EN), je Format ein Abgleichdokument (<code>ABGLEICH.md</code>, <code>COMPARISON.md</code>) · Proben: <code>pruefen.cmd --nur framework-compress</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

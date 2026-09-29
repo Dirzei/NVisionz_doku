@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gzip and ZIP – reading containers – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite aktiv" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › gzip and ZIP – reading containers</span><a class="sprachwahl" href="../../de/compress/behaelter-theorie.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.gzip · envisionz.compress.zip</div>
+  <h1>gzip and ZIP – reading containers</h1>
+  <p class="unter">Two containers around the same Deflate stream, with very different layouts: gzip as a sequence of members read from the front, ZIP as an archive whose table of contents sits at the end and has to be searched for from the end. Layout, checks, pseudocode following the source and the traps where a reader silently goes wrong.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>A raw Deflate stream does not say what the file was called, when it was made, whether it arrived intact, and in the case of an archive not even which files it contains. The containers provide this. They themselves contain no mathematics beyond a checksum – but they contain places where a reader that is “right in the normal case” delivers wrong results on valid files without reporting an error. This page is about those places.</p>
+
+<h2 id="gzip">gzip (RFC 1952)</h2>
+<p>A gzip file is a sequence of <b>members</b>. Each member is laid out as</p>
+<table>
+  <tr><th>Field</th><th>length</th><th>content</th></tr>
+  <tr><td>ID1 ID2</td><td>2</td><td><code>1F 8B</code></td></tr>
+  <tr><td>CM</td><td>1</td><td>method, only 8 = Deflate assigned</td></tr>
+  <tr><td>FLG</td><td>1</td><td>bit 0 FTEXT, 1 FHCRC, 2 FEXTRA, 3 FNAME, 4 FCOMMENT; bits 5–7 must be zero</td></tr>
+  <tr><td>MTIME</td><td>4</td><td>Unix time in seconds, 0 = not set</td></tr>
+  <tr><td>XFL, OS</td><td>1 + 1</td><td>hint about the level, operating system of the writer</td></tr>
+  <tr><td>[FEXTRA]</td><td>2 + n</td><td>length, then n bytes</td></tr>
+  <tr><td>[FNAME]</td><td>up to 0</td><td>file name, ISO-8859-1, terminated by a zero byte</td></tr>
+  <tr><td>[FCOMMENT]</td><td>up to 0</td><td>comment, likewise</td></tr>
+  <tr><td>[FHCRC]</td><td>2</td><td>lower 16 bits of the CRC-32 over all header bytes before it</td></tr>
+  <tr><td>data</td><td>…</td><td>raw Deflate stream</td></tr>
+  <tr><td>CRC32</td><td>4</td><td>CRC-32 of the unpacked data</td></tr>
+  <tr><td>ISIZE</td><td>4</td><td>length of the unpacked data modulo <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{32}</annotation></semantics></math></td></tr>
+</table>
+<p>All multi-byte fields are least significant byte first. The optional fields, if present, appear in a <b>fixed</b> order; whoever skips one that is not there starts the Deflate stream at the wrong place.</p>
+
+<h3>The traps</h3>
+<ul>
+  <li><b>Several members.</b> Two gzip files in a row are a valid gzip file, <code>gunzip</code> delivers both parts. A reader that stops after the first member silently returns only part. The end of a member is stored nowhere as a number – it follows only from the Deflate stream, which carries its end within itself. For this, <code>Inflate.entpackeMitEnde</code> returns the position behind the stream.</li>
+  <li><b>ISIZE is a remainder.</b> Above 4 GiB it holds <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>mod</mi><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">n \operatorname{mod} 2^{32}</annotation></semantics></math>. Therefore <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>and</mi><mo stretchy="false">(</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">n \operatorname{and} (2^{32}-1)</annotation></semantics></math> is compared with ISIZE.</li>
+  <li><b>FHCRC checks only the header</b>, and only with 16 bits. The checksum of the data is CRC32 at the end of the member.</li>
+  <li><b>Padding at the end.</b> Some writers pad to a block size with zero bytes. If only zeros follow a member, that is not another member.</li>
+</ul>
+
+<h3>Pseudocode – <code>Gzip.glieder(gz)</code> and <code>liesGlied</code></h3>
+<pre class="pseudo"><b>if</b> length(gz) &lt; 18: error                     <i>10 header + 8 trailer</i>
+p ← 0;  summe ← 0
+<b>while</b> p &lt; length(gz):
+    <b>if</b> only zero bytes from p on: <b>break</b>
+    g ← liesGlied(gz, p)
+    summe ← summe + length(g.daten);  Entpackgrenze.pruefe(summe)
+    <b>if</b> g.ende ≤ p: error "does not advance"
+    p ← g.ende
+<b>if</b> no members: error
+
+<b>function</b> liesGlied(gz, ab):
+    check ID 1F 8B, CM = 8, no unknown flag bits
+    zeit ← 4 bytes;  system ← gz[ab+9];  p ← ab + 10
+    <b>if</b> FEXTRA:   len ← 2 bytes;  zusatz ← len bytes
+    <b>if</b> FNAME:    name ← up to the zero byte (ISO-8859-1)
+    <b>if</b> FCOMMENT: kommentar ← up to the zero byte
+    <b>if</b> FHCRC:    <b>if</b> (CRC32(gz[ab..p−1]) and 0xFFFF) ≠ 2 bytes: error
+    (daten, nach) ← Inflate.entpackeMitEnde(gz, p, rest)
+    <b>if</b> nach + 8 > length(gz): error "trailer bytes missing"
+    <b>if</b> CRC32(daten) ≠ 4 bytes at nach: error
+    <b>if</b> (length(daten) and 0xFFFFFFFF) ≠ 4 bytes at nach+4: error
+    <b>return</b> member(…, ende = nach + 8)</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/gzip/Gzip.java</code>. <code>Gzip.entpacke</code> concatenates the data of all members.</p>
+<div class="hinweis"><b>Convention in the framework:</b> Name and comment are read as ISO-8859-1, as RFC 1952 prescribes – even though today's writers put UTF-8 in them. There is no guessing. The timestamp is reported, not interpreted. No gzip is written; in the framework, packing is done with <code>Zlib.packe</code>.</div>
+
+<h2 id="zip">ZIP</h2>
+<p>ZIP is an archive with many entries. Each entry sits in the file as a <b>local header</b> (signature <code>PK\003\004</code>, 30 bytes plus name and extra field) with its packed data. At the end is the <b>central directory</b>: one record per entry (signature <code>PK\001\002</code>, 46 bytes plus name, extra field, comment) with method, CRC-32, both sizes and the offset of the local header. At the very end the <b>end of central directory</b> (<code>PK\005\006</code>, 22 bytes plus comment) with count, size and offset of the directory.</p>
+
+<figure>
+<svg viewBox="0 0 640 120" width="640" font-family="sans-serif" font-size="12">
+  <rect x="10" y="30" width="70" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="16" y="52" fill="#1f5f8b">header 1</text>
+  <rect x="80" y="30" width="90" height="34" fill="#ffffff" stroke="#1f5f8b"/><text x="86" y="52" fill="#1f5f8b">data 1</text>
+  <rect x="170" y="30" width="70" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="176" y="52" fill="#1f5f8b">header 2</text>
+  <rect x="240" y="30" width="90" height="34" fill="#ffffff" stroke="#1f5f8b"/><text x="246" y="52" fill="#1f5f8b">data 2</text>
+  <rect x="330" y="30" width="140" height="34" fill="#e8f0f6" stroke="#9a6400"/><text x="336" y="52" fill="#9a6400">central directory</text>
+  <rect x="470" y="30" width="70" height="34" fill="#1f5f8b" stroke="#1f5f8b"/><text x="476" y="52" fill="#ffffff">end</text>
+  <rect x="540" y="30" width="90" height="34" fill="#ffffff" stroke="#5b6475" stroke-dasharray="4,3"/><text x="546" y="52" fill="#5b6475">comment</text>
+  <path d="M505 70 C 480 100, 380 100, 360 68" fill="none" stroke="#9a6400" stroke-width="1.5"/>
+  <path d="M350 68 C 300 110, 60 110, 40 68" fill="none" stroke="#1f5f8b" stroke-width="1.5"/>
+  <text x="120" y="116" fill="#5b6475">offset of the local header</text>
+  <text x="400" y="106" fill="#9a6400">offset of the directory</text>
+  <text x="546" y="20" fill="#5b6475">up to 65,535 bytes</text>
+</svg>
+<figcaption>Layout of a ZIP file. It is read from the back: find the end of central directory, read the directory, jump from there to the local headers.</figcaption>
+</figure>
+
+<h3>Finding the end of central directory</h3>
+<p>After the end record a comment of up to 65,535 bytes may follow – with arbitrary content, including the signature <code>PK\005\006</code> itself. So it is not enough to search backwards for the first signature. In the last <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mtext>file size</mtext><mo>,</mo><mn>22</mn><mo>+</mo><mn>65535</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\min(\text{file size}, 22 + 65535)</annotation></semantics></math> bytes the reader looks for the last position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> at which <b>the fields are consistent with each other</b>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>i</mi><mo>+</mo><mn>22</mn><mo>+</mo><msub><mrow><mi>k</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mtext>file size</mtext><mspace width="2em"/><mtext>and</mtext><mspace width="2em"/><msub><mrow><mi>v</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>+</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>≤</mo><mtext>file size</mtext><mspace width="0.3333em"/><mspace width="0.3333em"/><mo stretchy="false">(</mo><mtext>or </mtext><msub><mrow><mi>v</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mtext>FFFFFFFF</mtext></mrow><mrow><mn>16</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">i + 22 + k_i = \text{file size} \qquad\text{and}\qquad v_i + s_i \le \text{file size}\ \ (\text{or } v_i = \text{FFFFFFFF}_{16})</annotation></semantics></math></p>
+<p>with the comment length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">k_i</annotation></semantics></math>, the directory offset <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>v</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">v_i</annotation></semantics></math> and the directory size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">s_i</annotation></semantics></math> at this position.</p>
+<pre class="pseudo">suchweite ← min(file size, 22 + 65535)
+schluss ← the last suchweite bytes
+<b>for</b> i ← suchweite − 22 <b>down to</b> 0:
+    <b>if</b> 4 bytes at i ≠ 06054b50: <b>continue</b>
+    passt ← basis + i + 22 + comment length(i) = file size
+    liegtDrin ← offset(i) = FFFFFFFF <b>or</b> offset(i) + size(i) ≤ file size
+    <b>if</b> passt <b>and</b> liegtDrin: <b>return</b> i
+<b>return</b> −1                                  <i>"end signature not in the last … bytes"</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/zip/Zipdatei.java</code> (<code>sucheEnde</code>).</p>
+
+<h3>Zip64</h3>
+<p>The end record has 16- and 32-bit fields. More than 65,535 entries or sizes and offsets above 4 GiB do not fit. Zip64 then sets the small fields to their maximum (<code>FFFF</code> or <code>FFFFFFFF</code>) and stores the true values elsewhere:</p>
+<ul>
+  <li>20 bytes before the end record is the <b>Zip64 locator</b> (<code>PK\006\007</code>) with the 64-bit offset of the <b>Zip64 end record</b> (<code>PK\006\006</code>); it holds count, size and offset of the directory with 64 bits (from bytes 32, 40, 48).</li>
+  <li>Per entry, the extra field with ID 1 carries the 64-bit values – <b>only</b> for the fields that are <code>FFFFFFFF</code> in the record, in the order uncompressed, compressed, header offset.</li>
+</ul>
+
+<h3>Reading an entry</h3>
+<pre class="pseudo"><b>function</b> bytes(e):
+    <b>if</b> e encrypted: error
+    <b>if</b> e.methode ∉ {0, 8}: error (names the method)
+    kopf ← 30 bytes at e.kopfVersatz;  check signature 04034b50
+    daten ← e.kopfVersatz + 30 + name length + extra length   <i>from the local header</i>
+    roh ← e.gepackt bytes from daten
+    aus ← (methode = 0) ? roh : Inflate.entpacke(roh)
+          <i>errors from Inflate become ZipException with the entry name</i>
+    <b>if</b> e.ungepackt > 0 <b>and</b> length(aus) ≠ e.ungepackt: error
+    <b>if</b> (CRC32(aus) and 0xFFFFFFFF) ≠ e.pruefsumme: error
+    <b>return</b> aus</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/zip/Zipdatei.java</code> (<code>bytes</code>, <code>liesVerzeichnis</code>, <code>zip64</code>, <code>zusatzfeld</code>).</p>
+<div class="hinweis"><b>Convention in the framework:</b> The central directory is authoritative, not the sequence of local headers. From the local header only the name and extra field lengths are taken to find the start of the data – both may differ from the directory. Sizes and checksum come from the directory. A reader that only walks the local headers can show a different file list for a manipulated container.</div>
+<div class="hinweis"><b>Convention in the framework:</b> If general-purpose bit 11 is set, the name is read as UTF-8, otherwise as <b>CP437</b> (the code page of the original PKZIP) – not as ISO-8859-1: there <code>0xFC</code> is ü, in CP437 it is ³. The <b>archive comment</b> at the end of the directory has no bit 11 of its own (APPNOTE 4.4.4 names it only for the name and comment of an entry); per APPNOTE appendix D the original code page applies without bit 11, so it is read as CP437 as well (since 2026-09-28; before, always UTF-8). Encrypted entries and the methods Deflate64 (9), bzip2 (12), LZMA (14), zstd (93), XZ (95) and PPMd (98) are named, reported as findings and not read.</div>
+
+<h3>The MS-DOS time</h3>
+<p>Every entry carries date and time as two 16-bit words:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>year</mtext><mo>=</mo><mn>1980</mn><mo>+</mo><mo stretchy="false">⌊</mo><mi>d</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>9</mn></mrow></msup><mo stretchy="false">⌋</mo><mo>,</mo><mspace width="1em"/><mtext>month</mtext><mo>=</mo><mo stretchy="false">⌊</mo><mi>d</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>5</mn></mrow></msup><mo stretchy="false">⌋</mo><mi>mod</mi><mn>16</mn><mo>,</mo><mspace width="1em"/><mtext>day</mtext><mo>=</mo><mi>d</mi><mi>mod</mi><mn>32</mn></mrow><annotation encoding="application/x-tex">\text{year} = 1980 + \lfloor d / 2^9 \rfloor, \quad \text{month} = \lfloor d / 2^5 \rfloor \operatorname{mod} 16, \quad \text{day} = d \operatorname{mod} 32</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>hour</mtext><mo>=</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>11</mn></mrow></msup><mo stretchy="false">⌋</mo><mo>,</mo><mspace width="1em"/><mtext>minute</mtext><mo>=</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>5</mn></mrow></msup><mo stretchy="false">⌋</mo><mi>mod</mi><mn>64</mn><mo>,</mo><mspace width="1em"/><mtext>second</mtext><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>t</mi><mi>mod</mi><mn>32</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{hour} = \lfloor t / 2^{11} \rfloor, \quad \text{minute} = \lfloor t / 2^5 \rfloor \operatorname{mod} 64, \quad \text{second} = 2\,(t \operatorname{mod} 32)</annotation></semantics></math></p>
+<p>The seconds thus have a resolution of two. Date 0 means “no time”; invalid values (month 0 or 13) are set to at least 1 or yield no timestamp. The probe reads <code>2000-12-01T00:00</code> from a generated container.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Gzipprobe</code> (46 checks):</b> three foreign anchors from Python's <code>gzip</code> (including the two-member one with timestamps 1 and 2); three members give three parts; zero bytes at the end are not a member; <b>all sixteen</b> combinations of the four optional fields, because an error in skipping only shows up with certain combinations; an empty name is a zero byte and not a missing field; eleven sizes from 1 to 200,000 bytes; incompressible data; nine kinds of damage (signature, method 9, unassigned flag bit, header checksum, missing trailer, data checksum, length, too short) – and the message names the right member.</li>
+  <li><b><code>Zipprobe</code> (41 checks):</b> generated containers (stored and Deflate, subfolder, 50 entries, MS-DOS time), a real container from Python's <code>zipfile</code> with umlauts in the name, a container with the end signature in the comment that Python's <code>zipfile</code> no longer opens, an archive comment with the byte <code>0x81</code> that must come out as “ü” (CP437), five broken containers (wrong checksum, lying size, truncated, not a ZIP, two bytes) and the proof that the reader does not modify the file (size, modification time, content).</li>
+  <li><b><code>Zip64probe</code> (12 checks):</b> Zip64 with compressed and stored entries, a container from Python with sizes and header offset from the extra field; counter-probes without Zip64 locator and without extra field.</li>
+</ul>
+<p>A lesson from building it is recorded in the module documentation: the first counter-probe for the comment trap stayed green, because the wrong signature sat ten bytes before the end of the file – the search does not even start there, since no complete end record fits before it. Only a longer comment hit the spot that was to be secured.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>gzip and ZIP are only read, not written.</li>
+  <li>ZIP entries must fit into a Java array; a compressed entry above <code>Integer.MAX_VALUE</code> bytes is rejected with a message.</li>
+  <li>No encryption, no multi-part archives, no evaluation of data descriptors (the sizes come from the directory anyway).</li>
+  <li>An archive comment that a writer stored as UTF-8 comes out as CP437 – the format offers no marker for it, and nothing is guessed.</li>
+  <li><code>Gzip.entpacke</code> holds all members and their concatenation in memory at the same time.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>P. Deutsch: RFC 1952, GZIP file format specification version 4.3, 1996.</li>
+  <li>PKWARE: APPNOTE.TXT – .ZIP File Format Specification.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#behaelter">gzip and ZIP</a> · Probes: <code>Gzipprobe</code>, <code>Zipprobe</code>, <code>Zip64probe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

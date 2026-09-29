@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reverse-mode differentiation in pure Java – from tensor to language model – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag aktiv" href="index.html">framework-autograd</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#kern">Tensor, operations, gradient check</a>
+<a class="rubrik" href="#nn">Network blocks and transformer</a>
+<a class="rubrik" href="#optim">Optimiser and weight storage</a>
+<a class="rubrik" href="#lm">Sequence training and sampling</a>
+<a class="rubrik" href="#text">Text, tokeniser, language model</a>
+<a class="rubrik" href="#dsp">Differentiable spectral model of the formant voice</a>
+<a class="rubrik" href="#corpus">Loading and vetting a speech corpus in advance</a>
+<a class="rubrik" href="#vector">Single-precision matrix kernels and Vector API</a>
+<a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-autograd</span><a class="sprachwahl" href="../../de/autograd/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-autograd</div>
+  <h1>Reverse-mode differentiation in pure Java – from tensor to language model</h1>
+  <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. Reverse-mode automatic differentiation,
+  transformer building blocks, optimiser and weight storage, tokeniser and language-model training, a differentiable spectral model
+  of the formant voice, corpus vetting and an optional float matrix path with the companion module envisionz-framework-autograd-vector.
+  For each method: purpose, API, use in the framework, applications, examples. The examples are shortened.
+  Some API names are German (e.g. <code>TextKorpus</code> = text corpus, <code>SprachmodellTrainer</code> = language-model trainer, <code>kodiere</code> = encode, <code>schnellesMatmul</code> = fast matmul); they are shown unchanged.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>37</b><span>public operations in <code>Ops</code>, each with a backward path</span></div>
+  <div class="zahl"><b>0</b><span>dependencies, pure JDK; the companion only needs <code>jdk.incubator.vector</code></span></div>
+  <div class="zahl"><b>44 + 1</b><span>source files in 9 packages, plus one in autograd-vector</span></div>
+  <div class="zahl"><b>double</b><span>precision; float only in the optional matrix path</span></div>
+  <div class="zahl"><b>4.2–5.2×</b><span>Vector API versus the double path (measured, AVX-512, one core)</span></div>
+  <div class="zahl"><b>5 + 1</b><span>probe classes, 18 + 1 test files (autograd, autograd-vector)</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>Not a general deep-learning framework.</b> The scope is what a transformer encoder with a regression or language head needs. It grows when a concrete model requires it, not speculatively.</div>
+  <div><b>One code base for training and use.</b> No export, no conversion, hence no mismatch between the two. Without a reflection-heavy runtime, native-image stays clean.</div>
+  <div><b>GradCheck as the safety net.</b> A wrong sign in a gradient does not crash; the model just learns worse. So every operation is held against central differences with a relative step size.</div>
+  <div><b>Reproducible to the bit.</b> Every initialisation takes an explicit <code>Random</code>. The parallel matrix product sums in the same order as the serial one, and the weight file round trip is bit-exact.</div>
+  <div><b>Double precision by default.</b> The float kernels run only via the switch <code>Ops.schnellesMatmul</code> (off by default), and then only forwards. The backward pass always stays <code>double</code>.</div>
+  <div><b>Throw rather than guess.</b> Broadcasting is one-sided and narrowly restricted; anything else throws. The weight file checks count, shapes and checksum before any value is transferred.</div>
+</div>
+
+<!-- =============================================================== CORE -->
+<h2 id="kern">Tensor, operations, gradient check <span class="paket">envisionz.autograd</span></h2>
+<p class="einl">The graph is built during the forward pass. <code>backward()</code> sorts it topologically, without recursion, and walks it in reverse. Gradients accumulate, so shared weights collect every contribution.</p>
+
+<div class="karte">
+  <h3><code>Tensor</code> and <code>Ops</code> – 37 operations in both directions</h3>
+  <p class="zweck">Flat <code>double[]</code> with an <code>int[]</code> shape, row-major. Arithmetic, matrix product (2D, batch × shared matrix, batch × batch), reshaping, nonlinearities, normalisation, embedding, losses. Above a threshold the matrix product is spread over all cores; the gradient with respect to b is split over k rather than m so that no work item writes to another's row.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Tensor.of(data, shape…)</code>, <code>param(…)</code>, <code>zeros(requiresGrad, shape…)</code>, <code>scalar(v)</code></li>
+      <li><code>backward()</code>, <code>zeroGrad()</code>, <code>detach()</code>, <code>grad</code>, <code>shape</code>, <code>data</code></li>
+      <li><code>add</code>, <code>sub</code>, <code>mul</code>, <code>div</code>, <code>scale</code>, <code>addScalar</code>, <code>matmul</code>, <code>reshape</code>, <code>permute</code>, <code>transposeLast</code>, <code>sliceLastDim</code>, <code>concatLastDim</code></li>
+      <li><code>softmaxLastDim</code>, <code>gelu</code>, <code>relu</code>, <code>tanh</code>, <code>sigmoid</code>, <code>softplus</code>, <code>silu</code>, <code>swiglu</code>, <code>sin</code>, <code>cos</code>, <code>exp</code>, <code>log</code>, <code>sqrt</code>, <code>square</code>, <code>scalarMinus</code>, <code>dropout</code></li>
+      <li><code>layerNorm</code>, <code>rmsNorm</code>, <code>embedding</code>, <code>sum</code>, <code>mean</code>, <code>crossEntropyLoss</code> (fused with softmax), <code>mseLoss</code>, <code>l1Loss</code></li>
+      <li><code>Ops.parallelMatmulThreshold</code> (250,000 multiplications)</li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: SequencePanel (language model), Textprobe</span><span class="chip">internal: nn, lm, text, dsp</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Any model that learns from gradients: small networks, transformers, fitting physical models to measurements.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – fitting a small network with Adam</h4>
+<pre><code>Random rnd = new Random(42);
+Linear l1 = new Linear(rnd, 2, 32), l2 = new Linear(rnd, 32, 1);
+List&lt;Tensor&gt; p = new ArrayList&lt;&gt;(l1.parameters());
+p.addAll(l2.parameters());
+Adam opt = new Adam(p, 1e-2);
+for (int i = 0; i &lt; 2000; i++) {
+    opt.zeroGrad();
+    Tensor loss = Ops.mseLoss(l2.forward(Ops.tanh(l1.forward(x))), y);   // x [n,2], y [n,1]
+    loss.backward();
+    opt.step();
+}</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>GradCheck</code> – analytic versus numerical gradient</h3>
+  <p class="zweck">Central differences at randomly chosen components. The step size is relative to the value (<code>h_i = max(h, relStep·|x|)</code>): a fixed step of 1e-5 on a 700 Hz formant frequency would otherwise lose several digits to cancellation.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>check(params, lossFn)</code> – usual settings</li>
+      <li><code>check(params, lossFn, h, relStep, maxProbes, seed)</code></li>
+      <li><code>Report</code>: <code>probes()</code>, <code>maxRelError()</code>, <code>meanRelError()</code>, <code>passed(tol)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Securing every new operation and model before the first run; catching faults that otherwise surface only after days of training.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – checking a composition</h4>
+<pre><code>Tensor w = Tensor.param(new double[] {0.3, -1.2, 0.7, 2.0}, 2, 2);
+Tensor x = Tensor.of(new double[] {1, 2, 3, 4}, 2, 2);
+GradCheck.Report r = GradCheck.check(List.of(w), () -&gt; Ops.mean(Ops.tanh(Ops.matmul(x, w))));
+boolean gut = r.passed(1e-6);</code></pre></div>
+  <div class="hinweis">At the kinks of <code>relu</code> and <code>l1Loss</code> central differences are themselves wrong. The probes start away from zero there.</div>
+</div>
+
+<!-- =============================================================== NN -->
+<h2 id="nn">Network blocks and transformer <span class="paket">envisionz.autograd.nn</span></h2>
+
+<div class="karte">
+  <h3><code>Module</code>, <code>Linear</code>, <code>Embedding</code>, <code>LayerNorm</code>, <code>RmsNorm</code>, <code>Init</code></h3>
+  <p class="zweck"><code>Module</code> collects the parameters in a fixed order, without reflection. That order is also the storage order of the weight file. <code>Init</code> offers Xavier, He, normal, uniform and constant, always with a <code>Random</code> passed in.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>parameters()</code>, <code>parameterNames()</code>, <code>parameterCount()</code>, <code>zeroGrad()</code></li>
+      <li><code>new Linear(rnd, in, out[, withBias, heInit])</code>, <code>forward(x)</code></li>
+      <li><code>new Embedding(rnd, count, dim)</code>, <code>forward(int[] ids)</code></li>
+      <li><code>new LayerNorm(d[, eps])</code> (eps 1e-5), <code>new RmsNorm(d[, eps])</code> (eps 1e-6)</li>
+      <li><code>Init.xavier(rnd, fanIn, fanOut)</code>, <code>he(…)</code>, <code>normal(rnd, σ, shape…)</code>, <code>uniform</code>, <code>constant</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: SequencePanel (Embedding)</span><span class="chip">internal: transformer, SprachmodellTrainer</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>The basic blocks of any network: mapping features, embedding symbols, bringing activations to a fixed scale.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>MultiHeadAttention</code>, <code>EncoderBlock</code>, <code>TransformerEncoder</code>, <code>PositionalEncoding</code>, <code>LanguageModelHead</code></h3>
+  <p class="zweck">Attention with H heads and scaling by 1/√D<sub>h</sub>; additive mask with −1e9 rather than −∞, because ∞ · 0 would give NaN in the backward pass. The block is pre-norm, stable without a tuned warm-up. Two variants: <code>CLASSIC</code> (LayerNorm and GELU) and <code>MODERN</code> (RMSNorm and SwiGLU). Sinusoidal positional encoding without learnable parameters. The language head can share the embedding matrix; it then appears exactly once in <code>parameters()</code>.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new TransformerEncoder(rnd, layers, dModel, heads, dFF, dropout[, variant])</code>, <code>forward(x, mask, rnd, training)</code></li>
+      <li><code>MultiHeadAttention.causalMask(T)</code>, <code>causalPaddingMask(valid)</code>, <code>paddingMask(valid)</code></li>
+      <li><code>new PositionalEncoding(maxLen, d)</code>, <code>add(x)</code></li>
+      <li><code>new LanguageModelHead(embedding, withBias)</code> (tied) or <code>(rnd, vocab, dModel, withBias)</code>, <code>isTied()</code></li>
+      <li><code>SwiGluFeedForward.hiddenForEqualParams(dFF)</code> – rounds 2/3 · dFF down so that <code>MODERN</code> is not larger than <code>CLASSIC</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: SequencePanel (model CLASSIC/MODERN)</span><span class="chip">internal: SprachmodellTrainer, text.Sampler</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Language models, sequence-to-sequence mapping (e.g. phoneme sequence to duration and fundamental frequency for the voice), surrogate models over sequences.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – small language model with a tied output head</h4>
+<pre><code>Embedding emb = new Embedding(rnd, vocab, 64);
+PositionalEncoding pos = new PositionalEncoding(128, 64);
+TransformerEncoder enc = new TransformerEncoder(rnd, 2, 64, 4, 256, 0.1, EncoderBlock.Variant.MODERN);
+LanguageModelHead kopf = new LanguageModelHead(emb, false);
+Tensor h = enc.forward(pos.add(emb.forward(ids)), MultiHeadAttention.causalMask(ids.length), rnd, true);
+Tensor loss = Ops.crossEntropyLoss(kopf.forward(h), ziele);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>ToyProsody</code> – learning proof with non-local rules</h3>
+  <p class="zweck">Generated phoneme sequences with duration and fundamental frequency per position. The rules need look-back, look-ahead and the sentence length; a question is recognisable only from the last symbol. Plus a per-symbol lookup table as baseline: it shows what attention actually contributes.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>generate(rnd, count, minWords, maxWords)</code> → <code>Sample(ids, targets, question)</code></li>
+      <li><code>labels(seq, question)</code>, <code>lookupBaseline(train)</code>, <code>isVowel</code>, <code>isFullVowel</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Precursor of the voice model (phonemes to duration and F0); proof that the transformer does more than a table.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== OPTIM -->
+<h2 id="optim">Optimiser and weight storage <span class="paket">envisionz.autograd.optim · envisionz.autograd</span></h2>
+
+<div class="karte">
+  <h3><code>Adam</code> – with decoupled weight decay and gradient clipping</h3>
+  <p class="zweck">Adam in the AdamW form, global norm clipping, warm-up with cosine decay. <code>step()</code> returns the gradient norm before clipping, the most useful sign of a run about to diverge. The state can be saved and restored.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Adam(params, lr)</code>; fields <code>learningRate</code>, <code>beta1</code>, <code>beta2</code>, <code>eps</code>, <code>weightDecay</code>, <code>maxGradNorm</code></li>
+      <li><code>zeroGrad()</code>, <code>step()</code>, <code>gradNorm()</code>, <code>steps()</code></li>
+      <li><code>state()</code> → <code>State(step, m, v)</code>, <code>restore(s)</code></li>
+      <li><code>Adam.schedule(step, warmup, total, peakLr, minLr)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: SequenceTrainer, SprachmodellTrainer, Checkpoint</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Every training run in the module; the learning-rate schedule depends on the total number of steps.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>WeightIO</code> and <code>Checkpoint</code> – bit-exact weights with provenance</h3>
+  <p class="zweck">Binary format with magic <code>EVZAGW01</code>, shapes per tensor, values as <code>double</code> in <code>parameters()</code> order and an FNV-1a checksum. Read through a mapped file inside an <code>Arena</code> that releases it immediately (otherwise the file would stay locked on Windows). Version 2 carries provenance: model id, ancestor, architecture, step count, note. Without a common ancestor models cannot be merged. A checkpoint writes two files, <code>.evzw</code> (weights, first) and <code>.evzo</code> (optimiser state).</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>WeightIO.save(path, params[, prov])</code>, <code>load(path, params)</code>, <code>readHeader(path)</code></li>
+      <li><code>Provenance(modelId, parentId, architecture, steps, note)</code>, <code>none()</code>, <code>sharesAncestorWith(o)</code></li>
+      <li><code>Checkpoint.save(weights, params, prov, opt)</code>, <code>load(weights, params, opt)</code> → <code>Loaded</code>, <code>optimizerPath(weights)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: SequenceTrainer, SprachmodellTrainer</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Interrupting long runs and resuming them bit-identically; shipping and comparing models; recording the family tree of models.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – writing a checkpoint and resuming later</h4>
+<pre><code>WeightIO.Provenance prov = new WeightIO.Provenance("tiny-01", "", "d64-L2", opt.steps(), "trial run");
+Checkpoint.save(Path.of("modell.evzw"), params, prov, opt);          // writes .evzw and .evzo
+Checkpoint.Loaded l = Checkpoint.load(Path.of("modell.evzw"), params, opt);</code></pre></div>
+</div>
+
+<!-- =============================================================== LM -->
+<h2 id="lm">Sequence training and sampling <span class="paket">envisionz.autograd.lm</span></h2>
+
+<div class="karte">
+  <h3><code>SequenceTrainer</code> – resumable training on sequences</h3>
+  <p class="zweck">The trainer only knows a recipe that turns an input and a target sequence into a loss. Batches arise by accumulating gradients and dividing by the batch size, without padding and without a mask. <code>trainResume</code> takes the optimiser state and the completed epochs and replays the shuffle of those epochs: the resumed run is bit-identical to the uninterrupted one.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>train(params, lossFn, inputs, targets, cfg, listener, cancelled, checkpoint, prov)</code> → <code>Result</code></li>
+      <li><code>trainResume(…, opt, doneEpochs, totalEpochs)</code></li>
+      <li><code>Config</code>: <code>epochs</code>, <code>batchSize</code>, <code>peakLr</code>, <code>minLr</code>, <code>warmup</code>, <code>weightDecay</code>, <code>maxGradNorm</code>, <code>shuffleSeed</code>, <code>checkpointEvery</code>, <code>validFraction</code></li>
+      <li><code>chunk(ids, laenge, inputsOut, targetsOut)</code> – target shifted by exactly one</li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: SequencePanel (training with progress display)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Language and sequence models with cancellation, checkpoints and a listener for the GUI.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – training with a recipe</h4>
+<pre><code>SequenceTrainer.Config cfg = new SequenceTrainer.Config();
+cfg.epochs = 5;
+SequenceTrainer.Result r = SequenceTrainer.train(params,
+        (ids, ziel, training) -&gt; Ops.crossEntropyLoss(logits(ids, training), ziel),   // logits(…) illustrative
+        eingaben, ziele, cfg, null, null, Path.of("lauf.evzw"), WeightIO.Provenance.none());</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>lm.Sampler</code> – temperature, top-k, top-p, repetition penalty</h3>
+  <p class="zweck">Picks the next token from the logits of the last position. Randomness comes from the generator passed in: same seed, same text.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>next(logits, opt, rnd)</code>, <code>next(logits, bisher, anzahl, opt, rnd)</code></li>
+      <li><code>Options</code>: <code>temperature</code>, <code>topK</code>, <code>topP</code>, <code>repetitionPenalty</code>; <code>Options.greedy()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: Textprobe (continuation and listening test), SequencePanel</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Generating text from a trained model and seeing whether it has learned anything.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – next token with a repetition penalty</h4>
+<pre><code>Sampler.Options opt = new Sampler.Options();
+opt.temperature = 0.8; opt.topK = 40; opt.repetitionPenalty = 0.3;
+int naechstes = Sampler.next(logits, bisher, n, opt, rnd);</code></pre></div>
+</div>
+
+<!-- =============================================================== TEXT -->
+<h2 id="text">Text, tokeniser, language model <span class="paket">envisionz.autograd.text</span></h2>
+
+<div class="karte">
+  <h3><code>BytePairEncoder</code> – byte-level byte-pair encoding</h3>
+  <p class="zweck">The 256 byte values as the base: umlauts and everything else without special handling. Pre-tokenisation by code point, so characters outside the BMP do not fall apart. On a tie the smaller pair wins, so the vocabulary is reproducible. The file is text; the merges stay hand-checkable.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>lerne(texte, zielVokabular, minHaeufigkeit, sonderSymbole)</code> (learn)</li>
+      <li><code>kodiere(text)</code>, <code>dekodiere(ids)</code>, <code>zeige(id)</code> (encode, decode, show)</li>
+      <li><code>vocabSize()</code>, <code>mergeCount()</code>, <code>specialId(name)</code>, <code>speichere(pfad)</code>, <code>lade(pfad)</code> (save, load)</li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: SequencePanel (learn and load tokeniser)</span><span class="chip">internal: TextKorpus</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Splitting German technical texts with compound words into tokens, losslessly in both directions.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – learning and using the tokeniser</h4>
+<pre><code>BytePairEncoder bpe = BytePairEncoder.lerne(texte, 8000, 2, List.of("&lt;s&gt;", "&lt;pad&gt;"));
+int[] ids = bpe.kodiere("Der Verdichter pumpt.");
+String zurueck = bpe.dekodiere(ids);
+bpe.speichere(Path.of("bpe.txt"));</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>TextKorpus</code>, <code>SprachmodellTrainer</code>, <code>text.Sampler</code> – a language model from a text file</h3>
+  <p class="zweck"><code>TextKorpus</code> reads block by block and cuts at word boundaries, before the separator; the pairs are offset by exactly one token. The trainer assembles embedding, positional encoding, encoder and tied head, and aborts if the starting loss lies more than 1.0 below ln(V) (the model then sees its target) or NaN appears. The sampler rejects temperature 0 and points to <code>waehleGroesstes</code> (pick largest).</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new TextKorpus(datei, bpe[, sequenzLaenge, blockZeichen])</code>, iteration over <code>Paar(vorher, nachher)</code>, <code>alle(hoechstens)</code>, <code>paareGeschaetzt()</code></li>
+      <li><code>new SprachmodellTrainer(vokabular, Einstellungen)</code>, <code>trainiere(Iterable&lt;Paar&gt;)</code> → <code>Ergebnis</code> (<code>perplexitaet()</code>), <code>vorwaerts(ids, maske, rnd, training)</code>, <code>parameterZahl()</code></li>
+      <li><code>new Sampler(saat)</code>, <code>naechstes(logits, temperatur, topK)</code>, <code>waehleGroesstes(logits)</code>, <code>erzeuge(modell, start, anzahl, temperatur, topK)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>A trial run on TinyStories with published reference values; later technical corpora.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – training and letting it continue a text</h4>
+<pre><code>SprachmodellTrainer.Einstellungen e = new SprachmodellTrainer.Einstellungen();
+e.dModell = 64;
+SprachmodellTrainer lm = new SprachmodellTrainer(bpe.vocabSize(), e);
+SprachmodellTrainer.Ergebnis erg = lm.trainiere(new TextKorpus(Path.of("tinystories.txt"), bpe));
+int[] text = new Sampler(7L).erzeuge(lm, bpe.kodiere("Once upon a time"), 50, 0.8, 40);</code></pre></div>
+  <div class="hinweis">Two routes to the same goal: <code>lm.SequenceTrainer</code> with <code>lm.Sampler</code> (used by app-neural, sequences in memory) and <code>text.SprachmodellTrainer</code> with <code>text.Sampler</code> (streams from the file, no callers outside yet).</div>
+</div>
+
+<div class="karte">
+  <h3><code>IntentDataGenerator</code> – training data for command recognition from templates</h3>
+  <p class="zweck">Templates with slots yield thousands of labelled examples with synonyms, politeness forms, filler words, lower case, missing punctuation and deliberate typos. Slot values are protected from synonym substitution. The split is by template, not by example; otherwise the evaluation measures only robustness to typos.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new IntentDataGenerator(seed)</code>, <code>slot(name, werte…)</code>, <code>synonym(wort, alternativen…)</code>, <code>prefix(…)</code>, <code>suffix(…)</code></li>
+      <li>rates <code>typoRate</code>, <code>prefixRate</code>, <code>suffixRate</code>, <code>lowercaseRate</code>, <code>dropPunctRate</code></li>
+      <li><code>generate(templates, proTemplate)</code>, <code>generateSplit(templates, proTemplate, train, valid, seed)</code>, <code>missingIntents(split)</code></li>
+      <li><code>readTemplates(pfad)</code>, <code>writeSamples(pfad, samples)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-neural: SequencePanel (read templates, generate texts)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Commands to an own application (e.g. INTEGRA) for which no ready corpus exists.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – templates into three sets</h4>
+<pre><code>IntentDataGenerator g = new IntentDataGenerator(1L)
+        .slot("datei", "Kennfeld", "Verdichterkarte")
+        .synonym("öffne", "lade", "zeige");
+List&lt;List&lt;IntentDataGenerator.Sample&gt;&gt; teile =
+        g.generateSplit(IntentDataGenerator.readTemplates(Path.of("vorlagen.txt")), 50, 0.8, 0.1, 7L);</code></pre></div>
+</div>
+
+<!-- =============================================================== DSP -->
+<h2 id="dsp">Differentiable spectral model of the formant voice <span class="paket">envisionz.autograd.dsp</span></h2>
+<p class="einl">Analysis by synthesis: the spectrum of the formant synthesiser from framework-voice as a differentiable function of its parameters. Formants can then be fitted to a recording, and the targets found are ones the synthesiser can actually realise.</p>
+
+<div class="karte">
+  <h3><code>FormantBankSpectrum</code> and <code>SourceSpectrum</code> – filter and source in the frequency domain</h3>
+  <p class="zweck">The parallel formant bank has a closed form in the frequency domain, with no backpropagation through the recursion. The coefficients match <code>voice.core.Formant#set</code> one to one, plus lip radiation 1 − 0.96 z<sup>−1</sup>. Arbitrary frequency grids are allowed, e.g. only the harmonics. The source: Rosenberg pulse, tilt in dB/octave, coloured noise.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new FormantBankSpectrum(fs, bins)</code> or <code>(fs, freqsHz)</code></li>
+      <li><code>response(freqs, bws, gains)</code>, <code>powerSpectrum(…)</code>, <code>logSpectrumDb(…, eps)</code>, <code>biquad(f, bw)</code>, <code>clampInPlace</code></li>
+      <li><code>DEFAULT_BRANCH_GAINS</code>, <code>defaultGains(n, altSign)</code></li>
+      <li><code>SourceSpectrum.rosenbergPower(f0, oq)</code>, <code>tiltPower(slope)</code>, <code>noisePower(color)</code>, <code>power(…)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: SpectralFit, FrameFit</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Obtaining formant targets from recordings for training the voice model.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>SpectralFit</code>, <code>FrameFit</code>, <code>FrameSequenceFit</code>, <code>FrameAnalyzer</code></h3>
+  <p class="zweck">Fitting with separate Adam instances for frequencies, bandwidths and gains (their magnitudes differ by a factor of 1000), clamping to the range the synthesiser accepts, F1 &lt; F2 &lt; F3 with minimum separation, multi-start. Over a sequence of frames: warm start along time, blocks in parallel, a derailed frame is redone cold. <code>fitFast</code> evaluates only at the harmonics and is bit-identical to <code>fit</code>.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>SpectralFit.fit(model, targetDb, initF, initBw, initGain, opt)</code>, <code>fitMultiStart(…)</code>, <code>spreadStarts(n, fMin, fMax, variants)</code></li>
+      <li><code>FrameFit.fit</code>, <code>fitFast</code>, <code>fitMultiStart</code>, <code>spreadStarts</code> – source times filter</li>
+      <li><code>FrameSequenceFit.fitAll(bank, src, analyzer, signal, f0, …, opt)</code> → <code>SequenceResult</code>, <code>medianRmsDb()</code></li>
+      <li><code>FrameAnalyzer</code>: <code>powerSpectrum</code>, <code>envelopeDb</code>, <code>harmonicPeaks</code>, <code>harmonicBins</code>, <code>averagePower</code></li>
+      <li>Verification aids: <code>ReferenceBiquad</code> (copy of <code>voice.core.Formant</code>), <code>ReferenceVoice</code>, <code>Fft</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Formant trajectories from a speech corpus as learning targets; proof that the model describes the same filter as the synthesiser.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – fitting five formants to a measured spectrum</h4>
+<pre><code>FormantBankSpectrum bank = new FormantBankSpectrum(16000, 2049);
+SpectralFit.Result r = SpectralFit.fitMultiStart(bank, zielDb,
+        SpectralFit.spreadStarts(5, 200, 5000, 8), startBw,
+        FormantBankSpectrum.DEFAULT_BRANCH_GAINS, new SpectralFit.Options());
+double[] f = r.freqs();                                    // r.rmsDb(): residual</code></pre></div>
+</div>
+
+<!-- =============================================================== CORPUS -->
+<h2 id="corpus">Loading and vetting a speech corpus in advance <span class="paket">envisionz.autograd.corpus</span></h2>
+
+<div class="karte">
+  <h3><code>CorpusLoader</code> and <code>G2pCoverage</code></h3>
+  <p class="zweck">Reads the HUI layout (<code>metadata.csv</code> with a pipe as separator, plus <code>wavs/</code>) with its own WAV reader, which walks the chunks rather than assuming fixed offsets (8/16/24/32-bit integer, 32-bit float). The summary warns below 22 kHz. <code>G2pCoverage</code> checks before training whether a grapheme-to-phoneme converter copes with the text: unknown characters, phonemes per character, empty conversions. The converter is passed as a function, so the module does not depend on framework-voice.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>CorpusLoader.load(dir)</code> → <code>Entry(id, rawText, normalizedText, audio)</code>, <code>readWav(file)</code> → <code>Audio</code>, <code>summary(eintraege, stichprobe)</code></li>
+      <li><code>G2pCoverage.check(texte, bekannt, conv)</code> → <code>Report</code> (<code>ok()</code>), <code>GERMAN_BASE</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Vetting an audiobook corpus before hours of compute go into faulty phoneme targets.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – inspecting a corpus</h4>
+<pre><code>List&lt;CorpusLoader.Entry&gt; e = CorpusLoader.load(Path.of("hui/eva_k"));
+System.out.println(CorpusLoader.summary(e, 20));</code></pre></div>
+</div>
+
+<!-- =============================================================== VECTOR -->
+<h2 id="vector">Single-precision matrix kernels and Vector API <span class="paket">envisionz.autograd.fast · envisionz-framework-autograd-vector</span></h2>
+<p class="einl">A second compute path in <code>float</code>, selectable via <code>ServiceLoader</code>. The Vector API is an incubator module in OpenJDK and needs <code>--add-modules jdk.incubator.vector</code> at compile and run time. That is why its kernel lives in a separate project; if it is absent, the built-in kernel runs.</p>
+
+<div class="karte">
+  <h3><code>MatmulKernel</code>, <code>Kernels</code>, <code>BlockedKernel</code>, <code>FloatKernels</code></h3>
+  <p class="zweck"><code>Kernels</code> takes the available kernel with the highest priority; the built-in blocked kernel has priority 0. A provider that fails to load does not take the core down (<code>Throwable</code> is caught). The forward step of <code>Ops.matmul</code> is connected: from <code>Ops.schnellesMatmulAb</code> (1,000,000 multiplications) and only with <code>Ops.schnellesMatmul = true</code>.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>MatmulKernel</code>: <code>name()</code>, <code>priority()</code>, <code>isAvailable()</code>, <code>matmul(a, b, c, M, K, N)</code>, <code>matmulNT(a, bT, c, M, K, N)</code> – add into <code>c</code></li>
+      <li><code>Kernels.kernel()</code>, <code>verfuegbare()</code> (available), <code>setKernel(k)</code>, <code>beschreibung()</code> (description)</li>
+      <li><code>FloatKernels.matmul</code>, <code>matmulNT</code>, <code>matmulNaiv</code>, <code>toFloat</code>, <code>toDouble</code>; block sizes <code>blockM</code>, <code>blockK</code>, <code>blockN</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">autograd-vector: VectorKernel (provider)</span><span class="chip">internal: Ops.matmul (switch)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Training runs with millions of parameters; gradient checking and bit-exact comparisons stay on the <code>double</code> path.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – switching on the fast path and logging it</h4>
+<pre><code>Ops.schnellesMatmul = true;                    // forward only, only from Ops.schnellesMatmulAb
+System.out.println(Kernels.beschreibung());    // e.g. "Matrixkern: Vector API (8 float)"</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>VectorKernel</code> – envisionz-framework-autograd-vector</h3>
+  <p class="zweck">The only class of the companion module, registered under <code>META-INF/services</code> with priority 100; available when the preferred vector width is greater than 1. <code>matmulNT</code> computes four output columns at once, without <code>fma</code>, and is therefore bit-identical to the single-column version. Measured on the target machine (Core Ultra 7 258V, AVX2, 8 float): 1.3 to 2.2 times faster than one column. A masked tail was measured and not adopted.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>matmul</code>, <code>matmulNT</code>, <code>name()</code> (with width), <code>priority()</code> = 100</li>
+      <li><code>VectorKernel.vectorWidth()</code> (8 with AVX2, 16 with AVX-512), <code>vectorBits()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">internal: via the ServiceLoader of Kernels</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Explicit SIMD that the JIT does not produce for these loops by itself; according to the documentation usable in native-image since GraalVM 25.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – starting with the vector kernel</h4>
+<pre><code>java --add-modules jdk.incubator.vector \
+     -cp envisionz-framework-autograd/bin:envisionz-framework-autograd-vector/bin …</code></pre></div>
+  <div class="hinweis">Every speed-up factor holds only with its vector width stated: measured 4.2–5.2× with AVX-512 at 16 float; on Lunar Lake (AVX2, 8 float) roughly half.</div>
+</div>
+
+<!-- =============================================================== USAGE -->
+<h2 id="einsatz">Usage matrix in the framework</h2>
+<p class="einl">Which modules use which parts today, counted in the source code (probes excluded).</p>
+<table>
+  <tr><th>Module</th><th>Tensor &amp; Ops</th><th>Network blocks</th><th>Sequence training</th><th>Text</th><th>Optimiser &amp; storage</th><th>Spectral model</th><th>Corpus</th><th>Matrix kernels</th><th>What for</th></tr>
+  <tr><td>app-neural</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td>Language-model workflow: tokeniser, model, training, text probe</td></tr>
+  <tr><td>framework-autograd-vector</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Vector kernel as ServiceLoader provider</td></tr>
+</table>
+<div class="hinweis">The spectral model, corpus vetting, <code>GradCheck</code> and the weight storage are verified but not connected outside the probes; <code>Adam</code> and the storage run inside the trainers. Obvious next steps: the run on the real speech corpus (stage 1: duration and fundamental frequency) and the connection to framework-voice.</div>
+
+<footer>
+envisionz-framework-autograd · 44 source files in 9 packages, plus <code>VectorKernel</code> in envisionz-framework-autograd-vector · eight help pages DE/EN under <code>src/envisionz/autograd/help/</code> · Probes: <code>pruefen.cmd --nur framework-autograd</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

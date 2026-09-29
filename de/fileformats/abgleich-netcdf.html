@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>netCDF — Abgleich gegen die Spezifikation und gegen netCDF4-python – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite aktiv" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › netCDF — Abgleich gegen die Spezifikation und gegen netCDF4-python</span><a class="sprachwahl" href="../../en/fileformats/abgleich-netcdf.html">English</a></div>
+<!-- erzeugt aus netcdf/ABGLEICH.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · Abgleich</div>
+  <h1>netCDF — Abgleich gegen die Spezifikation und gegen netCDF4-python</h1>
+</header>
+
+<p><b>Stand:</b> 2026-09-05<br><b>Unsere Umsetzung:</b> <code>envisionz.fileformats.hdf5.netcdf.Netcdf3Reader</code> für den klassischen Behälter und <code>NetcdfFile</code>/<code>Hdf5Backed</code> für netCDF-4, rein lesend, ohne Fremdbibliothek<br><b>Spezifikation:</b> <i>NetCDF Classic Format Specification</i> (Unidata) und <i>NetCDF-4 / HDF5 File Format</i> — beide öffentlich; die Fundstellen nennen Kopffelder und Attributnamen<br><b>Verglichen mit:</b> netCDF4 1.7.4 (Python, gegen die C-Bibliothek von Unidata gebunden)<br><b>Prüfstand:</b> <code>envisionz.fileformats.hdf5.Netcdf4probe</code> — 53 Prüfungen, fünf Fremdanker; der klassische Behälter zusätzlich in <code>Leserprobe</code></p>
+<p><b>Das Vergleichsprodukt.</b> <b>netCDF4-python</b> ist die Bindung an <i>netcdf-c</i> und wird unter dem Dach von <b>Unidata (UCAR)</b> gepflegt — also <b>beim Eigner des Formats selbst</b>, begonnen von Jeff Whitaker. In den Klima- und Geowissenschaften ist es der Standardweg zu netCDF-Dateien. Gemessen wird damit gegen die Referenzumsetzung, nicht gegen eine Nachbildung.</p>
+<p><b>Warum ausgerechnet dieses.</b> Weil netCDF4-python beim Eigner selbst gepflegt wird. Naeher an die Norm kommt man nicht, ohne die Norm zu sein. Jede Abweichung ist damit eindeutig zuzuordnen — sie ist unsere.</p>
+<p><b>Deckung, aus den Zeilen unten gerechnet:</b> von 21 Merkmalen sind bei uns 19 vorhanden, 0 teilweise und 2 nicht vorhanden; beim Vergleichsstueck 19 / 1 / 0.</p>
+<p><span class="ampel gruen">●</span> vorhanden · <span class="ampel rot">●</span> nicht vorhanden · <span class="ampel gelb">●</span> teilweise · – nicht zutreffend</p>
+<p><b>Die Spalte <i>Anmerkung</b></i> verweist auf Abschnitt 5 dieses Dokuments — nicht auf die Punkteliste des Arbeitsbereichs. Das Wort davor sagt, <i>worum es sich handelt</i>: <b>Lücke</b> ist etwas, das uns fehlt und offen ist; <b>entschieden</b> ist etwas, das wir absichtlich nicht tun; <b>Merkmal</b> ist eine Eigenschaft des Formats, die beide Umsetzungen betrifft; <b>dort offen</b> ist eine Lücke des Vergleichsprodukts. Nur die Lücken sind Arbeit — sie stehen gesammelt in Abschnitt 5.1 und als <i>ein</i> Punkt in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Merkmalsvergleich</h2>
+<p>„netCDF" ist ein Name für <b>zwei völlig verschiedene Byteformate</b>. Der klassische Behälter (Kennung <code>CDF</code>) ist ein eigenständiges, altes, sehr sparsames Format mit einem Kopf am Dateianfang. netCDF-4 ist eine <b>Konvention über HDF5</b> — dieselbe Bauart wie CGNS. Beide tragen die Endung <code>.nc</code>, beide werden von derselben Bibliothek gelesen, und zwischen ihnen liegt so viel Gemeinsames wie zwischen einem Aktenordner und einer Datenbank.</p>
+<h3>Der klassische Behälter</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>netCDF4 1.7.4</th><th>Anmerkung</th></tr>
+  <tr><td><code>CDF\x01</code> — Fassung 1</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>CDF\x02</code> — 64-Bit-Versatz</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>CDF\x05</code> — CDF-5 (grosse Variablen)</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Höchstwertiges Byte zuerst, auf vier aufgefüllt</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Achsen, globale Attribute, Variablen</td><td>§Header</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Unbegrenzte Achse mit <code>numrecs</code></td><td>§Records</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D1</td></tr>
+  <tr><td>Verschränkte Satzvariablen</td><td>§Records</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D1</td></tr>
+  <tr><td>Genau <b>eine</b> Satzvariable wird <b>nicht</b> aufgefüllt</td><td>§Records</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D2</td></tr>
+  <tr><td>Alle sechs klassischen Typen (<code>byte</code> bis <code>double</code>)</td><td>§Types</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>char</code>-Variablen als Zeichenketten</td><td>§Langform</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D3</td></tr>
+  <tr><td>Die Längenachse ist keine Datenachse</td><td>§Langform</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D3</td></tr>
+</table>
+<h3>netCDF-4 über HDF5</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>netCDF4 1.7.4</th><th>Anmerkung</th></tr>
+  <tr><td>HDF5-Behälter mit netCDF-Regeln</td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Achsen über <code>DIMENSION_LIST</code>/<code>REFERENCE_LIST</code></td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Gruppen als eigene Tabellen</td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Reines HDF5 ohne netCDF-Kennzeichnung wird gelesen</td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>dort offen D4</td></tr>
+  <tr><td>Zwei Achsenkombinationen mit demselben Tabellennamen</td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td>entschieden D5</td></tr>
+  <tr><td>Verbundtypen (compound)</td><td>§NC4</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal D6</td></tr>
+  <tr><td>Ausschnittzugriff, netCDF-4 (blockweise, 65536 Werte)</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Ausschnittzugriff, klassischer Behälter</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden D7</td></tr>
+  <tr><td>Zeichenkettenspalten blockweise</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden D7</td></tr>
+  <tr><td>Schreiben</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden D8</td></tr>
+</table>
+
+<h2 id="a2">Was gemessen wurde</h2>
+<p>Sieben Prüfstücke in <b>beiden</b> Richtungen: zwei von netCDF4-python geschriebene klassische Dateien durch unseren Leser, und fünf Anker aus <code>Netcdf4anker</code> durch beide. Damit ist dieses Format eines der wenigen dieser Sammlung, bei dem die Gegenmessung in beide Richtungen und über <b>beide Behälter</b> geht.</p>
+<h3>Die von netCDF4-python geschriebenen klassischen Dateien</h3>
+<p><code>klassisch.nc</code> (344 Byte, <code>NETCDF3_CLASSIC</code>) und <code>gross.nc</code> (356 Byte, <code>NETCDF3_64BIT_OFFSET</code>) tragen dieselben Daten: eine unbegrenzte Achse <code>zeit</code>, eine Achse <code>ort</code> der Länge vier, eine Doppelvariable <code>temperatur(zeit, ort)</code> mit drei geschriebenen Sätzen, eine Ganzzahlvariable <code>ort</code> und eine <code>char</code>-Variable <code>name</code>. Unser Leser liest beide <b>identisch</b>: eine Tabelle <code>zeit_ort</code> mit den Spalten <code>zeit</code>, <code>ort</code>, <code>temperatur</code> und den Werten 0,0 / 0,1,5 / 0,3,0 …</p>
+<p>Dass die beiden Fassungen dasselbe ergeben, ist der eigentliche Prüfwert dieser Messung. Zwischen Fassung 1 und 2 liegt allein die Breite der Datenversätze — vier gegen acht Byte — an genau einer Stelle im Kopf. Ein Leser, der sie verwechselt, liest den Kopf noch richtig und danach an jeder Variablen um vier Byte daneben. Bei kleinen Dateien fällt das als offensichtlicher Unsinn auf; bei grossen als eine Zahlenreihe, die um eine halbe Zelle verschoben ist.</p>
+<p>Beide Male meldet unser Leser dieselben zwei Befunde, und beide sind ehrlich: die <code>char</code>-Variable <code>name</code> wird übergangen (D3), und der klassische Behälter kennt keinen Ausschnittzugriff (D7).</p>
+<h3>Die fünf netCDF-4-Anker</h3>
+<table>
+  <tr><th>Anker</th><th>unser Leser</th></tr>
+  <tr><td><code>einfach.nc</code></td><td>1 Tabelle <code>zeit_ort</code>, 6 Sätze, Spalte <code>temperatur</code> als <code>float32</code></td></tr>
+  <tr><td><code>gruppen.nc</code></td><td>2 Tabellen <code>i</code> und <code>j</code> — Gruppen werden getrennt geführt</td></tr>
+  <tr><td><code>namensgleich.nc</code></td><td>2 Tabellen <code>i</code> und <code>i#2</code>, mit Befund zur Umbenennung</td></tr>
+  <tr><td><code>reinesHdf5.nc</code></td><td>2 Tabellen — HDF5 ohne netCDF-Kennzeichnung wird trotzdem gelesen</td></tr>
+  <tr><td><code>unbegrenzt.nc</code></td><td>1 Tabelle, Befund „die unbegrenzte Achse zeit ist an den Variablen 4 lang"</td></tr>
+</table>
+<p>Zwei Beobachtungen daraus sind es wert, festgehalten zu werden. <b>Erstens</b> <code>namensgleich.nc</code>: zwei Variablengruppen über dieselbe Achsenkombination ergäben denselben Tabellennamen. Wir hängen <code>#2</code> an und <b>melden es</b>. Eine stillschweigend zusammengeworfene Tabelle wäre die schlimmere Antwort — sie sähe richtig aus. <b>Zweitens</b> <code>reinesHdf5.nc</code>: eine HDF5-Datei ohne die netCDF-Attribute wird von uns gelesen, weil der Unterbau sie öffnen kann; netCDF4-python liest sie ebenfalls, führt die Achsen dabei aber nur teilweise. Der Unterschied ist klein und in D4 vermerkt.</p>
+<p>Der Befund bei <code>reinesHdf5.nc</code> — „HDF5 kann Ausschnitte: Zahlenspalten werden blockweise zu je 65536 Werten gelesen, nicht ganz. Zeichenkettenspalten dagegen ganz" — ist zugleich die genaueste Aussage über den Unterschied der beiden Behälter, die dieser Leser macht. Über HDF5 ist Ausschnittzugriff da; über den klassischen Behälter nicht.</p>
+
+<h2 id="a3">Was am Format schwierig ist</h2>
+<p><b>Die verschränkten Satzvariablen.</b> Variablen, deren erste Achse die unbegrenzte ist, liegen <b>nicht am Stück</b>: erst alle Grössen des ersten Zeitschritts, dann alle des zweiten. Der Abstand zwischen zwei Sätzen einer Variablen ist die Summe der Satzgrössen <b>aller</b> Satzvariablen. Wer das übersieht, liest die erste Variable richtig und alle folgenden als Mischung.</p>
+<p><b>Und die Ausnahme davon.</b> Gibt es <b>genau eine</b> Satzvariable, wird ihr Satz <b>nicht</b> auf vier Byte aufgefüllt. Eine Sonderregel für einen Sonderfall, in der Spezifikation ein Nebensatz. Wer sie übersieht, liest ab dem zweiten Zeitschritt daneben — und der erste stimmt, was die Suche um Stunden verlängert. Das ist der bösartigste Einzelsatz in dieser ganzen Dokumentensammlung.</p>
+<p><b>Zwei Byteformate, ein Name, eine Endung.</b> Eine <code>.nc</code> kann <code>CDF\x01</code>, <code>CDF\x02</code>, <code>CDF\x05</code> oder HDF5 sein. Die ersten vier Byte sagen es — das ist der freundliche Teil. Der unfreundliche: dieselbe Bibliothek, dieselbe API, dieselben Werkzeuge, und darunter Formate ohne jede Gemeinsamkeit. Ein Leser braucht zwei getrennte Umsetzungen, und die eine kann Ausschnittzugriff und die andere nicht. Das ist keine Eigenschaft der Umsetzung, sondern der Behälter.</p>
+<p><b>Was gut ist:</b> der klassische Kopf. Alles steht am Dateianfang: Achsen, Attribute, Variablen, Typen und die <b>Anfangsadresse der Daten jeder Variablen</b>. Ein Leser kennt nach ein paar hundert Byte den ganzen Bestand und kann jede Variable einzeln anspringen, ohne die Datei zu durchsuchen. Für ein Format aus den achtziger Jahren ist das eine bemerkenswert moderne Anlage — und der Grund, warum ältere Wetter- und Ozeanbestände fast durchweg so vorliegen und sich immer noch lesen lassen.</p>
+
+<h2 id="a4">Die Punkte</h2>
+<p>Die Spalte <i>Anmerkung</i> nennt die Art vor der Kennung. Nur die <b>Lücken</b> sind Arbeit.</p>
+<h3>Unsere offenen Lücken — das ist die Arbeit</h3>
+<p><b>D3</b> (Merkmal) — <code>char</code>-Variablen — geschlossen am 2026-09-07</p>
+<p><b>Geschlossen.</b> In netCDF sind Zeichenketten traditionell <code>char</code>-Felder mit einer <b>Längenachse</b> als letzter Achse — Stationsnamen, Einheiten, Kennungen. Sie werden jetzt als Textspalten geführt. Wer wissen will, welche Messstelle Nummer drei ist, findet es hier.</p>
+<p><b>Die letzte Achse ist keine Datenachse.</b> Eine Variable <code>name(station, namelen)</code> ist keine Tabelle aus <code>station × namelen</code> Buchstaben, sondern eine <b>Spalte aus <code>station</code> Namen</b>. Wer die Längenachse als Datenachse führt, bekommt eine Tabelle aus einzelnen Zeichen — formal richtig und sachlich unbrauchbar. Die Gegenprobe, die sie stehen lässt, bringt die Probe zum Absturz: die Textvariable landet dann in einer Tabelle mit einer Achse zuviel.</p>
+<p><b>Und sie kommt in die Tabelle ihrer <i>übrigen</i> Achsen</b> und nicht in eine eigene. Sonst stünden Name und Höhe derselben Station in zwei Tabellen, und die Zuordnung wäre nur noch über die Zeilennummer da. Der Anker trägt deshalb <b>zwei</b> Textvariablen und eine Zahlenvariable auf derselben Achse; alle drei stehen in der Tabelle <code>station</code>.</p>
+<p><b>Die Füllzeichen fallen weg.</b> netCDF füllt kürzere Namen auf die volle Breite auf — mit Leerzeichen oder Nullbytes —, und die Füllung gehört nicht zum Namen. Die Namen im Anker sind vier, sieben und fünf Zeichen lang bei acht Zeichen Breite, damit das auffällt; die Gegenprobe, die die Füllung stehen lässt, färbt sechs Prüfungen rot. Geschrieben von netCDF4-python 1.7.4 im Format <code>NETCDF3_CLASSIC</code>.</p>
+<h3>Bewusste Entscheidungen — nichts zu tun</h3>
+<p><b>D5</b> (entschieden) — Zwei Achsenkombinationen, ein Tabellenname</p>
+<p>Die Tabellensicht bündelt Variablen nach ihren <b>Achsen</b>: alles, was über <code>(zeit, station)</code> liegt, wird eine Tabelle, alles über <code>(zeit, tiefe)</code> eine andere. Der Name kommt aus den Achsen, und deshalb kann er sich wiederholen, wenn zwei Gruppen dieselben Achsennamen benutzen — in netCDF-4 ist das erlaubt, denn dort sind Achsen an eine Gruppe gebunden.</p>
+<p><b>Der Name wird dann um den Gruppenpfad ergänzt, nicht durchnummeriert.</b> Eine Zahl am Ende (<code>punkte</code>, <code>punkte2</code>) wäre kürzer und sagte nichts; der Pfad sagt, <i>welche</i> Gruppe gemeint ist, und das ist genau die Frage, die jemand hat, der zwei gleichnamige Tabellen sieht. Es ist keine Lücke: es gibt keinen Fall, in dem eine Variable unerreichbar wäre.</p>
+<p><b>D7</b> (entschieden) — Ausschnittzugriff — für Zahlen, nicht für Zeichenketten</p>
+<p>Beide Behälter liefern Ausschnitte: netCDF-4 blockweise zu 65536 Werten, der klassische unmittelbar über den Versatz. Das ist die Eigenschaft, wegen der man eine Datei von zwanzig Gigabyte überhaupt öffnen kann — gelesen wird, was gefragt ist, und nicht die Datei.</p>
+<p><b>Für Zeichenkettenspalten gilt es nicht</b>, und das ist entschieden und nicht vergessen. Eine <code>char</code>-Variable mit Längenachse (D3) wird als <b>ganze</b> Spalte zusammengesetzt, weil ihre Sätze erst beim Zerlegen entstehen: die Längenachse ist keine Datenachse, und ein Block aus 65536 Bytes liegt fast nie auf einer Satzgrenze. Ein blockweiser Zugriff müsste den Rest zwischenspeichern und wäre damit kein Ausschnittzugriff mehr, sondern ein Zwischenspeicher mit Extraschritten. Bei den Grössenordnungen, in denen Namensspalten vorkommen — Stationen, Kennungen, Einheiten —, ist das kein Verlust.</p>
+<p><b>D8</b> (entschieden) — Schreiben</p>
+<p>Dieses Modul liest. netCDF4-python schreibt, und alle sieben Prüfstücke sind auf diesem Weg entstanden — fünf von ihm geschrieben, zwei von Hand gebaut und von ihm gegengelesen. Ein Schreiber hier wäre ein zweites Fach: das klassische Format verlangt eine Kopfrechnung über Versätze, die man erst kennt, wenn alle Variablen feststehen, und netCDF-4 verlangte einen HDF5-Schreiber.</p>
+<h3>Eigenschaften des Formats — beide betreffend</h3>
+<p><b>D6</b> (Merkmal) — Verbundtypen — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen mit LF1</b>, denn es war dieselbe Ursache an derselben Stelle: die Tabellensicht <code>Langform</code> nahm aus einem Verbund nur die Zahlenmitglieder und meldete die Textmitglieder als übergangen — „das Verbundmitglied /messreihe.kennung hat den Typ string[8] und wird uebergangen". Jetzt werden sie über <code>readMemberString</code> als Textspalten geführt. Siehe <code>docs/hdf5</code> LF1 für die Messung und die Gegenproben.</p>
+<p>Der Punkt D3 (<code>char</code>-Variablen im <b>klassischen</b> Behälter) bleibt offen: das ist ein anderer Lesepfad — netCDF-3 kennt keine HDF5-Typen — und dieselbe Ursache besteht dort nicht.</p>
+<p><b>D1</b> (Merkmal) — Verschränkte Satzvariablen</p>
+<p>Siehe Abschnitt 3. Beide Umsetzungen können es; es steht hier, weil es die Stelle ist, an der eine dritte scheitern würde.</p>
+<p><b>D2</b> (Merkmal) — Genau eine Satzvariable wird nicht aufgefüllt</p>
+<p>Siehe Abschnitt 3. Die Sonderregel, die man leicht übersieht und deren Wirkung erst ab dem zweiten Zeitschritt einsetzt. Beide Umsetzungen halten sie ein.</p>
+<h3>Befunde am Vergleichsprodukt</h3>
+<p><b>D4</b> (dort offen) — Reines HDF5 wird nur teilweise geführt</p>
+<p>Eine HDF5-Datei ohne die netCDF-Kennzeichnungsattribute (<code>_Netcdf4Dimid</code> und Verwandte) öffnet netCDF4-python, führt die Achsen dabei aber nur zum Teil: Datensätze ohne zugeordnete Achse erscheinen mit ersatzweise erzeugten Achsennamen. Unser Leser geht denselben Weg über den HDF5-Unterbau und führt die Form so, wie sie im Datensatz steht. Der Unterschied ist klein, er ist <b>kein Fehler</b> von netCDF4-python — die Datei ist eben keine netCDF-Datei —, und er ist hier festgehalten, weil er beim Vergleich zweier Ausgaben sonst als unser Fehler erschiene. Ein echter Fehler von netCDF4-python ist bei dieser Messung <b>nicht</b> gefunden worden.</p>
+
+<h2 id="a5">Das Umfeld — womit diese Dateien sonst gelesen und geschrieben werden</h2>
+<p>Diese Tafel zaehlt <b>nicht</b> in die Deckung. Sie sagt nichts ueber diesen Leser, sondern ueber das Umfeld, in dem eine solche Datei entsteht — und das ist beim Lesen einer fremden Datei die wichtigere Auskunft: <b>wer sie geschrieben hat, entscheidet, welche Spielart darin steht.</b> Ein Leser, der nur die Dateien eines einzigen Schreibers kennt, haelt dessen Gewohnheiten fuer das Format.</p>
+<table>
+  <tr><th>Programm</th><th>liest</th><th>schreibt</th><th>Bemerkung</th></tr>
+  <tr><td><b>netcdf-c</b> (Unidata/UCAR)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die Referenz, mit <code>ncdump</code> und <code>ncgen</code>. Der Eigner des Formats.</td></tr>
+  <tr><td><b>netCDF4-python</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Das Vergleichsprodukt dieses Abgleichs.</td></tr>
+  <tr><td><b>xarray</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die uebliche Arbeitsumgebung fuer Klimadaten; schreibt ueber netCDF4-python oder scipy.</td></tr>
+  <tr><td><b>CDO</b>, <b>NCO</b>, <b>ncview</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die Kommandozeilenwerkzeuge der Klimaforschung; sie erzeugen die meisten Dateien, die man in freier Wildbahn trifft.</td></tr>
+  <tr><td><b>MATLAB</b>, <b>R (<code>ncdf4</code>)</b>, <b>Panoply</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Auswertung und Anzeige; Panoply ist der uebliche schnelle Blick hinein.</td></tr>
+</table>
+<p>Die Liste ist <b>nicht vollstaendig</b> und will es nicht sein. Sie nennt, was einem bei diesem Format tatsaechlich begegnet, und laesst weg, was es zwar auch kann, aber niemand dafuer benutzt.</p>
+
+<h2 id="a6">Die Java-Umsetzung — wo dieser Leser unter seinesgleichen steht</h2>
+<p><b>Warum dieser Abschnitt.</b> Alle übrigen Abgleiche dieses Moduls messen gegen ein Werkzeug in einer <b>anderen</b> Sprache. Das ist gut gegen Irrtümer über das Format und sagt nichts darüber, wo dieser Leser unter seinesgleichen steht — und das ist die Frage, die einen Java-Entwickler zuerst umtreibt. Wichtig ist dabei die Unterscheidung zwischen einem <b>reinen Nachbau in Java</b> und einem <b>Mantel um die originale C-Bibliothek</b>: nur der Nachbau löst dieselbe Aufgabe unter denselben Bedingungen wie dieser Leser hier; ein Mantel ruft das Original.</p>
+<p><b>Gemessen am 2026-09-06 gegen netcdf-java 5.10.0</b> — die Java-Umsetzung von Unidata, also <b>vom Eigner des Formats selbst</b>, und für den klassischen Behälter wie für netCDF-4 ein <b>reiner Java-Nachbau</b>. Nur zum <i>Schreiben</i> von netCDF-4 greift es auf die C-Bibliothek zu (über JNA, nicht JNI); lesend nicht.</p>
+<p>Die Messung lief über den HDF5-Weg (netCDF-4 ist HDF5) an fünf Dateien: <b>alle Datensatzpfade, Formen und Werte stimmen überein</b>, ohne eine einzige Abweichung. Einzelheiten im HDF5-Dokument, Abschnitt 7 — es ist derselbe Lauf.</p>
+<p>Bemerkenswert ist der Zuschnitt: netcdf-java ist ein grosses Projekt (GRIB, BUFR, HDF4, Zarr, THREDDS) und liest <b>HDF4 ebenfalls in reinem Java</b> — das ist unter den Java-Umsetzungen dieser Sammlung die einzige, die HDF4 ohne C-Bibliothek anfasst.</p>
+<p><b>Diese Messung liegt ausserhalb des Moduls</b>, in <code>javavergleich/Javavergleich.java</code>, denn <code>envisionz-framework-fileformats</code> hat die Regel „keine Fremdbibliotheken“ — und die gilt weiter. Ins Modul wandert nur das Ergebnis, mit Datum und Fassung. Die einzige Ausnahme ist <code>javax.imageio</code> bei den Bildformaten: das steckt im JDK und misst deshalb als bleibende Probe mit.</p>
+
+<footer>
+Erzeugt aus <code>envisionz-framework-fileformats/docs/netcdf/ABGLEICH.md</code> · zurück zur <a href="index.html#behaelter">Übersicht</a> · alle Formate im <a href="abgleich.html">Abgleich</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

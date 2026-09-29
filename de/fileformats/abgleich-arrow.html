@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apache Arrow IPC — Abgleich gegen Spezifikation und pyarrow – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite aktiv" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › Apache Arrow IPC — Abgleich gegen Spezifikation und pyarrow</span><a class="sprachwahl" href="../../en/fileformats/abgleich-arrow.html">English</a></div>
+<!-- erzeugt aus arrow/ABGLEICH.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · Abgleich</div>
+  <h1>Apache Arrow IPC — Abgleich gegen Spezifikation und pyarrow</h1>
+</header>
+
+<p><b>Stand:</b> 2026-09-06<br><b>Unsere Umsetzung:</b> <code>envisionz.fileformats.arrow.ArrowQuelle</code> mit <code>Arrowtyp</code> und <code>Flach</code> — einschliesslich eines eigenen FlatBuffers-Lesers, rein lesend<br><b>Spezifikation:</b> <i>Apache Arrow Columnar Format</i> und <i>IPC File Format</i>, öffentlich; die Fundstellen nennen FlatBuffers-Strukturen<br><b>Verglichen mit:</b> pyarrow 25.0.1<br><b>Prüfstand:</b> <code>envisionz.fileformats.arrow.Arrowprobe</code> — 147 Prüfungen, vierzehn Fremdanker, zehn eigene Prüfstücke</p>
+<p><b>Das Vergleichsprodukt.</b> <b>pyarrow</b> ist die <b>offizielle Python-Umsetzung von Apache Arrow</b>, gepflegt von der Apache Software Foundation. Arrow wurde 2016 aus einer Koalition mehrerer Analysewerkzeuge heraus angekuendigt — der Anfangscode kam aus Apache Drill, prominent beteiligt war Wes McKinney. Sie ist damit die Referenzumsetzung des Formats und zugleich, ueber pandas, Dask und Spark, dessen verbreitetster Leser.</p>
+<p><b>Warum ausgerechnet dieses.</b> Weil pyarrow die offizielle Umsetzung des Formats ist. Ein Unterschied ist damit unserer. Der Vergleich hat hier eine zweite Aufgabe: Arrow beschreibt seine Puffer ueber FlatBuffers, und ein Leser, der die Pufferzahl je Feldbaum anders zaehlt, liefert plausible falsche Daten — das faellt nur gegen die offizielle Umsetzung auf.</p>
+<p><b>Deckung, aus den Zeilen unten gerechnet:</b> von 33 Merkmalen sind bei uns 32 vorhanden, 0 teilweise und 1 nicht vorhanden; beim Vergleichsstueck 29 / 2 / 2.</p>
+<p><span class="ampel gruen">●</span> vorhanden · <span class="ampel rot">●</span> nicht vorhanden · <span class="ampel gelb">●</span> teilweise · – nicht zutreffend</p>
+<p><b>Die Spalte <i>Anmerkung</b></i> verweist auf Abschnitt 5 dieses Dokuments — nicht auf die Punkteliste des Arbeitsbereichs. Das Wort davor sagt, <i>worum es sich handelt</i>: <b>Lücke</b> ist etwas, das uns fehlt und offen ist; <b>entschieden</b> ist etwas, das wir absichtlich nicht tun; <b>Merkmal</b> ist eine Eigenschaft des Formats, die beide Umsetzungen betrifft; <b>dort offen</b> ist eine Lücke des Vergleichsprodukts. Nur die Lücken sind Arbeit — sie stehen gesammelt in Abschnitt 5.1 und als <i>ein</i> Punkt in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Merkmalsvergleich</h2>
+<h3>Datei und Nachrichten</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>pyarrow 25.0.1</th><th>Anmerkung</th></tr>
+  <tr><td>Kennung <code>ARROW1</code> am Anfang und am Ende</td><td>Kennung</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Verzeichnis (Footer) als FlatBuffer</td><td>Footer</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A1</td></tr>
+  <tr><td>Beschreibungsfassung 4 und 5</td><td>MetadataVersion</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Andere Fassung wird gemeldet und gelesen</td><td>MetadataVersion</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen A6</td></tr>
+  <tr><td>Nachrichtenmarke <code>0xFFFFFFFF</code> vor der Länge</td><td>Message</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A2</td></tr>
+  <tr><td>Ältere Schreibweise ohne Marke wird gelesen und gemeldet</td><td>Message</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A2</td></tr>
+  <tr><td>Mehrere Satzblöcke</td><td>RecordBatch</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Strom statt Datei (ohne Verzeichnis)</td><td>Stream format</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A7</td></tr>
+  <tr><td>Ein Block, der ins Leere zeigt, wird gemeldet und übergangen</td><td>Block</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>dort offen A6</td></tr>
+  <tr><td>Ein Block, der keine Satznachricht ist, wird gemeldet</td><td>Block</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>dort offen A6</td></tr>
+</table>
+<h3>Typen</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>pyarrow 25.0.1</th><th>Anmerkung</th></tr>
+  <tr><td>Ganze Zahlen 8, 16, 32, 64 Bit, mit und ohne Vorzeichen</td><td>Int</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Gleitkomma 32 und 64 Bit</td><td>FloatingPoint</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Gleitkomma 16 Bit</td><td>FloatingPoint</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A8</td></tr>
+  <tr><td>Wahrheitswerte als Bitfeld</td><td>Bool</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A3</td></tr>
+  <tr><td>Text (UTF-8) mit Versatzpuffer</td><td>Utf8</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A4</td></tr>
+  <tr><td>Rohbytes mit Versatzpuffer</td><td>Binary</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Text und Rohbytes mit 64-Bit-Versätzen</td><td>LargeUtf8</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A8</td></tr>
+  <tr><td>Datum 32 (Tage) und 64 (Millisekunden)</td><td>Date</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Zeitpunkt mit vier Genauigkeiten</td><td>Timestamp</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Zeit, Zeitspanne, Intervall</td><td>Time</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A8</td></tr>
+  <tr><td>Festkommazahl 128 und 256 Bit</td><td>Decimal</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A9</td></tr>
+  <tr><td>Liste, grosse Liste, Liste fester Länge</td><td>List</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A10</td></tr>
+  <tr><td>Struktur</td><td>Struct</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A10</td></tr>
+  <tr><td>Abbildung</td><td>Map</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A10</td></tr>
+  <tr><td>Vereinigung (dicht und dünn)</td><td>Union</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A10</td></tr>
+  <tr><td>Wörterbuchkodierte Spalten</td><td>DictionaryBatch</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A11</td></tr>
+  <tr><td>Fehlende Werte über den Gültigkeitspuffer</td><td>validity</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A3</td></tr>
+</table>
+<h3>Puffer und Packung</h3>
+<table>
+  <tr><th>Merkmal</th><th>Fundstelle</th><th>wir</th><th>pyarrow 25.0.1</th><th>Anmerkung</th></tr>
+  <tr><td>Ein Puffer je Spalte plus Gültigkeitspuffer</td><td>Buffer</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A5</td></tr>
+  <tr><td>Pufferzahl gegen den Feldbaum geprüft</td><td>FieldNode</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>dort offen A6</td></tr>
+  <tr><td>Ungepackt</td><td>BodyCompression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>LZ4-Frame</td><td>BodyCompression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A12</td></tr>
+  <tr><td>zstd</td><td>BodyCompression</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Merkmal A12</td></tr>
+  <tr><td>Schreiben</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>entschieden A13</td></tr>
+</table>
+
+<h2 id="a2">Was gemessen wurde</h2>
+<p>Achtzehn Prüfstücke — acht Fremdanker aus <code>Arrowanker</code> (von pyarrow erzeugt) und zehn absichtlich beschädigte aus <code>Arrowschreiber</code> — durch beide Leser. Bei den acht Ankern stimmen sieben vollständig überein: alle Ganzzahlbreiten an ihren Grenzen, Datum und Zeitpunkt, gemischte Typen, Nullwerte, zwei Satzblöcke und eine Liste.</p>
+<p><b>Der achte geht auseinander, und das ist eine Lücke von uns:</b> <code>gepackt.arrow</code> trägt einen <b>zstd-gepackten</b> Satzblock. pyarrow liest ihn; wir melden „Ein Satzblock ist gepackt (Verfahren 1 — 0 heisst LZ4, 1 heisst zstd); dieser Leser entpackt ihn nicht und übergeht ihn" und liefern null Zeilen.</p>
+<p><b>Diese Lücke ist seit dem 2026-09-05 billig geworden.</b> An demselben Tag sind mit BF34 und BF33 ein LZ4- und ein zstd-Leser in <code>framework-compress</code> entstanden — genau die beiden Verfahren, die Arrow hier benutzt. Es fehlt nur noch die Verdrahtung. Siehe A12.</p>
+<p>Bei den zehn beschädigten Prüfstücken lehnen beide Leser neun ab. Beim zehnten — <code>ohneAnfangskennung</code>, einer Datei ohne die führende <code>ARROW1</code>-Kennung — liest <b>pyarrow</b> sie trotzdem vollständig, weil es vom Dateiende her aufsetzt. Wir lehnen ab. Beides ist vertretbar; wer eine abgeschnittene Datei retten will, ist mit pyarrow besser bedient, wer wissen will, ob eine Datei heil ist, mit uns.</p>
+
+<h2 id="a3">Was am Format schwierig ist</h2>
+<p><b>Die Zahl der Puffer steht nicht in der Nachricht, sondern im Feldbaum.</b> Ein Satzblock zählt seine Puffer auf, aber welcher zu welcher Spalte gehört, ergibt sich erst daraus, wieviele Puffer jeder Typ <b>braucht</b>: eine Ganzzahlspalte zwei (Gültigkeit und Werte), eine Textspalte drei (Gültigkeit, Versätze, Bytes), eine Liste ebenfalls drei plus die ihres Unterfelds. Wer den Feldbaum nicht in derselben Reihenfolge abläuft wie der Schreiber, greift auf gültige Puffer der falschen Spalte zu.</p>
+<p><b>Wahrheitswerte und Gültigkeit sind Bitfelder, nicht Bytefelder.</b> Acht Zeilen in einem Byte, das niederwertigste Bit zuerst. Wer sie byteweise liest, bekommt für die ersten acht Zeilen einen Wert und für den Rest Nullen — und die ersten acht sehen richtig aus.</p>
+<p><b>Der Versatzpuffer hat einen Eintrag mehr als die Spalte Zeilen.</b> Bei n Zeilen stehen n+1 Versätze da, weil das Ende der letzten Zeichenkette auch irgendwo stehen muss. Wer n liest, verliert die letzte Zeile; wer n+1 als Zeilenzahl nimmt, erfindet eine.</p>
+<p><b>Was gut ist:</b> Arrow beschreibt sich vollständig selbst, und zwar in einer Sprache (FlatBuffers), die man ohne Codegenerator lesen kann — die Sprungtabelle steht in der Nachricht. Der Leser hier bringt seinen FlatBuffers-Leser deshalb selbst mit, in etwa zweihundert Zeilen.</p>
+
+<h2 id="a4">Die Punkte</h2>
+<p>Die Spalte <i>Anmerkung</i> nennt die Art vor der Kennung. Nur die <b>Lücken</b> sind Arbeit.</p>
+<h3>Unsere offenen Lücken — das ist die Arbeit</h3>
+<h3>Bewusste Entscheidungen — nichts zu tun</h3>
+<p><b>A13</b> (entschieden) — Schreiben</p>
+<p>pyarrow schreibt Arrow, Parquet, ORC, CSV und mehr. Dieses Modul liest.</p>
+<h3>Eigenschaften des Formats — beide betreffend</h3>
+<p><b>A12</b> (Merkmal) — Gepackte Satzblöcke — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> <code>BodyCompression</code> erlaubt LZ4-Frame und zstd; beide werden entpackt, über <code>envisionz.compress.lz4.Lz4</code> (BF34) und <code>envisionz.compress.zstd.Zstd</code> (BF33). Was am Format zu wissen ist: <b>nicht der Rumpf als Ganzes ist gepackt, sondern jeder Puffer einzeln</b>, mit acht Byte entpackter Länge davor. Die Versätze im FlatBuffer zeigen auf die gepackte Lage, also wird ein neuer Rumpf gebaut und die Versätze werden umgeschrieben.</p>
+<p><b>Wie es abgenommen wurde.</b> Nicht daran, dass Zahlen herauskommen — das täten auch falsche. <code>Arrowanker.gepackt()</code> (zstd) und <code>Arrowanker.gepacktLz4()</code> (LZ4, mit pyarrow 25.0.1 am 2026-09-06 erzeugt) tragen <b>denselben Inhalt</b> wie der ungepackte Anker <code>gemischt()</code>; die Probe vergleicht Spalte für Spalte gegen ihn. Zwei Gegenproben werden rot: die acht Byte Längenangabe nicht überspringen (elf Fehlschläge) und die Versätze nicht umschreiben (acht).</p>
+<p><b>Ein Rest bleibt und ist benannt:</b> ein Puffer darf die Länge <code>-1</code> tragen — „dieser eine ist nicht gepackt". Der Zweig ist gebaut, aber <b>nicht gemessen</b>: pyarrow 25.0.1 schreibt ihn in keinem Fall, auch nicht bei einem Ein-Byte-Wert oder bei Zufallsbytes. Die Gegenprobe dazu bleibt grün und ist deshalb nicht mitgezählt — dieselbe Lage wie bei der Ausrichtung des Rumpfes, und sie steht im Quelltext an der Stelle.</p>
+<p><b>A7</b> (Merkmal) — Das Stromformat — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> Arrow gibt es als Datei mit Verzeichnis am Ende und als <b>Strom</b> ohne eines. Der Strom wird jetzt gelesen: erkannt an der Fortsetzungsmarke <code>0xFFFFFFFF</code> am Anfang statt an einer Kennung, dann Nachricht auf Nachricht — Beschreibung, Wörterbücher, Satzblöcke —, bis eine Länge von null das Ende sagt. Auch eine Datei, die mit <code>ARROW1</code> anfängt und nicht damit aufhört, wird so gelesen und der Fall benannt; vorher wurde sie abgewiesen.</p>
+<p><b>Was daran zu wissen ist:</b> man muss sich von Länge zu Länge hangeln, und jede Angabe kommt aus der Datei selbst. Eine Länge, die nicht mehr hineinpasst, beendet das Lesen mit einem Befund — <b>abgeschnitten wird gesagt und nicht geraten</b>. Die Erkennung prüft drei Dinge und nicht eines: die Marke, eine Beschreibungslänge, die durch acht teilbar ist, und einen Wurzelverweis, der in die Beschreibung zeigt. Mit nur der Marke wäre jede Datei mit vier <code>FF</code>-Bytes am Anfang ein Arrow-Strom.</p>
+<p><b>A8</b> (Merkmal) — Die vier kleineren Typen — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> Halbe Gleitkommagenauigkeit (IEEE binary16, mit den nicht normalisierten Zahlen), Uhrzeit in vier Einheiten, Dauer und Zeitspanne. <code>LargeUtf8</code>/<code>LargeBinary</code> lagen schon vor. Eine <b>Dauer</b> bleibt eine Zahl in <i>ihrer</i> Einheit, und die Einheit steht in der Feldbeschreibung — umgerechnet wären aus −2500 Millisekunden −2 Sekunden geworden, und das Runden sieht man einer Zahl nicht an. Eine <b>Zeitspanne</b> wird Text in der Schreibweise von ISO 8601, weil ein Monat keine feste Länge in Tagen hat.</p>
+<p><b>Und dabei ein echter Fehler gefunden, an einer Stelle, die seit Monaten stand.</b> Der Vorgabewert der Zeiteinheit ist im Format <code>MILLISECOND</code> und nicht <code>SECOND</code> oder <code>DAY</code>. Ein FlatBuffer lässt jedes Feld weg, dessen Wert der Vorgabe entspricht — bei einem <code>date64</code> fehlt die Einheit also <b>ganz</b>. Wer dann Tage annimmt, macht aus dem 2026-09-06 das Jahr <b>5331045</b>, und weil ein <code>date64</code> acht Byte belegt und ein <code>date32</code> vier, steht auch jede Zeile danach verschoben da. Beides sieht wie ein Datum aus. Der Anker <code>vorgabewerte</code> hält den Fall fest.</p>
+<p><b>A9</b> (Merkmal) — Festkommazahlen — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> <code>Decimal128</code> und <code>Decimal256</code>, mit Genauigkeit und Nachkommastellen aus dem Typ. Herausgegeben wird <b>Text</b> und keine Kommazahl: eine Festkommazahl ist genau, ein <code>double</code> ist es nicht — und gerade bei einem Geldbetrag fällt der Unterschied niemandem auf, bis er zählt. Die Zahl steht wenigstwertig zuerst und im Zweierkomplement; sie wird gedreht und über <code>BigInteger</code>/<code>BigDecimal</code> in ihre Stellen gebracht.</p>
+<p><b>A10</b> (Merkmal) — Verschachtelte Typen — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> Liste, grosse Liste, Liste fester Länge, Struktur, Abbildung und Vereinigung — dicht wie dünn. Sie kommen als <b>Text</b> heraus: <code>[1, 2, 3]</code>, <code>{a=1, b=x}</code>, <code>{k1=1, k2=2}</code>. Das ist eine Darstellung und keine Deutung, und sie ist ehrlicher als die Alternativen: für eine Tabellensicht ist eine Liste keine Zelle, und wer stattdessen den ersten Wert oder die Länge herausgibt, liefert eine Zahl, die wie ein Wert aussieht. Geschachteltes wird geschachtelt dargestellt.</p>
+<p><b>Zwei Fallen bei der Vereinigung, beide gemessen.</b> Sie trägt seit Fassung 5 des Formats <b>keinen Gültigkeitspuffer</b> — wer ihn sucht, liest die Kennungen als Bitfeld, und aus <code>07 09</code> wird „die ersten drei Zeilen gelten, die nächsten nicht". Und die Kennungen sind frei wählbar: der Anker <code>auswahl</code> benutzt <b>7 und 9</b> statt 0 und 1, denn wer sie mit der Nummer des Unterfeldes gleichsetzt, liest jede Datei richtig, deren Schreiber bei null angefangen hat, und die nächste falsch.</p>
+<p><b>A11</b> (Merkmal) — Wörterbuchkodierte Spalten — geschlossen am 2026-09-06</p>
+<p><b>Geschlossen.</b> Die Wörterbücher stehen in eigenen Nachrichten vor den Satzblöcken; im Satzblock stehen nur <b>Nummern</b>. Sie werden vorher gelesen und beim Zugriff aufgelöst, Nachträge (<code>isDelta</code>) angehängt statt ersetzt. Zwei Dinge sind daran zu wissen: der Typ der Spalte beschreibt die <b>Werte</b>, nicht die Nummern — und eine wörterbuchkodierte Spalte belegt deshalb <b>zwei</b> Puffer und nicht drei, auch wenn ihre Werte Text sind. Wer hier drei zählt, ordnet alles dahinter falsch zu.</p>
+<p>Der Anker <code>woerterbuch</code> benutzt absichtlich <b>acht Bit</b> breite Nummern in der einen Spalte und zweiunddreissig in der anderen: mit nur einer Breite bliebe eine Gegenprobe grün, die die Breite fest verdrahtet.</p>
+<p><b>A1</b> (Merkmal) — FlatBuffers ohne Codegenerator</p>
+<p>Die Beschreibung ist ein FlatBuffer: ein Wurzelversatz, eine Sprungtabelle je Objekt, Felder als Versätze darin. Fehlende Felder stehen als Null in der Sprungtabelle und bedeuten „Voreinstellung" — nicht „null". Wer den Unterschied übersieht, liest bei jedem nicht gesetzten Feld die Zahl 0 als Wert. Beide Umsetzungen machen es richtig; wir mit einem eigenen Leser, pyarrow mit dem erzeugten Code.</p>
+<p><b>A2</b> (Merkmal) — Zwei Schreibweisen der Nachrichtenlänge</p>
+<p>Seit Arrow 0.15 steht vor jeder Nachrichtenlänge die Marke <code>0xFFFFFFFF</code>; davor stand die Länge allein. Beide kommen vor. Wir lesen beide und melden die ältere („das ist die ältere Schreibweise und wird gelesen"), damit klar ist, womit man es zu tun hat.</p>
+<p><b>A3</b> (Merkmal) — Bitfelder</p>
+<p>Siehe Abschnitt 3. Der Anker <code>mitNullen</code> misst es mit einer Spalte, in der drei von fünf Werten fehlen — bei acht Zeilen läge die Grenze genau auf der Bytegrenze und ein Fehler fiele nicht auf.</p>
+<p><b>A4</b> (Merkmal) — Der Versatzpuffer mit n+1 Einträgen</p>
+<p>Siehe Abschnitt 3.</p>
+<p><b>A5</b> (Merkmal) — Puffer gehören dem Feldbaum, nicht der Spalte</p>
+<p>Siehe Abschnitt 3. Unser Leser prüft die Pufferzahl gegen das Schema und meldet eine Abweichung („Ein Satzblock nennt N Puffer, das Schema braucht M; gelesen wird nach dem Schema") — die einzige Stelle, an der sich ein Reihenfolgefehler überhaupt bemerken lässt.</p>
+<h3>Befunde am Vergleichsprodukt</h3>
+<p><b>A6</b> (dort offen) — Vier Zustände ohne Meldung</p>
+<p>Eine unbekannte Beschreibungsfassung, ein Block, der ins Leere zeigt, ein Block, der keine Satznachricht ist, und eine Pufferzahl, die nicht zum Schema passt. Wir nennen alle vier; pyarrow bricht bei den mittleren beiden mit einer FlatBuffers-Meldung ab, die die Stelle nicht nennt, und liest bei den äusseren weiter.</p>
+
+<h2 id="a5">Das Umfeld — womit diese Dateien sonst gelesen und geschrieben werden</h2>
+<p>Diese Tafel zaehlt <b>nicht</b> in die Deckung. Sie sagt nichts ueber diesen Leser, sondern ueber das Umfeld, in dem eine solche Datei entsteht — und das ist beim Lesen einer fremden Datei die wichtigere Auskunft: <b>wer sie geschrieben hat, entscheidet, welche Spielart darin steht.</b> Ein Leser, der nur die Dateien eines einzigen Schreibers kennt, haelt dessen Gewohnheiten fuer das Format.</p>
+<table>
+  <tr><th>Programm</th><th>liest</th><th>schreibt</th><th>Bemerkung</th></tr>
+  <tr><td><b>Apache Arrow</b> (C++, pyarrow)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Die offizielle Umsetzung und das Vergleichsprodukt dieses Abgleichs.</td></tr>
+  <tr><td><b>pandas</b>, <b>Polars</b>, <b>DuckDB</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Arrow ist ihr gemeinsames Speicherformat; der Dateistrom ist derselbe Aufbau auf Platte.</td></tr>
+  <tr><td><b>Apache Spark</b>, <b>Dask</b>, <b>Ray</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Fuer den Austausch zwischen Prozessen und Sprachen.</td></tr>
+  <tr><td><b>R (<code>arrow</code>)</b>, <b>Julia (<code>Arrow.jl</code>)</b>, <b>Rust (<code>arrow-rs</code>)</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Umsetzungen ausserhalb von C++ und Python — Arrow ist ausdruecklich sprachuebergreifend gedacht.</td></tr>
+  <tr><td><b>Feather</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Derselbe Aufbau unter anderem Namen; Feather v2 <i>ist</i> der Arrow-Dateistrom.</td></tr>
+</table>
+<p>Die Liste ist <b>nicht vollstaendig</b> und will es nicht sein. Sie nennt, was einem bei diesem Format tatsaechlich begegnet, und laesst weg, was es zwar auch kann, aber niemand dafuer benutzt.</p>
+
+<h2 id="a6">Die Java-Umsetzung — wo dieser Leser unter seinesgleichen steht</h2>
+<p><b>Warum dieser Abschnitt.</b> Alle übrigen Abgleiche dieses Moduls messen gegen ein Werkzeug in einer <b>anderen</b> Sprache. Das ist gut gegen Irrtümer über das Format und sagt nichts darüber, wo dieser Leser unter seinesgleichen steht. Entscheidend ist die Unterscheidung zwischen einem <b>reinen Nachbau in Java</b> und einem <b>Mantel um eine C-Bibliothek</b>: nur der Nachbau löst dieselbe Aufgabe unter denselben Bedingungen.</p>
+<p><b>Es gibt einen reinen Java-Nachbau:</b> <code>apache/arrow-java</code>, Modul <code>arrow-vector</code>, mit <code>ArrowFileReader</code> und <code>ArrowStreamReader</code>. Die JNI-Teile des Projekts (arrow-dataset, arrow-gandiva, arrow-c-data) sind eigene Module und für das IPC-Format nicht nötig. <b>Nicht gemessen</b> — die Standard-Speicherverwaltung <code>arrow-memory-netty</code> zieht Netty mit, und Arrow verlangt JVM-Schalter wie <code>--add-opens</code>; für eine Messung wären das mehrere jars und eine eigene Startzeile.</p>
+<p>Das ist kein Nebensatz, sondern der Unterschied im Zuschnitt: dieser Leser hier kommt mit dem JDK aus und liest dieselben Dateien. Die Gegenrechnung ist ebenso ehrlich — Arrow-Java deckt weit mehr ab als das, was hier gelesen wird.</p>
+<p><b>Wie belastbar das ist.</b> Recherchiert am 2026-09-06 über Web- und GitHub-Suche; die Suchschnittstelle von Maven Central war gesperrt, eine systematische Artefaktsuche war also nicht möglich. Wo unten „nicht gemessen" steht, steht es ausdrücklich — eine genannte Bibliothek ist noch keine gemessene.</p>
+
+<footer>
+Erzeugt aus <code>envisionz-framework-fileformats/docs/arrow/ABGLEICH.md</code> · zurück zur <a href="index.html#tabellen">Übersicht</a> · alle Formate im <a href="abgleich.html">Abgleich</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

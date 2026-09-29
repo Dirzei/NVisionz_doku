@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D charts with their own depth buffer – without OpenGL, without Orson Charts – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag aktiv" href="index.html">framework-chart3d</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#maschine">The rendering engine</a>
+<a class="rubrik" href="#diagramm">Chart, axes, colour scale</a>
+<a class="rubrik" href="#fabriken">Factories and data sources</a>
+<a class="rubrik" href="#stil">Styles</a>
+<a class="rubrik" href="#swing">Controls in Swing</a>
+<a class="rubrik" href="#belege">Proof images and tools</a>
+<a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-chart3d</span><a class="sprachwahl" href="../../de/chart3d/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-chart3d</div>
+  <h1>3D charts with their own depth buffer – without OpenGL, without Orson Charts</h1>
+  <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. Own camera, own matrices,
+  own rasteriser with depth buffer; on top of it axes, legends and six chart types, styles and a control rail of settings cards
+  for Swing. For each method: purpose, API, use in the framework, applications, examples. The examples are shortened.
+  Many API names are German (e.g. <code>Einstellkarte</code> = settings card, <code>Diagrammtafel</code> = chart board, <code>Stil</code> = style, <code>Gitterquelle</code> = grid source); they are shown unchanged.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>45</b><span>source files in 10 packages</span></div>
+  <div class="zahl"><b>6</b><span>chart types: surface, volume, scatter, line, bars, pie</span></div>
+  <div class="zahl"><b>294 ms</b><span>instead of 807 ms for 6,400 triangles, measured against Orson Charts</span></div>
+  <div class="zahl"><b>0</b><span>third-party libraries, no OpenGL</span></div>
+  <div class="zahl"><b>6</b><span>probe classes</span></div>
+  <div class="zahl"><b>24</b><span>counter-probes</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>Everything in-house.</b> Own <code>Framebuffer</code>, own <code>Mat4</code>, own <code>Camera</code>. Depends only on framework-swing (resource bundle) and framework-math (Catmull-Rom spline).</div>
+  <div><b>Depth per pixel instead of sorting.</b> The rasteriser decides with the depth buffer; intersecting surfaces need no special treatment. None of Orson's four depth-sort keys rendered intersecting cutting planes correctly.</div>
+  <div><b>Colour from the value, not from the triangle.</b> Corner values are coloured per pixel through the colour scale; band boundaries follow the value field instead of the tessellation, and isolines can never deviate from the colour change.</div>
+  <div><b>Text via Java2D, position from the same projection.</b> Labels stay parallel to the screen and still sit at the right place in space.</div>
+  <div><b>Data coordinates stay data coordinates.</b> The axes map into the unit cube; the camera does not know whether a quantity is in pascal or bar. The vertical axis is z.</div>
+  <div><b>Probes with closed-form targets.</b> Determinant and orthogonality of the view matrix, frustum edge on image edge, colours at the support points – nothing is compared with an earlier run. Pure painting is left to inspection and the proof images.</div>
+</div>
+
+<!-- =============================================================== ENGINE -->
+<h2 id="maschine">The rendering engine <span class="paket">envisionz.chart3d · .render · .scene</span></h2>
+
+<div class="karte">
+  <h3><code>ZBufferRenderer</code>, <code>Framebuffer</code>, <code>Scene3D</code>, <code>Camera</code>, <code>Mat4</code>, <code>Vec3</code></h3>
+  <p class="zweck">Per image: transform vertices, clip at the near plane, sort into tiles, fill tiles in parallel. Anti-aliasing by supersampling (1 to 4). Gouraud shading via vertex normals with crease angle, depth cueing, edge emphasis, outlines, isolines at band boundaries, a clipping plane and hit testing per pixel. The camera orbits a target, in perspective or orthographic projection.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>ZBufferRenderer.render(szene, kamera, breite, hoehe)</code>, <code>itemAt(x, y, toleranz)</code></li>
+      <li><code>setSupersampling</code>, <code>setGouraud</code>, <code>setKnickwinkel</code>, <code>setValueScale</code>, <code>setIsoLines</code>, <code>setDepthCue</code>, <code>setEdges</code>, <code>setClipPlane(nx, ny, nz, d)</code></li>
+      <li><code>Scene3D</code>: <code>addTriangles(tris, farben|eckwerte)</code>, <code>addQuad</code>, <code>addPolyline</code>, <code>addPoints</code>, <code>kennung(k)</code></li>
+      <li><code>Camera.setOrbit(theta, phi, rho)</code>, <code>orbit</code>, <code>zoom</code>, <code>pan</code>, <code>setOrthographic</code>; <code>Mat4.lookAt</code>, <code>perspective</code>, <code>orthographic</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: Chart3DStateIO, Punktreihen</span><span class="chip">internal: Chart3DView</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Own 3D scenes outside the chart form; native-image friendly because it is only Java2D and arithmetic.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – rasterise a scene directly</h4>
+<pre><code>Scene3D s = new Scene3D();
+s.addTriangles(tris, eckwerte);                     // 9 coordinates or 3 values per row
+ZBufferRenderer r = new ZBufferRenderer();
+r.setGouraud(true);
+r.setValueScale(ColorScale.of(0, 1, t -&gt; Color.getHSBColor((float) (0.7 * (1 - t)), 1f, 1f)));
+Camera cam = new Camera();
+cam.setOrbit(Math.toRadians(-122), Math.toRadians(70.6), 3.0);
+BufferedImage bild = r.render(s, cam, 800, 600);</code></pre></div>
+</div>
+
+<!-- =============================================================== CHART -->
+<h2 id="diagramm">Chart, axes, colour scale <span class="paket">envisionz.chart3d.chart · envisionz.chart3d.color</span></h2>
+
+<div class="karte">
+  <h3><code>Chart3DView</code>, <code>Axis3D</code>, <code>ColorScale</code></h3>
+  <p class="zweck">The chart: payload geometry, three axes, title, subtitle, colour-scale and category legends in a selectable position, markers and ranges on the axes, walls and grid, equal scales on request. Additional geometry (planes, lines, splines, points) can be added. <code>uebernehmenVon</code> transfers the presentation of one chart to another without carrying over data, axis ranges and colour scale.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Chart3DView(szene, xAchse, yAchse, zAchse)</code>, <code>render(breite, hoehe)</code>, <code>fitToView(b, h)</code>, <code>itemAt(px, py, tol)</code></li>
+      <li><code>setTitle</code>, <code>setSubtitle</code>, <code>setLegend(skala[, titel])</code>, <code>setLegendPosition</code>, <code>setCategoryLegend</code>, <code>setEqualAspect</code></li>
+      <li><code>addLabel</code>, <code>addPlane(achse, wert, farbe)</code>, <code>addPolyline</code>, <code>addSpline</code>, <code>addPoints</code>, <code>addSurface</code>, <code>uebernehmenVon(andere)</code></li>
+      <li><code>Axis3D</code>: <code>setRange</code>, <code>setLogarithmic</code>, <code>setReversed</code>, <code>setTicks</code>, <code>marke</code>, <code>bereich</code>; <code>ColorScale.of(lo, hi, verlauf)</code>, <code>banded(...)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, Chart3DStyle, Chart3DOptionsPanel</span><span class="chip">app-maps: Raumansicht</span><span class="chip">framework-chart: 3D factories, ColormapColorScale</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Maps and measurement clouds in space with labels, legend and markers, as an image or in a window.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – mark an operating point and render</h4>
+<pre><code>view.addLabel(w2, pr, eta, "Auslegungspunkt", Color.RED);
+view.addPlane(2, 0.85, new Color(0, 0, 255, 60));    // plane z = 0.85
+BufferedImage bild = view.render(1200, 900);</code></pre></div>
+</div>
+
+<!-- =============================================================== FACTORIES -->
+<h2 id="fabriken">Factories and data sources <span class="paket">envisionz.chart3d.chart · envisionz.chart3d.data</span></h2>
+
+<div class="karte">
+  <h3><code>Surface3DFactory</code>, <code>Scatter3DFactory</code>, <code>Line3DFactory</code>, <code>Volume3DFactory</code>, <code>Category3DFactory</code>, <code>Pie3DFactory</code></h3>
+  <p class="zweck">Six chart types, each with a path via arrays and one via a data source – one drawing path, not two. The surface passes values per corner, scatter points are coloured per point, lines per segment from the value at its middle; bars stand on a reversed category axis so that the largest series is at the back; the pie carries percentages in the legend. Volume takes shells with colour and opacity.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Surface3DFactory.create(xv, yv, gitterZ, nI, nJ, titel, xL, yL, zL, skala, umriss)</code>, <code>create(gitterquelle, …)</code></li>
+      <li><code>Scatter3DFactory.create(x, y, z, werte, groesse, farbe, titel, …, skala)</code>, <code>Line3DFactory.create(reihen, namen, farben, …)</code></li>
+      <li><code>Volume3DFactory.create(List&lt;Schale&gt;, …)</code>, <code>createBanded(tris, werte, …)</code></li>
+      <li><code>Category3DFactory.create(werte, reihen, spalten, …)</code>, <code>Pie3DFactory.create(werte, namen, farben, …)</code></li>
+      <li><code>Felder.punkte(x, y, z, werte, name)</code>, <code>gitter(xv, yv, f, nI, nJ)</code>, <code>bahnen(...)</code>, <code>kategorien(...)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">framework-chart: threed factories, Datenbruecke</span><span class="chip">app-charts: ChartAssembly</span><span class="chip">app-maps: Raumansicht</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Efficiency surfaces, measurement clouds, paths in space, iso-surfaces from point clouds, bar and pie charts in 3D.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – surface from a grid</h4>
+<pre><code>ColorScale skala = ColorScale.banded(zMin, zMax, 10, t -&gt; Color.getHSBColor((float) (0.7 * (1 - t)), 1f, 1f));
+Chart3DView v = Surface3DFactory.create(xv, yv, z, nI, nJ, "Wirkungsgrad", "W2", "PR", "η", skala, false);</code></pre></div>
+  <div class="hinweis">Axis convention: Orson put y upwards, this engine z. When converting old calls this must be checked per factory, otherwise the view tips over.</div>
+</div>
+
+<!-- =============================================================== STYLE -->
+<h2 id="stil">Styles <span class="paket">envisionz.chart3d.stil</span></h2>
+
+<div class="karte">
+  <h3><code>Stil</code> – a set of presentation settings to apply</h3>
+  <p class="zweck">Background, text and line colours, fonts, walls, grid, text orientation, legend position, shading, supersampling, depth cueing and edges, series colours – as an immutable set with <code>mit…</code> (“with …”) derivations. Four presets, including one that looks like Orson Charts.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Stil.hell()</code>, <code>dunkel()</code>, <code>druck()</code>, <code>wieOrson()</code></li>
+      <li><code>mitHintergrund</code>, <code>mitSchriften</code>, <code>mitWaenden</code>, <code>mitGitter</code>, <code>mitSchattierung(weich, knick, grund)</code>, <code>mitUeberabtastung</code>, <code>mitReihenfarben</code></li>
+      <li><code>anwenden(view)</code>, <code>reihenfarbe(i)</code>, <code>reihenfarben(n)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">framework-chart: CategoryChart3DFactory, Pie3DFactory</span><span class="chip">internal: Themenkarte, Diagrammtafel</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>A uniform look for screen, print and presentation with one call.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – print version with grid</h4>
+<pre><code>Stil.druck().mitGitter(true).mitUeberabtastung(3).anwenden(view);</code></pre></div>
+</div>
+
+<!-- =============================================================== SWING -->
+<h2 id="swing">Controls in Swing <span class="paket">envisionz.chart3d.swing</span></h2>
+
+<div class="karte">
+  <h3><code>Chart3DPanel</code>, <code>Diagrammtafel</code>, <code>Einstellrail</code> and the settings cards</h3>
+  <p class="zweck">The panel rotates, zooms and pans with the mouse, renders coarser while dragging and fine at rest, reports hits and shows short help. The chart board arranges several charts in columns, with a coupled camera and one style for all. Settings sit as cards in a vertical rail: view, axes, legend, title, markers, theme; <code>Farbwahl</code> lets the application plug in its own colour chooser.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Chart3DPanel(view)</code>, <code>setChart(view[, einpassen])</code>, <code>datenGeaendert()</code>, <code>setTrefferhorcher</code>, <code>setSupersampling(ruhe, ziehen)</code></li>
+      <li><code>new Diagrammtafel(spalten)</code>, <code>hinzufuegen(view)</code>, <code>setKamerakopplung</code>, <code>stilFuerAlle(stil)</code>, <code>mitBedienflaeche(tafel)</code></li>
+      <li><code>Einstellrail.vollstaendig(panel, tafel)</code>, <code>new Einstellrail(karten…)</code>, <code>nachziehen()</code></li>
+      <li><code>Ansichtskarte</code>, <code>Achsenkarte</code>, <code>Legendenkarte</code>, <code>Titelkarte</code>, <code>Markenkarte</code>, <code>Themenkarte</code>; <code>Einstellkarte.setFarbwahl(quelle)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartsPanel, ChartWorkbench, Inlinefarbwahl</span><span class="chip">app-maps: MapsRootPanel</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>3D views in the applications, adjusted through cards instead of dialog windows.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – chart with the complete settings rail</h4>
+<pre><code>Chart3DPanel panel = new Chart3DPanel(view);
+Einstellrail leiste = Einstellrail.vollstaendig(panel, null);    // no board
+fenster.add(panel, BorderLayout.CENTER);
+fenster.add(leiste, BorderLayout.EAST);</code></pre></div>
+  <div class="hinweis"><code>Diagrammtafel</code> and <code>Einstellrail</code> are used today only in the demo programs and probes; app-charts uses the cards individually.</div>
+</div>
+
+<!-- =============================================================== PROOF -->
+<h2 id="belege">Proof images and tools <span class="paket">envisionz.chart3d.proof · cmd.chart3d</span></h2>
+
+<div class="karte">
+  <h3><code>ProofScenes</code>, <code>Chart3DProof</code>, <code>Chart3DTypes</code>, <code>Chart3DViews</code>, <code>Chart3DPruefung</code>, <code>Chart3DDemo</code>, <code>Kartenmass</code></h3>
+  <p class="zweck">Proof scenes with a known answer (triangle, cube, crossing planes, surface, path in a box, volume) and tools that write proof images from them into <code>docs/</code>: the categorical and point-based chart types, contact sheets with a full orbit and increasing zoom, a visual check of the painting and a demo. <code>Kartenmass</code> measures the width of the settings cards. Proof images need a human to look at them; they do not replace a probe.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>ProofScenes.singleTriangle()</code>, <code>cube()</code>, <code>crossingPlanes()</code>, <code>surface(n)</code>, <code>pathInBox()</code>, <code>volumeTriangles(n)</code></li>
+      <li><code>Chart3DProof.run(args)</code>, <code>Chart3DTypes.run(args)</code>, <code>Chart3DViews.run(args)</code> – return value as result</li>
+      <li><code>Chart3DPruefung.main</code>, <code>Chart3DDemo.main</code>, <code>Kartenmass.main</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: tools under cmd.chart3d</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Proof images for documentation and comparison; a quick visual check after changes to the rasteriser.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== USAGE -->
+<h2 id="einsatz">Usage matrix in the framework</h2>
+<p class="einl">Which modules use which parts today, counted in the source code (excluding probes).</p>
+<table>
+  <tr><th>Module</th><th>Engine / scene</th><th>Chart &amp; axes</th><th>Colour scale</th><th>Factories / data sources</th><th>Style</th><th>Swing</th><th>What for</th></tr>
+  <tr><td>framework-chart</td><td></td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td>3D factories with the same calls as before, data bridge to JFreeChart</td></tr>
+  <tr><td>app-charts</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td class="x">●</td><td>3D charts with settings cards, saving the state</td></tr>
+  <tr><td>app-maps</td><td></td><td class="x">●</td><td></td><td></td><td></td><td class="x">●</td><td>Spatial view of maps</td></tr>
+</table>
+<div class="hinweis">The applications reach the factories via framework-chart; directly they use <code>Chart3DView</code>, the panel and the cards. A comparison with Orson Charts (measurements, findings per chart type) is under <code>docs/vergleich/</code>.</div>
+
+<footer>
+envisionz-framework-chart3d · 45 source files in 10 packages · comparison <code>docs/vergleich/LIESMICH.md</code>, <code>BEFUNDE.md</code> · probes: <code>pruefen.cmd --nur framework-chart3d</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

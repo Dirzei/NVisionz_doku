@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Limit against decompression bombs – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite aktiv" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › Limit against decompression bombs – background</span><a class="sprachwahl" href="../../de/compress/grenze-theorie.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress</div>
+  <h1>Limit against decompression bombs – background</h1>
+  <p class="unter">Why packed data may grow by orders of magnitude, how far each format can grow at most, and how <code>Entpackgrenze</code> pushes back at two points: at the announced size and at the size actually produced. With pseudocode following the source, worked examples and the probes.</p>
+</header>
+
+<h2 id="problem">What it is about</h2>
+<p>A compression method replaces repetitions with short references. The more uniform the data, the shorter the packed stream – with nothing but zeros, a gigabyte shrinks to about a megabyte. That is the purpose. A <b>decompression bomb</b> turns it around: a small file that demands so much memory when unpacked that the application aborts with an <code>OutOfMemoryError</code>. In Java that is not a clean error but a state after which the runtime no longer works reliably.</p>
+<p>There are two kinds, and both must be caught:</p>
+<ul>
+  <li><b>The honest bomb:</b> the stream really produces huge amounts, for instance Deflate back-references with distance 1 and length 258 in a row.</li>
+  <li><b>The lying bomb:</b> a header <i>claims</i> a huge size – a zstd frame header of a few bytes can announce 2 GB, a Snappy varint of five bytes 4 GB. A reader that takes the announcement as array size without looking allocates the memory before it has read a single payload byte.</li>
+</ul>
+<p><code>Entpackgrenze</code> is the common answer of all decoders in the module: an upper limit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> on the output of <b>one call</b>, checked against what is announced and against what is actually produced.</p>
+
+<h2 id="verhaeltnis">How far a format can grow at most</h2>
+<p>The <b>expansion ratio</b> is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>=</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>out</mtext></mrow></msub><mo>/</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">q = n_{\text{out}} / n_{\text{in}}</annotation></semantics></math>. For the defence its maximum counts: how many output bytes a single input byte produces in the most favourable case. It follows from the shortest command that produces the most bytes.</p>
+<p><b>Deflate.</b> The longest back-reference is 258 bytes (length code 285, no extra bits). If a dynamic block contains only two literal/length symbols and one distance symbol, length code 285 has one bit and distance code 0 (distance 1) has one as well. A back-reference then costs 2 bits:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>q</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mfrac><mrow><mn>258</mn><mo>⋅</mo><mn>8</mn><mspace width="0.3333em"/><mtext>bit</mtext></mrow><mrow><mn>2</mn><mspace width="0.3333em"/><mtext>bit</mtext></mrow></mfrac><mo>=</mo><mn>1032</mn></mrow><annotation encoding="application/x-tex">q_{\max} = \frac{258 \cdot 8\ \text{bit}}{2\ \text{bit}} = 1032</annotation></semantics></math></p>
+<p>The block header and the end-of-block symbol count against it but do not matter for large amounts. Recomputed with the module's own encoder: 4 MiB of zeros give 4080 bytes with <code>Deflate.packe</code>, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>≈</mo><mn>1028</mn></mrow><annotation encoding="application/x-tex">q \approx 1028</annotation></semantics></math>. A raw stream of one megabyte of zeros gives 1032 bytes.</p>
+<p><b>zstd.</b> An RLE block consists of three bytes of block header and a single byte that is repeated; the block size sits in 21 bits of the header, and the format limits a block to 128 KiB. Four bytes therefore yield up to 131,072 bytes, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>q</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mn>32</mn><mspace width="0.1667em"/><mn>768</mn></mrow><annotation encoding="application/x-tex">q_{\max} = 32\,768</annotation></semantics></math>. This is the case the <code>Bombenprobe</code> builds as “2 GB from 64 KB”.</p>
+<p><b>LZ4.</b> A length above 15 is continued with extra bytes; every byte <code>0xFF</code> extends the back-reference by 255. At most about 255 output bytes arise per input byte. <code>Lz4Block.entpacke(block, groesse)</code> therefore rejects any announcement above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn><mo>⋅</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub><mo>+</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">255 \cdot n_{\text{in}} + 64</annotation></semantics></math>.</p>
+<p><b>Snappy.</b> The most productive command is the copy of kind 10: three bytes (tag byte plus two bytes of offset) for up to 64 bytes, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>q</mi></mrow><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><mn>64</mn><mo>/</mo><mn>3</mn><mo>≈</mo><mn>21.3</mn></mrow><annotation encoding="application/x-tex">q_{\max} = 64/3 \approx 21.3</annotation></semantics></math>. <code>Snappy.entpacke</code> rejects a target size above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32</mn><mo>⋅</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub><mo>+</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">32 \cdot n_{\text{in}} + 64</annotation></semantics></math> – with headroom above the true maximum.</p>
+<p><b>LZMA, bzip2, Brotli, LZO.</b> No fixed formula bound is in the code here. In LZMA a repeated back-reference with well-trained models costs clearly less than one bit; bzip2 stacks two run-length stages. For these formats <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> alone applies.</p>
+<table>
+  <tr><th>Format</th><th>most productive command</th><th>maximum ratio</th><th>bound in the code</th></tr>
+  <tr><td>Deflate / zlib / gzip</td><td>length 258, distance 1, 1 bit code each</td><td>1032 : 1</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> only</td></tr>
+  <tr><td>zstd</td><td>RLE block, 4 bytes</td><td>32,768 : 1</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> only</td></tr>
+  <tr><td>LZ4 block</td><td>length byte <code>0xFF</code></td><td>≈ 255 : 1</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn><mspace width="0.1667em"/><mi>n</mi><mo>+</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">255\,n + 64</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math></td></tr>
+  <tr><td>Snappy</td><td>copy kind 10, 3 bytes → 64 bytes</td><td>≈ 21 : 1</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32</mn><mspace width="0.1667em"/><mi>n</mi><mo>+</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">32\,n + 64</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math></td></tr>
+  <tr><td>LZMA, bzip2, Brotli, LZO, LZW</td><td>–</td><td>no simple bound</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> only</td></tr>
+</table>
+
+<h2 id="zweifach">Checked twice: announcement and growth</h2>
+<p>A decoder needs an output buffer. If it knows the final size from the header, it is tempting to allocate it at once – and that is exactly the door for the lying bomb. If it does not know it, the buffer grows along. Both paths go through the limit:</p>
+<ul>
+  <li><b><code>vorab(angekündigt, vorab, verfahren)</code></b> checks the announcement against <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> and allocates at most <code>vorab</code> bytes. Throughout the module <code>vorab</code> is 16 MiB. A file that announces 2 GB but delivers only 64 KB therefore never occupies more than 16 MiB.</li>
+  <li><b><code>wachse(jetzt, gebraucht, verfahren)</code></b> checks the size actually needed against <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> and names the new buffer size.</li>
+  <li><b><code>pruefe(groesse, verfahren)</code></b> is the core of both: negative or above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> means <code>Grenzueberschreitung</code>.</li>
+</ul>
+<p>The new buffer size when growing is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>L</mi></mrow><mrow><mtext>new</mtext></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>2</mn><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>L</mi><mo>,</mo><mspace width="0.1667em"/><mn>16</mn><mo stretchy="false">)</mo><mo>,</mo><mspace width="0.3333em"/><mi>b</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>b</mi><mo>,</mo><mspace width="0.3333em"/><mi>G</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L_{\text{new}} = \min\Big(\max\big(2\max(L,\,16),\ b\big),\ \max(b,\ G)\Big)</annotation></semantics></math></p>
+<p>with the current length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> and the demand <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>≤</mo><mi>G</mi></mrow><annotation encoding="application/x-tex">b \le G</annotation></semantics></math>. The buffer doubles because then the sum of all copy operations stays bounded: if a buffer grows from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>L</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">L_0</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> by doubling, in total</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>L</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><mn>2</mn><msub><mrow><mi>L</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><mn>4</mn><msub><mrow><mi>L</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><mo>…</mo><mo>+</mo><mfrac><mrow><mi>N</mi></mrow><mrow><mn>2</mn></mrow></mfrac><mo>&lt;</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">L_0 + 2L_0 + 4L_0 + \dots + \frac{N}{2} &lt; N</annotation></semantics></math></p>
+<p>bytes are copied – the effort per output byte is constant. Capping at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> makes sure the last doubling step does not request memory beyond the limit merely because it “happens” to double.</p>
+
+<figure>
+<svg viewBox="0 0 600 170" width="600" font-family="sans-serif" font-size="13">
+  <text x="10" y="20" fill="#5b6475">Buffer length (logarithmic) over the growth steps</text>
+  <line x1="40" y1="140" x2="580" y2="140" stroke="#5b6475"/>
+  <line x1="40" y1="140" x2="40" y2="30" stroke="#5b6475"/>
+  <line x1="40" y1="50" x2="580" y2="50" stroke="#9a6400" stroke-dasharray="5,4"/>
+  <text x="480" y="44" fill="#9a6400">limit G</text>
+  <rect x="60" y="125" width="40" height="15" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="120" y="110" width="40" height="30" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="180" y="95" width="40" height="45" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="240" y="80" width="40" height="60" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="300" y="65" width="40" height="75" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="360" y="50" width="40" height="90" fill="#1f5f8b" stroke="#1f5f8b"/>
+  <text x="358" y="162" fill="#5b6475">capped</text>
+  <rect x="440" y="50" width="40" height="90" fill="none" stroke="#9a6400" stroke-dasharray="4,3"/>
+  <text x="420" y="162" fill="#9a6400">demand > G: abort</text>
+  <text x="64" y="162" fill="#5b6475">L</text>
+  <text x="124" y="162" fill="#5b6475">2L</text>
+  <text x="184" y="162" fill="#5b6475">4L</text>
+  <text x="244" y="162" fill="#5b6475">8L</text>
+  <text x="302" y="162" fill="#5b6475">16L</text>
+</svg>
+<figcaption>The buffer doubles until the next step would exceed the limit; then it is capped exactly at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>. Whoever needs more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> gets a <code>Grenzueberschreitung</code> instead of an <code>OutOfMemoryError</code>.</figcaption>
+</figure>
+
+<h2 id="vorrang">Where the limit comes from</h2>
+<p>The applicable limit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> is determined anew on every call, in a fixed order of precedence:</p>
+<ol>
+  <li>a limit for a section of the current thread, set with <code>Entpackgrenze.mit(grenze, arbeit)</code>;</li>
+  <li>the system property <code>envisionz.entpacken.max</code> (bytes) – an explicit start option for this run;</li>
+  <li>the user's setting in the system property <code>envisionz.entpacken.eingestellt</code>, which <code>Rahmeneinstellungen</code> from framework-swing sets at start-up;</li>
+  <li>the default <code>VORGABE</code> = <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>30</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{30}</annotation></semantics></math> bytes = 1 GiB.</li>
+</ol>
+<p>The setting comes in via a system property and not via a method call. That way framework-swing needs no compile-time dependency on compress, and applications without compress on the class path still start.</p>
+
+<h3>Pseudocode – <code>Entpackgrenze.grenze()</code> and <code>lies(name)</code></h3>
+<pre class="pseudo"><b>function</b> grenze():
+    a ← ABWEICHEND.get()                         <i>thread limit from mit(...)</i>
+    <b>if</b> a ≠ null: <b>return</b> min(a, FELD_MAX)
+    s ← lies(EIGENSCHAFT)                         <i>"envisionz.entpacken.max"</i>
+    <b>if</b> s > 0: <b>return</b> s
+    e ← lies(EINGESTELLT)                         <i>"envisionz.entpacken.eingestellt"</i>
+    <b>if</b> e > 0: <b>return</b> e
+    <b>return</b> min(VORGABE, FELD_MAX)
+
+<b>function</b> lies(name):
+    t ← System.getProperty(name)
+    <b>if</b> t ≠ null <b>and</b> t parses as an integer:
+        v ← number(t)
+        <b>if</b> v > 0: <b>return</b> min(v, FELD_MAX)
+    <b>return</b> 0                                     <i>0 or negative: not set or unusable</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/Entpackgrenze.java</code>. <code>eingestellteGrenze()</code> combines the last two steps; <code>mit(...)</code> restores the previous thread limit in <code>finally</code>, also for nested calls.</p>
+
+<h3>Pseudocode – the three check points</h3>
+<pre class="pseudo"><b>function</b> pruefe(groesse, verfahren):
+    g ← grenze()
+    <b>if</b> groesse &lt; 0 <b>or</b> groesse > g: <b>throw</b> Grenzueberschreitung
+    <b>return</b> groesse as int
+
+<b>function</b> wachse(jetzt, gebraucht, verfahren):
+    pruefe(gebraucht, verfahren)
+    neu ← max(2 · max(jetzt, 16), gebraucht)
+    <b>return</b> min(neu, max(gebraucht, grenze()))
+
+<b>function</b> vorab(angekuendigt, vorab, verfahren):
+    pruefe(angekuendigt, verfahren)                <i>the announcement itself</i>
+    <b>return</b> min(angekuendigt, max(1, vorab))     <i>at most vorab is allocated</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/Entpackgrenze.java</code>. Callers: <code>Inflate</code> (initially <code>vorab(4·input, 16 MiB)</code>), <code>Lzma</code>, <code>Zstd</code>, <code>Lz4</code>, <code>Lzo1x</code> (16 MiB up front each), <code>wachse</code> in all growing buffers; <code>pruefe</code> over the sum of all members, streams and frames in gzip, bzip2, zstd and LZ4.</p>
+
+<h2 id="summen">Sums over members, streams and frames</h2>
+<p>gzip, bzip2, zstd, LZ4 and XZ may contain several members, streams or frames in a row. Each piece on its own may stay below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>, the sum may not: 128 gzip members of 4 MiB each add up to 512 MiB. The running sum is therefore checked against <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> <b>while reading</b>, after each piece – not only at the end, when a thousand pieces are already in memory:</p>
+<pre class="pseudo">summe ← 0
+<b>while</b> another member is present:
+    g ← liesGlied(...)                       <i>unpacks this member</i>
+    summe ← summe + length(g.daten)
+    pruefe(summe, "gzip")                     <i>aborts at the first member above G</i>
+    append g</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/gzip/Gzip.java</code> (<code>glieder</code>); likewise <code>Bzip2.liesStrom</code> per block, <code>Zstd.rahmen</code> and <code>Lz4.rahmen</code> per frame.</p>
+
+<h2 id="festlegungen">Conventions in the framework</h2>
+<div class="hinweis"><b>Convention in the framework:</b> The default is <code>VORGABE</code> = 1 GiB. The largest possible limit is <code>FELD_MAX</code> = <code>Integer.MAX_VALUE − 8</code>, the largest length a Java array safely accepts. In the settings app the limit can be chosen between 16 and 2047 MiB (section Security, stored as <code>sicherheit.entpackenMaxMb</code> in <code>rahmen.properties</code>).</div>
+<div class="hinweis"><b>Convention in the framework:</b> The limit applies to the output of <b>one call</b>, not to the process. Ten calls side by side may each occupy up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>. At most 16 MiB are allocated up front, whatever a header announces; the rest grows along if it really comes.</div>
+<div class="hinweis"><b>Convention in the framework:</b> A system property that cannot be read as an integer counts as not set. A readable number <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≤</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\le 0</annotation></semantics></math> likewise counts as not set; a larger one is clamped to at most <code>FELD_MAX</code>. The same holds for <code>setzeGrenze(b)</code>: with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>≤</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">b \le 0</annotation></semantics></math> it clears the setting; then the default applies again. (Until 2026-09-28, <code>-Denvisionz.entpacken.max=0</code> was clamped to 1 byte; unified with WT20.)</div>
+
+<h2 id="beispiel">Worked example</h2>
+<p>Limit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">G = 64</annotation></semantics></math> MiB (this is how the <code>Bombenprobe</code> runs). A gzip member holding 4 MiB of zeros is 4098 bytes long. A file of 128 such members is 512 KiB in size and would yield 512 MiB.</p>
+<ul>
+  <li>Members 1 to 16: the sum reaches <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>16</mn><mo>⋅</mo><mn>4</mn><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">16 \cdot 4 = 64</annotation></semantics></math> MiB – exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>, allowed.</li>
+  <li>Member 17: sum 68 MiB &gt; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> → <code>Grenzueberschreitung</code> before member 18 is read.</li>
+</ul>
+<p>The probe measures how much memory the thread requested in total: 283 MB. That is more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>, because each member is built in a growing buffer that doubles, and the finished members sit in a list until the abort. Before the limit existed, the same bombs ran to 1 to 2 GB. The probe demands that a bomb requests less than five times the limit.</p>
+<p>A growth example following the formula above, with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">G = 64</annotation></semantics></math> MiB = 67,108,864 bytes: a buffer of 48 MiB needs 49 MiB. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>⋅</mo><mn>48</mn><mo>=</mo><mn>96</mn></mrow><annotation encoding="application/x-tex">2 \cdot 48 = 96</annotation></semantics></math> MiB would be the doubling step; it is capped at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>49</mn><mo>,</mo><mn>64</mn><mo stretchy="false">)</mo><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">\max(49, 64) = 64</annotation></semantics></math> MiB. If it then needs 65 MiB, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>&gt;</mo><mi>G</mi></mrow><annotation encoding="application/x-tex">b &gt; G</annotation></semantics></math>, and the call aborts.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Entpackgrenzeprobe</code> (10 checks):</b> each level of precedence in <b>both</b> directions against the next – a setting smaller and larger than the default, a start option smaller and larger than the setting, the thread limit smaller and larger than everything. Only then does a wrong rule such as “the smallest wins” show up. In addition: an unusable start option lets the setting apply, 0 means “nothing set” – for <code>setzeGrenze</code> as well as for the start option.</li>
+  <li><b><code>Bombenprobe</code> (9 checks):</b> one bomb each for zstd (RLE, 2 GB from 64 KB; frame header claims 2 GB), gzip (128 members of 4 MiB), LZ4 (frame header claims 2 GB), LZMA (header claims 2 GB) and Snappy (header claims 4 GB). Each must abort under a 64 MiB limit and request less than five times that. Two harmless counter-cases (zstd RLE with 1 MiB, one gzip member with 4 MiB) must unpack completely – the limit is not a lock. And the default must be 1 GiB.</li>
+  <li>Counter-probes to the Entpackgrenzeprobe: “setting overlooked” and “smallest instead of precedence” turn red.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The limit bounds the <b>output</b>, not the peak demand. <code>Gzip.entpacke</code> holds all members and then their concatenation, briefly about twice the output; <code>Lzma2</code> keeps the entire previous output as dictionary.</li>
+  <li>Beyond about 2 GiB nothing works: the output is a Java array. Larger entries need a streaming reader, which the module does not have.</li>
+  <li>Computing time is not limited. A file just below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> is unpacked completely, however long that takes.</li>
+  <li>The plausibility bounds of LZ4 and Snappy only apply to the calls with a known target size; the frame formats rely on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#grenze">Limit against decompression bombs</a> · Probes: <code>Entpackgrenzeprobe</code>, <code>Bombenprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iterative solvers (Krylov) – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag aktiv" href="index.html">framework-math</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#fourier">Fourier and cosine transforms</a>
+<a class="unterseite" href="fourier.html">Background</a>
+<a class="rubrik" href="index.html#linear">Dense linear algebra</a>
+<a class="unterseite" href="linear.html">Background</a>
+<a class="rubrik" href="index.html#gspar">Sparse LU</a>
+<a class="unterseite" href="gspar.html">Background</a>
+<a class="rubrik" href="index.html#krylov">Iterative solvers (Krylov)</a>
+<a class="unterseite aktiv" href="krylov.html">Background</a>
+<a class="rubrik" href="index.html#eigen">Eigenvalues and singular value decomposition</a>
+<a class="unterseite" href="eigen.html">QR and SVD</a>
+<a class="unterseite" href="lanczos.html">Lanczos and Arnoldi</a>
+<a class="rubrik" href="index.html#ode">Initial value problems and DAEs</a>
+<a class="unterseite" href="ode.html">Background</a>
+<a class="rubrik" href="index.html#quadratur">Numerical integration</a>
+<a class="unterseite" href="quadratur.html">Background</a>
+<a class="rubrik" href="index.html#optimierung">Optimisation and root finding</a>
+<a class="unterseite" href="nullstellen.html">Brent, Nelder-Mead, LM</a>
+<a class="unterseite" href="optimierung.html">L-BFGS and SQP</a>
+<a class="rubrik" href="index.html#kurven">Curves, splines and surfaces</a>
+<a class="unterseite" href="kurven.html">Background</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix within the framework</a>
+</div>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-math</a> › Iterative solvers (Krylov) – background</span><a class="sprachwahl" href="../../de/math/krylov.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-math · envisionz.math.krylov</div>
+  <h1>Iterative solvers (Krylov) – background</h1>
+  <p class="unter">The computation behind <code>KonjugierteGradienten</code>, <code>Gmres</code> and <code>BiCgStab</code>: Krylov spaces, the conjugate gradient method, GMRES with restart and Givens rotations, BiCGStab, preconditioning and the stopping rules – with pseudocode following the source, a worked example by hand, checks and limits.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>The direct methods (<a href="index.html#linear">LU</a>, <a href="index.html#gspar">sparse LU</a>) need the matrix entry by entry and pay with fill-in. For a heat conduction problem on a fine grid, or for a Newton method whose Jacobian is only available as a directional derivative <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi><mi>v</mi><mo>≈</mo><mo stretchy="false">(</mo><mi>F</mi><mo stretchy="false">(</mo><mi>x</mi><mo>+</mo><mi mathvariant="normal">ε</mi><mi>v</mi><mo stretchy="false">)</mo><mo>−</mo><mi>F</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>/</mo><mi mathvariant="normal">ε</mi></mrow><annotation encoding="application/x-tex">J v \approx (F(x + \varepsilon v) - F(x))/\varepsilon</annotation></semantics></math>, the matrix does not exist at all – only the rule <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>→</mo><mi>A</mi><mi>v</mi></mrow><annotation encoding="application/x-tex">v \to A v</annotation></semantics></math>. <b>Iterative</b> methods make do with that: they improve an approximation step by step and need one or two applications of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> per step.</p>
+<p>In the package the matrix is therefore a <code>LinearerOperator</code> with a single method <code>anwenden(x, y)</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mi>A</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">y = A x</annotation></semantics></math>. Whether a dense matrix (<code>LinearerOperator.dicht</code>), a finite-difference stencil or a function evaluation is behind it, the method does not see.</p>
+
+<h2 id="krylovraum">The Krylov space</h2>
+<p>From the initial residual <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mi>b</mi><mo>−</mo><mi>A</mi><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_0 = b - A x_0</annotation></semantics></math> and repeated application of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> arises the <b>Krylov space</b></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">K</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">(</mo><mi>A</mi><mo>,</mo><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo stretchy="false">)</mo><mo>=</mo><mi>span</mi><mo stretchy="false">{</mo><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mspace width="0.3333em"/><mi>A</mi><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mspace width="0.3333em"/><msup><mrow><mi>A</mi></mrow><mrow><mn>2</mn></mrow></msup><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mspace width="0.3333em"/><mo>…</mo><mo>,</mo><mspace width="0.3333em"/><msup><mrow><mi>A</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msup><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo stretchy="false">}</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\mathcal{K}_k(A, r_0) = \operatorname{span}\{r_0,\ A r_0,\ A^2 r_0,\ \dots,\ A^{k-1} r_0\}.</annotation></semantics></math></p>
+<p>All methods implemented here seek the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>-th approximation in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><msub><mrow><mi mathvariant="normal">K</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_0 + \mathcal{K}_k</annotation></semantics></math>. The residual is then a polynomial in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> applied to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">r_0</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi>p</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">(</mo><mi>A</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo><mo>=</mo><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">r_k = p_k(A)\, r_0, \qquad p_k(0) = 1,</annotation></semantics></math></p>
+<p>with a polynomial <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">p_k</annotation></semantics></math> of degree <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math>.</p>
+<p>This gives the most important property: if <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> has only <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> distinct eigenvalues <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mi>m</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\lambda_1, \dots, \lambda_m</annotation></semantics></math> (and is diagonalisable), the polynomial <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>z</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo largeop="true" movablelimits="true">∏</mo><mrow><mi>j</mi></mrow></munder><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>z</mi><mo>/</mo><msub><mrow><mi mathvariant="normal">λ</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p(z) = \prod_j (1 - z/\lambda_j)</annotation></semantics></math> vanishes on the whole spectrum, and a method that finds the best polynomial is exactly done after at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> steps. The probes use this as a sharp anchor: five distinct eigenvalues → CG in at most 5 steps, four → GMRES without restart in at most 4. More generally a Krylov method converges fast if the eigenvalues gather in a few clusters far away from 0 – which is the aim of <a href="#vorkonditionierung">preconditioning</a>.</p>
+<p>The methods differ in <b>which</b> polynomial they choose and what they require for it:</p>
+<table>
+  <tr><th>Method</th><th>Matrix</th><th>minimises</th><th>per step</th><th>Memory</th></tr>
+  <tr><td>CG</td><td>symmetric positive definite</td><td>error in the A-norm <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>‖</mo><mi>x</mi><mo>−</mo><msub><mrow><mi>x</mi></mrow><mrow><mo>*</mo></mrow></msub><msub><mrow><mo>‖</mo></mrow><mrow><mi>A</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\|x - x_*\|_A</annotation></semantics></math></td><td>1 × A, 1 × M⁻¹</td><td>fixed, few vectors</td></tr>
+  <tr><td>GMRES(m)</td><td>any</td><td>residual <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>‖</mo><mi>b</mi><mo>−</mo><mi>A</mi><mi>x</mi><msub><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\|b - A x\|_2</annotation></semantics></math> in the Krylov space</td><td>1 × A, 1 × M⁻¹</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">m + 1</annotation></semantics></math> basis vectors</td></tr>
+  <tr><td>BiCGStab</td><td>any</td><td>nothing (short recurrence, smoothed)</td><td>2 × A, 2 × M⁻¹</td><td>fixed</td></tr>
+</table>
+
+<h2 id="cg">Conjugate gradients (CG)</h2>
+<p>For symmetric positive definite <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>x</mi><mo>=</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">A x = b</annotation></semantics></math> is equivalent to minimising <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ϕ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><msup><mrow><mi>x</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>A</mi><mi>x</mi><mo>−</mo><msup><mrow><mi>b</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>x</mi></mrow><annotation encoding="application/x-tex">\phi(x) = \tfrac12 x^T A x - b^T x</annotation></semantics></math>; the residual <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mi>b</mi><mo>−</mo><mi>A</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">r = b - A x</annotation></semantics></math> is the negative gradient. Steepest descent runs along <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math> and zigzags in an elongated valley. CG (Hestenes and Stiefel 1952) instead chooses search directions that are <b>A-conjugate</b> to each other, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow><mrow><mi>T</mi></mrow></msubsup><mi>A</mi><msub><mrow><mi>p</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">p_i^T A p_j = 0</annotation></semantics></math> for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mo>≠</mo><mi>j</mi></mrow><annotation encoding="application/x-tex">i \ne j</annotation></semantics></math>. Then each direction is finished for good after one step, and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_k</annotation></semantics></math> minimises <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ϕ</mi></mrow><annotation encoding="application/x-tex">\phi</annotation></semantics></math> – equivalently the error in the A-norm – over all of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><msub><mrow><mi mathvariant="normal">K</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_0 + \mathcal{K}_k</annotation></semantics></math>. The directions come from a short recurrence without storing old vectors:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mfrac><mrow><msubsup><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow><mrow><mi>T</mi></mrow></msubsup><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mi>k</mi></mrow><mrow><mi>T</mi></mrow></msubsup><mi>A</mi><msub><mrow><mi>p</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></mfrac><mo>,</mo><mspace width="1em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>+</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>k</mi></mrow></msub><msub><mrow><mi>p</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="1em"/><msub><mrow><mi>r</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>k</mi></mrow></msub><mi>A</mi><msub><mrow><mi>p</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="1em"/><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mfrac><mrow><msubsup><mrow><mi>r</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow><mrow><mi>T</mi></mrow></msubsup><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><mrow><msubsup><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow><mrow><mi>T</mi></mrow></msubsup><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></mfrac><mo>,</mo><mspace width="1em"/><msub><mrow><mi>p</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>k</mi></mrow></msub><msub><mrow><mi>p</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\alpha_k = \frac{r_k^T z_k}{p_k^T A p_k}, \quad x_{k+1} = x_k + \alpha_k p_k, \quad r_{k+1} = r_k - \alpha_k A p_k, \quad \beta_k = \frac{r_{k+1}^T z_{k+1}}{r_k^T z_k}, \quad p_{k+1} = z_{k+1} + \beta_k p_k</annotation></semantics></math></p>
+<p>with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>r</mi></mrow><annotation encoding="application/x-tex">z = M^{-1} r</annotation></semantics></math> (without preconditioner <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mi>r</mi></mrow><annotation encoding="application/x-tex">z = r</annotation></semantics></math>). For convergence the well-known bound holds</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo>‖</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mi>x</mi></mrow><mrow><mo>*</mo></mrow></msub><msub><mrow><mo>‖</mo></mrow><mrow><mi>A</mi></mrow></msub><mo>≤</mo><mn>2</mn><msup><mrow><mrow><mo fence="true" stretchy="true">(</mo><mfrac><mrow><msqrt><mi mathvariant="normal">κ</mi></msqrt><mo>−</mo><mn>1</mn></mrow><mrow><msqrt><mi mathvariant="normal">κ</mi></msqrt><mo>+</mo><mn>1</mn></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow></mrow><mrow><mi>k</mi></mrow></msup><mo>‖</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>−</mo><msub><mrow><mi>x</mi></mrow><mrow><mo>*</mo></mrow></msub><msub><mrow><mo>‖</mo></mrow><mrow><mi>A</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">\|x_k - x_*\|_A \le 2\left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^k \|x_0 - x_*\|_A,</annotation></semantics></math></p>
+<p>so the number of steps grows with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi mathvariant="normal">κ</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{\kappa}</annotation></semantics></math>, not with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">κ</mi></mrow><annotation encoding="application/x-tex">\kappa</annotation></semantics></math>. For the five-point stencil on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>30</mn><mo>×</mo><mn>30</mn></mrow><annotation encoding="application/x-tex">30 \times 30</annotation></semantics></math> points (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>900</mn></mrow><annotation encoding="application/x-tex">n = 900</annotation></semantics></math>) CG needs 108 steps to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-10}</annotation></semantics></math> in the probe.</p>
+
+<figure>
+<svg viewBox="0 0 560 300" width="560" font-family="sans-serif" font-size="12">
+  <g fill="none" stroke="#5b6475" stroke-width="1" opacity="0.6">
+    <polyline points="252,152 250,153 247,154 244,154 240,154 237,153 234,152 231,151 228,149 225,146 222,143 219,140 217,137 215,133 213,130 212,126 211,122 211,118 211,115 211,111 212,108 213,105 215,103 217,101 219,99 222,98 225,97 228,96 231,96 234,97 238,98 241,100 244,102 247,104 250,107 253,110 255,114 257,117 258,121 260,125 260,128 261,132 261,136 260,139 259,142 258,145 257,148 255,150 252,152"/>
+    <polyline points="269,178 263,181 258,182 251,183 245,183 239,182 232,179 226,176 219,172 213,167 208,162 202,155 198,149 194,142 191,134 188,127 187,119 186,112 186,104 187,98 188,91 191,85 194,80 198,76 203,72 208,70 214,68 220,67 226,68 233,69 240,71 246,74 252,78 258,83 264,89 269,95 274,102 278,109 281,116 283,124 285,131 286,139 286,146 285,153 283,159 281,165 277,170 273,175 269,178"/>
+    <polyline points="285,205 277,209 268,211 259,212 250,212 240,210 230,206 220,202 211,195 202,188 193,180 186,171 179,161 173,150 168,139 164,127 162,116 161,105 161,94 162,84 165,74 169,65 174,58 180,51 187,46 195,42 203,39 212,38 222,39 232,41 241,44 251,49 261,55 270,62 278,71 286,80 293,90 299,101 304,112 307,123 310,134 311,146 311,156 309,167 307,176 303,185 298,193 292,199 285,205"/>
+    <polyline points="299,228 289,233 278,236 266,237 254,237 241,234 229,230 216,224 204,216 192,207 181,196 171,184 162,171 155,157 148,143 144,128 140,113 139,99 139,85 141,72 144,59 149,48 156,38 163,30 172,23 183,18 194,15 205,13 218,14 230,16 243,21 256,27 268,35 280,44 291,55 301,67 309,80 317,94 323,108 328,122 331,137 333,152 333,166 331,179 327,191 322,203 316,212 308,221 299,228"/>
+  </g>
+  <polyline points="214,278 274,158 234,138 239,128 236,126 236,126 236,125" fill="none" stroke="#9a6400" stroke-width="2" stroke-dasharray="5,3"/>
+  <polyline points="214,278 274,158 236,125" fill="none" stroke="#1f5f8b" stroke-width="2.5"/>
+  <circle cx="214" cy="278" r="4" fill="#1f5f8b"/>
+  <circle cx="274" cy="158" r="4" fill="#1f5f8b"/>
+  <circle cx="236" cy="125" r="5" fill="#1f5f8b"/>
+  <text x="222" y="290" fill="#5b6475">x₀ = (0, 0)</text>
+  <text x="282" y="162" fill="#1f5f8b">x₁ = (0.25, 0.5)</text>
+  <text x="130" y="120" fill="#1f5f8b">x₂ = x* = (1/11, 7/11)</text>
+  <line x1="380" y1="60" x2="410" y2="60" stroke="#1f5f8b" stroke-width="2.5"/>
+  <text x="418" y="64" fill="#5b6475">CG: exact after 2 steps</text>
+  <line x1="380" y1="85" x2="410" y2="85" stroke="#9a6400" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="418" y="89" fill="#5b6475">steepest descent: zigzag</text>
+  <text x="380" y="120" fill="#5b6475">contour lines of</text>
+  <text x="380" y="137" fill="#5b6475">½ xᵀAx − bᵀx,</text>
+  <text x="380" y="154" fill="#5b6475">A = [[4, 1], [1, 3]], b = (1, 2)</text>
+</svg>
+<figcaption>CG versus steepest descent on the same problem. The first step is the same for both; after that CG chooses the direction A-conjugate to the first one and hits the solution in the second step, because <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> has only two eigenvalues. Steepest descent approaches in a zigzag.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>KonjugierteGradienten.loese(a, b, x0, m, absTol, relTol, maxIt)</code></h3>
+<pre class="pseudo">target ← max(absTol, relTol · ‖b‖)
+x ← x0 (copy) or 0;  r ← b − A x                                  <i>1st operator call</i>
+<b>if</b> ‖r‖ ≤ target: <b>done</b>
+z ← M⁻¹ r;  p ← z;  rz ← r·z
+<b>if not</b> rz > 0: stop “preconditioner not positive definite”
+<b>for</b> it ← 1 <b>to</b> maxIt:
+    ap ← A p;  pap ← p·ap
+    <b>if not</b> pap > 0: stop “matrix not positive definite (p·Ap = …)”
+    α ← rz / pap;   x ← x + α p;   r ← r − α ap
+    <b>if</b> x not finite: stop
+    <b>if</b> ‖r‖ ≤ target:                                           <i>recursive residual</i>
+        r ← b − A x                                               <i>recompute the true residual</i>
+        <b>if</b> ‖r‖ ≤ target: <b>done</b>
+        z ← M⁻¹ r;  p ← z;  rz ← r·z;  <b>continue</b>                      <i>restart</i>
+    z ← M⁻¹ r;  rzNew ← r·z
+    <b>if not</b> rzNew > 0: stop
+    β ← rzNew / rz;  rz ← rzNew;  p ← z + β p
+end “maximum number of iterations reached”</pre>
+<p class="quelle">Source: <code>envisionz-framework-math/src/envisionz/math/krylov/KonjugierteGradienten.java</code>; input checks, counting and final computation in <code>Ablauf.java</code>.</p>
+
+<h3>Worked example by hand</h3>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>4</mn></mtd><mtd style="text-align:left"><mn>1</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>1</mn></mtd><mtd style="text-align:left"><mn>3</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">A = \left(\begin{matrix} 4 &amp; 1 \\ 1 &amp; 3 \end{matrix}\right)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">b = (1, 2)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">x_0 = 0</annotation></semantics></math>, no preconditioner.</p>
+<ol>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><msub><mrow><mi>p</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">r_0 = p_0 = (1, 2)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow><mrow><mi>T</mi></mrow></msubsup><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">r_0^T r_0 = 5</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><msub><mrow><mi>p</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>6</mn><mo>,</mo><mn>7</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">A p_0 = (6, 7)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mn>0</mn></mrow><mrow><mi>T</mi></mrow></msubsup><mi>A</mi><msub><mrow><mi>p</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">p_0^T A p_0 = 20</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>0.25</mn></mrow><annotation encoding="application/x-tex">\alpha_0 = 0.25</annotation></semantics></math>. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0.25</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.5</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x_1 = (0.25,\ 0.5)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo stretchy="false">)</mo><mo>−</mo><mn>0.25</mn><mo>⋅</mo><mo stretchy="false">(</mo><mn>6</mn><mo>,</mo><mn>7</mn><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mo>−</mo><mn>0.5</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.25</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">r_1 = (1, 2) - 0.25 \cdot (6, 7) = (-0.5,\ 0.25)</annotation></semantics></math>.</li>
+  <li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow><mrow><mi>T</mi></mrow></msubsup><msub><mrow><mi>r</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0.3125</mn></mrow><annotation encoding="application/x-tex">r_1^T r_1 = 0.3125</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>0.3125</mn><mo>/</mo><mn>5</mn><mo>=</mo><mn>0.0625</mn></mrow><annotation encoding="application/x-tex">\beta_0 = 0.3125/5 = 0.0625</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mo>−</mo><mn>0.4375</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.375</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">p_1 = (-0.4375,\ 0.375)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mo>−</mo><mn>1.375</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.6875</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">A p_1 = (-1.375,\ 0.6875)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow><mrow><mi>T</mi></mrow></msubsup><mi>A</mi><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0.859375</mn></mrow><annotation encoding="application/x-tex">p_1^T A p_1 = 0.859375</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>4</mn><mo>/</mo><mn>11</mn></mrow><annotation encoding="application/x-tex">\alpha_1 = 4/11</annotation></semantics></math>. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>/</mo><mn>11</mn><mo>,</mo><mspace width="0.3333em"/><mn>7</mn><mo>/</mo><mn>11</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x_2 = (1/11,\ 7/11)</annotation></semantics></math> – the exact solution.</li>
+</ol>
+<p><code>KonjugierteGradienten.loese</code> with <code>maxIt = 1</code> returns <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mo stretchy="false">(</mo><mn>0.25</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.5</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x = (0.25,\ 0.5)</annotation></semantics></math>, residual <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.559</mn><mo>=</mo><mo>‖</mo><mo stretchy="false">(</mo><mo>−</mo><mn>0.5</mn><mo>,</mo><mspace width="0.3333em"/><mn>0.25</mn><mo stretchy="false">)</mo><mo>‖</mo></mrow><annotation encoding="application/x-tex">0.559 = \|(-0.5,\ 0.25)\|</annotation></semantics></math>, not converged, 3 operator calls (start, one step, final computation). With <code>maxIt = 2</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mo stretchy="false">(</mo><mn>0.0909</mn><mo>…</mo><mo>,</mo><mspace width="0.3333em"/><mn>0.6363</mn><mo>…</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x = (0.0909\ldots,\ 0.6363\ldots)</annotation></semantics></math>, residual 0, converged, 4 operator calls. GMRES and BiCGStab also hit the same solution in 2 iterations (4 and 5 operator calls respectively).</p>
+
+<h2 id="gmres">GMRES with restart</h2>
+<p>For non-symmetric matrices there is no short recurrence that is optimal at the same time. GMRES (Saad and Schultz 1986) therefore builds an orthonormal basis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mo stretchy="false">[</mo><msub><mrow><mi>v</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>v</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">V_k = [v_1, \dots, v_k]</annotation></semantics></math> of the Krylov space explicitly (Arnoldi process) and chooses in it the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> with the <b>smallest residual</b>. The Arnoldi recurrence gives</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>A</mi><msub><mrow><mi>V</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi>V</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>H</mi></mrow></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">A V_k = V_{k+1} \bar H_k,</annotation></semantics></math></p>
+<p>with an upper Hessenberg matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>H</mi></mrow></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\bar H_k</annotation></semantics></math> of size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>k</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>×</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">(k+1) \times k</annotation></semantics></math>, and with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><msub><mrow><mi>V</mi></mrow><mrow><mi>k</mi></mrow></msub><mi>y</mi></mrow><annotation encoding="application/x-tex">x = x_0 + V_k y</annotation></semantics></math> the large least-squares problem becomes a small one:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo>‖</mo><mi>b</mi><mo>−</mo><mi>A</mi><mi>x</mi><msub><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mo>‖</mo><mi mathvariant="normal">β</mi><msub><mrow><mi>e</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>H</mi></mrow></mrow><mrow><mi>k</mi></mrow></msub><mi>y</mi><msub><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msub><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">β</mi><mo>=</mo><mo>‖</mo><msub><mrow><mi>r</mi></mrow><mrow><mn>0</mn></mrow></msub><msub><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\|b - A x\|_2 = \|\beta e_1 - \bar H_k y\|_2, \qquad \beta = \|r_0\|_2.</annotation></semantics></math></p>
+<p>It is solved progressively with <b>Givens rotations</b>: every new column of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>H</mi></mrow></mrow><annotation encoding="application/x-tex">\bar H</annotation></semantics></math> first receives all previous rotations, then a new one that annihilates the subdiagonal element <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>h</mi></mrow><mrow><mi>j</mi><mo>+</mo><mn>1</mn><mo>,</mo><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">h_{j+1,j}</annotation></semantics></math>. The right-hand side <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><mi mathvariant="normal">β</mi><msub><mrow><mi>e</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">g = \beta e_1</annotation></semantics></math> is rotated along, and its last entry <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>|</mo></mrow><annotation encoding="application/x-tex">|g_{j+1}|</annotation></semantics></math> is the norm of the residual – without another application of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math>.</p>
+<p>The basis grows by one vector of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> per step, and orthogonalisation costs <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>k</mi><mi>n</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(k n)</annotation></semantics></math> per step. After <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> steps (default <code>NEUSTART = 30</code>) the approximation is therefore formed and the method restarts with the true residual: GMRES(m). The restart forgets the Krylov space; for difficult matrices this can slow convergence down considerably (in the probe GMRES(2) on the convection problem still has a relative residual of 0.4 after 20 steps).</p>
+<p><b>Orthogonalisation:</b> modified Gram-Schmidt, and if the norm of the new vector drops below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><msqrt><mn>2</mn></msqrt></mrow><annotation encoding="application/x-tex">1/\sqrt 2</annotation></semantics></math> of its initial value – a sign of cancellation – a second pass (criterion after Daniel, Gragg, Kaufman and Stewart). The corrections of the second pass are added into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>H</mi></mrow></mrow><annotation encoding="application/x-tex">\bar H</annotation></semantics></math>.</p>
+<p><b>Right preconditioning:</b> the method solves <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>u</mi><mo>=</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">A M^{-1} u = b</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>u</mi></mrow><annotation encoding="application/x-tex">x = M^{-1} u</annotation></semantics></math>. The minimised residual is then the <b>unpreconditioned</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>−</mo><mi>A</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">b - A x</annotation></semantics></math>; the tolerance means the same with and without preconditioner.</p>
+
+<h3>Pseudocode – <code>Gmres.loese(a, b, x0, m, absTol, relTol, neustart, maxIt)</code></h3>
+<pre class="pseudo">k ← min(neustart, n);  x ← x0 or 0;  r ← b − A x;  it ← 0
+<b>repeat</b>:
+    β ← ‖r‖
+    <b>if</b> β ≤ target: <b>done</b>;   <b>if</b> it ≥ maxIt: end “maximum reached”
+    v₀ ← r / β;   g ← (β, 0, …, 0)
+    <b>for</b> j ← 0 <b>to</b> k−1, <b>while</b> it &lt; maxIt:
+        it ← it + 1
+        w ← A (M⁻¹ v_j);   before ← ‖w‖
+        <b>for</b> i ← 0 <b>to</b> j:  h[i][j] ← w·v_i;  w ← w − h[i][j] v_i              <i>MGS</i>
+        <b>if</b> ‖w‖ &lt; 0.7071 · before:                                          <i>second pass</i>
+            <b>for</b> i ← 0 <b>to</b> j:  c ← w·v_i;  h[i][j] ← h[i][j] + c;  w ← w − c v_i
+        h[j+1][j] ← ‖w‖
+        apply old Givens rotations 0..j−1 to column j
+        d ← hypot(h[j][j], h[j+1][j])
+        <b>if</b> d = 0 or not finite: stop “Arnoldi breakdown”
+        cs[j] ← h[j][j]/d;  sn[j] ← h[j+1][j]/d;  h[j][j] ← d;  h[j+1][j] ← 0
+        g[j+1] ← −sn[j] g[j];   g[j] ← cs[j] g[j]
+        lucky ← ‖w‖ ≤ 1e−14 · before                                        <i>Krylov space invariant</i>
+        <b>if not</b> lucky: v_{j+1} ← w / ‖w‖
+        <b>if</b> lucky <b>or</b> |g[j+1]| ≤ target: <b>break</b>
+    solve H y = g (upper triangle) backwards
+    x ← x + M⁻¹ (Σ y_i v_i);   r ← b − A x                                     <i>true residual</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-math/src/envisionz/math/krylov/Gmres.java</code>. The factor 0.7071 is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><msqrt><mn>2</mn></msqrt></mrow><annotation encoding="application/x-tex">1/\sqrt 2</annotation></semantics></math>: reorthogonalisation happens when more than half of the squared norm is lost (until 2026-09-28 the class description said “half of the norm”, corrected, WT5).</p>
+
+<h2 id="bicgstab">BiCGStab</h2>
+<p>BiCGStab (van der Vorst 1992) combines the biconjugate gradient method – a short recurrence for non-symmetric matrices whose residuals are orthogonal to a second, “shadow” Krylov space built from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>r</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\hat r_0</annotation></semantics></math> – with a smoothing step that minimises the residual along <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><mi>A</mi><mover accent="true"><mrow><mi>s</mi></mrow><mo stretchy="true">^</mo></mover></mrow><annotation encoding="application/x-tex">t = A \hat s</annotation></semantics></math> in every iteration. Memory is fixed, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">M^{-1}</annotation></semantics></math> are applied twice per iteration. In exchange the method minimises nothing global; the residual history can jump, and the recurrence can <b>break down</b> when a denominator becomes zero.</p>
+<h3>Pseudocode – <code>BiCgStab.loese(a, b, x0, m, absTol, relTol, maxIt)</code></h3>
+<pre class="pseudo">r ← b − A x;  <b>if</b> ‖r‖ ≤ target: <b>done</b>
+r̂₀ ← r;  ρ ← α ← ω ← 1;  v ← p ← 0
+<b>for</b> it ← 1 <b>to</b> maxIt:
+    ρ_new ← r̂₀·r;         <b>if</b> ρ_new = 0 or not finite: breakdown
+    β ← (ρ_new/ρ)(α/ω)
+    p ← r + β (p − ω v);   p̂ ← M⁻¹ p;   v ← A p̂
+    r̂₀v ← r̂₀·v;           <b>if</b> r̂₀v = 0 or not finite: breakdown
+    α ← ρ_new / r̂₀v;   s ← r − α v
+    <b>if</b> ‖s‖ ≤ target:  x ← x + α p̂;  check the true residual, otherwise restart with it
+    ŝ ← M⁻¹ s;   t ← A ŝ;   <b>if</b> t·t = 0: breakdown
+    ω ← (t·s)/(t·t);   x ← x + α p̂ + ω ŝ;   r ← s − ω t
+    <b>if</b> ω = 0: breakdown
+    <b>if</b> ‖r‖ ≤ target: check the true residual, otherwise restart
+    ρ ← ρ_new</pre>
+<p class="quelle">Source: <code>envisionz-framework-math/src/envisionz/math/krylov/BiCgStab.java</code>. On restart <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>r</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\hat r_0</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ρ</mi><mo>,</mo><mi mathvariant="normal">α</mi><mo>,</mo><mi mathvariant="normal">ω</mi></mrow><annotation encoding="application/x-tex">\rho, \alpha, \omega</annotation></semantics></math> are reset.</p>
+<p>A breakdown is not rare for small unfavourable matrices: for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">(</mo><mtable><mtr><mtd style="text-align:left"><mn>0</mn></mtd><mtd style="text-align:left"><mn>1</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>1</mn></mtd><mtd style="text-align:left"><mn>0</mn></mtd></mtr></mtable><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">A = \left(\begin{matrix} 0 &amp; 1 \\ 1 &amp; 0 \end{matrix}\right)</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mo>*</mo></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x_* = (0, 1)</annotation></semantics></math> we have <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">b = (1, 0)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>=</mo><mi>A</mi><mi>r</mi><mo>=</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">v = A r = (0, 1)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>r</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>0</mn></mrow></msub><mo>⋅</mo><mi>v</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\hat r_0 \cdot v = 0</annotation></semantics></math> in the very first step. BiCGStab reports “Zusammenbruch: r0 . v = 0.0”; GMRES solves the same problem in 2 steps (case NM5-BS-03 of the probe).</p>
+
+<h2 id="vorkonditionierung">Preconditioning</h2>
+<p>A preconditioner <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>≈</mo><mi>A</mi></mrow><annotation encoding="application/x-tex">M \approx A</annotation></semantics></math> is a cheap approximation with which, instead of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>x</mi><mo>=</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">A x = b</annotation></semantics></math>, one solves the equivalent system <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>A</mi><mi>x</mi><mo>=</mo><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>b</mi></mrow><annotation encoding="application/x-tex">M^{-1} A x = M^{-1} b</annotation></semantics></math> (left) or <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>u</mi><mo>=</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">A M^{-1} u = b</annotation></semantics></math> (right). If <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>A</mi></mrow><annotation encoding="application/x-tex">M^{-1} A</annotation></semantics></math> is closer to the identity, the eigenvalues are more clustered and the Krylov method needs fewer steps. Only the application <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>r</mi></mrow><annotation encoding="application/x-tex">z = M^{-1} r</annotation></semantics></math> is required – the interface <code>Vorkonditionierer</code> has exactly this one method.</p>
+<ul>
+  <li><code>Vorkonditionierer.keiner()</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mi>r</mi></mrow><annotation encoding="application/x-tex">z = r</annotation></semantics></math>.</li>
+  <li><code>Vorkonditionierer.jacobi(d)</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mi>r</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>/</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">z_i = r_i / d_i</annotation></semantics></math> with the diagonal <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math>. Helps with rows or columns that differ by orders of magnitude. Zero or non-finite diagonal entries are rejected on creation.</li>
+</ul>
+<p>For CG, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> must be symmetric positive definite; the class checks this indirectly via <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>r</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>z</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">r^T z &gt; 0</annotation></semantics></math>. Effect in the probe: on the two-sided scaled 1D Poisson matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mi>A</mi><mi>D</mi></mrow><annotation encoding="application/x-tex">D A D</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mo>=</mo><mi>diag</mi><mo stretchy="false">(</mo><msup><mn>10</mn><mrow><mn>3</mn><mi>i</mi><mo>/</mo><mn>99</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">D = \operatorname{diag}(10^{3i/99})</annotation></semantics></math>, CG needs 1502 steps without preconditioner, with Jacobi 100; GMRES(30) on the column-scaled convection problem uses up the allowed 3000 steps without preconditioner, with Jacobi from the right 571 suffice; BiCGStab needs 245 instead of the full 5000.</p>
+<div class="hinweis"><b>Convention in the framework:</b> ILU(0) and SSOR are deliberately missing; they need the sparsity structure. Any existing solver can however be plugged in as a preconditioner – for instance an LU factorisation of an approximate matrix. Jacobi from the <b>right</b> compensates column scaling, not row scaling; the first version of probe problem NM5-P10 was designed wrongly because of this (finding during construction).</div>
+
+<h2 id="abbruch">Stopping and the true residual</h2>
+<p>All three methods carry the residual along by a recurrence, not via <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>−</mo><mi>A</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">b - A x</annotation></semantics></math>. In floating point the two drift apart; the recursive one may keep falling while the true one stagnates. Therefore:</p>
+<ul>
+  <li>The target is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>‖</mo><mi>b</mi><mo>−</mo><mi>A</mi><mi>x</mi><msub><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msub><mo>≤</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mo stretchy="false">(</mo><mtext>absTol</mtext><mo>,</mo><mspace width="0.3333em"/><mtext>relTol</mtext><mspace width="0.1667em"/><mo>‖</mo><mi>b</mi><msub><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\|b - A x\|_2 \le \max(\text{absTol},\ \text{relTol}\,\|b\|_2)</annotation></semantics></math>; both tolerances 0 are rejected.</li>
+  <li>When the recursive residual reaches the target, the true one is recomputed. If it misses the target, the method restarts with the true residual (CG: new search direction <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><msup><mrow><mi>M</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>r</mi></mrow><annotation encoding="application/x-tex">p = M^{-1} r</annotation></semantics></math>; BiCGStab: new shadow vector) until the maximum is reached.</li>
+  <li>The result <code>Loesung</code> always carries the residual <b>freshly computed</b> at the end, the relative residual, the iterations, the counted operator calls, <code>konvergiert</code> and a message. Converged means: no breakdown and true residual below the target – even if the maximum was reached on the way.</li>
+  <li>The Euclidean norm is computed scaled by the largest entry and therefore does not overflow even for entries around <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>200</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{200}</annotation></semantics></math>.</li>
+</ul>
+<div class="hinweis"><b>Convention in the framework:</b> defaults: start at 0, no preconditioner, GMRES restart after 30 steps. For GMRES <code>maxIt</code> counts Arnoldi steps over all restarts. Operator calls are counted exactly; for CG they are start + one per step + final computation, so that five steps give 7 calls (check NM5-CG-04).</div>
+
+<h2 id="pruefung">How it is checked</h2>
+<p>The <code>Krylovprobe</code> (75 checks) computes ten problems with prescribed solution <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mo>*</mo></mrow></msub></mrow><annotation encoding="application/x-tex">x_*</annotation></semantics></math> (NM5-P01 … P10, as Matrix Market files under <code>envisionz-examples/math/krylov</code>):</p>
+<table>
+  <tr><th>Case</th><th>Problem</th><th>Anchor</th></tr>
+  <tr><td>CG-01</td><td>1D Poisson, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>100</mn></mrow><annotation encoding="application/x-tex">n = 100</annotation></semantics></math></td><td>at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> steps (100), error against <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mo>*</mo></mrow></msub></mrow><annotation encoding="application/x-tex">x_*</annotation></semantics></math> below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>, reported = recomputed residual</td></tr>
+  <tr><td>CG-02</td><td>2D Poisson <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>30</mn><mo>×</mo><mn>30</mn></mrow><annotation encoding="application/x-tex">30 \times 30</annotation></semantics></math></td><td>below 200 steps (108), error below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math></td></tr>
+  <tr><td>CG-03</td><td>1D Poisson scaled on both sides</td><td>Jacobi at most half the steps (100 versus 1502)</td></tr>
+  <tr><td>CG-04</td><td>diagonal, eigenvalues 1, 2, 3, 5, 8, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>200</mn></mrow><annotation encoding="application/x-tex">n = 200</annotation></semantics></math></td><td>at most 5 steps, exactly 7 operator calls</td></tr>
+  <tr><td>CG-05, 08</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>diag</mi><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{diag}(1, -1)</annotation></semantics></math>; negative definite preconditioner</td><td>not converged, message names the reason</td></tr>
+  <tr><td>GM-01, 04</td><td>1D convection-diffusion, upwind, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>200</mn></mrow><annotation encoding="application/x-tex">n = 200</annotation></semantics></math></td><td>GMRES(30) error below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math>; GMRES(2) respects the maximum 20</td></tr>
+  <tr><td>GM-02</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mi>D</mi><msup><mrow><mi>S</mi></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">S D S^{-1}</annotation></semantics></math> with four eigenvalues, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>40</mn></mrow><annotation encoding="application/x-tex">n = 40</annotation></semantics></math></td><td>full GMRES in at most 4 steps</td></tr>
+  <tr><td>GM-03, BS-02</td><td>dense, diagonally dominant, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>30</mn></mrow><annotation encoding="application/x-tex">n = 30</annotation></semantics></math></td><td>error below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-10}</annotation></semantics></math></td></tr>
+  <tr><td>GM-05, BS-04</td><td>scaled problems with Jacobi</td><td>at most half the steps; from the right the tolerance applies to the unpreconditioned residual</td></tr>
+  <tr><td>BS-03</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo><mo>,</mo><mo stretchy="false">[</mo><mn>1</mn><mo>,</mo><mn>0</mn><mo stretchy="false">]</mo><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[[0,1],[1,0]]</annotation></semantics></math></td><td>breakdown at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>r</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>0</mn></mrow></msub><mo>⋅</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">\hat r_0 \cdot v</annotation></semantics></math> reported, GMRES solves in 2 steps</td></tr>
+  <tr><td>XX-01</td><td>1D Poisson with all three</td><td>the same solution to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-8}</annotation></semantics></math></td></tr>
+</table>
+<p>In addition the input checks (empty or non-finite right-hand side, wrong start vector, tolerances 0, <code>maxIt</code> 0, <code>neustart</code> 0) and the overflow-safe norm. 11 counter-probes in <code>test/gegenproben.dat</code>; during construction the counter-probe for the breakdown <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mover accent="true"><mrow><mi>r</mi></mrow><mo stretchy="true">^</mo></mover></mrow><mrow><mn>0</mn></mrow></msub><mo>⋅</mo><mi>v</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\hat r_0 \cdot v = 0</annotation></semantics></math> at first stayed green because the method stopped one step later at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>⋅</mo><mi>t</mi><mo>=</mo></mrow><annotation encoding="application/x-tex">t \cdot t =</annotation></semantics></math> NaN – the probe now requires the correct diagnosis.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>CG assumes symmetry without checking it; for non-symmetric <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> it does not converge or converges to something wrong. Only lack of definiteness is detected (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>p</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>A</mi><mi>p</mi><mo>≤</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">p^T A p \le 0</annotation></semantics></math>).</li>
+  <li>GMRES(m) can stagnate if <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> is too small; without restart (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>≥</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">m \ge n</annotation></semantics></math>) memory grows to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>n</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">n^2</annotation></semantics></math>.</li>
+  <li>BiCGStab can break down; this is reported, not worked around. If in doubt, use GMRES.</li>
+  <li>Only Jacobi as built-in preconditioner; for difficult field problems (fine grids, strong convection) that is not enough – plug in your own <code>Vorkonditionierer</code> there.</li>
+  <li>The speed of convergence depends on the problem, not on the code: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi mathvariant="normal">κ</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt\kappa</annotation></semantics></math> for CG, the eigenvalue distribution for GMRES.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>Y. Saad: <i>Iterative Methods for Sparse Linear Systems</i>. SIAM, 2nd ed. 2003 – Krylov spaces, GMRES, preconditioning.</li>
+  <li>H. A. van der Vorst: Bi-CGSTAB: A fast and smoothly converging variant of Bi-CG for the solution of nonsymmetric linear systems. <i>SIAM J. Sci. Stat. Comput.</i> 13 (1992).</li>
+  <li>Y. Saad, M. H. Schultz: GMRES: A generalized minimal residual algorithm for solving nonsymmetric linear systems. <i>SIAM J. Sci. Stat. Comput.</i> 7 (1986).</li>
+</ul>
+
+<footer>
+envisionz-framework-math · background to <a href="index.html#krylov">Iterative solvers (Krylov)</a> · probes: <code>Krylovprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

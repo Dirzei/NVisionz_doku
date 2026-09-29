@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avro — comparison against specification and fastavro – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite aktiv" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › Avro — comparison against specification and fastavro</span><a class="sprachwahl" href="../../de/fileformats/abgleich-avro.html">Deutsch</a></div>
+<!-- erzeugt aus avro/COMPARISON.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · comparison</div>
+  <h1>Avro — comparison against specification and fastavro</h1>
+</header>
+
+<p><b>As of:</b> 2026-09-26<br><b>Our implementation:</b> <code>envisionz.fileformats.avro.AvroQuelle</code>, read-only, no third-party library<br><b>Specification:</b> Apache Avro Specification 1.12; references name the sections "Binary Encoding" and "Object Container Files"<br><b>Compared against:</b> fastavro 1.12.2 (Python)<br><b>Test bench:</b> <code>envisionz.fileformats.avro.Avroprobe</code> — 59 checks; <code>Avroaufloesungsprobe</code> — 40 checks (AV5)</p>
+<p><b>The reference implementation.</b> <b>fastavro</b> is an Avro implementation written in Cython, the usual one in Python around Kafka and data pipelines — much faster than the Apache Software Foundation's reference library <code>avro</code> and tested against it.</p>
+<p><b>Why this one.</b> Because it writes all six codecs and knows the logical types completely. The fixtures come from fastavro, the expected values from fastavro's own reading.</p>
+<p><b>Coverage, computed from the rows below:</b> of 13 features we have 12 present, 0 partial and 1 absent; the reference implementation has 12 / 0 / 1.</p>
+<p><span class="ampel gruen">●</span> present · <span class="ampel rot">●</span> absent · <span class="ampel gelb">●</span> partial · – not applicable</p>
+<p><b>The <i>Note</i> column</b> points into section 5 of this document — not into the workspace item list. The word in front says <i>what kind of thing it is</i>: <b>gap</b> is something we lack and that is open; <b>decided</b> is something we deliberately do not do; <b>property</b> is a trait of the format affecting both implementations; <b>open there</b> is a gap of the reference product. Only the gaps are work — they are collected in section 5.1 and appear as <i>one</i> item in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Feature comparison</h2>
+<p>Until 2026-09-25 Avro was recognised but not read (item BF23). It hinged on a question: the schema in the header is JSON, and this module does not depend on <code>framework-core</code>, where the house's only JSON reader lives. On 2026-09-23 the owner decided: a small JSON reader inside the module (<code>envisionz.fileformats.avro.Jsonleser</code>).</p>
+<h3>Container and codecs</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>fastavro 1.12.2</th><th>Note</th></tr>
+  <tr><td>Header: magic, metadata, sync marker</td><td>Object Container Files</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Sync marker checked after every block</td><td>Object Container Files</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property AV1</td></tr>
+  <tr><td>null, deflate (raw), bzip2, xz, zstandard</td><td>avro.codec</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>snappy with CRC-32 of the uncompressed bytes</td><td>avro.codec</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property AV2</td></tr>
+  <tr><td>Custom metadata in the header</td><td>Object Container Files</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+</table>
+<h3>Schema and values</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>fastavro 1.12.2</th><th>Note</th></tr>
+  <tr><td>All primitive types, zigzag varints</td><td>Binary Encoding</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>record, enum, array, map, union, fixed</td><td>Complex Types</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Namespaces and recursive named types</td><td>Names</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property AV3</td></tr>
+  <tr><td>Logical types: decimal, uuid, date, time, timestamp, local-timestamp, duration</td><td>Logical Types</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>decided AV4</td></tr>
+  <tr><td>An unsuitable logical type is ignored</td><td>Logical Types</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Schema resolution (reader vs writer schema)</td><td>Schema Resolution</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property AV5</td></tr>
+  <tr><td>Reader-schema defaults per the specification (missing fields of a record default, logical type)</td><td>Schema Resolution</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there AV7</td></tr>
+  <tr><td>Writing</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>decided AV6</td></tr>
+</table>
+
+<h2 id="a2">What was measured</h2>
+<p>Thirteen files, <b>written by fastavro</b> (<code>docs/avro/erzeuge.py</code>): a schema of 21 fields — all primitive and complex types and six logical ones — in seven records and three blocks, once per codec; plus the recipe from OFFENE-PUNKTE, a schema without a record, a recursive one and an empty one. <b>Equal</b> in every value fastavro reads (<code>docs/avro/auskunft.txt</code>); the six codecs yield the same rows.</p>
+<p>Four mutations go red: without zigzag (17 failures), deflate read as zlib (2), without the snappy CRC check (1), without the sync check (3).</p>
+
+<h2 id="a3">What is hard about the format</h2>
+<p><b>Without the schema nothing can be read.</b> Values carry neither names nor lengths nor types; whoever misreads the schema reads nonsense from the first deviation on without noticing. The only feedback is the sync marker at the block end — and the block's byte count, which has to add up.</p>
+<p><b>Two codecs are not what their name says.</b> <code>deflate</code> is raw, without the zlib frame; <code>snappy</code> is the raw block followed by four bytes of CRC-32 — not snappy's framing format.</p>
+
+<h2 id="a4">The items</h2>
+<p>The <i>Note</i> column names the kind in front of the identifier. Only the <b>gaps</b> are work.</p>
+<h3>Our open gaps — this is the work</h3>
+<p><b>Since 2026-09-26 nothing is left here.</b> AV5, schema resolution, is built and now listed under 5.3.</p>
+<h3>Deliberate decisions</h3>
+<p><b>AV6</b> (decided) — Writing</p>
+<p>fastavro writes. This module reads.</p>
+<p><b>AV4</b> (decided) — decimal as text, timestamps in UTC</p>
+<p><code>decimal</code> comes out as text so that no digit is lost — as a floating-point number 0.1 would no longer be 0.1. Timestamps become <code>ZEITPUNKT</code> in UTC; fastavro returns them with time zone UTC. Composite values come as JSON text, bytes inside them in hex.</p>
+<h3>Properties of the format</h3>
+<p><b>AV1</b> (property) — The sync marker is checked</p>
+<p>If it does not match after a block, reading stops there and it is reported. The records before it stay readable.</p>
+<p><b>AV2</b> (property) — The CRC-32 after snappy is checked</p>
+<p>fastavro checks it too. A block whose checksum fails is not handed out.</p>
+<p><b>AV3</b> (property) — Recursive types stay finite</p>
+<p>A named type is registered before its fields; a reference to it is the same object. A field's description names named types by name only.</p>
+<p><b>AV5</b> (property) — Schema resolution with a reader schema</p>
+<p><code>AvroQuelle.oeffne(file, readerSchema)</code> reads a file with a schema other than the one it was written with (<code>Aufloesung</code>). Fields are matched by name or field alias, record names also by alias; a field only in the writer is skipped, one only in the reader gets its default. Promotions int → long/float/double, long → float/double, float → double, string ↔ bytes. An enum symbol unknown to the reader becomes its default. If the reader is a union, the first matching branch applies. What can be decided from the schemas fails on <b>opening</b>, with location; what depends on a value — an unknown symbol without default, a union branch that matches nowhere — fails at that <b>record</b>, and the records before stay readable. fastavro behaves the same: in all ten cases it fails at the same record. Without a reader schema the file's own applies.</p>
+<h3>Findings against the reference implementation</h3>
+<p><b>AV7</b> (open there) — fastavro returns defaults raw</p>
+<p>Two places, both concerning reader-schema defaults, measured with fastavro 1.12.2. A record default that omits a field (<code>{"a":7}</code> for a record with <code>a</code> and <code>b</code>, <code>b</code> having its own default <code>"x"</code>) is returned by fastavro as written — Apache Avro fills <code>b</code> with its default, and so does this reader. And fastavro does not apply the logical type to the default: a <code>decimal(5,2)</code> with default <code>"\u0001\u0000"</code> comes out as those two characters, here as <code>2.56</code>. The probe puts in the value per the specification at exactly these places and checks it separately.</p>
+
+<h2 id="a5">The wider field — what else reads and writes these files</h2>
+<p>This table does <b>not</b> count towards the coverage figures.</p>
+<table>
+  <tr><th>Program</th><th>reads</th><th>writes</th><th>Note</th></tr>
+  <tr><td><b>Apache Kafka</b> mit Schema Registry</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The most common occasion; there mostly single messages without a container.</td></tr>
+  <tr><td><b>Apache Spark</b>, <b>Hive</b>, <b>Flink</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Avro as a row format next to Parquet.</td></tr>
+  <tr><td><b>fastavro</b>, <b>avro</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>fastavro is this comparison's reference product.</td></tr>
+  <tr><td><b>Apache Avro</b> (Java)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The reference implementation.</td></tr>
+</table>
+
+<h2 id="a6">The Java implementation — where this reader stands among its own kind</h2>
+<p><b>Apache Avro</b> for Java is the reference implementation and a pure reimplementation; it brings Jackson as its JSON reader. This reader is smaller: no code generator, no writing; schema resolution it can do since 2026-09-26. <b>Not measured.</b></p>
+
+<footer>
+Generated from <code>envisionz-framework-fileformats/docs/avro/COMPARISON.md</code> · back to the <a href="index.html#tabellen">overview</a> · all formats in the <a href="abgleich.html">comparison</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

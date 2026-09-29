@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From the CSV cell to the triangle mesh – one data layer for every application – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag aktiv" href="index.html">framework-data</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#tabelle">CSV and the in-memory table</a>
+<a class="rubrik" href="#zahl">Numbers from text</a>
+<a class="rubrik" href="#einheiten">The unit system of the workspace</a>
+<a class="rubrik" href="#h2">Storage in H2</a>
+<a class="rubrik" href="#formel">Computed columns</a>
+<a class="rubrik" href="#schnitt">Slices, grids, statistics</a>
+<a class="rubrik" href="#tri">Triangulation in 2D</a>
+<a class="rubrik" href="#rand">Boundary methods and manual correction</a>
+<a class="rubrik" href="#drei">Meshes and surfaces in 3D</a>
+<a class="rubrik" href="#tecplot">Tecplot data and layouts</a>
+<a class="rubrik" href="#hdf5">Bridge from HDF5 to the table</a>
+<a class="rubrik" href="#vergleich">Comparing two data states and handing over</a>
+<a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-data</span><a class="sprachwahl" href="../../de/data/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-data</div>
+  <h1>From the CSV cell to the triangle mesh – one data layer for every application</h1>
+  <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. Tables from CSV, Tecplot and HDF5,
+  the unit system, storage in H2, computed columns, slices and grids for charts, triangulation in 2D and 3D,
+  comparison of two data states. No user interface. For each method: purpose, API, use in the framework, applications, examples.
+  The examples are shortened.
+  Many API names are German (e.g. <code>Zahlenleser</code> = number reader, <code>Einheitentafel</code> = unit table, <code>Randverfahren</code> = boundary method, <code>Gitterfinder</code> = grid finder); they are shown unchanged.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>84</b><span>source files in 15 packages</span></div>
+  <div class="zahl"><b>22</b><span>quantity kinds, 133 unit entries with factor and offset</span></div>
+  <div class="zahl"><b>3 + 3</b><span>triangulation and boundary methods behind registries</span></div>
+  <div class="zahl"><b>1</b><span>third-party library: H2 2.5.250</span></div>
+  <div class="zahl"><b>27</b><span>probe classes</span></div>
+  <div class="zahl"><b>17</b><span>counter-probes</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>One layer without a user interface.</b> Tables, units, storage and geometry for all applications, without Swing. Above it sit chart, swing and the apps; below it only framework-api and, for HDF5, framework-fileformats.</div>
+  <div><b>Units with factor and offset.</b> A converter with factors only returns 0 K for 0 °C. Unknown units stay unchanged, and the name heuristic sets only the quantity kind, never a unit.</div>
+  <div><b>One place for numbers from text.</b> <code>Zahlenleser</code> for file data, <code>Eingabezahl</code> for typed input – instead of scattered <code>replace(',', '.')</code>. The probes record what happens today, including where it goes wrong.</div>
+  <div><b>Scale-proof triangulation.</b> Delaunay is not scale-invariant. Computation runs normalised to [0,1] per axis with exact predicates; the original coordinates are returned bit for bit.</div>
+  <div><b>Known structure before Delaunay.</b> On a CFD mesh Delaunay filled concave regions and gave 102 % excess area. Where indices are known or can be read from the positions, the grid is split directly.</div>
+  <div><b>Limits against malicious files.</b> Tecplot value counts against the file size, formulas at most 20,000 characters and 200 levels – a message instead of a memory or stack overflow.</div>
+</div>
+
+<!-- =============================================================== TABLE -->
+<h2 id="tabelle">CSV and the in-memory table <span class="paket">envisionz.data.csv</span></h2>
+
+<div class="karte">
+  <h3><code>CsvParser</code>, <code>CsvTypeDetector</code>, <code>CsvWriter</code>, <code>LoadedTable</code>, <code>ColumnSpec</code></h3>
+  <p class="zweck">RFC 4180 without a third-party library: quoting, multi-line fields, selectable delimiter and charset, findings instead of silent repair. Type detection looks at the first 100 rows and recognises <code>INTEGER</code>, <code>DOUBLE</code>, <code>TIMESTAMP</code>, <code>VARCHAR</code>, with decimal point and decimal comma. <code>LoadedTable</code> holds the table as text, with unit information per column, and offers the transformations of the 2020 table tools.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new CsvParser(trenner[, zeichensatz]).parse(pfad)</code> → <code>ParseResult</code>: <code>header</code>, <code>rows</code>, <code>befunde</code></li>
+      <li><code>new CsvTypeDetector().detectAndApply(tabelle)</code>, <code>detect(...)</code>, <code>guess(zelle)</code></li>
+      <li><code>LoadedTable</code>: <code>columns()</code>, <code>rows()</code>, <code>valueAt(r, c)</code>, <code>transposed()</code>, <code>blockTransfer()</code>, <code>withoutEmptyColumns()</code>, <code>withSiValues(registry)</code></li>
+      <li><code>ColumnSpec</code>: name, <code>ColumnType</code>, quantity kind, source unit, alias, <code>displayLabel()</code></li>
+      <li><code>CsvWriter.write(tabelle, trenner, pfad[, einheitenkopf])</code> – header <code>NAME [unit]</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">framework-swing: CsvLoadPanel, DataTypePanel, DbLoadPanel</span><span class="chip">app-charts</span><span class="chip">app-maps</span><span class="chip">app-epds</span><span class="chip">app-eqnparser</span><span class="chip">app-stats</span><span class="chip">app-neural</span><span class="chip">app-acft</span><span class="chip">app-hdf5reader</span><span class="chip">app-pdfdigitizer</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Every file that enters an application as a table: test-bed data, cycle calculations, map points.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – the loading path as <code>CsvLoadPanel</code> takes it</h4>
+<pre><code>CsvParser.ParseResult res = new CsvParser(';').parse(datei);
+List&lt;ColumnSpec&gt; cols = new ArrayList&lt;&gt;();
+for (String h : res.header) cols.add(new ColumnSpec(h, ColumnType.VARCHAR));
+LoadedTable t = new LoadedTable(cols, res.rows, datei.toString());
+UnitHeaders.applyHeaderConvention(t, registry);                        // 1. header "T30 [K]"
+UnitAssignmentStore.apply(t, UnitAssignmentStore.load(datei));         // 2. sidecar file
+QuantityNameDefaults.applyNameDefaults(t);                             // 3. name heuristic
+new CsvTypeDetector().detectAndApply(t);
+LoadedTable si = t.withSiValues(registry);                             // once, as a copy</code></pre></div>
+</div>
+
+<!-- =============================================================== NUMBERS -->
+<h2 id="zahl">Numbers from text <span class="paket">envisionz.data.zahl</span></h2>
+
+<div class="karte">
+  <h3><code>Zahlenleser</code> and <code>Eingabezahl</code> – the one place</h3>
+  <p class="zweck"><code>Zahlenleser</code> reads file data (CSV, H2 cells, table cells, envelope files), <code>Eingabezahl</code> typed text. The <code>heute</code> (“today”) forms reproduce the former rule verbatim, so that consolidating them changed no behaviour. The house rule with an explicit notation is ready.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Zahlenleser.heute(roh[, ersatz])</code>, <code>heuteEndlich(roh)</code>, <code>istZahlHeute(roh)</code></li>
+      <li><code>Zahlenleser.lies(roh, Schreibweise)</code> – <code>STRENG</code>, <code>DEUTSCH</code>, <code>ENGLISCH</code>; anything that does not fit gives <code>null</code></li>
+      <li><code>Eingabezahl.lies(roh[, ersatz])</code>, <code>Eingabezahl.heute(roh[, ersatz])</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">framework-swing: Eingabefeld, axis and marker cards</span><span class="chip">framework-chart: EnvelopeOverlay</span><span class="chip">app-charts</span><span class="chip">app-maps</span><span class="chip">app-acft</span><span class="chip">app-neural</span><span class="chip">app-stats</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Interpreting input fields and file cells uniformly; switching to the coming stricter rule in one place.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – today and under the house rule</h4>
+<pre><code>Double a = Zahlenleser.heute("1,500");                                  // 1.5 (today's rule)
+Double b = Zahlenleser.lies("1,500", Zahlenleser.Schreibweise.ENGLISCH); // 1500.0</code></pre></div>
+  <div class="hinweis"><code>Zahlenleser.lies(roh, Schreibweise)</code> has no caller yet; the probes measure today that <code>"1,500"</code> in a comma-separated file is read as 1.5.</div>
+</div>
+
+<!-- =============================================================== UNITS -->
+<h2 id="einheiten">The unit system of the workspace <span class="paket">envisionz.data.units</span></h2>
+
+<div class="karte">
+  <h3><code>UnitRegistry</code>, <code>QuantityKind</code>, <code>UnitProfile</code></h3>
+  <p class="zweck">Every unit linear-affine to the SI base of its quantity kind (<code>factor·v + offset</code>), 22 quantity kinds from temperature via flow function to reduced speed. Three profiles: SI, Imperial and RR, the historic mixed system with K, psia and CHU/lb. Unknown units are returned unchanged – nothing is guessed.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>convert(wert, von, nach)</code>, <code>convertDelta(delta, von, nach)</code>, <code>toBase</code>, <code>fromBase</code></li>
+      <li><code>kindOf(einheit)</code>, <code>unitsFor(art)</code>, <code>alternativesFor(einheit)</code>, <code>isConvertible(a, b)</code>, <code>addUnit(...)</code></li>
+      <li><code>QuantityKind.byId(id)</code>, <code>baseUnit()</code></li>
+      <li><code>UnitProfile.si()</code>, <code>imp()</code>, <code>rr()</code>, <code>unitFor(art)</code>, <code>withUnit(art, einheit)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">framework-reporttable: RegistryRechner</span><span class="chip">framework-swing: CsvLoadPanel, DataTypePanel</span><span class="chip">app-charts: DisplayUnits</span><span class="chip">app-maps</span><span class="chip">app-epds</span><span class="chip">app-eqnparser</span><span class="chip">app-report</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Making measurements and calculations in different unit systems comparable, display in SI, Imperial or RR.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – absolute and as a difference</h4>
+<pre><code>UnitRegistry reg = new UnitRegistry();
+double t  = reg.convert(20.0, "°C", "K");        // 293.15
+double dt = reg.convertDelta(10.0, "°C", "K");   // 10 – without offset
+String p  = UnitProfile.rr().unitFor(QuantityKind.PRESSURE);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>UnitHeaders</code>, <code>UnitAssignmentStore</code>, <code>QuantityNameDefaults</code> – where a column gets its unit</h3>
+  <p class="zweck">Order: header before sidecar before heuristic. The header <code>NAME [unit]</code> is the explicit declaration; the sidecar <code>&lt;name&gt;.units.properties</code> next to the CSV remembers quantity kind, unit and alias per column; the heuristic recognises station identifiers of cycle calculations (T30, P25, …) and sets only the quantity kind.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>UnitHeaders.applyHeaderConvention(tabelle, registry)</code></li>
+      <li><code>UnitAssignmentStore.load(csv)</code>, <code>apply(tabelle, gespeichert)</code>, <code>save(csv, tabelle, optionen)</code>, <code>sidecarFor(csv)</code></li>
+      <li><code>QuantityNameDefaults.guess(name)</code>, <code>applyNameDefaults(tabelle)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">framework-swing: CsvLoadPanel, DataTypePanel</span><span class="chip">app-maps</span><span class="chip">app-charts</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Finding units once assigned again when the same file is loaded next time.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== H2 -->
+<h2 id="h2">Storage in H2 <span class="paket">envisionz.data · envisionz.data.h2</span></h2>
+
+<div class="karte">
+  <h3><code>DataStore</code>, <code>H2DataStore</code>, <code>Einheitentafel</code>, <code>SqlLog</code>, <code>Tabellenwahl</code></h3>
+  <p class="zweck">The only <code>DataStore</code> implementation stores tables in an H2 file database: writing with a primary key in batches of 1000 rows, identifiers always quoted, arbitrary SELECTs for slicing and binning. The database closes when the last connection to the file goes – no hard <code>SHUTDOWN</code>, so that parallel readers are not cut off. Units live in a side table <code>&lt;table&gt;_UNITS</code>, read and written in one place.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>open(pfad)</code>, <code>close()</code>, <code>writeTable(name, tabelle)</code>, <code>readTable(name)</code>, <code>query(sql)</code>, <code>execute(sql)</code></li>
+      <li><code>listTables()</code>, <code>dropTable(name)</code>, <code>tableExists(name)</code>; <code>cacheKb()</code>, <code>setzeCacheKb(kb)</code></li>
+      <li><code>Einheitentafel.lies(db, tabelle)</code>, <code>schreibe(db, tabelle, spalten)</code>, <code>wendeAn(eintraege, spalten)</code></li>
+      <li><code>SqlLog.setEnabled(an)</code>, <code>entries()</code>, <code>addListener(l)</code>; <code>Tabellenwahl.datentabellen(alle)</code>, <code>waehle(alle, bevorzugt…)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">framework-swing: CsvLoadPanel, DbLoadPanel, Rahmeneinstellungen</span><span class="chip">app-charts: H2TableData, DbLogDialog</span><span class="chip">app-maps: H2OperatingData</span><span class="chip">app-epds: EpdsMerge</span><span class="chip">app-eqnparser: RunStore</span><span class="chip">app-stats</span><span class="chip">app-acft</span><span class="chip">app-pdfdigitizer</span><span class="chip">app-settings: DatenbankKarte</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Large data collections as a working database; operating lines, calculation runs, merged measurement series.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – store and read back filtered</h4>
+<pre><code>try (H2DataStore db = new H2DataStore()) {
+    db.open(Path.of("arbeit/messung"));          // without extension, H2 appends .mv.db
+    db.writeTable("MESSUNG", tabelle);           // replaces a table of the same name
+    Einheitentafel.schreibe(db, "MESSUNG", tabelle.columns());
+    LoadedTable teil = db.query("SELECT \"T30\", \"P30\" FROM \"MESSUNG\" WHERE \"N\" &gt; 0.9");
+}</code></pre></div>
+  <div class="hinweis">Not thread-safe: one instance per operation. <code>LOCK_MODE=0</code> means: never open the same file from two processes; several connections within one JVM are fine.</div>
+</div>
+
+<!-- =============================================================== FORMULA -->
+<h2 id="formel">Computed columns <span class="paket">envisionz.data.formula</span></h2>
+
+<div class="karte">
+  <h3><code>Formula</code> and <code>Ausdruck</code> – own reader since 26 Sep 2026</h3>
+  <p class="zweck">Columns are addressed as <code>{{plain name}}</code>, without an upper limit. Operators <code>+ - * / ^ % //</code>, factorial, absolute-value bars, implicit multiplication, <code>pi</code> and <code>e</code>, the trigonometric, hyperbolic, exponential and rounding functions, plus <code>min</code>, <code>max</code>, <code>atan2</code>. It replaces the former CAS library; the deliberate deviations are listed in the Javadoc, above all <code>sin(x)^2</code> = (sin x)².</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Formula.compile(vorlage)</code>, <code>referencedColumns()</code>, <code>eval(spaltenwert)</code>, <code>source()</code></li>
+      <li><code>Ausdruck.lies(text)</code>, <code>liesMitNamen(text)</code>, <code>variablen()</code>, <code>wert(belegung)</code>, <code>funktionen()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartDataContainer, DataPrepPanel, H2DisplayTableData</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Derived quantities in the chart, such as pressure ratio, coefficients, corrected speed.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – pressure ratio from two columns (column names illustrative)</h4>
+<pre><code>Formula f = Formula.compile("{{P30 [Pa]}} / {{P25 [Pa]}}");
+double pr = f.eval(name -&gt; zeile.get(name));        // ToDoubleFunction&lt;String&gt;</code></pre></div>
+</div>
+
+<!-- =============================================================== SLICES -->
+<h2 id="schnitt">Slices, grids, statistics <span class="paket">envisionz.data.slice · envisionz.data.analysis</span></h2>
+
+<div class="karte">
+  <h3><code>SliceExtractor</code>, <code>SliceSql</code>, <code>Regrid</code>, <code>GridSmoother</code></h3>
+  <p class="zweck">From a table comes a point slice (x, y, f) with constraints and a z window, optionally with row numbers and extra columns. For databases of a gigabyte and more, <code>SliceSql</code> generates the SQL that lets H2 filter and bin to pixels itself. <code>Regrid</code> maps scattered points onto a grid by inverse distance weighting and fills every cell; smoothing leaves NaN holes empty unless filling is requested explicitly.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>SliceExtractor.extract(tabelle, spec, anfrage)</code>, <code>ausSpalten(spalte, n, spec, anfrage)</code>, <code>fromResult(...)</code></li>
+      <li><code>ChartSpec.line(...)</code>, <code>field(x, y, f, bedingungen)</code>, <code>volume(...)</code>, <code>mitZusatz(spalten…)</code>; <code>SliceRequest.NONE</code>, <code>slab(z, halb)</code></li>
+      <li><code>SliceSql.where(...)</code>, <code>scatter(...)</code>, <code>distinct(...)</code>, <code>binned(tabelle, x, y, f, where, x0, y0, bx, by)</code></li>
+      <li><code>Regrid.toGrid(schnitt, RegridOptions.defaults().withGrid(nx, ny))</code>; <code>GridSmoother.gaussian(g, sigma[, loecherFuellen])</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, ChartSlices, H2TableData, Isonetz</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Contour plots from measurement clouds, slices through maps at a fixed third quantity, charts over databases that do not fit into memory.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – field slice and grid</h4>
+<pre><code>ChartSpec spec = ChartSpec.field(ix, iy, iF, List.of(new StructureCheck.Constraint(iN, "&gt;=", 0.9)));
+ScatterSlice s = SliceExtractor.extract(tabelle, spec, SliceRequest.NONE);
+GridSlice g    = Regrid.toGrid(s, RegridOptions.defaults().withGrid(200, 100));</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>ParameterStats</code> and <code>StructureCheck</code></h3>
+  <p class="zweck">Statistics per column (count, distinct values, minimum, maximum, equidistant) and the question whether the points form a grid or a cloud – which decides whether to contour directly or to triangulate first.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>ParameterStats.analyze(tabelle, distinctCap, relTol)</code>, <code>analyze(db, tabelle[, …])</code> → <code>ColumnStat</code></li>
+      <li><code>StructureCheck.check(tabelle, x, y, z, bedingungen, relTol)</code> → <code>Result</code>, <code>AxisInfo</code>, <code>Constraint</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: DataAnalysisPanel, VariableSelectionPanel, ChartBuilder</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Detecting empty and constant columns, suggesting a chart type, offering filter values.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== TRI -->
+<h2 id="tri">Triangulation in 2D <span class="paket">envisionz.data.tri</span></h2>
+
+<div class="karte">
+  <h3><code>Triangulierverfahren</code>, <code>BowyerWatson</code>, <code>SweepHull</code>, <code>GuibasStolfi</code>, <code>ConstrainedDelaunay</code></h3>
+  <p class="zweck">Three Delaunay methods behind a registry – a new one is entered only there, and selection fields and probes pick it up by themselves. All compute normalised to [0,1] per axis with exact circumcircle tests; <code>BowyerWatson</code> with ghost triangles instead of super vertices, <code>GuibasStolfi</code> with guaranteed O(n log n). Constrained edges as well. At 1:1, 27:1, 33333:1 and 1:1000 the same set of triangles results.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Triangulierverfahren.alle()</code>, <code>finde(kennung)</code>, <code>erzeuge(kennung)</code> – <code>BOWYER_WATSON</code>, <code>SWEEP_HULL</code>, <code>GUIBAS_STOLFI</code></li>
+      <li><code>Triangulator.triangulate(x, y, f)</code>, <code>triangulate(schnitt)</code> → <code>TriMesh</code> (<code>tris</code>, <code>adj</code>)</li>
+      <li><code>new ConstrainedDelaunay().triangulate(x, y, f, segmente)</code></li>
+      <li><code>Geom.orient2d</code>, <code>inCircle</code>, <code>inTriangleCCW</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, Verfahrenswahl, Netzkarte</span><span class="chip">app-maps: MapsRootPanel</span><span class="chip">app-acft: AcftChartBuilder</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Contour plots from scattered measurement points, maps without a regular grid.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – via the registry</h4>
+<pre><code>TriMesh netz = Triangulierverfahren.erzeuge("GUIBAS_STOLFI").triangulate(x, y, f);
+System.out.println(netz.triangleCount() + " triangles");</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>StructuredMesh</code> and <code>Gitterfinder</code> – structure instead of Delaunay</h3>
+  <p class="zweck">With known indices the grid is split into triangles directly, holes included. Without index columns <code>Gitterfinder</code> reads (i, j) from the positions of the points: growth from a start point via predicted neighbour positions, rejected on contradiction, fracture edge or sheared reading. On 77 blocks of the machieve example grids: 56 recognised exactly, 21 rejected, none wrong.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>StructuredMesh.build(x, y, f, iMax, jMax)</code>, <code>ausZellen(x, y, f, gi, gj, block)</code>, <code>merge(teile)</code></li>
+      <li><code>Gitterfinder.finde(x, y)</code> → <code>Gitter(i, j, block, bloecke, zellen)</code> or <code>null</code>; <code>untersuche(x, y)</code> → <code>Befund</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, StructuredBlocks, Gitterrollen</span><span class="chip">app-maps: Raumansicht</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Showing CFD results and maps with speed lines without wrongly filled concave regions.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – try the structure first</h4>
+<pre><code>Gitterfinder.Gitter g = Gitterfinder.finde(x, y);
+TriMesh netz = (g != null) ? StructuredMesh.ausZellen(x, y, f, g.i(), g.j(), g.block())
+                           : Triangulierverfahren.erzeuge(Triangulierverfahren.VORGABE).triangulate(x, y, f);</code></pre></div>
+</div>
+
+<!-- =============================================================== BOUNDARY -->
+<h2 id="rand">Boundary methods and manual correction <span class="paket">envisionz.data.tri</span></h2>
+
+<div class="karte">
+  <h3><code>Randverfahren</code>, <code>AlphaShape</code>, <code>ChiShape</code>, <code>Nachbesserung</code></h3>
+  <p class="zweck">Delaunay covers the convex hull; the real boundary is often concave. <code>AlphaShape</code> discards triangles by circumradius or longest edge, measured in normalised space. <code>ChiShape</code> (Duckham et al. 2008) trims only from the boundary inwards, the boundary stays a simple polygon and no point drops out. <code>Nachbesserung</code> restores or discards individual triangles by hand, identified by the table rows of their corners.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Randverfahren.anwende(netz, Einstellung)</code> → <code>Ergebnis</code> (before, removed, orphaned …); <code>KEINES</code>, <code>ALPHA</code>, <code>CHI</code></li>
+      <li><code>AlphaShape.filter(netz, alpha, kriterium)</code>, <code>autoAlpha(...)</code>, <code>sortedValuesDesc(...)</code></li>
+      <li><code>ChiShape.filter(netz, lambda)</code>, <code>filterAbsolut(netz, schwelle)</code>, <code>VORGABE_LAMBDA</code> = 2.0</li>
+      <li><code>Nachbesserung.anwende(basis, gefiltert, zeilen, liste)</code>, <code>Ausnahme.von(art, a, b, c)</code>, <code>treffer(...)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: Randwahl, Randmeldung, Netzkarte, ChartAssembly</span><span class="chip">app-maps: MapsRootPanel (AlphaShape)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Showing map and measurement regions without bridges across gaps; deciding borderline cases one by one.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – chi boundary with the default</h4>
+<pre><code>ChiShape.Ergebnis e = ChiShape.filter(netz, ChiShape.VORGABE_LAMBDA);
+TriMesh rand = e.netz();                            // e.entfernt(), e.schwelle()</code></pre></div>
+</div>
+
+<!-- =============================================================== 3D -->
+<h2 id="drei">Meshes and surfaces in 3D <span class="paket">envisionz.data.tri</span></h2>
+
+<div class="karte">
+  <h3><code>DelaunayTet</code>, <code>StructuredTets</code>, <code>IsoSurface3D</code>, <code>AxisSlice3D</code>, <code>HullSurface3D</code></h3>
+  <p class="zweck">Tetrahedralisation normalised per axis, with ghost tetrahedra and exact predicates; the output carries the raw values. For structured blocks <code>StructuredTets</code> splits every hexahedral cell directly into six tetrahedra (Kuhn/Freudenthal). On top: iso-surfaces by marching tetrahedra, axis-parallel cuts (triangle or quadrilateral per tetrahedron), the hull, colour bands on surfaces, surfaces from a height grid.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new DelaunayTet().triangulate(x, y, z, f)</code> → <code>TetMesh</code>; <code>StructuredTets.build(x, y, z, f, iMax, jMax, kMax)</code>, <code>merge</code></li>
+      <li><code>IsoSurface3D.surface(netz, niveau)</code>, <code>surface(netz, skalar, niveau)</code>, <code>levels(min, max, n)</code></li>
+      <li><code>AxisSlice3D.slice(netz, achse, wert)</code>, <code>slice2D(...)</code>; <code>HullSurface3D.faces(netz)</code></li>
+      <li><code>ContourBand3D.band(flaechen, niveaus)</code>, <code>GridSurface3D.faces(...)</code>, <code>FaceSplit.splitAt</code>, <code>clipKeep</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, StructuredBlocks</span><span class="chip">app-maps: Raumansicht</span><span class="chip">framework-chart: Isoflaechenlauf (tool)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Volume charts of maps f(x, y, z), iso-surfaces in CFD fields, cutting planes.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – iso-surface of a point cloud</h4>
+<pre><code>TetMesh tets = new DelaunayTet().triangulate(x, y, z, f);
+List&lt;double[]&gt; flaeche = IsoSurface3D.surface(tets, 0.85);</code></pre></div>
+</div>
+
+<!-- =============================================================== TECPLOT -->
+<h2 id="tecplot">Tecplot data and layouts <span class="paket">envisionz.data.tecplot · envisionz.data.tecplot.layout</span></h2>
+
+<div class="karte">
+  <h3><code>TecplotReader</code>, <code>TecplotAsciiReader</code>, <code>TecplotTables</code></h3>
+  <p class="zweck">Binary files up to about 2001: Tecplot 6.x without a signature, all fields FLOAT32, verified byte for byte on a real 6.3 file; Tecplot 7.x (<code>#!TDV</code>) with a header after the published structure, data section locked until a test file is available. Newer formats are rejected with a message. Plus ASCII with POINT and BLOCK ordering and empty zones. The byte order is not stated in the file; it follows from the version marker.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>TecplotReader.read(pfad[, optionen])</code>, <code>TecplotAsciiReader.read(pfad[, optionen])</code> → <code>TecplotDataset</code></li>
+      <li><code>TecplotDataset</code>: <code>variableNames()</code>, <code>zones()</code>, <code>requireVariable(name)</code>, <code>describe()</code></li>
+      <li><code>TecplotZone</code>: <code>iMax()</code>, <code>jMax()</code>, <code>readVariable(i)</code>, <code>readAll()</code>, <code>readConnectivity()</code></li>
+      <li><code>TecplotTables.toTable(ds[, mitIndexspalten])</code>; <code>TecplotReadOptions.builder()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: TecplotLoadPanel, Tecplotachsen</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Taking over old flow and map results that exist only as Tecplot files.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – read one variable</h4>
+<pre><code>TecplotDataset ds = TecplotReader.read(Path.of("feld.plt"));
+float[] ma = ds.zone(0).readVariable(ds.requireVariable("Ma"));
+LoadedTable t = TecplotTables.toTable(ds);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>TecplotLayoutReader</code>, <code>TecplotLayout</code>, <code>Layoutvorschlag</code>, <code>Layoutstil</code>, <code>Tecplotauszeichnung</code></h3>
+  <p class="zweck">Reads <code>.lay</code> files: frames, data files, active zones, axes with range and log scale, curves and texts; whatever is not interpreted ends up in <code>ungedeutet()</code>. From this comes a proposal of which columns belong on which axis, plus curve styles and colours and Tecplot's text markup (super- and subscripts, symbols).</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>TecplotLayoutReader.read(datei)</code>; <code>rahmen()</code>, <code>achse(name)</code>, <code>kurven()</code>, <code>texte()</code>, <code>ungedeutet()</code></li>
+      <li><code>Layoutvorschlag.aus(rahmen, spaltennamen)</code>: <code>xSpalte()</code>, <code>ySpalten()</code>, <code>befunde()</code>, <code>brauchbar()</code></li>
+      <li><code>Layoutstil.kurvenstile(rahmen)</code>, <code>diagrammtyp(rahmen)</code>; <code>Tecplotauszeichnung.deute(roh)</code>, <code>alsText(roh)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: TecplotLoadPanel, Tecplotstil, Tecplotachsen, ChartsPanel</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Rebuilding existing Tecplot charts with their axes and styles instead of setting them up again by hand.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== HDF5 -->
+<h2 id="hdf5">Bridge from HDF5 to the table <span class="paket">envisionz.data.hdf5</span></h2>
+
+<div class="karte">
+  <h3><code>Hdf5Tables</code> and <code>Hdf5Slices</code></h3>
+  <p class="zweck">Reads via the readers of framework-fileformats and builds a <code>LoadedTable</code> or directly a <code>ScatterSlice</code>. For plotting, the slice is the right way: a table holds every cell as text, 102 MB instead of 8 for a million values. Every method therefore has an explicit upper limit; beyond it comes an <code>Hdf5TableException</code> with <code>zuGross()</code>. Compound datasets yield one column per member.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Hdf5Tables.toTable(datensatz[, hoechstzahl])</code>, <code>toTable(gruppe[, laenge, hoechstzahl])</code>, <code>reihenlaengen(gruppe)</code></li>
+      <li><code>Hdf5Slices.scatter(x, f)</code>, <code>scatter(x, y, f)</code>, <code>scatterAusMitgliedern(...)</code>, <code>werte(datensatz)</code>, <code>passendeReihen(gruppe, bezug)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-hdf5reader: Hdf5RootPanel</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Using HDF5 wherever a CSV used to be: unit assignment, statistics, H2, chart.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – two datasets as a point slice</h4>
+<pre><code>Hdf5File h = Hdf5File.open(Path.of("ergebnis.h5"));
+ScatterSlice s = Hdf5Slices.scatter(h.dataset("/zeit"), h.dataset("/druck"));</code></pre></div>
+</div>
+
+<!-- =============================================================== COMPARISON -->
+<h2 id="vergleich">Comparing two data states and handing over <span class="paket">envisionz.data.vergleich · envisionz.data.events · envisionz.data.interp</span></h2>
+
+<div class="karte">
+  <h3><code>Morph</code> – the difference plot</h3>
+  <p class="zweck">Pairs the points of two slices, via key columns or, failing that, via position, using grid buckets – linear instead of quadratic; neighbouring buckets are read too. From this: difference, relative deviation or ratio. Interpolating onto the mesh of the baseline is deliberately not built – it would partly yield computed instead of measured values.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Morph.paare(a, b, schluesselA, schluesselB, toleranz)</code> → <code>Paarung(partner, ohnePartner, mehrdeutig)</code></li>
+      <li><code>Morph.rechne(a, b, paarung, groesse, schwelle)</code> → <code>Ergebnis</code>; <code>Groesse</code>: <code>DIFFERENZ</code>, <code>RELATIV</code>, <code>VERHAELTNIS</code></li>
+      <li><code>Morph.einheit(groesse, einheit)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, VariableSelectionPanel</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Comparing two calculation states or measurement campaigns as a difference contour.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – relative deviation by position</h4>
+<pre><code>Morph.Paarung p = Morph.paare(alt, neu, null, null, 1e-6);   // no keys: by position
+Morph.Ergebnis r = Morph.rechne(alt, neu, p, Morph.Groesse.RELATIV, 1e-9);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>TableAvailableEvent</code> and <code>Interp3D</code></h3>
+  <p class="zweck">The event hands a finished table to another application via the framework's EventBus, since 26 Sep 2026 with a target (<code>"charts"</code>, <code>"maps"</code>; <code>null</code> means any receiver). <code>Interp3D</code> interpolates trilinearly on regular grids and by Shepard in point clouds.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new TableAvailableEvent(tabelle, quelle[, ziel])</code>, <code>fuer(appId)</code></li>
+      <li><code>Interp3D.trilinear(x, y, z, f, xv, yv, zv)</code>, <code>inverseDistance(punkte, xv, yv, zv, potenz)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">TableAvailableEvent: app-epds, app-hdf5reader, app-charts, app-maps</span><span class="chip frei">Interp3D: ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Opening EPDS results as operating lines in maps or as a chart in charts; values between support points in space.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== USAGE -->
+<h2 id="einsatz">Usage matrix in the framework</h2>
+<p class="einl">Which modules use which parts today, counted in the source code (excluding probes).</p>
+<table>
+  <tr><th>Module</th><th>CSV / table</th><th>Numbers</th><th>Units</th><th>H2</th><th>Formulas</th><th>Slice / analysis</th><th>Triangu&shy;lation</th><th>Tecplot</th><th>HDF5</th><th>Comparison / event</th><th>What for</th></tr>
+  <tr><td>app-charts</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td>Charts from CSV, H2 and Tecplot, contours, 3D, difference plot</td></tr>
+  <tr><td>app-maps</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td></td><td class="x">●</td><td>Operating lines, spatial view of maps</td></tr>
+  <tr><td>app-acft</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td>Data sources, flight performance charts</td></tr>
+  <tr><td>app-epds</td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Merging and handing on measurement series</td></tr>
+  <tr><td>app-eqnparser</td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Storing calculation runs</td></tr>
+  <tr><td>app-stats</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Statistics over H2 collections</td></tr>
+  <tr><td>app-neural</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Training data</td></tr>
+  <tr><td>app-pdfdigitizer</td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Storing digitised tables</td></tr>
+  <tr><td>app-hdf5reader</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td class="x">●</td><td>Handing on HDF5 as a table</td></tr>
+  <tr><td>app-settings</td><td></td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Database cache size</td></tr>
+  <tr><td>app-report</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Unit profiles in the operating-point report</td></tr>
+  <tr><td>framework-swing</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Load panels, input fields</td></tr>
+  <tr><td>framework-chart</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td>Envelope files, iso-surface tool</td></tr>
+  <tr><td>framework-reporttable</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Unit layer with registry</td></tr>
+</table>
+<div class="hinweis">The module is the most widely used foundation of the applications. Only <code>Interp3D</code> has no caller outside the probes. The Tecplot, formula, slice and comparison parts are used today by app-charts alone.</div>
+
+<footer>
+envisionz-framework-data · 84 source files in 15 packages · help pages DE/EN under <code>src/envisionz/data/help/</code> · third-party library <code>lib/h2-2_5_250.jar</code> · probes: <code>pruefen.cmd --nur framework-data</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BMP — comparison against the documented Windows structures and against Pillow – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite aktiv" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › BMP — comparison against the documented Windows structures and against Pillow</span><a class="sprachwahl" href="../../de/fileformats/abgleich-bmp.html">Deutsch</a></div>
+<!-- erzeugt aus bmp/COMPARISON.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · comparison</div>
+  <h1>BMP — comparison against the documented Windows structures and against Pillow</h1>
+</header>
+
+<p><b>As of:</b> 2026-09-06<br><b>Our implementation:</b> <code>envisionz.fileformats.bmp.BmpDatei</code> with <code>Bmpkopf</code>, read-only, no third-party library<br><b>Specification:</b> Microsoft Windows GDI, <i>Bitmap Storage</i>, and the structures <code>BITMAPFILEHEADER</code>, <code>BITMAPCOREHEADER</code>, <code>BITMAPINFOHEADER</code>, <code>BITMAPV4HEADER</code>, <code>BITMAPV5HEADER</code> — publicly documented; references give structure and field names<br><b>Compared against:</b> Pillow 12.2.0 (Python)<br><b>Test bench:</b> <code>envisionz.fileformats.bmp.Bmpprobe</code> — 389 checks, fourteen foreign anchors, two computed fixtures, twelve counter-tests</p>
+<p><b>The reference implementation.</b> <b>Pillow</b> is the image library of the Python ecosystem: a thin Python layer over its own C code. It is the 2010 fork of the original <i>Python Imaging Library</i> by Fredrik Lundh (Secret Labs), started by Jeffrey "Alex" Clark and maintained today by the <i>python-pillow</i> team. Nearly everything that opens an image in Python — from matplotlib to Django's image fields — passes through it. It is therefore the most widely used implementation in its field, but the <b>reference implementation of no format at all</b>: it reimplements other people's formats. For this format it uses <b>its own C code</b>, no third-party library.</p>
+<p><b>Why this one.</b> Because for BMP there is <b>no reference implementation to measure against</b>. The format is a sequence of C structures from the Windows programming interface; whoever reads it reads a description of structures, not a norm. Among the freely available implementations Pillow is by far the most used and covers the header variants and run lengths broadly — so it is not the truth, but the most solid second opinion obtainable without Windows. That is precisely why every difference here is recorded as a <b>finding</b>, not as an error on either side, until it is settled against the structure documentation.</p>
+<p><b>Coverage, computed from the rows below:</b> of 46 features we have 43 present, 0 partial and 2 absent; the reference implementation has 32 / 2 / 10.</p>
+<p><span class="ampel gruen">●</span> present · <span class="ampel rot">●</span> absent · <span class="ampel gelb">●</span> partial · – not applicable</p>
+<p><b>The <i>Note</i> column</b> points into section 5 of this document — not into the workspace item list. The word in front says <i>what kind of thing it is</i>: <b>gap</b> is something we lack and that is open; <b>decided</b> is something we deliberately do not do; <b>property</b> is a trait of the format affecting both implementations; <b>open there</b> is a gap of the reference product. Only the gaps are work — they are collected in section 5.1 and appear as <i>one</i> item in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Feature comparison</h2>
+<p>BMP has no specification in the sense the other formats in this collection have. There is no document with numbered paragraphs to point at — there are <b>documented C structures</b> from the Windows programming interface, and the file format is what comes out when you write them one after another into a file. Everything characteristic of this format is therefore a property of a 1990 memory layout rather than a design decision: rows run bottom-up because OS/2's coordinates started there; colours are stored blue-green-red because that is what a <code>COLORREF</code> looks like in little-endian memory; rows are padded to four bytes because a 32-bit access would otherwise be unaligned.</p>
+<p>That makes BMP the simplest format in this series and at the same time the one with the most silent traps. There is nothing to decompress and nothing to decode; there are only half a dozen places where a reader accidentally delivers something plausible that is wrong.</p>
+<h3>Headers and palette</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>Pillow 12.2.0</th><th>Note</th></tr>
+  <tr><td>Magic <code>BM</code></td><td><code>BITMAPFILEHEADER.bfType</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>12-byte header (<code>BITMAPCOREHEADER</code>)</td><td><code>BITMAPCOREHEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B13</td></tr>
+  <tr><td>40-byte header (<code>BITMAPINFOHEADER</code>)</td><td><code>BITMAPINFOHEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B13</td></tr>
+  <tr><td>52-, 56- and 64-byte headers</td><td>OS/2 2.x, <code>BITMAPV2/V3INFOHEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B13</td></tr>
+  <tr><td>108-byte header (<code>BITMAPV4HEADER</code>)</td><td><code>BITMAPV4HEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B13</td></tr>
+  <tr><td>124-byte header (<code>BITMAPV5HEADER</code>)</td><td><code>BITMAPV5HEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B13</td></tr>
+  <tr><td>An unknown header length is reported and read as a 40-byte one</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there B17</td></tr>
+  <tr><td>Palette entry of <b>three</b> bytes with the 12-byte header</td><td><code>RGBTRIPLE</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B10</td></tr>
+  <tr><td>Palette entry of <b>four</b> bytes otherwise</td><td><code>RGBQUAD</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B10</td></tr>
+  <tr><td><code>biClrUsed = 0</code> means the <b>full</b> palette, not "none"</td><td><code>BITMAPINFOHEADER.biClrUsed</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B11</td></tr>
+  <tr><td>Palette in <b>BGR</b>, not RGB</td><td><code>RGBQUAD</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B9</td></tr>
+  <tr><td>Colour space and ICC profile from the 108/124-byte header are read</td><td><code>BITMAPV4HEADER.bV4CSType</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>property B4</td></tr>
+  <tr><td>A palette cut short is reported, the rest stays black</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there B16</td></tr>
+</table>
+<h3>Pixels</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>Pillow 12.2.0</th><th>Note</th></tr>
+  <tr><td>Rows <b>bottom-up</b></td><td><code>biHeight &gt; 0</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B7</td></tr>
+  <tr><td>A negative height flips to top-down</td><td><code>biHeight &lt; 0</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B7</td></tr>
+  <tr><td>A negative height cannot exist in the 12-byte header — reported</td><td><code>BITMAPCOREHEADER</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property B7</td></tr>
+  <tr><td>Rows padded to <b>four bytes</b></td><td><i>Bitmap Storage</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B8</td></tr>
+  <tr><td>1 bit per pixel</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>4 bits per pixel, two per byte</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>8 bits per pixel</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>16 bits <b>without</b> masks is 5-5-5, not 5-6-5</td><td><code>BI_RGB</code> mit <code>biBitCount = 16</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B12</td></tr>
+  <tr><td>24 bits per pixel</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>32 bits per pixel</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>BI_BITFIELDS</code> (3) with arbitrary masks</td><td><code>BI_BITFIELDS</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>BI_ALPHABITFIELDS</code> (6) with a fourth mask</td><td>OS/2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there B15</td></tr>
+  <tr><td>Alpha from the fourth mask</td><td><code>bV4AlphaMask</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>decided B6</td></tr>
+  <tr><td>Widening narrow channels to eight bits, <b>rounded</b> — Pillow truncates</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>decided B5</td></tr>
+  <tr><td>An impossible bit depth is rejected</td><td><code>biBitCount</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Image data cut short is reported, the rest stays black</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there B16</td></tr>
+</table>
+<h3>Run-length encoding</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>Pillow 12.2.0</th><th>Note</th></tr>
+  <tr><td><code>BI_RLE8</code> (1)</td><td><code>BI_RLE8</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><code>BI_RLE4</code> (2), nibbles</td><td><code>BI_RLE4</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Encoded run (count &gt; 0)</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>End of line (<code>00 00</code>)</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>End of bitmap (<code>00 01</code>)</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td><b>Delta</b> (<code>00 02 dx dy</code>)</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B14</td></tr>
+  <tr><td><b>Absolute run</b> padded to an even byte count</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B14</td></tr>
+  <tr><td>Skipped pixels stay background</td><td><i>Bitmap Compression</i></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property B14</td></tr>
+  <tr><td>A stream without an end-of-bitmap is reported</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there B16</td></tr>
+</table>
+<h3>Other</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>Pillow 12.2.0</th><th>Note</th></tr>
+  <tr><td>Embedded JPEG (<code>BI_JPEG</code>, 4) is decoded</td><td><code>BI_JPEG</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property B2</td></tr>
+  <tr><td>Embedded PNG (<code>BI_PNG</code>, 5) is decoded</td><td><code>BI_PNG</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property B2</td></tr>
+  <tr><td>An unknown compression is rejected</td><td><code>biCompression</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>A wrong file size in the header is reported, not fatal</td><td><code>bfSize</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there B18</td></tr>
+  <tr><td>Detection via <code>Formaterkennung</code></td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td></td></tr>
+  <tr><td>Opening via <code>Datenquellen.oeffne</code></td><td>—</td><td><span class="ampel rot">●</span></td><td>–</td><td>decided B1</td></tr>
+  <tr><td>Writing</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>decided B3</td></tr>
+  <tr><td><code>bits</code> and <code>compression</code> take effect on writing</td><td>—</td><td>–</td><td><span class="ampel rot">●</span></td><td>open there B19</td></tr>
+</table>
+
+<h2 id="a2">What was measured</h2>
+<p><b>Eleven foreign anchors</b>: five were written by Pillow 12.2.0, six were built by hand and <b>read back by Pillow</b> — so the target values come from there in all eleven cases. What had to be built by hand is what Pillow does not write: the 12-byte header, the negative height, four bits, sixteen bits and the two run-length images. Pillow always writes a BMP uncompressed and with eight, twenty-four or thirty-two bits; the arguments <code>bits=4</code> and <code>compression=1</code> are accepted and <b>ignored</b> (measured, see B19).</p>
+<h3>Why the colour sum alone does not suffice here</h3>
+<p>For every anchor the probe checks <b>three</b> things: the colour sum over all pixels, the <b>first</b> row and the <b>last</b>. The reason is the format's main trap. A BMP is stored bottom-up; a reader that overlooks this delivers a vertically mirrored image — with the <b>same</b> colour sum, the same colours, the same size and without any message. Only comparing the first row against the last uncovers it. The same holds for the BGR/RGB mix-up: on a grey image it is invisible because all three channels are equal. That is why both colourful <b>and</b> grey anchors are in the list.</p>
+<table>
+  <tr><th>Anchor</th><th>covers</th><th>result</th></tr>
+  <tr><td><code>b24</code></td><td>3 × 4, 24 bits, written by Pillow</td><td><span class="ampel gruen">●</span> sum 3132, first and last row</td></tr>
+  <tr><td><code>b8</code></td><td>9 × 5 with palette — covers BGR and <code>biClrUsed</code></td><td><span class="ampel gruen">●</span> sum 16626</td></tr>
+  <tr><td><code>b1</code></td><td>17 × 3, <b>one</b> bit — width 17 forces the padding</td><td><span class="ampel gruen">●</span> sum 19125</td></tr>
+  <tr><td><code>b32</code></td><td>4 × 3, 32 bits</td><td><span class="ampel gruen">●</span> sum 4200</td></tr>
+  <tr><td><code>grau</code></td><td>6 × 4 in greys — here BGR/RGB is <b>invisible</b></td><td><span class="ampel gruen">●</span> sum 6840; it is there to show exactly that</td></tr>
+  <tr><td><code>kern12</code></td><td><b>12-byte header</b>, three-byte palette entries</td><td><span class="ampel gruen">●</span> sum 4939</td></tr>
+  <tr><td><code>obenunten</code></td><td><b>negative height</b> — top-down</td><td><span class="ampel gruen">●</span> sum 3060, first/last row set against <code>b24</code></td></tr>
+  <tr><td><code>vierbit</code></td><td><b>4 bits</b>, width 7 — half a byte at the row end</td><td><span class="ampel gruen">●</span> sum 4116</td></tr>
+  <tr><td><code>sechzehn</code></td><td><b>16 bits as 5-5-5</b>, without masks</td><td><span class="ampel gruen">●</span> sum 2032 with a tolerance of 1 per channel, see B5</td></tr>
+  <tr><td><code>rle8</code></td><td><code>BI_RLE8</code>, encoded runs only</td><td><span class="ampel gruen">●</span> sum 5160</td></tr>
+  <tr><td><code>rlesprung</code></td><td><code>BI_RLE8</code> with <b>delta</b> and <b>absolute run</b></td><td><span class="ampel gruen">●</span> sum 10888 — the eleventh anchor, see 2.2</td></tr>
+</table>
+<p><b>Two fixtures manage without a foreign anchor</b>, and the reason is itself a finding: <code>BI_BITFIELDS</code> with an express 5-6-5 and <code>BI_ALPHABITFIELDS</code> with four masks. Pillow does not read the second compression at all (B15) — there is nobody to read it back. The probe therefore builds both files itself, byte by byte from a rule, and checks against that same rule rather than against transcribed numbers: with eight bits per mask a pixel must come out <b>unchanged</b>, and the same 16-bit word must give something different <b>without</b> masks than with them. This is the only place in this comparison without an outside cross-check, and it is marked as such.</p>
+<h3>Two counter-tests that stayed green — and why that was a finding about the probe</h3>
+<p>A set of checks is worth something only once it goes red the moment one breaks the reader. Of twelve interventions only eight went red at first. <b>Two stayed green</b>: "skip the delta in the run-length stream" and "do not pad absolute runs to an even byte count".</p>
+<p>The cause was not the reader but the fixture. The anchor <code>rle8</code> consists exclusively of <b>encoded runs</b> — four pixels of one index, four of another, end of line, end of bitmap. A stream in that shape uses neither the delta nor the absolute run. The two corresponding branches in the reader were covered by <b>not a single</b> fixture; they stood there unproven, and the counter-tests could not go red at all.</p>
+<p>The house rule says a counter-test that stays green is discarded <b>or</b> the probe is sharpened. Here the second was right, because both branches are genuine parts of the format and not an invention. So an eleventh anchor was added: <code>rlesprung</code>, 8 × 4, built by hand and read back by Pillow. Its bottom row contains an absolute run of <b>three</b> pixels — three bytes and one pad byte — its second row a <b>delta</b> of three to the right whose skipped pixels stay on the background, and above that two ordinary rows. Since then all twelve counter-tests are red.</p>
+<table>
+  <tr><th>Intervention</th><th>failures</th></tr>
+  <tr><td>always three-byte palette entries</td><td><b>119</b></td></tr>
+  <tr><td>rows top-down instead of bottom-up</td><td><b>123</b></td></tr>
+  <tr><td>read the palette as RGB instead of BGR</td><td><b>74</b></td></tr>
+  <tr><td>do not pad rows to four bytes</td><td><b>50</b></td></tr>
+  <tr><td>nibbles in reverse order</td><td><b>38</b></td></tr>
+  <tr><td>do not pad absolute runs</td><td><b>33</b> — green before</td></tr>
+  <tr><td>widen by shifting alone</td><td><b>35</b></td></tr>
+  <tr><td>sixteen bits as 5-6-5 instead of 5-5-5</td><td><b>27</b></td></tr>
+  <tr><td>take the zero in <code>biClrUsed</code> literally</td><td><b>18</b>, and the probe aborts after 362 checks</td></tr>
+  <tr><td>look for the masks behind the whole header</td><td><b>8</b></td></tr>
+  <tr><td>skip the fourth mask (alpha)</td><td><b>5</b></td></tr>
+  <tr><td>skip the delta in the run-length stream</td><td><b>2</b> — green before</td></tr>
+</table>
+
+<h2 id="a3">What is hard about the format</h2>
+<p><b>Bottom-up.</b> The first row in the file is the <b>bottom</b> row of the image, as long as the height is positive. Only a negative height — which cannot occur in the 12-byte header, whose dimensions are unsigned — flips it. Overlook it and you get a mirrored image with the same checksum. With a pattern that has no clear top, and that is most patterns in a test bench, it never shows.</p>
+<p><b>Blue, green, red.</b> Both in the palette and at 24 and 32 bits the channels are stored in that order. Swap them and the colour sum stays <b>numerically identical</b> — the same three numbers, only assigned differently. And on a grey image the error is entirely invisible. A test bench comparing only a sum over a grey image says nothing about this mix-up.</p>
+<p><b>The row padding aligns every row, not the file.</b> Every row occupies a multiple of four bytes. For three pixels at 24 bits that is nine useful bytes and twelve occupied. Forget the padding and you read shifted from the <b>second</b> row on — and the image is then not broken but <b>sheared</b>: it looks like an image, only skewed. That is exactly why the anchor <code>b1</code> is 17 wide and <code>vierbit</code> is 7; at even widths the padding coincides by accident.</p>
+<p><b>A zero that means "all".</b> <code>biClrUsed = 0</code> does not mean "no palette" but "as many entries as fit the bit depth" — at eight bits, 256. Take the zero literally and you skip the palette, compute the data start 1024 bytes too early and thereby mistake the palette for image data. The result is not a crash but an image of gradients that at first glance looks like a test pattern.</p>
+<p><b>Sixteen bits are 5-5-5.</b> Without masks the three channels take five bits each and the top bit stays unused. The 5-6-5 split familiar from elsewhere occurs in BMP only when stated <b>expressly</b> through <code>BI_BITFIELDS</code>. Read maskless data as 5-6-5 and the image is not wrong enough to notice: red and blue sit one bit off, green is too bright — it looks like a different colour rendering, not like a bug.</p>
+<p><b>The header kind is stated nowhere — only its length.</b> There is no "version" field. The first word of the info header is its length in bytes, and that alone tells whether a <code>BITMAPCOREHEADER</code> (12) or a <code>BITMAPV5HEADER</code> (124) follows and where the colour masks sit. An unknown value leaves only two ways: reject, or read on as a 40-byte header and say so.</p>
+<p><b>What is good:</b> that there is nothing to decompress. An uncompressed BMP is the only widespread image file in which one can work out the pixel at a given place with paper and pencil. For a test bench that is no small advantage — for every error the question "what is really in the file" can be answered without having to believe a second reader. That is precisely why six of the eleven anchors could be built by hand.</p>
+
+<h2 id="a4">The items</h2>
+<p>The <i>Note</i> column names the kind in front of the identifier. Only the <b>gaps</b> are work.</p>
+<h3>Our open gaps — this is the work</h3>
+<h3>Deliberate decisions — nothing to do</h3>
+<p><b>B1</b> (decided) — No route through the general format detection</p>
+<p><code>Datenquellen.oeffne</code> rejects a BMP and points at <code>BmpDatei.lies</code>. The reason is the same as with GIF (I15): <b>an image is not a table</b>, and a <code>Datenquelle</code> is a table view. The detection itself knows BMP and names it; only opening it as a data source is missing. The same situation as VTK (V9), HDF4 (H8) and GIF (I15).</p>
+<p><b>Decided by the owner on 2026-09-06.</b> The item stood as a <i>gap</i> in five image formats with identical wording (BMP B1, GIF I15, PNG P1, TIFF T24, WebP W20). It is not one: a <code>Datenquelle</code> is a <b>table view</b>, and an image is not a table. A view with one row per pixel <code>(x, y, red, green, blue)</code> would be possible — at 4000x3000 that is twelve million rows, and what it would buy does not answer the question "what is in this file" but a different one. The readers exist and are <b>named</b> in the rejection message; that is the information the user needs. VTK (V9) and HDF4 (H8) are different: their content really is tabular, and there the view is being built.</p>
+<p><b>B5</b> (decided) — Widen by rounding, not by bit replication</p>
+<p>A five-bit value stands for the fraction <code>v / 31</code>; on eight bits that is <code>v · 255 / 31</code>, and how you make that an integer decides the result. Three ways are in circulation. <b>Shifting alone</b> (<code>v &lt;&lt; 3</code>) is wrong: 31 becomes 248, the brightest white would not be white. <b>Bit replication</b> (<code>v &lt;&lt; 3 | v &gt;&gt; 2</code>) hits the ends and is the trick quoted everywhere — but it is off by one at <b>four</b> of the thirty-two values (too dark at 3 and 7, too bright at 24 and 28). We <b>round to nearest</b>, written in integers as <code>(v · 255 + 15) / 31</code>. It is the only one of the three that lands on the right number everywhere, and the probe recomputes this in closed form over all 32 values — against the formula, not against a reference product.</p>
+<p><b>B6</b> (decided) — Alpha is carried but not counted in the sum</p>
+<p>The reader returns one <code>int</code> per pixel in <code>ARGB</code> form; alpha comes from the fourth mask where one exists and is otherwise full. The probe's colour sum counts <b>only</b> red, green and blue. That is deliberate: Pillow delivers alpha differently depending on mode (<code>RGB</code> or <code>RGBA</code>), and a sum that depends on the reference product's operating mode checks nothing. Alpha is checked at individual places instead.</p>
+<p><b>B3</b> (decided) — Writing</p>
+<p>Pillow writes BMP and supplied five of the eleven foreign anchors. This module reads. The six hand-built anchors are test equipment, not an output path — they arise in the test bench from a few lines and sit as packed bytes in <code>Bmpanker</code>.</p>
+<p><b>B2</b> (property) — Embedded JPEG and PNG — closed on 2026-09-06</p>
+<p><b>Closed.</b> Compression methods 4 and 5 are not compression: where the pixels would be there is a <b>complete file</b>, with its own signature, header and dimensions. The work is therefore <b>handing on</b> to <code>PngDatei</code> respectively <code>JpegDatei</code> — both sit in the same series and cost no third-party library.</p>
+<p><b>The one question this raised:</b> which dimensions apply when the envelope and its content disagree. Those of the <b>inner</b> image apply, because the BMP is only the envelope; the disagreement is reported. A dedicated anchor covers it, whose header says 12 × 9 while its PNG is 8 × 6 — without it a counter-test that fetches the pixels with the wrong row width would stay green, because with equal dimensions both computations coincide.</p>
+<p><b>One remainder is named:</b> that the length field <code>biSizeImage</code> is honoured is <b>not measured</b> — the counter-test of always reading to the end of the file stays green, because neither the PNG nor the JPEG reader minds bytes after the end of the image. The line stands in the code anyway, because the format calls for it.</p>
+<p><b>B4</b> (property) — Colour space and ICC profile — closed on 2026-09-06</p>
+<p><b>Closed, as far as a reading module can take it.</b> The 108-byte header carries a colour-space tag, nine endpoint coordinates in <b>2.30 fixed point</b> and three gamma values in <b>16.16 fixed point</b>; the 124-byte one adds the rendering intent and the offset and length of an embedded ICC profile. All of it is now read and exposed through <code>Bmpkopf</code>, and the three cases — calibrated, embedded profile, link to a profile file — are <b>named</b>.</p>
+<p><b>Nothing is converted, and that is a decision, not a remainder.</b> A colour transform needs a target — which screen, which profile, which intent — and file inspection does not know that. Whoever applies the values hands out numbers that <i>differ</i> from those in the file and still calls them "the pixels". So the pixels come out unconverted; whoever wants to convert them now has the endpoints and the gamma values in hand. Pillow likewise only carries the ICC profile in <code>info</code> and does not convert either.</p>
+<p>The test measures both together: the values must <b>come out</b> and the pixels must remain <b>untouched</b>. Whoever converts here is caught.</p>
+<h3>Properties of the format</h3>
+<p><b>B7</b> (property) — Bottom-up</p>
+<p>See section 3 — the main trap. Two anchors therefore stand side by side: <code>b24</code> bottom-up and <code>obenunten</code> top-down, both with first and last row checked individually. The 12-byte header carries its dimensions <b>unsigned</b>; a negative height cannot exist there, and we report it if one does.</p>
+<p><b>B8</b> (property) — Rows padded to four bytes</p>
+<p>See section 3. Two anchors are deliberately of odd width: <code>b1</code> with 17 pixels at one bit and <code>vierbit</code> with seven at four bits — there the row ends in the middle of a byte <b>and</b> before the padding.</p>
+<p><b>B9</b> (property) — Blue, green, red</p>
+<p>See section 3. The anchor <code>grau</code> is in the list to show where this mix-up does <b>not</b> show.</p>
+<p><b>B10</b> (property) — Three or four bytes per palette entry</p>
+<p>The 12-byte header carries three-byte <code>RGBTRIPLE</code>s, all larger ones four-byte <code>RGBQUAD</code>s. Always take four and the 12-byte case reads a palette a third too long and lands on the wrong data start; always take three and the reverse. The anchor <code>kern12</code> covers exactly that — it is the intervention with the <b>most</b> failures of all (119).</p>
+<p><b>B11</b> (property) — The zero that means "all"</p>
+<p>See section 3. <code>Bmpkopf.farben()</code> resolves it so that no caller has to interpret it a second time.</p>
+<p><b>B12</b> (property) — Sixteen bits are 5-5-5</p>
+<p>See section 3. The anchor <code>sechzehn</code> is a computed image: the red channel at (x, y) is <code>(x·7) % 32</code>, green <code>(y·11+3) % 32</code>, blue <code>(x·5 + y·9) % 32</code>. It is checked against that rule and not against transcribed numbers.</p>
+<p><b>B13</b> (property) — The header kind is only in its length</p>
+<p>See section 3. We know 12, 40, 52, 56, 64, 108 and 124; anything else is <b>reported</b> and read on as a 40-byte header, because the image content is usually unaffected.</p>
+<p><b>B14</b> (property) — Delta and absolute run</p>
+<p>Besides the encoded run the run-length stream knows three special cases with a leading zero byte: end of line, end of bitmap and <b>delta</b> (<code>00 02 dx dy</code>). Anything above that is an <b>absolute run</b> of <code>n</code> pixels whose bytes are padded to an <b>even</b> count. Forget the pad byte and the rest of the row shifts by one; skip the delta and everything following shifts left. Both branches were covered by no fixture until 6 September 2026 — see 2.2.</p>
+<h3>Findings against the reference implementation</h3>
+<p><b>B15</b> (open there) — <code>BI_ALPHABITFIELDS</code> (6) is not read</p>
+<p>This compression comes from OS/2 and differs from <code>BI_BITFIELDS</code> only in that <b>four</b> masks follow instead of three. Pillow 12.2.0 rejects it with <code>OSError: Unsupported BMP compression (6)</code>; we read it. The compression is rare, but it occurs, and the effort is one extra mask. Because <b>nobody reads it back</b> here, there can be no foreign anchor for this compression. The probe therefore builds the fixture itself, byte by byte from a rule, and checks against that same rule: with eight bits per mask a pixel must come out unchanged, and the alpha must be carried, not invented.</p>
+<p><b>B16</b> (open there) — Four conditions as an exception instead of a finding</p>
+<p>Truncated image data, a palette cut short, a run-length stream without an end-of-bitmap, and an unknown header length. In all four cases we read as far as possible, <b>report</b> the place and leave the rest black. Pillow throws (<code>image file is truncated</code>, <code>Unsupported BMP header type</code>) and delivers nothing. That is <b>not a bug in Pillow</b> — it is an imaging library, not a file-inspection tool, and half an image is no usable result for its purpose. For the question "what happened to this file" it is the difference between an answer and none.</p>
+<p><b>B17</b> (open there) — Unknown header length</p>
+<p>See B16. Listed separately because there is a way to read on that Pillow does not take: the first sixteen bytes of every info header from the 40-byte one upwards are <b>laid out identically</b>. An unknown length — say from a writer that invented a header — therefore does not cost the image but only the extra fields.</p>
+<p><b>B18</b> (open there) — A wrong file size in the header</p>
+<p><code>bfSize</code> is meant to state the length of the file. Many writers put nonsense there. We read by the <b>actual</b> length and report the discrepancy as a finding; Pillow reads on silently without mentioning it. Not a bug, but that field is the only place where a BMP can say of its own accord that it is incomplete — and then you want to see it.</p>
+<p><b>B19</b> (open there) — <code>bits</code> and <code>compression</code> on writing are accepted and ignored</p>
+<p><code>Image.save(..., "BMP", bits=4)</code> and <code>compression=1</code> raise nothing and change nothing: the file comes out eight-bit and uncompressed. Measured on a 4 × 4 <code>P</code> image — the file is 1094 bytes in all four cases, compression 0, depth 8. A silently ignored argument is more unpleasant than a rejected one, because the caller believes he got what he asked for. That is why six of the eleven anchors had to be built by hand.</p>
+
+<h2 id="a5">The wider field — what else reads and writes these files</h2>
+<p>This table does <b>not</b> count towards the coverage figures. It says nothing about this reader but about the field in which such a file comes into being — and when reading a foreign file that is the more important information: <b>whoever wrote it decides which variant is inside.</b> A reader that only knows the files of a single writer mistakes that writer's habits for the format.</p>
+<table>
+  <tr><th>Program</th><th>reads</th><th>writes</th><th>Note</th></tr>
+  <tr><td><b>Microsoft Windows</b> (GDI, Paint, Explorer)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The origin. Paint writes 24-bit uncompressed or palette; the header variant depends on the Windows version.</td></tr>
+  <tr><td><b>GIMP</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Optionally writes <code>BITMAPV5HEADER</code> with an alpha channel — the variant many older readers do not know.</td></tr>
+  <tr><td><b>ImageMagick</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>On request writes the OS/2 headers and the run-length forms hardly anyone else produces.</td></tr>
+  <tr><td><b>Pillow</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The reference implementation of this comparison.</td></tr>
+  <tr><td><b>Java</b> (<code>javax.imageio</code>)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Part of the JDK; knows the old header variants but not all bit masks.</td></tr>
+  <tr><td><b>Browser</b> (Chromium, Firefox)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Display BMP but do not write it. The run-length forms are partly skipped there.</td></tr>
+</table>
+<p>The list is <b>not exhaustive</b> and does not try to be. It names what one actually encounters with this format and leaves out what could do it too but nobody uses for it.</p>
+
+<h2 id="a6">The Java implementation — where this reader stands among its own kind</h2>
+<p><b>Why against <code>javax.imageio</code> in particular.</b> Every other comparison in this module measures against a tool in a <b>different</b> language — Pillow, astropy, pyarrow, meshio. That is good against misunderstandings of the format and says nothing about where this reader stands among its own kind. <code>javax.imageio</code> is the Java implementation it actually competes with in the field: it sits on every machine this module runs on, and it costs <b>no foreign library</b> — the module's rule stays untouched. It is measured on every run, not once: <code>Bildvergleichsprobe</code>, 80 checks now that JPEG is included. And the reader measured against here really is pure Java: <code>com.sun.imageio.plugins.bmp.BMPImageReader</code> has <b>not a single</b> native method. Measured on 2026-09-06, because adding JPEG revealed that this does <b>not</b> hold there — the JDK's JPEG reader is a JNI wrapper around libjpeg 6b. For this format, then, the comparison really is one among its own kind.</p>
+<p><b>11 anchors, all 11 pixel-identical.</b> One, four, eight, sixteen, twenty-four and thirty-two bits, both run-length variants with delta markers, the old 12-byte core header and the bottom-up variant — not a single differing pixel against <code>javax.imageio</code>.</p>
+<p><b>And a trap that is half the yield of the measurement.</b> <code>BufferedImage.getRGB()</code> returns <b>not</b> the pixel from the file but its conversion to sRGB. For greyscale, ImageIO stores the values in a <i>linear</i> grey space and <code>getRGB</code> applies the sRGB curve on top: the raw value <code>0x25</code> becomes <code>0x6A</code> — to three digits exactly <code>(37/255)^(1/2.4)</code> in sRGB encoding. The first run therefore reported differences on <b>every</b> greyscale image, in PNG <i>and</i> in BMP, that is on two independent readers of ours with the same symptom. It looked like a real bug and was none. The comparison goes through the <b>raster</b>. With <code>TYPE_USHORT_GRAY</code> the raster carries the <i>raw</i> 16-bit value while our <code>punkte()</code> is the view <b>scaled</b> to eight bits — whoever shifts there instead of rounding is off by one, and takes that for a bug too.</p>
+
+<footer>
+Generated from <code>envisionz-framework-fileformats/docs/bmp/COMPARISON.md</code> · back to the <a href="index.html#bilder">overview</a> · all formats in the <a href="abgleich.html">comparison</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

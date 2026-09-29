@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLOT3D — comparison against the NASA manual and against VTK – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite aktiv" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › PLOT3D — comparison against the NASA manual and against VTK</span><a class="sprachwahl" href="../../de/fileformats/abgleich-plot3d.html">Deutsch</a></div>
+<!-- erzeugt aus plot3d/COMPARISON.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · comparison</div>
+  <h1>PLOT3D — comparison against the NASA manual and against VTK</h1>
+</header>
+
+<p><b>As of:</b> 2026-09-07<br><b>Our implementation:</b> <code>envisionz.fileformats.plot3d.Plot3dQuelle</code> with <code>Bauart</code>, read-only, no third-party library<br><b>Specification:</b> <i>PLOT3D User's Manual</i> (NASA TM 101067), appendix "Grid and solution file formats" — public; references give record orders<br><b>Compared against:</b> VTK 9.7 (<code>vtkMultiBlockPLOT3DReader</code>, including <code>SetQFileName</code>, <code>SetFunctionFileName</code> and <code>SetTwoDimensionalGeometry</code>)<br><b>Test bench:</b> <code>envisionz.fileformats.Plot3dprobe</code> — 120 checks, one foreign anchor and five fixtures measured against VTK 9.7, ten counter-tests</p>
+<p><b>The reference implementation.</b> <b>VTK</b> by <b>Kitware</b> is the de facto core of scientific visualisation. For PLOT3D it is an <b>independent reimplementation</b>: the format goes back to 1982 and the work of Pieter Buning at the <b>NASA Ames Research Center</b>. Kitware's own source comments record that PLOT3D files are often not unambiguously classifiable at the byte level — the same observation that forces sixteen variants on this reader too.</p>
+<p><b>Why this one.</b> Because for PLOT3D there is <b>no authoritative implementation</b> and there cannot be one: the files carry no statement of which of the sixteen variants they are. Kitware's reader records this in its own source comments, and that honesty is exactly what makes it a usable reference — it describes the same problem this reader has to solve.</p>
+<p><b>Coverage, computed from the rows below:</b> of 25 features we have 23 present, 0 partial and 2 absent; the reference implementation has 17 / 0 / 7.</p>
+<p><span class="ampel gruen">●</span> present · <span class="ampel rot">●</span> absent · <span class="ampel gelb">●</span> partial · – not applicable</p>
+<p><b>The <i>Note</i> column</b> points into section 5 of this document — not into the workspace item list. The word in front says <i>what kind of thing it is</i>: <b>gap</b> is something we lack and that is open; <b>decided</b> is something we deliberately do not do; <b>property</b> is a trait of the format affecting both implementations; <b>open there</b> is a gap of the reference product. Only the gaps are work — they are collected in section 5.1 and appear as <i>one</i> item in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Feature comparison</h2>
+<p>PLOT3D is the only format in this collection with <b>no identification at all</b>. No magic at the start, no header record, no version. Precision, byte order, block count, Fortran record markers and IBLANK are stated nowhere — they follow solely from which combination fits the <b>file size</b>. A reader assuming a default here reads nonsense for every other file and notices only when the coordinates look obviously wrong.</p>
+<h3>Variant</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>VTK 9.7</th><th>Note</th></tr>
+  <tr><td>Single precision (4 bytes)</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Double precision (8 bytes)</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Little-endian</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Big-endian</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Single block without leading block count</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Multiple blocks with block count</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Fortran record markers around every record</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Without record markers (C output)</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>IBLANK per point</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>The variant is <b>computed</b>, not assumed</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property P1</td></tr>
+  <tr><td>An ambiguous variant is reported</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property P1</td></tr>
+  <tr><td>If no variant fits, that is said rather than guessed</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property P1</td></tr>
+  <tr><td>2D grids (without k)</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property P2</td></tr>
+  <tr><td>2D: <b>no</b> <code>k</code> column and <b>no</b> <code>z</code> column</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property P2</td></tr>
+  <tr><td>Solution file <code>.q</code></td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property P3</td></tr>
+  <tr><td>The four properties per block</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property P3</td></tr>
+  <tr><td>The properties are as wide as the quantities</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property P3</td></tr>
+  <tr><td>2D solution: <b>four</b> quantities, not five</td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property P3</td></tr>
+  <tr><td>Function file <code>.f</code></td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property P3</td></tr>
+  <tr><td>The quantity count stands <b>in the block header</b></td><td>Anhang C</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property P3</td></tr>
+  <tr><td>A <b>verified</b> interpretation beats an unverified one</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property P6</td></tr>
+  <tr><td>The file extension is a hint, not proof</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property P6</td></tr>
+  <tr><td>Without record markers it is said that nothing supports the reading</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property P6</td></tr>
+  <tr><td>Opening via <code>Datenquellen.oeffne(Path)</code></td><td>—</td><td><span class="ampel rot">●</span></td><td>–</td><td>property P4</td></tr>
+  <tr><td>Writing</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>decided P5</td></tr>
+</table>
+
+<h2 id="a2">What was measured</h2>
+<p>One foreign anchor: <code>einblock.xyz</code>, written by VTK itself, 108 bytes for a grid of eight points. It was read through <code>vtkMultiBlockPLOT3DReader</code> and through our reader.</p>
+<h3>The result, and why it is not what it looks like</h3>
+<p>VTK reads the file and finds eight points. Our reader via the <b>general route</b> <code>Datenquellen.oeffne(Path)</code> <b>rejects it</b>. At first glance that looks like our gap. It is one, but a different one than it looks like.</p>
+<p><code>Datenquellen.oeffne(Path)</code> recognises a format by its first bytes. PLOT3D <b>has no first bytes that mean anything</b> — the file begins with a number, and any number is allowed. There is no way to distinguish a PLOT3D file from an arbitrary heap of bytes short of computing through the file size. That is exactly what <code>Plot3dQuelle.oeffne(Path)</code> does — the <b>named</b> route by which this format is to be opened and by which <code>Plot3dprobe</code> opens it. The general route refuses because format detection must not be allowed to guess.</p>
+<p>VTK has the same problem and solves it differently: <code>vtkMultiBlockPLOT3DReader</code> is <b>explicitly selected</b> and told the variant through switches (<code>SetBinaryFile</code>, <code>SetMultiGrid</code>, <code>SetHasByteCount</code>, <code>SetDoublePrecision</code>). Set them wrong and you get numbers without a warning. Our reader computes them and reports when several fit. Row P4 therefore stands at <span class="ampel rot">●</span> for us and – for the reference: VTK <b>has</b> no general route by which the format could be opened without prior knowledge.</p>
+<h3>What the variant computation actually achieves</h3>
+<p>For <code>einblock.xyz</code> — eight points, one block — <b>several</b> variants fit the file size. Our reader reports that and takes the first. That is honest and still a statement one has to check: for tiny grids the file size is too little information. For a grid of ordinary size — a hundred thousand points — exactly one combination fits, and then the computation is not merely a hint but a proof.</p>
+
+<h2 id="a3">What is hard about the format</h2>
+<p><b>There is nothing to recognise.</b> No format in this collection is so defenceless against confusion. A 108-byte <code>.xyz</code> file may be a PLOT3D grid, a point-cloud text file or a leftover. All a reader has is the file size and arithmetic.</p>
+<p><b>The coordinates are stored one after another, not side by side.</b> All x of a block first, then all y, then all z. Reading them point-wise gives a grid that looks like a tangle — the same trap as in Exodus and Ensight, but here without a dimension name to give it away.</p>
+<p><b>Fortran record markers are data that are not data.</b> A Fortran program brackets every record in two four-byte lengths. A C program does not. Both write files with the same extension. Whoever takes the markers for payload reads the first coordinate as a record length — and gets a number of order 10⁻⁴⁰.</p>
+<p><b>IBLANK is invisible until it is missing.</b> If present, an integer follows the coordinates for every point; if absent, the next block follows. The difference is a four-byte shift per point, and the file stays exactly as large under both readings if the block count is guessed correspondingly differently. That is why the variant computation must try <b>all</b> combinations and not take the first that fits.</p>
+<p><b>What is good:</b> the block structure itself. A cuboid of points with <code>ni × nj × nk</code> is the simplest conceivable description of a structured grid, and the indices run exactly as the manual says. Once the variant is settled, reading is trivial. The whole difficulty sits in the first twenty bytes that do not exist.</p>
+
+<h2 id="a4">The items</h2>
+<p>The <i>Note</i> column names the kind in front of the identifier. Only the <b>gaps</b> are work.</p>
+<h3>Our open gaps — this is the work</h3>
+<p><b>P5</b> (decided) — Writing</p>
+<p>This module reads. <code>Plot3dschreiber</code> in the test bench builds files of every variant so that the variant computation can be measured against them — it is test equipment, not an output path.</p>
+<h3>Properties of the format</h3>
+<p><b>P2</b> (property) — Two axes — closed on 2026-09-07</p>
+<p>PLOT3D has a two-dimensional form: <b>two</b> numbers in the block dimensions, <b>two</b> coordinates per point, and in the solution <b>four</b> flow quantities instead of five. It is read; since 2026-09-07 the number of axes is part of the variant and is computed along with everything else.</p>
+<p><b>There is no <code>k</code> column and no <code>z</code> column.</b> VTK delivers a two-dimensional file as a grid with <code>nk = 1</code> and <code>z = 0</code> — that is its view, because its data structure is always three-dimensional, and for a viewer that is right. For a file-inspection tool it is not: <b>a column of zeroes is a statement about the file that the file does not make.</b> Whoever wants to know what is in the file should not have to guess whether the zero is there or invented.</p>
+<p>The price is recorded in P6: the number of possible variants has risen from thirty-two to a hundred and ninety-two, and that makes detection more ambiguous.</p>
+<p><b>P3</b> (property) — Solutions and functions — closed on 2026-09-07</p>
+<p>A grid <code>.xyz</code> usually has a <b>solution</b> <code>.q</code> beside it and sometimes a <b>function file</b> <code>.f</code>. Both are read. The solution delivers per point density, one momentum per axis and energy; the function file any number of quantities <code>f1</code>, <code>f2</code>, … A grid without the solution on it was exactly half of what PLOT3D files exist for.</p>
+<p><b>Three traps, and all three are silent.</b> First: a solution file has <b>two</b> records per block — first four properties (Mach number, angle of attack, Reynolds number, time), then the quantities. Skip the first and you read the flow shifted by sixteen or thirty-two bytes. Second: the four properties stand in the <b>same</b> width as the quantities — at double precision therefore eight bytes each. At single precision the difference never shows, and that is exactly why an anchor at double precision is there. Third: a function file has <b>one number more</b> in the block header, saying how many quantities follow; miss it and you read the next block's dimensions shifted by one place — and get numbers that look like dimensions.</p>
+<p><b>And the quantities stand one after another, not side by side</b> — first all densities of the block, then all x-momenta. The same trap as with the coordinates, and it is more dangerous here: a wrongly read coordinate gives a tangle one can see; a wrongly read density gives a number that looks like a density.</p>
+<p><b>The names are the manual's, and they are conservative</b>: the momentum is ρu and not u. Read them as velocities and in any flow with varying density you get something else — and the result still looks like a velocity. VTK calls them <code>Density</code>, <code>Momentum</code> and <code>StagnationEnergy</code> and means the same numbers; every expected value in this probe is its.</p>
+<p><b>P6</b> (property) — The price of completeness: a hundred and ninety-two variants</p>
+<p>Until 2026-09-06 there were thirty-two possible variants; since P2 and P3 there are <b>a hundred and ninety-two</b>. That is not a gain in convenience but one in <b>ambiguity</b>: the more forms are allowed, the more often two fit the same file size. A grid of two by two by one is 88 bytes — and the same 88 bytes also work out as a two-dimensional C solution.</p>
+<p><b>Against that stand two rules, in this order.</b> First: a <b>verified</b> interpretation beats an unverified one. In Fortran <code>unformatted</code> the length of every record stands before and after it, and both must agree — the file confirms the reading. In C binary nothing of the kind is there; the only check is that the size works out. Second, and only then: the <b>file extension</b> may decide between equally well verified readings.</p>
+<p>The order is the point. Put the extension above the check and you read a flawless Fortran grid as a derived C solution merely because someone renamed the file — and in fluid dynamics files are renamed constantly. Conversely there is exactly one case where the extension really decides: when <b>all</b> fitting readings are unverified. A C-binary grid of seven by one by three, 264 bytes, is a three-dimensional grid as <code>.xyz</code> and a two-dimensional solution as <code>.q</code> — the same bytes, and nothing in them says which is right. The file name is then the only thing left.</p>
+<p>And because that is so, <b>the reader says it</b>: for every variant without record markers there is a finding stating that the only check was the file size and nothing in the file confirms the reading. That is the most honest statement this format permits.</p>
+<p><b>P4</b> (property) — No route through the general format detection — settled on 2026-09-06</p>
+<p><b>The item stands in substance and is nevertheless no longer a gap.</b> A PLOT3D file carries <b>no magic</b>: it starts with a bare block count, which is an ordinary number. <code>Formaterkennung</code> therefore fundamentally cannot recognise it — and <b>should</b> not: whoever infers a format from a leading number recognises every numeric file as PLOT3D. That is a property of the format, not an omission of the reader.</p>
+<p><b>What was really missing was the message</b>, and that is built. Until now <code>Datenquellen.oeffne(datei)</code> ended with "for unknown there is no reader here" — a dead end although the route existed. Now it names it: that there are formats without magic, that PLOT3D is one, and that <code>Datenquellen.oeffne(datei, Format.PLOT3D)</code> works. The probe measures both — that detection really does fail (otherwise it would be checking a message nobody sees) and that the named route actually carries (otherwise the message would be a false trail).</p>
+<p><b>P1</b> (property) — No identification — the variant has to be computed</p>
+<p>See sections 2 and 3. The difference between the two implementations is not whether they handle the format but <b>who determines the variant</b>: with VTK the user via switches, with us the arithmetic via the file size. Both routes can go wrong, but only one notices: a file to which no combination fits we reject; a VTK reader with wrongly set switches delivers numbers. That several variants can fit we report — that is the honest limit of the method and is worked through in section 2.2.</p>
+
+<h2 id="a5">The wider field — what else reads and writes these files</h2>
+<p>This table does <b>not</b> count towards the coverage figures. It says nothing about this reader but about the field in which such a file comes into being — and when reading a foreign file that is the more important information: <b>whoever wrote it decides which variant is inside.</b> A reader that only knows the files of a single writer mistakes that writer's habits for the format.</p>
+<table>
+  <tr><th>Program</th><th>reads</th><th>writes</th><th>Note</th></tr>
+  <tr><td><b>NASA-Werkzeuge</b> (OVERFLOW, FUN3D, Chimera Grid Tools)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The format's home. The variant follows from the writing program, not from the file.</td></tr>
+  <tr><td><b>VTK</b> (<code>vtkMultiBlockPLOT3DReader</code>)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>The reference implementation of this comparison.</td></tr>
+  <tr><td><b>Tecplot</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The usual way to look at a PLOT3D solution — and the reason there are so many variants.</td></tr>
+  <tr><td><b>Pointwise</b>, <b>Gridgen</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>Mesh generators of fluid dynamics.</td></tr>
+  <tr><td><b>ParaView</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>Through VTK; often requires the variant to be stated by hand.</td></tr>
+</table>
+<p>The list is <b>not exhaustive</b> and does not try to be. It names what one actually encounters with this format and leaves out what could do it too but nobody uses for it.</p>
+
+<h2 id="a6">The Java implementation — where this reader stands among its own kind</h2>
+<p><b>Why this section.</b> Every other comparison in this module measures against a tool in a <b>different</b> language. That is good against misunderstandings of the format and says nothing about where this reader stands among its own kind. What matters is the distinction between a <b>pure reimplementation in Java</b> and a <b>wrapper around the original C library</b>: only the reimplementation solves the same task under the same conditions as this reader; a wrapper calls the original.</p>
+<p><b>No Java implementation found.</b> The known readers are Fortran and C++; the C++ reader <code>vtkPLOT3DReader</code> is reachable from Java only through the <b>JNI wrapper</b> of the VTK wrappers. That fits the finding in section 2: the format carries no magic, and whoever wants to read it must either know the variant or compute it — which is what this reader does.</p>
+<p><b>How solid this is.</b> Researched on 2026-09-06 via web and GitHub search; Maven Central's search API was blocked at the time, so a systematic artefact search was not possible. "Nothing found" is therefore not the same as "nothing exists" — a little-visible or in-house implementation would not be discoverable this way. What stands here is the state of an honest search and not a claim of completeness.</p>
+
+<footer>
+Generated from <code>envisionz-framework-fileformats/docs/plot3d/COMPARISON.md</code> · back to the <a href="index.html#netze">overview</a> · all formats in the <a href="abgleich.html">comparison</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

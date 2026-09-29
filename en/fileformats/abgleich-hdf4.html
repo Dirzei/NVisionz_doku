@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDF4 — comparison against the specification and against pyhdf – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite aktiv" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › HDF4 — comparison against the specification and against pyhdf</span><a class="sprachwahl" href="../../de/fileformats/abgleich-hdf4.html">Deutsch</a></div>
+<!-- erzeugt aus hdf4/COMPARISON.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · comparison</div>
+  <h1>HDF4 — comparison against the specification and against pyhdf</h1>
+</header>
+
+<p><b>As of:</b> 2026-09-27<br><b>Our implementation:</b> <code>envisionz.fileformats.hdf5.hdf4.Hdf4File</code> with <code>Hdf4Dataset</code>, <code>Hdf4Vdata</code>, <code>Hdf4Tag</code>, <code>Hdf4Sonderart</code>, read-only, no third-party library<br><b>Specification:</b> <i>HDF Specification and Developer's Guide</i> (The HDF Group), chapter "File Format" — public; references give tag numbers<br><b>Compared against:</b> pyhdf 0.11.7 (Python, linked against the HDF Group's HDF4 library)<br><b>Test bench:</b> <code>envisionz.fileformats.hdf5.hdf4.Hdf4probe</code> — 251 checks; plus <code>hdf4_muster.hdf</code> in the <code>Referenzdateiprobe</code></p>
+<p><b>The reference implementation.</b> <b>pyhdf</b> is a Python wrapper around the <b>HDF4 library</b> — a binding to the reference implementation, whose code originally came from NCSA and is maintained today by the <i>HDF Group</i>. The original author abandoned the project; it lives on under community maintenance and is the only common HDF4 binding for Python.</p>
+<p><b>Why this one.</b> Because pyhdf talks to the HDF4 library and so reaches the reference itself. There is effectively no alternative: HDF4 is a format on its way out, and apart from the owner's library and this wrapper around it there is nothing in the freely available space that reads it completely.</p>
+<p><b>Coverage, computed from the rows below:</b> of 39 features we have 37 present, 0 partial and 2 absent; the reference implementation has 27 / 1 / 3.</p>
+<p><span class="ampel gruen">●</span> present · <span class="ampel rot">●</span> absent · <span class="ampel gelb">●</span> partial · – not applicable</p>
+<p><b>The <i>Note</i> column</b> points into section 5 of this document — not into the workspace item list. The word in front says <i>what kind of thing it is</i>: <b>gap</b> is something we lack and that is open; <b>decided</b> is something we deliberately do not do; <b>property</b> is a trait of the format affecting both implementations; <b>open there</b> is a gap of the reference product. Only the gaps are work — they are collected in section 5.1 and appear as <i>one</i> item in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Feature comparison</h2>
+<p><b>HDF4 and HDF5 share nothing but three letters.</b> Where HDF5 has a superblock, B-trees and named objects, HDF4 has a plain linked list of <i>data descriptor blocks</i>: a count, the offset of the next block, and twelve-byte entries of tag, ref, offset and length. Names exist only where an element brings one. The format is simpler than HDF5 and therefore <b>harder to interpret</b>: the structure is there, the meaning is in a table of tag numbers.</p>
+<h3>Structure</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>pyhdf 0.11.7</th><th>Note</th></tr>
+  <tr><td>Magic <code>0E 03 13 01</code></td><td>§2.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Chain of DD blocks</td><td>§2.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>A cyclic chain is caught</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property H1</td></tr>
+  <tr><td>A negative offset is a format error, not a large file</td><td>§2.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>decided H2</td></tr>
+  <tr><td>35 named tags, unknown ones by number</td><td>§Anhang A</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Special forms: linked, external, compressed, chunked</td><td>§5</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H3</td></tr>
+</table>
+<h3>Scientific data sets (SD)</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>pyhdf 0.11.7</th><th>Note</th></tr>
+  <tr><td>Data group <code>NDG</code>/<code>SDG</code></td><td>§4.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Rank and dimensions from <code>SDD</code></td><td>§4.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Number type from <code>NT</code> (all widths)</td><td>§4.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Values from <code>SD</code></td><td>§4.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Label, unit, format from <code>SDL</code>/<code>SDU</code>/<code>SDF</code></td><td>§4.3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Name from a Vgroup (<code>Var0.0</code>)</td><td>§6</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H4</td></tr>
+  <tr><td>The old tags come first: <code>SDL</code> beats the Vgroup</td><td>§4.3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>property H4</td></tr>
+  <tr><td>Axis names from the <code>Dim0.0</code>-Vgroups</td><td>§6</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H4</td></tr>
+  <tr><td>A Vgroup that is <b>not</b> a <code>Dim0.0</code> is not an axis</td><td>§6</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H4</td></tr>
+  <tr><td>Empty string instead of <code>null</code> when nothing is there</td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td>property H4</td></tr>
+  <tr><td>Attributes from a Vdata beside the dataset</td><td>§6</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H4</td></tr>
+  <tr><td><code>units</code> is the unit — another attribute name is not</td><td>§6</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H4</td></tr>
+  <tr><td>Dimension labels and units</td><td>§4.3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+</table>
+<h3>Vdata and Vgroup</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>pyhdf 0.11.7</th><th>Note</th></tr>
+  <tr><td>Vdata header with fields, widths and offsets</td><td>§6.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Vdata raw rows</td><td>§6.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Vdata values unpacked by type</td><td>§6.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H5</td></tr>
+  <tr><td>Every field at its <b>own</b> offset</td><td>§6.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H5</td></tr>
+  <tr><td>A character field is <b>one</b> string, not <i>n</i> characters</td><td>§6.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H5</td></tr>
+  <tr><td>A Vdata with <b>zero</b> rows is not a broken file</td><td>§6.2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H5</td></tr>
+  <tr><td>Vgroup with name, class and members</td><td>§6.1</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Raster images of the GR interface (Vgroup <code>RI0.0</code>: <code>ID</code>, <code>RI</code>, <code>LUT</code>/<code>LD</code>, attributes)</td><td>§3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H6</td></tr>
+  <tr><td>Raster image groups <code>RIG</code> (DFR8, DF24), old RLE in the dimension record</td><td>§3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H6</td></tr>
+  <tr><td>Images from HDF 3.0 (<code>ID8</code>, <code>RI8</code>/<code>CI8</code>, <code>IP8</code>) without a group</td><td>§3</td><td><span class="ampel gruen">●</span></td><td>–</td><td>property H6</td></tr>
+  <tr><td>Interlace by pixel, line, plane</td><td>§3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property H6</td></tr>
+  <tr><td>IMCOMP and JPEG in the dimension record are named, not read</td><td>§3</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>property H6</td></tr>
+  <tr><td>GR with <code>DFNT_LITEND</code>: the number type does not state little-endian order</td><td>§3</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there H10</td></tr>
+  <tr><td>Annotations (<code>DIA</code>, <code>DIL</code>)</td><td>§7</td><td><span class="ampel gruen">●</span></td><td>–</td><td>property H7</td></tr>
+  <tr><td>The four-byte reference does not land in the text</td><td>§7</td><td><span class="ampel gruen">●</span></td><td>–</td><td>property H7</td></tr>
+  <tr><td>Opening via <code>Datenquellen.oeffne(Path)</code></td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td>property H8</td></tr>
+  <tr><td>The tables are named like the datasets</td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td>property H8</td></tr>
+  <tr><td>One table per Vdata, one column per field</td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td>property H8</td></tr>
+  <tr><td>The SD interface's internal Vdatas do <b>not</b> become tables</td><td>—</td><td><span class="ampel gruen">●</span></td><td>–</td><td>property H8</td></tr>
+  <tr><td>Writing</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>decided H9</td></tr>
+</table>
+
+<h2 id="a2">What was measured</h2>
+<p>Two foreign anchors, <b>written by pyhdf and thus by the HDF Group's own HDF4 library</b>: <code>sd.hdf</code> (3320 bytes) with two scientific data sets and <code>vd.hdf</code> (396 bytes) with one Vdata table. Both read through <code>Hdf4File</code>. This makes it one of the better fixtures in this collection: the files come from the reference library.</p>
+<h3>The numbers are right</h3>
+<table>
+  <tr><th>Anchor</th><th>written</th><th>read</th></tr>
+  <tr><td><code>sd.hdf</code> dataset 2</td><td><code>float32[3][4]</code>, values <code>0, 1.5, 3.0, 4.5, 6.0, 7.5, …</code></td><td><code>[3, 4] float32</code>, values <b>equal value for value</b></td></tr>
+  <tr><td><code>sd.hdf</code> dataset 4</td><td><code>int16[5]</code>, values <code>1…5</code></td><td><code>[5] int16</code>, values <code>1…5</code></td></tr>
+  <tr><td><code>vd.hdf</code></td><td>Vdata <code>messreihe</code>, 3 rows, fields <code>zeit</code> (float64) and <code>druck</code> (float32)</td><td><code>messreihe — 3 row(s), 2 field(s)</code>, types and widths right</td></tr>
+</table>
+<p>The inventory our reader emits for <code>sd.hdf</code> is more precise than what pyhdf says about the file: 200 entries in one DD block, broken down by library version, values, Vdata rows, Vdata headers, Vgroups, number types, dimensions and data groups. For a file behaving unexpectedly this list is where every search starts — and it is the reason why a file that gets "does not work" from an HDF4 reader still yields an account here.</p>
+<h3>And the names are missing</h3>
+<p>The measurement uncovered exactly one gap, and it sits in an unexpected place: <b>neither dataset has a name.</b> <code>beschriftung()</code> returns <code>null</code>, <code>einheit()</code> returns <code>null</code> — although the file contains "temperatur", "kanal" and "einheit: K".</p>
+<p>The reason is a piece of format history. HDF4 has the tag <code>SDL</code> for a dataset's label — and pyhdf does not use it. Instead it creates one <b>Vgroup of class <code>Var0.0</code></b> per dataset carrying the name, and the attributes as a <b>Vdata</b> beside it. Both are the newer route preferred by the SD interface, and both are in the specification. Our reader reads <code>SDL</code>/<code>SDU</code>/<code>SDF</code> and does not look into the Vgroups.</p>
+<p>What is remarkable: <b>the information is already read.</b> For the same file <code>Hdf4Inspect</code> shows the Vgroups "temperatur (Var0.0) — 8 member(s)" and "kanal (Var0.0) — 6 member(s)" and the Vdata "einheit — 1 row(s)". What is missing is only the <b>link</b>: from the Vgroup to the dataset it describes. The gap is therefore not reading work but an assignment — and precisely for that reason it stands as an item of its own (H4) and not as "HDF4 can do more than we read".</p>
+<p>One small side matter is noticeable: <code>beschriftung()</code> and <code>einheit()</code> return <code>null</code> and not the empty string. For a caller that is the difference between "has no name" and an exception three lines later. The point is noted under H4.</p>
+
+<h2 id="a3">What is hard about the format</h2>
+<p><b>The meaning is in a table of numbers.</b> A DD entry is tag, ref, offset, length — twelve bytes without a word. What an element is, is said by the tag number alone, and the mapping is in the developer's guide. A reader without that table sees a well-formed file about which it can say nothing. We carry 35 tags with names and name unknown ones by number — the number is then still information one can look up in the manual.</p>
+<p><b>Two gigabytes, and strictly so.</b> Offsets and lengths are signed 32-bit numbers. The format <b>cannot describe</b> larger files. A negative offset is therefore a format error and not a large file — a reader interpreting it unsigned "to handle large files too" reads on at a random place. That is a place where generosity does harm.</p>
+<p><b>The same thing twice, historically grown.</b> A name may be in <code>SDL</code> or in a Vgroup; an attribute in <code>SDU</code> or in a Vdata. Both are correct, both occur, and which one you meet depends on which interface wrote the file — the old DFSD or the newer SD interface. Section 2.2 is exactly this case in pure form: our anchors use the one route, pyhdf the other.</p>
+<p><b>The chain may point in a circle.</b> The "next block" offset is a number in the file; nothing stops it pointing at an earlier block. We bound the number of blocks and report it. Without that bound a reader on a damaged file reads until memory runs out.</p>
+<p><b>What is good:</b> self-description without an index. There are no B-trees, no heaps, no fractal structures — a linked list, and everything is in it. Whoever has the tag table can read an HDF4 file with a hex editor. With HDF5 that is hopeless and was a deliberate advance; with HDF4 it is the reason thirty-year-old satellite holdings are still accessible today.</p>
+
+<h2 id="a4">The items</h2>
+<p>The <i>Note</i> column names the kind in front of the identifier. Only the <b>gaps</b> are work.</p>
+<h3>Our open gaps — this is the work</h3>
+<p><b>Since 2026-09-27 nothing is left here</b> — H6 stands under 5.3.</p>
+<h3>Deliberate decisions — nothing to do</h3>
+<p><b>H2</b> (decided) — A negative offset is an error</p>
+<p>See section 3. Offsets are signed and the file cannot exceed two gigabytes. Interpreting one unsigned "to handle large files too" would turn a reported format error into silent reading on at the wrong place.</p>
+<p><b>H9</b> (decided) — Writing</p>
+<p>pyhdf writes HDF4 and supplied this document's foreign anchors. This module reads. <code>Hdf4Schreiber</code> in the test bench builds fixtures — including ones with cyclic chains and negative offsets — it is test equipment, not an output path.</p>
+<h3>Properties of the format</h3>
+<p><b>H6</b> (property) — Raster images — closed on 2026-09-27</p>
+<p><code>Hdf4Bild</code> reads all three generations: the <b>GR interface</b> (one Vgroup <code>RI0.0</code> per image with a name, dimension record <code>ID</code>, data <code>RI</code>, palette <code>LUT</code> with <code>LD</code>, attributes as Vdatas of class <code>RIATTR0.0C</code> — always named <code>RIATTR0.0N</code>, the attribute name is the field name), the <b>raster image groups</b> <code>RIG</code> of the old DFR8/DF24 interface, which GR writes <b>in addition</b> for 8-bit images with one or three components (the same image then appears twice in the inventory and is listed once), and the <b>HDF 3.0</b> tags (<code>ID8</code>, <code>RI8</code>/<code>CI8</code>, <code>IP8</code>) when no group covers them. Interlace by pixel, line and plane is reordered to pixel; compression as a special element (RLE, deflate) like any other element, plus the <b>old RLE</b> from the dimension record (compression tag 11) — a different method from the new one: a run counts <code>c &amp; 0x7F</code> times, not <code>+ 3</code>. IMCOMP and JPEG are named. <code>uchar8</code>, as DFR8 writes it, is computed as an unsigned byte. Through <code>Datenquellen.oeffne</code> each image becomes a table with the axes <code>zeile</code> and <code>spalte</code> and one column per component, the palette a table <code>&lt;bild&gt;.palette</code> with <code>rot</code>, <code>gruen</code>, <code>blau</code>; file attributes appear as findings. <b>Measured</b> on two files written by the HDF4 library 4.2.14 itself — the <code>libdf</code> bundled with pyhdf 0.11.7, via ctypes (pyhdf itself has no GR interface): <code>Hdf4anker.grBilder()</code> (eight images: 8-bit with palette, three components, 16-bit, passed line-interlaced, RLE, deflate, floating point, little-endian) and <code>Hdf4anker.r8Bilder()</code> (DFR8 uncompressed and RLE, DF24 in all three interlaces); build script and the library's account in <code>test/proben/h6_gr.py</code>, <code>h6_auskunft.txt</code>. Three variants derived per the specification: groups set to the null tag (then <code>RI8</code>/<code>CI8</code> carry), <code>tief16</code> with representation 4 and swapped bytes, a dimension record with IMCOMP.</p>
+<p><b>H10</b> (open there) — The GR interface forgets little-endian byte order</p>
+<p>Measured on <code>klein16</code> in <code>Hdf4anker.grBilder()</code>: <code>GRcreate</code> with <code>DFNT_INT16 | DFNT_LITEND</code>. The HDF4 library 4.2.14 stores the bytes little-endian (<code>e8 03</code> for 1000) but writes the default representation into the number type (<code>01 16 10 00</code>, representation 0) — and itself reads back −6141 instead of 1000 with <code>GRreadimage</code>. We follow the file as the library does and return the same numbers; the writer's intent is nowhere in the file. Whether the GR interface admits <code>DFNT_LITEND</code> at all has not been checked — hence <i>fremd</i> and not <i>fremdfehler</i>.</p>
+<p><b>H3</b> (property) — Special forms — compressed, chunked, external: closed on 2026-09-25</p>
+<p>The three special forms found in real holdings are now read, following the header layouts of the HDF4 library (<code>hcomp.c</code>, <code>hchunks.c</code>, <code>hextelt.c</code>): <b>compressed</b> with the methods none, RLE and deflate (an ordinary zlib stream, inflated with our own <code>Zlib</code>); <b>chunked</b>, also with compressed chunks — the chunk table is a Vdata with fields <code>origin</code>, <code>chk_tag</code>, <code>chk_ref</code>, edge chunks are stored full size; <b>external</b> in a side file next to the HDF file. Measured on <code>Hdf4anker.sonderformen()</code> (pyhdf 0.11 over the HDF4 library, chunked via <code>SDsetchunk</code>) and on the existing <code>hdf4_muster.hdf</code>, whose deflate dataset used to be rejected and now shows the values <code>hdp</code> names. <b>Still named</b>: szip, N-bit, skipping Huffman, linked Vdata, buffered, compressed raster. <b>Found and fixed on the way:</b> with linked blocks the first block has the length of the original element, not the block length (<code>hblocks.c</code>). The reader always advanced by the block length; the chunk table, whose first row sat alone in the first block, then yielded only zeros.</p>
+<p><b>H4</b> (property) — Names and attributes from the Vgroups — closed on 2026-09-07</p>
+<p>HDF4 has the tag <code>SDL</code> for a dataset's label. <b>The HDF Group's own HDF4 library does not use it when writing through the SD interface.</b> It creates one <b>Vgroup of class <code>Var0.0</code></b> per dataset: it carries the name, names the <code>Dim0.0</code> Vgroups of the axes and holds the attributes as Vdatas of class <code>Attr0.0</code> beside it. Both are in the specification, and both are the newer route.</p>
+<p><b>A reader that knows only the old tags does not stand out doing so.</b> The values are right, the dimensions are right, the type is right — only the label is missing, and a missing label looks like a file without a label. That is exactly why this item stood here and not in a defect list.</p>
+<p><b>The old tags come first.</b> If an <code>SDL</code> is there, it holds. Preferring the new route skips a statement somebody wrote down. And <b><code>units</code> is the unit, another attribute name is not</b>: the anchor deliberately carries a dataset with the attribute <code>einheit="Pa"</code> — to a German-speaking reader that sounds like a unit and is none. Choosing by sound gets it wrong for every file with a self-chosen attribute name.</p>
+<p>Done along with it: <code>beschriftung()</code> and <code>einheit()</code> now return the <b>empty string</b> instead of <code>null</code>. <code>null</code> is the same value as "not read" and forces every caller into a check he forgets.</p>
+<p><b>Four mutation checks, all red</b> — the fourth only after a new anchor. "Every Vgroup is an axis" stayed <b>green</b> at first: in <code>sd.hdf</code> a <code>Var0.0</code> Vgroup names nothing but <code>Dim0.0</code> Vgroups. Instead of discarding the mutation, an anchor was added — <code>sd2.hdf</code>, extended by an ordinary Vgroup through pyhdf's <code>V</code> interface and thus written by the library again. After that it is red. <i>A mutation check that stays green does not measure the reader but the reach of the anchor.</i></p>
+<p><b>H5</b> (property) — Vdata values — closed on 2026-09-07</p>
+<p><code>Hdf4Vdata.werte()</code> unpacks the rows by the field descriptions: one list per row, one value per field. The reference values are pyhdf 0.11.7's on the same file — <code>[[0.0, 1013.0], [0.5, 1012.5], [1.0, 1011.75]]</code>.</p>
+<p><b>Every field carries its own offset</b>, and it need not follow on seamlessly. Summing the field widths reads past the mark from the second field onwards for every Vdata with padding — and the numbers that come out are numbers. <b>The anchor does not cover this trap</b>, and that is stated here so it does not vanish into what is covered: pyhdf writes the fields contiguously, <code>zeit</code> at 0 and <code>druck</code> at 8. The row is therefore evidenced on one side only.</p>
+<p>Two smaller finds while building: a <b>character field</b> is <i>one</i> string, not <i>n</i> characters — reading it row-wise turns <code>"Kelvin"</code> into six values. And a <b>Vdata with zero rows</b> is legal: the SD interface creates one such marker per dataset (<code>SDSVar</code>). Its descriptor is there, offset and length are <code>-1</code>. Until 2026-09-07 access to it threw "Zugriff ausserhalb der Datei: Versatz -1, Laenge -1" — a message that sounds like a broken file and describes an intact one.</p>
+<p><b>H7</b> (property) — Annotations — closed on 2026-09-07</p>
+<p><b>The earlier text of this item was wrong.</b> It said "we read the short ones and skip the long ones"; <code>Hdf4Annotation.alle</code> has always read all four tags — <code>FID</code>, <code>FD</code>, <code>DIL</code> and <code>DIA</code> — and the long file annotation (<code>FD</code>) was even tested. Untested was only the <b>long object annotation</b> (<code>DIA</code>).</p>
+<p>It is tested now: the same four-byte reference in front, the same branch in the reader, 87 characters of text.</p>
+<p><b>Why there is no foreign anchor for it.</b> pyhdf 0.11.7 has <b>no <code>AN</code> interface</b> — the module is missing from the package, and the lower-level <code>hdfext</code> layer offers no <code>AN…</code> function either. A file with a long object annotation therefore <b>cannot be produced</b> with the reference product available here. The test case rests on our own writer, and the foreign column of those two rows stands at <code>-</code> rather than <code>yes</code> — not measured is not the same as cannot.</p>
+<p><b>H8</b> (property) — The route through the format detection — closed on 2026-09-07</p>
+<p><code>Datenquellen.oeffne(Path)</code> now yields tables for HDF4 instead of a message: <code>Langform.ueberHdf4</code>. One table per <b>scientific dataset</b>, with its axes and a value column; one table per <b>Vdata</b>, with a row axis and one column per field.</p>
+<p><b>It came after H4, and that was the point.</b> Without the names from the <code>Var0.0</code> Vgroups the tables would be called <code>datensatz2</code> and <code>datensatz4</code> — a table whose name is a serial number does not answer the question "what is in this file". The message that stood here before was better than that.</p>
+<p><b>Not every Vdata is a table.</b> The SD interface also stores its dimension values, its attributes and its dataset markers as Vdatas. Emitting them appends eight tables nobody wrote to a file with three datasets — and what they say already stands elsewhere: the dimensions as axes, the attributes as properties. They are therefore left out, and <b>that</b> they are left out is stated as a finding.</p>
+<p>A dataset in a <b>special form this reader does not resolve</b> — szip, N-bit, buffered or compressed raster data — gets <b>no</b> table with invented numbers but a finding naming the special form in plain words. Compressed (none, RLE, deflate), chunked and external are read since 2026-09-25 (H3).</p>
+<p>Until then the <code>Langformprobe</code> recorded that this view does <b>not</b> exist, and it fell over when the gap was closed. That is the right direction: a test that records a gap must fall over when the gap is closed.</p>
+<p><b>H1</b> (property) — The chain may point in a circle</p>
+<p>See section 3. We bound the number of DD blocks and report reaching the bound; pyhdf relies on the C library. A fixture for it is built by <code>Hdf4Schreiber</code>, because such a file cannot be obtained anywhere else.</p>
+
+<h2 id="a5">The wider field — what else reads and writes these files</h2>
+<p>This table does <b>not</b> count towards the coverage figures. It says nothing about this reader but about the field in which such a file comes into being — and when reading a foreign file that is the more important information: <b>whoever wrote it decides which variant is inside.</b> A reader that only knows the files of a single writer mistakes that writer's habits for the format.</p>
+<table>
+  <tr><th>Program</th><th>reads</th><th>writes</th><th>Note</th></tr>
+  <tr><td><b>HDF4-Bibliothek</b> (HDF Group)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The reference, with the tools <code>hdp</code> and <code>ncdump</code> for the netCDF view.</td></tr>
+  <tr><td><b>pyhdf</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The reference implementation of this comparison.</td></tr>
+  <tr><td><b>HDFView</b> (HDF Group)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The viewer; it shows HDF4 and HDF5 side by side.</td></tr>
+  <tr><td><b>NASA-Erdbeobachtung</b> (HDF-EOS 2)</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>The great source of HDF4 files: MODIS and its siblings are stored in it to this day.</td></tr>
+  <tr><td><b>GDAL</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Reads HDF4-EOS as a raster source.</td></tr>
+</table>
+<p>The list is <b>not exhaustive</b> and does not try to be. It names what one actually encounters with this format and leaves out what could do it too but nobody uses for it.</p>
+
+<h2 id="a6">The Java implementation — where this reader stands among its own kind</h2>
+<p><b>Why this section.</b> Every other comparison in this module measures against a tool in a <b>different</b> language. That is good against misunderstandings of the format and says nothing about where this reader stands among its own kind. What matters is the distinction between a <b>pure reimplementation in Java</b> and a <b>wrapper around the original C library</b>: only the reimplementation solves the same task under the same conditions as this reader; a wrapper calls the original.</p>
+<p><b>A pure Java reimplementation does exist, and it is a surprise:</b> netcdf-java has read HDF4 and HDF-EOS2 since version 4.0.09 explicitly as a "100% Java library" without the C library. The HDF Group's official Java products by contrast are <b>JNI wrappers</b> around the C library — their own documentation says so.</p>
+<p>There is therefore a genuine Java reference for HDF4, and it is already on the machine (<code>netcdfAll-5.10.0.jar</code>). A measurement against it is the next sensible step for this document — it is still outstanding and is <b>not</b> claimed here.</p>
+<p><b>How solid this is.</b> Researched on 2026-09-06 via web and GitHub search; Maven Central's search API was blocked at the time, so a systematic artefact search was not possible. "Nothing found" is therefore not the same as "nothing exists" — a little-visible or in-house implementation would not be discoverable this way. What stands here is the state of an honest search and not a claim of completeness.</p>
+
+<footer>
+Generated from <code>envisionz-framework-fileformats/docs/hdf4/COMPARISON.md</code> · back to the <a href="index.html#behaelter">overview</a> · all formats in the <a href="abgleich.html">comparison</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

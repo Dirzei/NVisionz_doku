@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LZW for PDF, TIFF and GIF – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite aktiv" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › LZW for PDF, TIFF and GIF – background</span><a class="sprachwahl" href="../../de/compress/lzw-theorie.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.lzw</div>
+  <h1>LZW for PDF, TIFF and GIF – background</h1>
+  <p class="unter">The method of Lempel, Ziv and Welch: a dictionary that writer and reader build up in the same way while working, codes of growing width, the special case of the code that refers to itself, and the three differences between PDF, TIFF and GIF that appear as switches in <code>Lzw.Einstellung</code>. With the worked example from PDF 32000-1 and pseudocode following <code>Lzw</code>.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>LZW (Welch, 1984, after Ziv and Lempel 1978) does not write back-references with length and distance but <b>numbers of dictionary entries</b>. The dictionary starts with all single characters. Every time the writer outputs an entry, it creates a new one: the output entry plus the next character. The entries thus grow with the repetitions in the text. The reader does not need to be sent the dictionary – it builds it from the codes read in exactly the same way, just one step later.</p>
+<p>Today LZW is mainly still read in three formats: in the PDF filter <code>LZWDecode</code>, in TIFF (compression 5) and in GIF. All three use the same method with codes at most 12 bits wide, but differ in details that make a stream of one format unreadable for the reader of another.</p>
+
+<h2 id="verfahren">The method</h2>
+<p>With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> bits per character (PDF and TIFF: 8, GIF: 2 to 8, from the file) the codes are:</p>
+<table>
+  <tr><th>Code</th><th>meaning</th></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>…</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">0 \dots 2^b - 1</annotation></semantics></math></td><td>the character itself</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^b</annotation></semantics></math></td><td>clear code: reset the dictionary, width back to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">b+1</annotation></semantics></math></td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi></mrow></msup><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^b + 1</annotation></semantics></math></td><td>end code</td></tr>
+  <tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi></mrow></msup><mo>+</mo><mn>2</mn><mo>…</mo><mn>4095</mn></mrow><annotation encoding="application/x-tex">2^b + 2 \dots 4095</annotation></semantics></math></td><td>created entries</td></tr>
+</table>
+<p>An entry is stored as a pair (predecessor, last character); its string arises by walking the predecessor chain down to a single character – backwards, hence via a stack. After every code read (except the first after a clear code) the reader creates an entry:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mtext>new</mtext></mrow></msub><mo>=</mo><mi>E</mi><mo stretchy="false">(</mo><mtext>old</mtext><mo stretchy="false">)</mo><mo>+</mo><mtext>first character of </mtext><mi>E</mi><mo stretchy="false">(</mo><mtext>code</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">E_{\text{new}} = E(\text{old}) + \text{first character of } E(\text{code})</annotation></semantics></math></p>
+<p><b>The self-reference.</b> The writer can output a code it has only just created and which the reader does not yet know – when the pattern <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mi>S</mi><mi>x</mi><mi>S</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">xSxSx</annotation></semantics></math> occurs in the text. The missing entry is then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo stretchy="false">(</mo><mtext>old</mtext><mo stretchy="false">)</mo><mo>+</mo><mtext>first character of </mtext><mi>E</mi><mo stretchy="false">(</mo><mtext>old</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">E(\text{old}) + \text{first character of } E(\text{old})</annotation></semantics></math>, since the first character of the new entry is the first character of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo stretchy="false">(</mo><mtext>old</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">E(\text{old})</annotation></semantics></math>.</p>
+
+<h3>The code width</h3>
+<p>The codes start with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">b + 1</annotation></semantics></math> bits and become wider when the entries no longer fit. Exactly when is the most important difference between the formats. With the next free entry <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> and the switch <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> (<code>frueh</code>), the width <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math> grows after an entry has been created as soon as</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>n</mi><mo>+</mo><mi>f</mi><mo>≥</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>w</mi></mrow></msup><mspace width="1em"/><mtext>and</mtext><mspace width="1em"/><mi>w</mi><mo>&lt;</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">n + f \ge 2^{w} \quad \text{and} \quad w &lt; 12</annotation></semantics></math></p>
+<p>PDF (with the default <code>EarlyChange</code> = 1) and TIFF grow <b>one position earlier</b> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">f = 1</annotation></semantics></math>): after creating entry 510, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>511</mn></mrow><annotation encoding="application/x-tex">n = 511</annotation></semantics></math>, and code 511 is already read with 10 bits. GIF, with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">f = 0</annotation></semantics></math>, grows only at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>512</mn></mrow><annotation encoding="application/x-tex">n = 512</annotation></semantics></math>. If a TIFF reader reads a GIF stream, it slips by one bit at the first width change, and the rest is nonsense.</p>
+
+<h3>The three formats</h3>
+<table>
+  <tr><th>Switch</th><th>PDF</th><th>TIFF</th><th>GIF</th></tr>
+  <tr><td><code>lsbZuerst</code> – bit order</td><td>no (most significant first)</td><td>no</td><td>yes (least significant first)</td></tr>
+  <tr><td><code>frueh</code></td><td><code>EarlyChange</code>, default 1</td><td>1</td><td>0</td></tr>
+  <tr><td><code>anfangsbits</code></td><td>8</td><td>8</td><td>from the file (2 … 8)</td></tr>
+  <tr><td>broken stream</td><td><code>ungueltigUeberspringen</code></td><td>stop silently</td><td><code>streng</code></td></tr>
+</table>
+<p>The core produces no messages. It states in its result how the stream ended – <code>ENDCODE</code>, <code>DATENENDE</code> (the bits did not suffice for another code) or <code>UNGUELTIG</code> (with the code and the next free entry) – and the callers report in their own language.</p>
+
+<h3>Pseudocode – <code>Lzw.entpacke(d, ab, laenge, e)</code></h3>
+<pre class="pseudo">clear ← 2^b;  end ← clear + 1;  n ← end + 1;  w ← b + 1;  old ← −1
+<b>for</b> i ← 0 <b>to</b> clear−1:  predecessor[i] ← −1;  last[i] ← i
+<b>repeat</b>:
+    fill the reservoir with whole bytes until it holds w bits (LSB or MSB order)
+    <b>if</b> not enough bits: how ← DATENENDE;  <b>break</b>
+    code ← next w bits
+    <b>if</b> code = clear:  n ← end + 1;  w ← b + 1;  old ← −1;  <b>continue</b>
+    <b>if</b> code = end:  how ← ENDCODE;  <b>break</b>
+    <b>if</b> code &lt; n:                                   entry ← code
+    <b>else if</b> old ≥ 0 <b>and</b> (<b>not</b> strict <b>or</b> code = n): entry ← SELF-REFERENCE
+    <b>else if</b> skipInvalid:                           <b>continue</b>
+    <b>otherwise</b>:  how ← UNGUELTIG;  <b>break</b>
+    base ← (entry = SELF-REFERENCE) ? old : entry
+    stack ← characters of the chain from base (last first);  first ← bottom character
+    <b>if</b> SELF-REFERENCE: append first at the end
+    output the stack in the right order (with hoechstens: cap, keep counting)
+    <b>if</b> old ≥ 0 <b>and</b> n &lt; 4096:
+        predecessor[n] ← old;  last[n] ← first;  n ← n + 1
+        <b>if</b> n + frueh ≥ 2^w <b>and</b> w &lt; 12:  w ← w + 1
+    old ← (entry = SELF-REFERENCE) ? n − 1 : entry</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/lzw/Lzw.java</code>. The reservoir is a <code>long</code>; for GIF bytes are added at the top and codes taken from the bottom, for PDF and TIFF the other way round.</p>
+<div class="hinweis"><b>Convention in the framework:</b> Without <code>streng</code>, <b>every</b> code from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> upwards counts as a self-reference as long as there is a previous code – that is what the replaced PDF and TIFF decoders did, and the probe demands that nothing changes about it. <code>ungueltigUeberspringen</code> therefore only takes effect when there is no previous code yet (at the start or after a clear code). With <code>streng</code> (GIF) only exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> is a valid self-reference. When the dictionary is full with 4096 entries, nothing more is created, and the width stays 12 until a clear code comes.</div>
+
+<h2 id="beispiel">Worked example from PDF 32000-1, 7.4.4.2</h2>
+<p>The input is given in <b>decimal</b> in the standard: 45 45 45 45 45 65 45 45 45 66, i.e. <code>-----A---B</code>. The code sequence of the standard is 256 45 258 258 65 259 66 257, packed with 9 bits, most significant first:</p>
+<pre><code>80 0B 60 50 22 0C 0C 85 01</code></pre>
+<table>
+  <tr><th>Code</th><th>meaning</th><th>output</th><th>new entry</th></tr>
+  <tr><td>256</td><td>clear code</td><td>–</td><td>–</td></tr>
+  <tr><td>45</td><td>character</td><td><code>-</code></td><td>– (first code)</td></tr>
+  <tr><td>258</td><td>not yet known: self-reference</td><td><code>--</code></td><td>258 = <code>--</code></td></tr>
+  <tr><td>258</td><td>entry</td><td><code>--</code></td><td>259 = <code>---</code></td></tr>
+  <tr><td>65</td><td>character</td><td><code>A</code></td><td>260 = <code>--A</code></td></tr>
+  <tr><td>259</td><td>entry</td><td><code>---</code></td><td>261 = <code>A-</code></td></tr>
+  <tr><td>66</td><td>character</td><td><code>B</code></td><td>262 = <code>---B</code></td></tr>
+  <tr><td>257</td><td>end code</td><td>–</td><td>–</td></tr>
+</table>
+<p>Together <code>-----A---B</code>. Recomputed with <code>Lzw.entpacke</code> and the defaults (PDF, <code>frueh</code> = 1): the same ten bytes, end <code>ENDCODE</code>. The probe had first read the input as hexadecimal and was red because of that – not the core.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<p><code>Lzwprobe</code> (40 checks) sets the core against the <b>old wording of all three</b> replaced decoders (<code>PdfFilters.lzw</code>, <code>Giflzw</code>, <code>Tifflzw</code>), whose source is contained in the probe:</p>
+<ul>
+  <li>the example from PDF 32000-1 as a foreign anchor;</li>
+  <li>six valid inputs from a probe encoder that tracks the decoder's state, across all width changes from 9 to 12 bits, with a full dictionary and clear code – each in six settings (PDF with <code>frueh</code> 0 and 1, TIFF, GIF with 2, 5 and 8 bits): the core returns the input, and so does the old version;</li>
+  <li>1600 broken streams of random bytes (800 PDF, 400 TIFF, 400 GIF, 362 of them invalid): the core equals the old version everywhere, including the error marker.</li>
+</ul>
+<p>Seven counter-experiments turned red: early width fixed to 1, bit order fixed to MSB, self-reference not strict, invalid codes not skipped, the appended character of a self-reference at the front instead of the back, capping off, initial width fixed to eight.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Unpacking only; there is no LZW encoder in the module (the probe encoder only serves the probe).</li>
+  <li>Codes at most 12 bits wide (4096 entries), as in all three formats.</li>
+  <li>A given maximum length (<code>hoechstens</code>, often from a TIFF or PDF header) is checked against the <a href="index.html#grenze">decompression limit</a>; without it the output grows along.</li>
+  <li>The core does not check the output for plausibility; a wrongly chosen setting gives a valid but meaningless stream or an early <code>UNGUELTIG</code>.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>T. A. Welch: A Technique for High-Performance Data Compression. IEEE Computer, 1984.</li>
+  <li>J. Ziv, A. Lempel: Compression of Individual Sequences via Variable-Rate Coding. IEEE Transactions on Information Theory, 1978.</li>
+  <li>ISO 32000-1:2008, Document management – Portable document format – Part 1: PDF 1.7, section 7.4.4.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#lzw">LZW for PDF, TIFF and GIF</a> · Probe: <code>Lzwprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

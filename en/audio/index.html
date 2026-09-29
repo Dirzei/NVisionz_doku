@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading, playing and recognising sound – without third-party libraries – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag aktiv" href="index.html">framework-audio</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#quellen">Sources, playback and mixer</a>
+<a class="rubrik" href="#wav">Reading and writing WAV</a>
+<a class="rubrik" href="#mp3">MP3 decoder</a>
+<a class="rubrik" href="#mp2">MPEG-1 Layer II</a>
+<a class="rubrik" href="#mfcc">MFCC features</a>
+<a class="rubrik" href="#kws">Word recognition</a>
+<a class="rubrik" href="#stt">Features for phone recognition</a>
+<a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-audio</span><a class="sprachwahl" href="../../de/audio/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-audio</div>
+  <h1>Reading, playing and recognising sound – without third-party libraries</h1>
+  <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. One common source interface for
+  PCM, own decoders for WAV, MP3 (Layer III) and MPEG-1 Layer II, playback and microphone via <code>javax.sound</code>, MFCC features,
+  closed-vocabulary word recognition and the feature chain for later phone recognition.
+  For each method: purpose, API, use in the framework, applications, examples. The examples are shortened.
+  Many API names are German (e.g. <code>Tonmischer</code> = sound mixer, <code>Horcher</code> = listener, <code>Wortgrenzen</code> = word boundaries); they are shown unchanged.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>49</b><span>classes in 7 packages</span></div>
+  <div class="zahl"><b>3</b><span>MPEG versions in the MP3 decoder (1, 2, 2.5), plus Layer II</span></div>
+  <div class="zahl"><b>2.1·10<sup>−7</sup></b><span>RMS deviation of the MP3 decoder against ffmpeg (norm 3.05·10<sup>−5</sup>)</span></div>
+  <div class="zahl"><b>0</b><span>third-party libraries; FFT/DCT from framework-math, network from framework-neural</span></div>
+  <div class="zahl"><b>2</b><span>probe classes, 16 test files</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>One interface for everything.</b> WAV, MP3, Layer II, microphone and sine all deliver the same <code>AudioSource</code>; player, mixer and features do not know where the samples come from.</div>
+  <div><b><code>float</code>, −1…+1, channel-separated.</b> Every processing stage computes in floating point. Interleaving happens only immediately before the sound card.</div>
+  <div><b>Bit-exact round trip.</b> The scaling factors are powers of two; 8, 16 and 24 bit come back unchanged. 32-bit integer PCM is rejected with a reason instead of being silently mangled.</div>
+  <div><b>No <code>AudioSystem</code> for reading.</b> <code>javax.sound.sampled</code> only serves input and output at the sound card; volume is a factor computed in <code>float</code>, not <code>MASTER_GAIN</code>.</div>
+  <div><b>No third-party code.</b> No JLayer, no Vosk, no JavaFX. FFT and DCT come from framework-math, the acoustic model from framework-neural.</div>
+</div>
+
+<!-- =============================================================== SOURCES -->
+<h2 id="quellen">Sources, playback and mixer <span class="paket">envisionz.audio</span></h2>
+
+<div class="karte">
+  <h3><code>AudioSource</code>, <code>SineSource</code>, <code>MicSource</code> – where the samples come from</h3>
+  <p class="zweck">The one interface: sample rate, channel count, length (or <code>LAENGE_UNBEKANNT</code>), <code>read</code> into a buffer <code>[channel][frame]</code>, optionally seekable. <code>SineSource</code> is both a source and a test instrument; the phase is recomputed from the frame counter, not accumulated. <code>MicSource</code> reads the microphone through a <code>TargetDataLine</code> and keeps a loss balance.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>sampleRate()</code>, <code>channels()</code>, <code>frameLength()</code>, <code>position()</code></li>
+      <li><code>read(ziel, offset, frames)</code> – −1 only at the end; <code>seekable()</code>, <code>seek(frame)</code></li>
+      <li><code>SineSource(rate, kanaele, frequenz, amplitude, rahmen)</code>, <code>SineSource.kammerton(rate)</code></li>
+      <li><code>MicSource(rate, kanaele)</code>, <code>MicSource(mischer, rate, kanaele)</code>, <code>eingaenge(rate, kanaele)</code>, <code>starte()</code>, <code>beende()</code></li>
+      <li><code>verloreneRahmen()</code>, <code>zittern()</code>, <code>bilanz()</code>, <code>pegel()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: ForensikPanel (sound chain)</span><span class="chip">internal: all decoders, MfccStrom, Horcher</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Treat every sound source alike: play it, analyse it, turn it into features.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>Player</code>, <code>Tonmischer</code>, <code>Versatzquelle</code>, <code>Pegel</code> – making it audible</h3>
+  <p class="zweck"><code>Player</code> plays streaming through a <code>SourceDataLine</code>: stopping discards the device buffer (<code>flush</code>), the regular end plays it out (<code>drain</code>). <code>Tonmischer</code> sits in front: volume, linear balance (centre means a factor of one), channel layout and mute; the level meter measures <em>before</em> the volume control, i.e. the recording itself. <code>Versatzquelle</code> shifts a source by silence in front or by discarding the beginning – exactly in the data stream instead of in the sound card.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Player(quelle)</code>, <code>play()</code>, <code>pause()</code>, <code>stop()</code>, <code>seek(sekunden)</code>, <code>setGain(faktor)</code>, <code>warteAufEnde()</code>, <code>zustand()</code></li>
+      <li><code>Tonmischer</code>: <code>lautstaerke</code>, <code>balance</code>, <code>stumm</code>, <code>kanalbild(Kanalbild.MONO|LINKS|RECHTS|TAUSCH|STEREO)</code>, <code>ueber(quelle)</code>, <code>pegel()</code></li>
+      <li><code>Versatzquelle(quelle, sekunden)</code> – positive: silence in front, negative: beginning dropped</li>
+      <li><code>Pegel.von(puffer, rahmen)</code>, <code>spitzeDb()</code>, <code>effektivDb()</code>, <code>uebersteuert()</code>, <code>balken(breite)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: ForensikPanel (playback, picture-sound offset)</span><span class="chip">app-forensik: Tondialog (mixer, level meter)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Play the sound of a DVD backup in sync with the picture, listen to channels individually, judge the recording level.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – play a WAV as mono sum with lead-in</h4>
+<pre><code>Tonmischer mischer = new Tonmischer();
+mischer.kanalbild(Tonmischer.Kanalbild.MONO);
+AudioSource kette = mischer.ueber(new Versatzquelle(new WavReader(new File("aufnahme.wav")), 0.35));
+try (Player p = new Player(kette)) {
+    p.play();
+    p.warteAufEnde();
+}</code></pre></div>
+</div>
+
+<!-- =============================================================== WAV -->
+<h2 id="wav">Reading and writing WAV <span class="paket">envisionz.audio.wav</span></h2>
+
+<div class="karte">
+  <h3><code>WavReader</code>, <code>WavWriter</code>, <code>WavFormat</code> – RIFF directly</h3>
+  <p class="zweck">Read streaming and seekable; when writing, the sizes are filled in afterwards. The format's traps are handled in the code: 8 bit is unsigned (zero at 128), odd chunks carry a pad byte outside the chunk size, <code>WAVE_FORMAT_EXTENSIBLE</code> holds the real code in the subformat GUID, an unusable data size (0 or 0xFFFFFFFF) means “rest of the file”. Overdrive is clipped, not wrapped around.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>WavReader(file)</code>, <code>format()</code>, <code>seek(frame)</code>, <code>read(...)</code></li>
+      <li><code>WavWriter(ziel, format, rate, kanaele)</code>, <code>write(quelle, offset, frames)</code></li>
+      <li><code>WavWriter.schreibe(quelle, ziel, format)</code> – a whole source into one file</li>
+      <li><code>WavFormat.PCM_U8</code>, <code>PCM_S16</code>, <code>PCM_S24</code>, <code>IEEE_F32</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: ForensikPanel (save a sound excerpt)</span><span class="chip">app-forensik: cmd.forensik.TonAuszug</span><span class="chip">internal: Datensatz (kws)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Save sound excerpts from DVD material as WAV, read data sets for word recognition.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – concert pitch as 24-bit WAV</h4>
+<pre><code>WavWriter.schreibe(new SineSource(48000, 2, 440.0, 0.5, 48000), new File("a440.wav"), WavFormat.PCM_S24);</code></pre></div>
+</div>
+
+<!-- =============================================================== MP3 -->
+<h2 id="mp3">MP3 decoder <span class="paket">envisionz.audio.mp3</span></h2>
+
+<div class="karte">
+  <h3><code>Mp3Source</code> – MPEG-1/2/2.5 Layer III, sample-exact seeking</h3>
+  <p class="zweck">The whole chain in own classes: frame search (<code>Mp3FrameReader</code>, <code>Mp3Header</code>), side information (<code>SideInfo</code>, <code>Granule</code>), bit reservoir (<code>ByteVorrat</code>), scale factors, Huffman, requantisation, MS and intensity stereo, alias reduction and IMDCT (<code>Hybridsynthese</code>), synthesis filter bank. Seeking uses an own index of all frame starts instead of the hundred support points of the Xing header; after a seek three frames are discarded so that reservoir, overlap and filter memory are right again.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Mp3Source(file)</code>, <code>read(...)</code>, <code>seek(rahmen)</code>, <code>frameLength()</code>; <code>ANLAUF_RAHMEN = 3</code></li>
+      <li><code>Mp3FrameReader.naechster()</code> → <code>Rahmen</code>, <code>id3v2Laenge()</code>, <code>resyncStellen()</code></li>
+      <li><code>Mp3Decoder.dekodiere(rahmen, ziel)</code>, <code>vergissZustand()</code></li>
+      <li>Stages individually: <code>StereoVerarbeitung.verarbeite</code>, <code>Hybridsynthese.reduziereAlias</code>/<code>synthetisiere</code>, <code>Synthesefilter.synthetisiere</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: Synthesefilter also for Layer II</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Play and analyse MP3 collections without a third-party library; source material for codec measurements.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – play from second 60</h4>
+<pre><code>Mp3Source mp3 = new Mp3Source(new File("titel.mp3"));
+Player p = new Player(mp3);
+p.seek(60.0);
+p.play();</code></pre></div>
+  <div class="hinweis">Against ffmpeg the RMS deviation is 2.1·10<sup>−7</sup> at a signal norm of 3.05·10<sup>−5</sup>, for all three MPEG versions (according to the module description).</div>
+</div>
+
+<!-- =============================================================== MP2 -->
+<h2 id="mp2">MPEG-1 Layer II <span class="paket">envisionz.audio.mp2</span></h2>
+
+<div class="karte">
+  <h3><code>Mp2Decoder</code>, <code>Mp2Source</code>, <code>Mp2Tabellen</code> – the sound of DVD and Video CD</h3>
+  <p class="zweck">DVD-Video mostly carries Layer II. Compared with Layer III there is no Huffman, no window switching and no alias reduction; the synthesis filter bank is the same. Because Layer II has no reservoir across frame boundaries, the decoder checks itself: after all fields the bit pointer must stand just before the frame end (<code>restbits()</code>). <code>Mp2Source</code> does not trust the first sync but demands three matching frames in a row and counts dropouts.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Mp2Source(InputStream)</code>, <code>bitrate()</code>, <code>rahmen()</code>, <code>aussetzer()</code> – not seekable</li>
+      <li><code>Mp2Decoder(kanaele)</code>, <code>dekodiere(d, versatz, rahmenlaenge, crc, ziel)</code>, <code>restbits()</code>, <code>belegteTeilbaender()</code></li>
+      <li><code>Mp2Tabellen.stufen</code>, <code>zuteilungsbits</code>, <code>skalenfaktor</code>, <code>skalenfaktorPruefen()</code>, <code>faktorenPruefen()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-forensik: ForensikPanel (DVD sound)</span><span class="chip">app-forensik: cmd.forensik.TonAuszug</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Play the sound of a DVD backup and extract it as WAV.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – save a Layer II stream as WAV</h4>
+<pre><code>try (Mp2Source ton = new Mp2Source(ein)) {          // ein: InputStream of the audio stream
+    WavWriter.schreibe(ton, new File("ton.wav"), WavFormat.PCM_S16);
+}</code></pre></div>
+</div>
+
+<!-- =============================================================== MFCC -->
+<h2 id="mfcc">MFCC features <span class="paket">envisionz.audio.mfcc</span></h2>
+
+<div class="karte">
+  <h3><code>Mfcc</code>, <code>MfccStrom</code>, <code>MelFilterbank</code>, <code>Delta</code></h3>
+  <p class="zweck">The classic feature chain: pre-emphasis, window, power spectrum (FFT from framework-math), mel filter bank, logarithm, DCT, lifter. Default setting per sample rate: 25 ms window, 10 ms step, 13 coefficients, 26 filters. <code>Delta</code> adds first and second derivatives, turning 13 values into 39; at the edges values are repeated instead of padded with zeros.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>MfccEinstellung.fuer(rate)</code>, <code>fensterRahmen()</code>, <code>schrittRahmen()</code></li>
+      <li><code>new Mfcc(e).vonSignal(float[])</code> → <code>double[time][coeff]</code>; <code>Mfcc.betoneVor(roh, beiwert)</code></li>
+      <li><code>MfccStrom(quelle, e)</code>, <code>naechstes(ziel)</code> – running over an <code>AudioSource</code></li>
+      <li><code>MelFilterbank.zuMel</code>/<code>zuHertz</code>; <code>Delta.ableitung</code>, <code>Delta.mitAbleitungen(merkmale, weite)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: word recognition, phone features</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Speech recognition, sound comparisons, features as network input.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – 39 features every 10 ms</h4>
+<pre><code>double[][] m = new Mfcc(MfccEinstellung.fuer(16000)).vonSignal(signal);
+double[][] m39 = Delta.mitAbleitungen(m, 2);</code></pre></div>
+</div>
+
+<!-- =============================================================== KWS -->
+<h2 id="kws">Word recognition <span class="paket">envisionz.audio.kws</span></h2>
+
+<div class="karte">
+  <h3><code>Datensatz</code>, <code>KwsTraining</code>, <code>KwsModell</code>, <code>Horcher</code> – closed vocabulary</h3>
+  <p class="zweck">A few dozen words, recorded by oneself, one network on top. <code>Wortgrenzen</code> finds the word in the recording, <code>Wortmerkmal</code> condenses it into a fixed number of segments with mean subtraction – which makes it insensitive to volume, time shift and, within limits, speaking rate. <code>KwsModell</code> stores network, normalisation, word list and the complete feature setting in one <code>.ennet</code> file, because model and features belong together. <code>Horcher</code> spots words in a running stream. Against coughing and slamming doors only the rejection threshold helps (default 0.6).</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Datensatz.lies(ordner)</code>, <code>teile(anteil, saat)</code>, <code>erweitert(jeAufnahme, saat)</code>, <code>bericht()</code></li>
+      <li><code>KwsTraining.trainiere(datensatz, Einstellung.fuer(rate))</code> → <code>Ergebnis</code> (<code>modell()</code>, <code>genauigkeit()</code>, <code>verwechslungAlsText()</code>)</li>
+      <li><code>KwsModell.lade(pfad)</code>, <code>speichere(pfad)</code>, <code>erkenneWort</code>, <code>erkenneAufnahme</code>, <code>schwelle(s)</code></li>
+      <li><code>Horcher(quelle, modell)</code>, <code>naechstes()</code> → <code>Fund</code>; <code>Augmentierung.varianten(...)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Voice commands for the own applications, without cloud and without a third-party model.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – train and listen at the microphone</h4>
+<pre><code>Datensatz d = Datensatz.lies(Path.of("woerter"));      // one folder per word
+KwsTraining.Ergebnis e = KwsTraining.trainiere(d, KwsTraining.Einstellung.fuer(d.rate()));
+e.modell().speichere(Path.of("befehle.ennet"));
+
+MicSource mic = new MicSource(d.rate(), 1);
+mic.starte();
+try (Horcher h = new Horcher(mic, e.modell())) {
+    Horcher.Fund f;
+    while ((f = h.naechstes()) != null) System.out.println(f.treffer());
+}</code></pre></div>
+  <div class="hinweis">Word recognition has been accepted on a synthetic voice; acceptance with a real voice needs a recorded data set.</div>
+</div>
+
+<!-- =============================================================== STT -->
+<h2 id="stt">Features for phone recognition <span class="paket">envisionz.audio.stt</span></h2>
+
+<div class="karte">
+  <h3><code>Lautmerkmale</code>, <code>Kontextfenster</code> – one vector per time step</h3>
+  <p class="zweck">Unlike word recognition, the time axis is kept: MFCC every 10 ms, mean subtraction over the utterance, first and second derivatives, then the neighbouring windows added. The context window replaces recurrence: every time window stays an ordinary pattern for an ordinary network. Typical are three neighbours per side and every second window, i.e. 39 × 7 = 273 values per 20 ms.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Lautmerkmale.Einstellung.fuer(rate)</code>, <code>breite()</code>, <code>werteJeRahmen()</code></li>
+      <li><code>new Lautmerkmale(e).von(signal)</code>, <code>ohneKontext(signal)</code>, <code>zeitschritte(abtastwerte)</code></li>
+      <li><code>Kontextfenster.baue(rahmen, weite[, schritt])</code>, <code>breite(merkmale, weite)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Input of an acoustic model for phoneme-based dictation (long-term goal, depends on training data).</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== USAGE -->
+<h2 id="einsatz">Usage matrix in the framework</h2>
+<p class="einl">Which modules use which packages today, counted in the source code (excluding probes).</p>
+<table>
+  <tr><th>Module</th><th>Sources / player / mixer</th><th>WAV</th><th>MP3</th><th>Layer II</th><th>MFCC</th><th>Word recog&shy;nition</th><th>Phone features</th><th>What for</th></tr>
+  <tr><td>app-forensik</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td></td><td>Play, mix and offset the sound of a DVD backup against the picture, extract it as WAV</td></tr>
+</table>
+<div class="hinweis">MP3 decoder, MFCC, word recognition and phone features are verified but have no callers outside the module yet. The output logic of <code>Player</code> is deliberately kept separate from the one in framework-voice; whoever repairs one has to think of the other.</div>
+
+<footer>
+envisionz-framework-audio · 49 classes in 7 packages · dependencies: framework-math, framework-neural · probes: <code>pruefen.cmd --nur framework-audio</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

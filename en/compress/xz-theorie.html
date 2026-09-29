@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LZMA2, XZ and pre-filters – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag aktiv" href="index.html">framework-compress</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grenze">Limit against decompression bombs</a>
+<a class="unterseite" href="grenze-theorie.html">Background</a>
+<a class="rubrik" href="index.html#deflate">Deflate and zlib, both ways</a>
+<a class="unterseite" href="abgleich-deflate.html">DEFLATE/zlib – comparison</a>
+<a class="unterseite" href="deflate-packer.html">The own encoder</a>
+<a class="unterseite" href="deflate-theorie.html">Format and decoder</a>
+<a class="rubrik" href="index.html#behaelter">gzip and ZIP</a>
+<a class="unterseite" href="abgleich-gzip.html">gzip – comparison</a>
+<a class="unterseite" href="abgleich-zip.html">ZIP – comparison</a>
+<a class="unterseite" href="behaelter-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzma">XZ, LZMA, LZMA2</a>
+<a class="unterseite" href="abgleich-xz.html">XZ/LZMA – comparison</a>
+<a class="unterseite" href="lzma-theorie.html">Range coder and LZMA</a>
+<a class="unterseite aktiv" href="xz-theorie.html">LZMA2, XZ and pre-filters</a>
+<a class="rubrik" href="index.html#bzip2">bzip2</a>
+<a class="unterseite" href="abgleich-bzip2.html">Comparison</a>
+<a class="unterseite" href="bzip2-theorie.html">Background</a>
+<a class="rubrik" href="index.html#zstd">Zstandard</a>
+<a class="unterseite" href="abgleich-zstd.html">Comparison</a>
+<a class="unterseite" href="zstd-fse.html">FSE and Huffman</a>
+<a class="unterseite" href="zstd-theorie.html">Frame and sequences</a>
+<a class="rubrik" href="index.html#schnell">Fast codecs of the data formats</a>
+<a class="unterseite" href="abgleich-lz4.html">LZ4 – comparison</a>
+<a class="unterseite" href="abgleich-lzo.html">LZO – comparison</a>
+<a class="unterseite" href="abgleich-snappy.html">Snappy – comparison</a>
+<a class="unterseite" href="schnell-theorie.html">Background</a>
+<a class="rubrik" href="index.html#brotli">Brotli</a>
+<a class="unterseite" href="abgleich-brotli.html">Comparison</a>
+<a class="unterseite" href="brotli-theorie.html">Background</a>
+<a class="rubrik" href="index.html#lzw">LZW for PDF, TIFF and GIF</a>
+<a class="unterseite" href="lzw-theorie.html">Background</a>
+<a class="rubrik" href="index.html#pruef">Checksums</a>
+<a class="unterseite" href="pruef-theorie.html">Background</a>
+<a class="rubrik" href="index.html#bausteine">Bits, Huffman, run length</a>
+<a class="unterseite" href="bausteine-theorie.html">Background</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-compress</a> › LZMA2, XZ and pre-filters</span><a class="sprachwahl" href="../../de/compress/xz-theorie.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-compress · envisionz.compress.lzma</div>
+  <h1>LZMA2, XZ and pre-filters</h1>
+  <p class="unter">What lies above the LZMA core: the LZMA2 chunking with its reset levels, the XZ container with multi-byte integers, padding, four check types and index, and the pre-filters Delta and BCJ, which transform data before packing. With pseudocode following <code>Lzma2</code>, <code>Xz</code> and <code>Vorfilter</code>.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>A raw LZMA stream is indivisible: it cannot be picked up in the middle, and with incompressible data it becomes larger than the input. <b>LZMA2</b> therefore adds chunks on top, which may be compressed or raw and each specify what carries over from the previous chunk. <b>XZ</b> puts the container around it: signature, blocks, check values, an index. And <b>pre-filters</b> transform the data so that LZMA finds more repetitions.</p>
+
+<h2 id="lzma2">LZMA2: chunks and reset levels</h2>
+<p>Every chunk begins with a control byte:</p>
+<table>
+  <tr><th>Control byte</th><th>meaning</th><th>followed by</th></tr>
+  <tr><td><code>0x00</code></td><td>end of stream</td><td>–</td></tr>
+  <tr><td><code>0x01</code></td><td>raw chunk, reset dictionary</td><td>size − 1 (16 bits), bytes</td></tr>
+  <tr><td><code>0x02</code></td><td>raw chunk, keep dictionary</td><td>size − 1 (16 bits), bytes</td></tr>
+  <tr><td><code>0x03</code> … <code>0x7F</code></td><td>not assigned</td><td>error</td></tr>
+  <tr><td><code>0x80</code> … <code>0xFF</code></td><td>compressed chunk</td><td>output − 1 (16 bits), compressed − 1 (16 bits), properties byte if any</td></tr>
+</table>
+<p>For a compressed chunk the lower five bits of the control byte are the <b>upper</b> five bits of the output size (21 bits in total, up to 2 MiB). Bits 5 and 6 are the <b>reset level</b>:</p>
+<table>
+  <tr><th>Level</th><th>state and models</th><th>properties byte</th><th>dictionary</th></tr>
+  <tr><td>0</td><td>carry on</td><td>–</td><td>carries on</td></tr>
+  <tr><td>1</td><td>reset</td><td>keep old</td><td>carries on</td></tr>
+  <tr><td>2</td><td>reset</td><td>read new</td><td>carries on</td></tr>
+  <tr><td>3</td><td>reset</td><td>read new</td><td>reset</td></tr>
+</table>
+<p>Level 0 is not a special case: liblzma writes it already at the second chunk of a 120 kB file. A reader that starts every chunk afresh reads noise from the second chunk on. Every compressed chunk brings its own range stream (five initial bytes); but what was learned before is kept depending on the level.</p>
+
+<h3>Pseudocode – <code>Lzma2.lies(daten, ab, ende)</code></h3>
+<pre class="pseudo">kern ← null;  brauchtEigenschaften ← true
+<b>repeat</b>:
+    <b>if</b> p ≥ ende: error "without end byte"
+    s ← daten[p++]
+    <b>if</b> s = 0x00: <b>break</b>
+    <b>if</b> 0x02 &lt; s &lt; 0x80: error "unknown control byte"
+    <b>if</b> s = 0x01 <b>or</b> s ≥ 0xE0: brauchtEigenschaften ← true      <i>dictionary is reset</i>
+    <b>else if</b> kern = null: error "first chunk must reset the dictionary"
+    <b>if</b> s ∈ {0x01, 0x02}:                                       <i>raw</i>
+        m ← 16 bits + 1
+        <b>if</b> kern = null: kern ← Lzma(0, 0, 0)
+        <b>if</b> s = 0x01: kern.woerterbuchZuruecksetzen()           <i>before copying</i>
+        kern.roheBytes(m bytes)                                     <i>state and models remain</i>
+        <b>continue</b>
+    m ← ((s and 0x1F) &lt;&lt; 16 | 16 bits) + 1;  g ← 16 bits + 1
+    stufe ← (s >>> 5) and 3
+    <b>if</b> stufe ≥ 2: eig ← next byte;  brauchtEigenschaften ← false
+    <b>else if</b> brauchtEigenschaften: error "properties byte missing"
+    <b>if</b> kern = null: kern ← Lzma(lc, lp, pb from eig)
+    <b>else if</b> stufe ≥ 1: kern.modelleZuruecksetzen(lc, lp, pb from eig)
+    <b>if</b> stufe = 3: kern.woerterbuchZuruecksetzen()
+    kern.stueck(daten, p, p + g, m)                <i>new range reader, m bytes of output</i>
+    p ← p + g
+<b>return</b> (output, p)                                <i>p lies behind the end byte</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/lzma/Lzma2.java</code>. The rules for the first chunk, the properties byte after a dictionary reset and the behaviour of raw chunks were cross-read on 2026-09-15 against xz-java (<code>LZMA2InputStream.decodeChunkHeader</code>) and liblzma (<code>lzma2_decoder.c</code>).</p>
+<div class="hinweis"><b>Convention in the framework:</b> “Resetting the dictionary” does not discard the output buffer – those bytes are the output – but only moves the limit <code>wbAb</code> to the current position. A back-reference across this limit is an error, and the first literal after it sees 0 as its previous byte. The dictionary is the entire output so far; the dictionary size from the filter header is checked (at most 40) but not needed.</div>
+
+<h2 id="xz">The XZ container</h2>
+<figure>
+<svg viewBox="0 0 640 110" width="640" font-family="sans-serif" font-size="12">
+  <rect x="10" y="30" width="90" height="34" fill="#1f5f8b" stroke="#1f5f8b"/><text x="16" y="52" fill="#ffffff">header 12</text>
+  <rect x="100" y="30" width="60" height="34" fill="#e8f0f6" stroke="#1f5f8b"/><text x="104" y="52" fill="#1f5f8b">blk head</text>
+  <rect x="160" y="30" width="120" height="34" fill="#ffffff" stroke="#1f5f8b"/><text x="166" y="52" fill="#1f5f8b">LZMA2 data</text>
+  <rect x="280" y="30" width="30" height="34" fill="#ffffff" stroke="#5b6475" stroke-dasharray="3,3"/><text x="284" y="52" fill="#5b6475">0…3</text>
+  <rect x="310" y="30" width="60" height="34" fill="#e8f0f6" stroke="#9a6400"/><text x="316" y="52" fill="#9a6400">check</text>
+  <rect x="370" y="30" width="60" height="34" fill="#ffffff" stroke="#5b6475"/><text x="380" y="52" fill="#5b6475">block …</text>
+  <rect x="430" y="30" width="110" height="34" fill="#e8f0f6" stroke="#9a6400"/><text x="436" y="52" fill="#9a6400">index</text>
+  <rect x="540" y="30" width="90" height="34" fill="#1f5f8b" stroke="#1f5f8b"/><text x="546" y="52" fill="#ffffff">footer 12</text>
+  <text x="10" y="90" fill="#5b6475">FD 37 7A 58 5A 00, flags, CRC32</text>
+  <text x="280" y="90" fill="#5b6475">zero padding</text>
+  <text x="460" y="90" fill="#5b6475">CRC32, size, flags, 59 5A</text>
+</svg>
+<figcaption>An XZ stream. Several streams in a row form a valid file; between them there may be padding with zero bytes in multiples of four.</figcaption>
+</figure>
+<ul>
+  <li><b>Stream header:</b> signature <code>FD 37 7A 58 5A 00</code>, two flag bytes (the first zero, the check type in the lower four bits of the second), CRC32 over the flags.</li>
+  <li><b>Block header:</b> size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>⋅</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">(b_0 + 1) \cdot 4</annotation></semantics></math> bytes; block flags (number of filters − 1 in bits 0–1, bit 6 compressed size present, bit 7 uncompressed size present, bits 2–5 reserved); per filter ID and length of the properties as multi-byte integers, then the properties; zero padding; CRC32 over the header.</li>
+  <li><b>Block data</b>, padded to a multiple of four, then the <b>check value</b> of the unpacked data.</li>
+  <li><b>Index:</b> indicator <code>00</code>, number of blocks, two sizes per block – the compressed one without block padding (“unpadded size”: block header + compressed data + check value) and the uncompressed one –, padding, CRC32.</li>
+  <li><b>Stream footer:</b> CRC32, index size <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mo>⋅</mo><mo stretchy="false">(</mo><mi>w</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">4 \cdot (w + 1)</annotation></semantics></math> from the stored value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math> (“backward size”), the stream flags again, <code>59 5A</code> (“YZ”).</li>
+</ul>
+
+<h3>Multi-byte integers</h3>
+<p>All sizes are stored with seven payload bits per byte, least significant group first; a set top bit means “another byte follows”:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></munderover><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>i</mi></mrow></msub><mi>and</mi><mn>127</mn><mo stretchy="false">)</mo><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>7</mn><mi>i</mi></mrow></msup><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>≤</mo><mn>9</mn></mrow><annotation encoding="application/x-tex">x = \sum_{i=0}^{k-1} (b_i \operatorname{and} 127) \cdot 2^{7i}, \qquad k \le 9</annotation></semantics></math></p>
+<p>Example: 300 = <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>⋅</mo><mn>128</mn><mo>+</mo><mn>44</mn></mrow><annotation encoding="application/x-tex">2 \cdot 128 + 44</annotation></semantics></math> is stored as <code>AC 02</code> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>44</mn><mo>+</mo><mn>128</mn><mo>=</mo><mn>172</mn><mo>=</mo><mtext>0xAC</mtext></mrow><annotation encoding="application/x-tex">44 + 128 = 172 = \text{0xAC}</annotation></semantics></math>, then 2). A zero byte in the last place of a multi-byte number is rejected, otherwise the same number would have two representations.</p>
+
+<h3>Check types</h3>
+<p>The check types are arranged in groups of three; the <b>length</b> depends only on the group:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>l</mi><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><mi>l</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo>=</mo><mn>4</mn><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mo stretchy="false">⌊</mo><mo stretchy="false">(</mo><mi>c</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mn>3</mn><mo stretchy="false">⌋</mo></mrow></msup><mspace width="1em"/><mo stretchy="false">(</mo><mn>1</mn><mo>≤</mo><mi>c</mi><mo>≤</mo><mn>15</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">l(0) = 0, \qquad l(c) = 4 \cdot 2^{\lfloor (c-1)/3 \rfloor} \quad (1 \le c \le 15)</annotation></semantics></math></p>
+<p>i.e. 4, 8, 16, 32 and 64 bytes. Recomputed are <code>0x00</code> none, <code>0x01</code> CRC32, <code>0x04</code> CRC64 (the default of xz) and <code>0x0A</code> SHA-256. For an unknown check type its length is still skipped so that the next block begins at the right place, and the result reports <code>geprueft = false</code>.</p>
+
+<h3>Pseudocode – one block in <code>Xz</code></h3>
+<pre class="pseudo">kopfLänge ← (roh[ab] + 1) · 4;  check CRC32 over kopfLänge − 4 bytes
+flaggen ← roh[ab+1];  filter ← (flaggen and 3) + 1
+<b>if</b> flaggen and 0x3C: error "reserved bits"
+<b>if</b> flaggen and 0x40: gepackt ← vielfach()
+<b>if</b> flaggen and 0x80: entpackt ← vielfach()
+<b>for</b> each filter f:
+    kennung ← vielfach();  eigLänge ← vielfach()
+    <b>if</b> f is the last: require LZMA2 (0x21), eigLänge = 1, dictionary value ≤ 40
+    <b>else if</b> kennung = Delta (0x03): distance ← property + 1
+    <b>else if</b> 0x04 ≤ kennung ≤ 0x0A: BCJ, start offset from 0 or 4 property bytes
+    <b>otherwise</b>: error (RISC-V 0x0B and others by name)
+check that the padding up to the CRC is zero
+(teil, datenEnde) ← Lzma2.lies(roh, datenAb, gepackt known ? datenAb + gepackt : end of file)
+compare datenEnde with gepackt and length(teil) with entpackt, if given
+<b>for</b> f ← last pre-filter <b>down to</b> first:  Vorfilter.rueckgaengig(f, teil)
+check padding to a multiple of 4 (zeros)
+check the check value over teil (CRC32, CRC64 or SHA-256)
+remember unpadded ← headerLength + (dataEnd − dataStart) + length(check value)
+
+<i>in the index, for each block i:</i>
+compare compressed(i) with unpadded(i) and uncompressed(i) with length(teil(i))
+<i>in the stream footer:</i>
+compare 4 · (w + 1) with the length of the index as read</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/lzma/Xz.java</code> (<code>lies</code>, <code>einStrom</code>, <code>einBlock</code>, <code>verzeichnisLesen</code>, <code>vielfach</code>, <code>pruefLaenge</code>).</p>
+<div class="hinweis"><b>Convention in the framework:</b> The compressed size in the block header may be missing, and liblzma omits it as a rule. Then only the LZMA2 stream says where the block data end – which is why <code>Lzma2.lies</code> returns the position behind the end byte. Whoever reads to the end of the file instead no longer finds the check value and the index; all fifteen anchors failed on this on 2026-09-06.</div>
+<div class="hinweis"><b>Convention in the framework:</b> The stream flags are two bytes; the check type is in the <b>second</b>. In the stream footer it is compared at byte 9 of the footer with the one from the header. SHA-256 comes from <code>java.security.MessageDigest</code> – the only place in the module's main code that uses a JDK computation.</div>
+
+<h2 id="vorfilter">Pre-filters</h2>
+<p>A pre-filter changes no length; it transforms bytes so that equal content looks equal. When packing it runs before LZMA2, when unpacking after it in reverse order.</p>
+<p><b>Delta</b> (ID 0x03) stores every byte as the difference to the byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> positions earlier (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo></mrow><annotation encoding="application/x-tex">a =</annotation></semantics></math> properties byte + 1). It is undone by</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>+</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>−</mo><mi>a</mi></mrow></msub><mo stretchy="false">)</mo><mi>mod</mi><mn>256</mn><mo>,</mo><mspace width="2em"/><mi>i</mi><mo>≥</mo><mi>a</mi></mrow><annotation encoding="application/x-tex">x_i = (y_i + x_{i-a}) \operatorname{mod} 256, \qquad i \ge a</annotation></semantics></math></p>
+<p>This helps with measurement series and images with evenly growing values: 10, 12, 14, 16 becomes 10, 2, 2, 2.</p>
+<p><b>BCJ</b> (Branch/Call/Jump, IDs 0x04–0x0A) looks for branch instructions with a <b>relative</b> target in machine code and, when packing, replaces the relative target by the <b>absolute</b> one. If a program calls the same function from many places, the same bytes then appear everywhere and LZMA finds repetitions. When unpacking, the conversion is reversed. For x86 (<code>E8</code> call, <code>E9</code> jmp with 32-bit offset) at position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> with start offset <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>relative</mtext><mo>=</mo><mtext>absolute</mtext><mo>−</mo><mo stretchy="false">(</mo><mi>s</mi><mo>+</mo><mi>p</mi><mo>+</mo><mn>5</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{relative} = \text{absolute} - (s + p + 5)</annotation></semantics></math></p>
+<p>The conversion is only done if the top byte of the offset is <code>00</code> or <code>FF</code>, i.e. a plausible nearby jump; a mask over the <code>E8</code>/<code>E9</code> bytes seen recently excludes further false hits. Example from the <code>Vorfilterprobe</code>: <code>E8 10 00 00 00</code> at position 0 becomes <code>E8 0B 00 00 00</code>, since <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>0x10</mtext><mo>−</mo><mn>5</mn><mo>=</mo><mtext>0x0B</mtext></mrow><annotation encoding="application/x-tex">\text{0x10} - 5 = \text{0x0B}</annotation></semantics></math>; with start offset 0x1000 and target 0x2000 the result is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>0x2000</mtext><mo>−</mo><mtext>0x1005</mtext><mo>=</mo><mtext>0xFFB</mtext></mrow><annotation encoding="application/x-tex">\text{0x2000} - \text{0x1005} = \text{0xFFB}</annotation></semantics></math>.</p>
+<p>For ARM (instruction word with top byte <code>EB</code>, BL) the field is 24 bits in units of four bytes:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>f</mi><mo>'</mo><mo>=</mo><mfrac><mrow><mn>4</mn><mi>f</mi><mo>−</mo><mo stretchy="false">(</mo><mi>s</mi><mo>+</mo><mi>p</mi><mo>+</mo><mn>8</mn><mo stretchy="false">)</mo></mrow><mrow><mn>4</mn></mrow></mfrac><mi>mod</mi><msup><mrow><mn>2</mn></mrow><mrow><mn>24</mn></mrow></msup></mrow><annotation encoding="application/x-tex">f' = \frac{4f - (s + p + 8)}{4} \operatorname{mod} 2^{24}</annotation></semantics></math></p>
+<p>Field 0x100 at position 0 becomes 0xFE, at position 4 0xFD. PowerPC, IA-64, ARM-Thumb, SPARC and ARM64 follow the public-domain filters of liblzma (<code>src/liblzma/simple/*.c</code>) with their own instruction formats.</p>
+
+<h3>Pseudocode – <code>Vorfilter.delta</code> and <code>arm</code></h3>
+<pre class="pseudo"><b>function</b> delta(b, a):
+    <b>for</b> i ← a <b>to</b> length(b)−1:  b[i] ← b[i] + b[i−a]          <i>modulo 256</i>
+
+<b>function</b> arm(b, s):
+    <b>for</b> i ← 0, 4, 8, … while i + 4 ≤ length(b):
+        <b>if</b> b[i+3] = 0xEB:
+            q ← (b[i+2]·2^16 + b[i+1]·2^8 + b[i]) · 4
+            z ← (q − (s + i + 8)) >>> 2
+            b[i..i+2] ← lower 24 bits of z, least significant first</pre>
+<p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/lzma/Vorfilter.java</code>. The x86 filter with its mask follows <code>x86.c</code> from liblzma line by line.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Xzprobe</code> (55 checks):</b> anchors from liblzma: text, all 256 byte values, empty, 70,000 equal bytes, a raw chunk of 4000 random bytes, eight symbols, unusual properties, 3 MB with reset level 0 across the chunk boundary; all four check types; two streams in a row (both halves come out); five blocks in one stream; CRC64 of “123456789” = <code>995DC9BBDF1939FA</code> and not the one of ISO 3309; damage (flipped byte, 104 single-bit flips, truncated, non-zero padding, wrong index with and without new CRC, wrong compressed size in the index and wrong index size in the stream footer, both with recomputed CRC); the multi-byte integers 127 and 128; a flipped SHA-256.</li>
+  <li><b><code>Lzmabausteinprobe</code> (58 checks):</b> all LZMA2 control bytes and error paths, the four reset levels on hand-built streams (level 0 lets models and dictionary carry on, level 3 in mid-stream forgets the dictionary), raw chunks between compressed ones, and three liblzma streams whose end lies behind the end byte.</li>
+  <li><b><code>Xzfilterprobe</code> (21 checks):</b> Delta with distance 4, all seven BCJ filters (x86 also with start offset 0x1000) and Delta with x86 in a row, each against a stream from liblzma 5.4.5 and with a counter-probe without the filter; RISC-V and LZMA2 in the wrong place are rejected.</li>
+  <li><b><code>Vorfilterprobe</code> (20 checks):</b> the names of the IDs, Delta with distances 1, 4, 7 against a separately written forward direction, x86 and ARM with hand-computed expected values (positive and negative targets, start offset, <code>E9</code>, no jump without 00/FF, shorter than five bytes).</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Read-only; the BCJ filter for RISC-V (since liblzma 5.6) is named, not applied.</li>
+  <li>Only LZMA2 is read as the last filter; at most three pre-filters before it.</li>
+  <li>The entire output lies in memory (dictionary = output); capped by the <a href="index.html#grenze">decompression limit</a>.</li>
+  <li>A level-3 dictionary reset in mid-stream does not occur in liblzma files; it is checked only on hand-built streams.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>L. Collin, I. Pavlov: The .xz File Format. Tukaani Project.</li>
+</ul>
+
+<footer>
+envisionz-framework-compress · Background to <a href="index.html#lzma">XZ, LZMA, LZMA2</a> · see also <a href="lzma-theorie.html">range coder and LZMA</a> · Probes: <code>Xzprobe</code>, <code>Lzmabausteinprobe</code>, <code>Xzfilterprobe</code>, <code>Vorfilterprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

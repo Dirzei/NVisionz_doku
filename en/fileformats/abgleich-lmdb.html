@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LMDB data.mdb — comparison against specification and py-lmdb – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite aktiv" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › LMDB data.mdb — comparison against specification and py-lmdb</span><a class="sprachwahl" href="../../de/fileformats/abgleich-lmdb.html">Deutsch</a></div>
+<!-- erzeugt aus lmdb/COMPARISON.md durch tools/Abgleichseite.java; nicht von Hand aendern -->
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · comparison</div>
+  <h1>LMDB <code>data.mdb</code> — comparison against specification and py-lmdb</h1>
+</header>
+
+<p><b>As of:</b> 2026-09-07<br><b>Our implementation:</b> <code>envisionz.fileformats.lmdb.LmdbQuelle</code>, read-only, no third-party library<br><b>Specification:</b> LMDB's layout is not published as a document — references give <b>structure names from <code>mdb.c</code></b>, the Symas implementation<br><b>Compared against:</b> py-lmdb 2.3.0 on libmdb<br><b>Test bench:</b> <code>envisionz.fileformats.Lmdbprobe</code> — 65 checks, four self-built variants, one anchor written by LMDB itself, five counter-tests</p>
+<p><b>The reference implementation.</b> <b>py-lmdb</b> by David Wilson and Nic Watson is a <b>pure binding</b> to <b>liblmdb</b> — and that is the thing itself: LMDB grew out of OpenLDAP development in 2009 as a replacement for Berkeley DB, written by <b>Howard Chu (Symas)</b>. No standard exists outside that code; <b>the implementation is the format definition</b>.</p>
+<p><b>Why this one.</b> Because with LMDB <b>the implementation is the format</b>. No specification exists outside the code, so there is nothing to measure against but the code. py-lmdb passes exactly that code through.</p>
+<p><b>Coverage, computed from the rows below:</b> of 22 features we have 21 present, 0 partial and 1 absent; the reference implementation has 15 / 2 / 5.</p>
+<p><span class="ampel gruen">●</span> present · <span class="ampel rot">●</span> absent · <span class="ampel gelb">●</span> partial · – not applicable</p>
+<p><b>The <i>Note</i> column</b> points into section 5 of this document — not into the workspace item list. The word in front says <i>what kind of thing it is</i>: <b>gap</b> is something we lack and that is open; <b>decided</b> is something we deliberately do not do; <b>property</b> is a trait of the format affecting both implementations; <b>open there</b> is a gap of the reference product. Only the gaps are work — they are collected in section 5.1 and appear as <i>one</i> item in <code>OFFENE-PUNKTE.md</code>.</p>
+
+<h2 id="a1">Feature comparison</h2>
+<p>LMDB is a <b>key-value store</b>, not a table format: one file, one B+ tree, key and value as raw bytes. What is inside is known to the application, not to the file. The table view here is therefore flat and honest: two columns, <code>SCHLUESSEL</code> and <code>WERT</code>, both as bytes.</p>
+<h3>File and meta pages</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>py-lmdb 2.3.0 on libmdb</th><th>Note</th></tr>
+  <tr><td>Two meta pages, the newer one wins</td><td>MDB_meta</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L1</td></tr>
+  <tr><td>Magic <code>0xBEEFC0DE</code></td><td>mm_magic</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Format version 1</td><td>mm_version</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>A version other than 1 is reported and read</td><td>mm_version</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there L6</td></tr>
+  <tr><td>Page size from the meta page</td><td>mm_psize</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>32-bit and 64-bit layout</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>decided L2</td></tr>
+  <tr><td>Both byte orders</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>decided L2</td></tr>
+  <tr><td>A file length that is not a multiple of the page size is reported</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there L6</td></tr>
+  <tr><td>A missing second meta page is reported</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there L6</td></tr>
+  <tr><td><code>lock.mdb</code> noticed, not opened</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>decided L3</td></tr>
+</table>
+<h3>Tree and entries</h3>
+<table>
+  <tr><th>Feature</th><th>Reference</th><th>us</th><th>py-lmdb 2.3.0 on libmdb</th><th>Note</th></tr>
+  <tr><td>Branch and leaf pages</td><td>P_BRANCH, P_LEAF</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Overflow pages for large values</td><td>P_OVERFLOW</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td></td></tr>
+  <tr><td>Named sub-databases</td><td>MDB_dbi</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L4</td></tr>
+  <tr><td>Two sub-databases of the same name are reported</td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel rot">●</span></td><td>open there L6</td></tr>
+  <tr><td>Duplicate keys (<code>MDB_DUPSORT</code>)</td><td>MDB_DUPSORT</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L7</td></tr>
+  <tr><td>Sub-pages with <code>DUPSORT</code></td><td>P_SUBP</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L7</td></tr>
+  <tr><td>The <b>sub-tree</b> for many values</td><td>F_SUBDATA</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L7</td></tr>
+  <tr><td><code>DUPFIXED</code>: packed without node headers</td><td>P_LEAF2</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L7</td></tr>
+  <tr><td>The value stands as the <b>key</b></td><td>—</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L7</td></tr>
+  <tr><td>Free list (<code>FREE_DBI</code>)</td><td>FREE_DBI</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L8</td></tr>
+  <tr><td>The first number in the value is the <b>count</b></td><td>FREE_DBI</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>property L8</td></tr>
+  <tr><td>Writing, transactions, locking</td><td>—</td><td><span class="ampel rot">●</span></td><td><span class="ampel gruen">●</span></td><td>decided L5</td></tr>
+</table>
+
+<h2 id="a2">What was measured</h2>
+<p>An environment <b>created</b> with py-lmdb 2.3.0: fifty entries in the main database and two in a named sub-database <code>unter</code>, written in two transactions. Read with <code>envisionz.fileformats.lmdb.LmdbQuelle</code>.</p>
+<p><b>Read, values equal</b> — both tables with the right entries. Plus three findings that together describe the file's situation: <i>"meta page 1 is current (transaction 3); page 0 holds the previous state (transaction 2)"</i>, <i>"lock.mdb (the lock file) lies alongside. It is not opened and not written; this reader enters itself into no reader table."</i> and <i>"the main database holds 1 named sub-database; its entries are at the same time entries of the main database."</i></p>
+<p>The third finding is the most important and the easiest to overlook: <b>a named sub-database is itself an entry of the main database.</b> Iterating the main database shows its name as a key and its root page as the value — and counts it. Fifty plus one is the right number here, not fifty.</p>
+
+<h2 id="a3">What is hard about the format</h2>
+<p><b>There is no format description.</b> LMDB is defined by <code>mdb.c</code>, a file of some ten thousand lines of C. Everything here is derived from that source and from files — the weakest evidence in this entire collection, and the header says so.</p>
+<p><b>The file does not state its layout.</b> Whether page numbers are four or eight bytes wide, and in which byte order they are stored, depends on the machine that wrote it and is stated <b>nowhere in the file</b>. It must be inferred from the first bytes — and this module's test bench produces all four combinations itself, because no real LMDB on a single machine can produce more than one.</p>
+<p><b>Two meta pages, and the newer one wins.</b> Page 0 and page 1 each carry a complete state; which one applies is decided by the higher transaction number. Always taking page 0 reads, depending on chance, the state of the day before yesterday — and the file is perfectly fine.</p>
+<p><b>What is good:</b> the layout is small. One meta page, three page types, one B+ tree. Once the variant is determined, an LMDB file can be read completely without ever having to guess.</p>
+
+<h2 id="a4">The items</h2>
+<p>The <i>Note</i> column names the kind in front of the identifier. Only the <b>gaps</b> are work.</p>
+<h3>Our open gaps — this is the work</h3>
+<p><b>L2</b> (decided) — Only the local variant is measured against a foreign implementation</p>
+<p>The reader handles all four combinations of word width and byte order, and <code>Lmdbschreiber</code> produces all four — but the measurement against py-lmdb could only hit the one this machine writes. The other three are covered by our own probe and are <b>not measured against a foreign implementation</b>. That is not a gap in the reader but one in the evidence, and it can only be closed with files from other machines.</p>
+<h3>Deliberate decisions — nothing to do</h3>
+<p><b>L3</b> (decided) — The lock file stays closed</p>
+<p>LMDB normally requires a reader to register itself in a reader table inside <code>lock.mdb</code>. We do not — and we do not even open the file. That is this module's read-only principle at its sharpest: <b>a file we want to read is not touched by our wanting to read it.</b> The consequence is that a concurrently writing process does not see us and could reuse pages we are reading. For a tool looking at a file at rest that is the right trade; for a concurrent user it would be wrong. Which is why it is in the findings.</p>
+<p><b>L5</b> (decided) — Writing, transactions, locking</p>
+<p>Out of scope, explicitly. LMDB is a database; this module reads files.</p>
+<h3>Properties of the format</h3>
+<p><b>L7</b> (property) — Several values per key — closed on 2026-09-07</p>
+<p>With <code>MDB_DUPSORT</code> a key may carry several values, and they now come out <b>one at a time</b>. An entry of the database is a <b>pair</b>, and a key with three hundred values is three hundred entries — that is how LMDB counts, and the anchor proves it: <code>mdb_stat</code> reports 306, and this reader delivers 306. Before, it was six.</p>
+<p><b>That was this reader's one gap that yielded silently wrong numbers</b>, and it has exactly the shape one fears: no exception, no finding, no crooked byte — only a number that is far too small and looks like a number. Whoever carries it into an evaluation never notices.</p>
+<p><b>Two forms, and both occur in the same file.</b> For <b>few</b> values LMDB puts them as a <b>sub-page</b> into the same node: a whole page in miniature, with its own header and its own node pointers — and the pointers are relative to the start of the <b>sub-page</b>, not of the page. Relate them to the surrounding page and you read at a place that happens to contain bytes too. For <b>many</b> values LMDB creates a <b>tree of its own</b> and writes its description into the node; then the node additionally carries <code>F_SUBDATA</code> — the same bit as a named sub-database (L4), and only together with <code>F_DUPDATA</code> does it mean something different.</p>
+<p><b>And in both forms the value is the key.</b> The values stand in the sub-page and in the sub-tree as <b>keys</b> with a data length of zero — LMDB sorts them, and sorting goes by the key. Read the data there and you get nothing but empty values, and exactly as many as you expected.</p>
+<p>Plus the third form: with <code>MDB_DUPFIXED</code> all values are the same length, and the sub-page carries them <b>packed without node headers</b> — the same layout as a <code>P_LEAF2</code> leaf, with the length in the pad field. Read it like an ordinary sub-page and you look for node pointers where payload stands.</p>
+<p><b>L8</b> (property) — The free list — closed on 2026-09-07</p>
+<p><code>FREE_DBI</code> is database zero and lists which pages a <b>completed</b> transaction has released: the key is its number, the value a list of page numbers. <code>freiliste()</code> walks it.</p>
+<p><b>The first number of the list is its length and not a page number.</b> Count it in and you report a page as free that may not exist at all — and at the same time count one real page short. The anchor shows it on two entries: transaction 3 released pages 4 and 3, transaction 4 pages 6 and 5. Both values begin with a two.</p>
+<p><b>Why this matters to anyone:</b> the bytes of deleted entries still stand on those pages. LMDB overwrites nothing on deletion; it hangs the page into the list and reuses it on the next write. Until that happens, everything is still there. The same situation as with SQLite and its free list — only here nobody has lifted it yet.</p>
+<p><b>Nothing is lifted here, and that is deliberate.</b> This method says <b>where</b> the remnants lie; interpreting them is a discipline of its own (with SQLite it is called <code>SqliteReste</code>, and it is three times as long as the reader itself). It begins with knowing where to look — and that is now available.</p>
+<p><b>L1</b> (property) — The newer meta page wins</p>
+<p>See section 3. In the findings we name <b>both</b> transaction numbers, not only the current one — when asking why a file shows an older state than expected, the second number is the answer.</p>
+<p><b>L4</b> (property) — A sub-database is an entry</p>
+<p>See section 2. Both implementations get it right; we additionally say so, because otherwise the entry count is off by the number of sub-databases and nobody knows why.</p>
+<h3>Findings against the reference implementation</h3>
+<p><b>L6</b> (open there) — Four conditions libmdb does not report</p>
+<p>A format version other than 1, a file length that is not a multiple of the page size, a missing second meta page, and two sub-databases with the same name. libmdb reads on silently in the first three cases or refuses without saying why; in the fourth one of the two silently wins. None of the four makes the file unreadable — each of them changes what the result means.</p>
+
+<h2 id="a5">The wider field — what else reads and writes these files</h2>
+<p>This table does <b>not</b> count towards the coverage figures. It says nothing about this reader but about the field in which such a file comes into being — and when reading a foreign file that is the more important information: <b>whoever wrote it decides which variant is inside.</b> A reader that only knows the files of a single writer mistakes that writer's habits for the format.</p>
+<table>
+  <tr><th>Program</th><th>reads</th><th>writes</th><th>Note</th></tr>
+  <tr><td><b>liblmdb</b> (Symas/OpenLDAP)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The implementation is the format; there is no specification beside it.</td></tr>
+  <tr><td><b>py-lmdb</b> (Python)</td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The reference implementation of this comparison.</td></tr>
+  <tr><td><b>OpenLDAP</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>The origin: LMDB was created as a replacement for Berkeley DB in the directory service.</td></tr>
+  <tr><td><b>Caffe</b>, <b>PyTorch-Datenpipelines</b></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gruen">●</span></td><td>In image processing, a common way to read millions of small images quickly.</td></tr>
+  <tr><td><b>Monero</b>, <code>mdb_dump</code>, <code>mdb_stat</code></td><td><span class="ampel gruen">●</span></td><td><span class="ampel gelb">●</span></td><td>Blockchain and bundled tools; <code>mdb_dump</code> is the usual look into a foreign file.</td></tr>
+</table>
+<p>The list is <b>not exhaustive</b> and does not try to be. It names what one actually encounters with this format and leaves out what could do it too but nobody uses for it.</p>
+
+<h2 id="a6">The Java implementation — where this reader stands among its own kind</h2>
+<p><b>Why this section.</b> Every other comparison in this module measures against a tool in a <b>different</b> language. That is good against misunderstandings of the format and says nothing about where this reader stands among its own kind. What matters is the distinction between a <b>pure reimplementation in Java</b> and a <b>wrapper around the original C library</b>: only the reimplementation solves the same task under the same conditions as this reader; a wrapper calls the original.</p>
+<p><b>Java access exists, but exclusively as a wrapper and not as a reimplementation</b> — and in this collection that is the clearest result of its kind. <code>lmdbjava</code> embeds unmodified <code>liblmdb</code> through JNR-FFI and ships the native libraries inside the JAR; the older <code>lmdbjni</code> is genuine JNI; LWJGL likewise offers only bindings.</p>
+<p>A pure Java reader for the LMDB <b>file format</b> — one that reads the B-tree pages itself — was not found. As things stand, this reader is therefore the only implementation in Java that opens an LMDB file without the C library. That also explains why the comparison in this document runs against py-lmdb and not against something from the JVM world.</p>
+<p><b>How solid this is.</b> Researched on 2026-09-06 via web and GitHub search; Maven Central's search API was blocked at the time, so a systematic artefact search was not possible. "Nothing found" is therefore not the same as "nothing exists" — a little-visible or in-house implementation would not be discoverable this way. What stands here is the state of an honest search and not a claim of completeness.</p>
+
+<footer>
+Generated from <code>envisionz-framework-fileformats/docs/lmdb/COMPARISON.md</code> · back to the <a href="index.html#tabellen">overview</a> · all formats in the <a href="abgleich.html">comparison</a>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

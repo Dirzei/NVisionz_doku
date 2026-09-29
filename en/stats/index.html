@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Statistics as in R, as a compute core in Java – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag aktiv" href="index.html">framework-stats</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#grundlagen">Foundations and distributions</a>
+<a class="unterseite" href="spezialfunktionen.html">Special functions</a>
+<a class="unterseite" href="verteilungen.html">Distributions and quantiles</a>
+<a class="rubrik" href="#beschreibend">Describe, explore, outliers</a>
+<a class="unterseite" href="ausreisser.html">Outliers</a>
+<a class="unterseite" href="beschreibend.html">Summaries and quantiles</a>
+<a class="rubrik" href="#schaetzen">Confidence, prediction and tolerance intervals</a>
+<a class="unterseite" href="intervalle.html">Background</a>
+<a class="rubrik" href="#tests">Test families</a>
+<a class="unterseite" href="anpassungstests.html">Goodness-of-fit tests</a>
+<a class="unterseite" href="kontingenz.html">Contingency tables</a>
+<a class="unterseite" href="tests-parametrisch.html">Parametric tests</a>
+<a class="unterseite" href="tests-rang.html">Rank tests</a>
+<a class="rubrik" href="#regression">Correlation and regression</a>
+<a class="unterseite" href="korrelation.html">Correlation</a>
+<a class="unterseite" href="regression.html">Regression</a>
+<a class="rubrik" href="#anova">Analysis of variance and multiple testing</a>
+<a class="unterseite" href="anova.html">Background</a>
+<a class="rubrik" href="#multivariat">Multivariate methods</a>
+<a class="unterseite" href="multivariat.html">Background</a>
+<a class="rubrik" href="#zeitreihen">Time series</a>
+<a class="unterseite" href="zeitreihen.html">Background</a>
+<a class="rubrik" href="#spc">Statistical process control</a>
+<a class="unterseite" href="spc.html">Background</a>
+<a class="rubrik" href="#resample">Resampling and data preparation</a>
+<a class="unterseite" href="resampling.html">Resampling, power and data preparation – background</a>
+<a class="rubrik" href="#katalog">Method catalogue for the GUI</a>
+<a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-stats</span><a class="sprachwahl" href="../../de/stats/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-stats</div>
+  <h1>Statistics as in R, as a compute core in Java</h1>
+  <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. Special functions and distributions,
+  descriptive statistics and outliers, confidence intervals, test families, correlation and regression, analysis of variance, multivariate methods,
+  time series, statistical process control, resampling and data preparation, plus a method catalogue as the interface for the GUI.
+  For each method: purpose, API, use in the framework, applications, examples. The examples are shortened.
+  The display names of the catalogue are German (e.g. <code>Deskriptiv</code> = descriptive, <code>Einfaktorielle ANOVA</code> = one-way ANOVA) and are translated only under an English locale via <code>Msg</code>; they are shown unchanged.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>54</b><span>methods in the catalogue, in 18 categories</span></div>
+  <div class="zahl"><b>14</b><span>distributions with density, CDF, quantile and random draw</span></div>
+  <div class="zahl"><b>19</b><span>packages, 46 source files</span></div>
+  <div class="zahl"><b>1</b><span>dependency: framework-math (LinAlg, Optimize), otherwise pure JDK</span></div>
+  <div class="zahl"><b>1e-9 … 1e-12</b><span>deviation from R reference values according to the self-tests</span></div>
+  <div class="zahl"><b>2</b><span>probe classes, 21 test files</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>Analyse, not display.</b> No GUI and domain-free: primitive arrays in, structured results out. The workbench is app-stats.</div>
+  <div><b>Results that explain themselves.</b> A test returns statistic, degrees of freedom, p-value, estimate, confidence interval, alternative, checked assumptions, effect size and a plain-language interpretation. So far the t-tests (normality after Shapiro-Wilk, for the pooled test equality of variances after Brown-Forsythe) and the catalogue's analysis of variance carry checked assumptions; for the other tests the list stays empty.</div>
+  <div><b>Computed against the reference.</b> Self-tests against R and NIST reference values. A finding such as <code>Normal.cdf(-9) = 0</code> (because <code>erfc</code> was computed as 1 − erf) is fixed and recorded.</div>
+  <div><b>Reproducible randomness.</b> <code>Rng</code> with an explicit seed; the same seed gives a bit-identical sequence. Compute kernels are stateless, <code>Rng</code> is not: one instance per run.</div>
+  <div><b>Only JDK and framework-math.</b> No jars, no reflection, native-image ready. Linear algebra and optimisation moved to framework-math in 2026-09, bit-identical.</div>
+  <div><b>Locale-independent.</b> Display names are translated, the id is not; numbers in the result HTML are formatted with <code>Locale.ROOT</code>.</div>
+</div>
+
+<!-- =============================================================== FOUNDATIONS -->
+<h2 id="grundlagen">Foundations and distributions <span class="paket">envisionz.stats.core · envisionz.stats.dist · envisionz.stats.result</span></h2>
+
+<div class="karte">
+  <h3><code>SpecialFunctions</code> and <code>Rng</code></h3>
+  <p class="zweck">Gamma (Lanczos with reflection), digamma, beta, regularised incomplete gamma and beta functions (series or Lentz continued fraction), erf and erfc. <code>erfc</code> is computed via the upper incomplete gamma function and therefore stays accurate in the tail. All distribution functions and p-values derive from these functions. <a class="vertiefung" href="spezialfunktionen.html">Special functions – background, formulas and pseudocode →</a> <a class="vertiefung" href="verteilungen.html">Distributions and quantiles – background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>logGamma</code>, <code>gamma</code>, <code>digamma</code>, <code>logBeta</code>, <code>beta</code>, <code>regularizedGammaP/Q(a, x)</code>, <code>regularizedBeta(x, a, b)</code>, <code>erf</code>, <code>erfc</code></li>
+      <li><code>new Rng(seed)</code>, <code>uniform</code>, <code>normal</code>, <code>exponential</code>, <code>nextInt</code>, <code>bootstrapIndices(n)</code>, <code>permutation(n)</code>, <code>shuffle</code>, <code>sampleWithout(n, k)</code>, <code>sampleByInversion(q)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: all distributions, tests, BuiltinMethods</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>The numerical basis of every probability; reproducible simulation and resampling.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>Distribution</code> – 14 distributions</h3>
+  <p class="zweck">Normal, Student's t, chi-squared, F, gamma, beta, exponential, uniform, lognormal, Weibull, binomial, Poisson, hypergeometric, negative binomial. Normal quantile after Acklam with a Halley step; discrete quantiles via bracketing search.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>pdf(x)</code>, <code>cdf(x)</code>, <code>quantile(p)</code>, <code>mean()</code>, <code>variance()</code>, <code>sd()</code>, <code>sample(rng)</code></li>
+      <li><code>new Normal(mu, sigma)</code>, <code>Normal.standard()</code>, <code>new StudentT(df)</code>, <code>new Weibull(shape, scale)</code>, …</li>
+      <li><code>Results</code>: <code>HTestResult</code>, <code>ConfInt</code>, <code>EffectSize</code>, <code>AssumptionCheck</code>, <code>FitResult</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: tests, Q-Q points, distribution fitting in the catalogue</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Service life (Weibull), failure counts (Poisson), critical values, probabilities far out in the tail.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – Weibull life and t quantile</h4>
+<pre><code>double b10 = new Weibull(2.1, 12000).quantile(0.10);    // 10 % failure time, parameters illustrative
+double t975 = new StudentT(9).quantile(0.975);</code></pre></div>
+</div>
+
+<!-- =============================================================== DESCRIBE -->
+<h2 id="beschreibend">Describe, explore, outliers <span class="paket">envisionz.stats.descriptive · .eda · .outlier</span></h2>
+
+<div class="karte">
+  <h3><code>Descriptive</code> and <code>Eda</code></h3>
+  <p class="zweck">Means (arithmetic, trimmed, geometric, harmonic), spread, quantiles after all nine R types (Hyndman-Fan, default 7), MAD, skewness, kurtosis, five-number summary. Histogram rules after Sturges, Scott and Freedman-Diaconis, kernel density with Silverman bandwidth, empirical CDF, box-plot statistics, Q-Q points. <a class="vertiefung" href="beschreibend.html">Summary statistics and quantiles – background, formulas and pseudocode →</a> <a class="vertiefung" href="ausreisser.html">Outliers – background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>mean</code>, <code>trimmedMean</code>, <code>median</code>, <code>mode</code>, <code>variance</code>, <code>sd</code>, <code>cv</code>, <code>sem</code>, <code>quantile(x, p[, type])</code>, <code>iqr</code>, <code>mad</code>, <code>skewness</code>, <code>kurtosis</code>, <code>fivenum</code>, <code>summary</code>, <code>frequencyTable</code></li>
+      <li><code>Eda.nclassSturges</code>, <code>binWidthScott</code>, <code>binWidthFD</code>, <code>breaks</code>, <code>histogram</code>, <code>kde(x, nGrid)</code>, <code>ecdf</code>, <code>boxplotStats</code>, <code>qqNormal</code>, <code>qqPoints</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (descriptive, EDA)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Summarising test-bed measurement series; looking at the distribution of a quantity before choosing a test.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – summary and a type-6 quantile</h4>
+<pre><code>Descriptive.Summary s = Descriptive.summary(x);          // n, mean, sd, min, q1, median, q3, max
+double p95 = Descriptive.quantile(x, 0.95, 6);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>Outlier</code> – detecting outliers rather than deleting them</h3>
+  <p class="zweck">Tukey fences, z-scores and robust z-scores (median and MAD), Grubbs test, Dixon's Q, Rosner ESD for several outliers, Hampel filter for series, winsorising and trimming.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>tukeyOutliers(x)</code>, <code>zScores(x)</code>, <code>robustZScores(x)</code></li>
+      <li><code>grubbs(x)</code> → <code>HTestResult</code>, <code>dixonQ(x)</code> → <code>DixonResult</code>, <code>rosnerESD(x, max)</code></li>
+      <li><code>hampelFilter(x, halfWindow, nSigma)</code>, <code>winsorize(x, fraction)</code>, <code>trim(x, fraction)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (outliers)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Flagging conspicuous measurement points; finding outliers in the column trend of digitised tables.</p></div>
+  </div>
+  <div class="hinweis">The plain z-score masks its own outlier, because a gross value inflates the standard deviation. Robust methods are preferable to cleaning.</div>
+</div>
+
+<!-- =============================================================== INTERVALS -->
+<h2 id="schaetzen">Confidence, prediction and tolerance intervals <span class="paket">envisionz.stats.estimate</span></h2>
+
+<div class="karte">
+  <h3><code>Estimate</code></h3>
+  <p class="zweck">Intervals for the mean (t), variance and standard deviation (chi-squared), median and quantiles (order statistics), proportions after Wald, Wilson, Clopper-Pearson and Agresti-Coull, normal prediction and tolerance intervals, bootstrap interval as percentile or BCa with jackknife acceleration. <a class="vertiefung" href="intervalle.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>meanCI(x, level)</code>, <code>varianceCI</code>, <code>sdCI</code>, <code>medianCI</code>, <code>quantileCI(x, p, level)</code></li>
+      <li><code>proportionCI(k, n, level, PropMethod.WILSON)</code></li>
+      <li><code>predictionIntervalNormal(x, level)</code>, <code>toleranceIntervalNormal(x, coverage, confidence)</code></li>
+      <li><code>bootstrapCI(x, stat, level, B, rng, bca)</code> → <code>ConfInt(lower, upper, level)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (confidence intervals)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>How precise a measured efficiency is; which range covers 99 % of the parts with 95 % confidence.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – BCa bootstrap for the median</h4>
+<pre><code>ConfInt ki = Estimate.bootstrapCI(x, Descriptive::median, 0.95, 2000, new Rng(1L), true);</code></pre></div>
+</div>
+
+<!-- =============================================================== TESTS -->
+<h2 id="tests">Test families <span class="paket">envisionz.stats.test · envisionz.stats.categorical</span></h2>
+
+<div class="karte">
+  <h3><code>ParametricTests</code> and <code>NonparametricTests</code></h3>
+  <p class="zweck">t-tests for one, two (Welch by default) and paired samples, z-test, F-test, Bartlett, Levene and Brown-Forsythe, proportion tests. Rank methods: Mann-Whitney U, Wilcoxon signed rank, sign test, Kruskal-Wallis, Friedman, Mood's median, runs test, each with tie correction in the normal approximation. Alternative as <code>"two.sided"</code>, <code>"less"</code> or <code>"greater"</code>. <a class="vertiefung" href="tests-parametrisch.html">Parametric tests – background, formulas and pseudocode →</a> <a class="vertiefung" href="tests-rang.html">Rank tests – background, formulas and pseudocode →</a> <a class="vertiefung" href="anpassungstests.html">Goodness-of-fit tests – background, formulas and pseudocode →</a> <a class="vertiefung" href="kontingenz.html">Contingency tables – background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>oneSampleT(x, mu0, alt)</code>, <code>twoSampleT(x, y, alt, welch)</code>, <code>pairedT(x, y, alt)</code>, <code>zTest</code>, <code>fTestVariance</code>, <code>bartlett(groups)</code>, <code>leveneTest(groups, median)</code>, <code>oneProportionZ</code>, <code>twoProportionZ</code></li>
+      <li><code>mannWhitneyU(x, y, alt)</code>, <code>wilcoxonSignedRank(x, mu, alt)</code>, <code>signTest</code>, <code>kruskalWallis(groups)</code>, <code>friedman(data)</code>, <code>moodMedian</code>, <code>runsTest</code>, <code>ranks</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (group comparison, paired t)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Whether two component variants or two test beds really differ.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – Welch test with effect size</h4>
+<pre><code>HTestResult r = ParametricTests.twoSampleT(alt, neu, "two.sided", true);
+double p = r.pValue();                    // r.confInt(), r.effectSize(), r.assumptions(), r.interpretation()</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>GofTests</code> and <code>CategoricalTests</code></h3>
+  <p class="zweck">Goodness-of-fit tests: Shapiro-Wilk (Royston), one- and two-sample Kolmogorov-Smirnov, Anderson-Darling, Lilliefors, Jarque-Bera, chi-squared goodness of fit, Cramér-von Mises. Contingency tables: chi-squared independence with Yates correction, Fisher exact, McNemar, Cochran's Q, Cramér's V, phi, odds ratio, Cohen's kappa.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>shapiroWilk(x)</code>, <code>ksOneSample(x, dist)</code>, <code>ksTwoSample(a, b)</code>, <code>andersonDarlingNormal</code>, <code>lilliefors</code>, <code>jarqueBera</code>, <code>chiSquareGof(obs, exp, ddof)</code>, <code>cramerVonMisesNormal</code></li>
+      <li><code>chiSquareIndependence(table, yates)</code>, <code>fisherExact(t)</code>, <code>mcnemar(t, correction)</code>, <code>cochranQ</code>, <code>cramersV</code>, <code>phi</code>, <code>oddsRatio</code>, <code>cohensKappa</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (goodness of fit, contingency)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Checking whether normality may be assumed; evaluating finding tables (good/bad per supplier).</p></div>
+  </div>
+  <div class="hinweis">A p-value says neither how likely the null hypothesis is nor how large a difference is. With ten thousand points a deviation of 0.1 % becomes significant; that is why the effect size belongs with every test.</div>
+</div>
+
+<!-- =============================================================== REGRESSION -->
+<h2 id="regression">Correlation and regression <span class="paket">envisionz.stats.correlation · envisionz.stats.regression</span></h2>
+
+<div class="karte">
+  <h3><code>Correlation</code></h3>
+  <p class="zweck">Pearson with test and Fisher-z interval, Spearman, Kendall's τ, partial correlation via the precision matrix, correlation matrix, autocorrelation and partial autocorrelation (Durbin-Levinson). <a class="vertiefung" href="korrelation.html">Correlation – background, formulas and pseudocode →</a> <a class="vertiefung" href="regression.html">Regression – background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>pearson</code>, <code>pearsonTest</code>, <code>spearman</code>, <code>spearmanTest</code>, <code>kendallTau</code>, <code>kendallTest</code></li>
+      <li><code>correlationMatrix(columns)</code>, <code>partialMatrix(columns)</code>, <code>acf(x, maxLag)</code>, <code>pacf(x, maxLag)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods, TimeSeries</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Relations between measurement channels; detecting autocorrelation in time series.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>Regression</code>, <code>LinearModel</code>, <code>Glm</code></h3>
+  <p class="zweck">Least squares with full diagnostics (standard errors, t, p, R², adjusted R², AIC, BIC, F, leverage, Cook's distance). Polynomial, VIF, ridge, lasso (coordinate descent), Huber-robust and quantile regression (IRLS), LOESS, nonlinear after Levenberg-Marquardt. Logistic and Poisson regression via IRLS with deviance and AIC.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>ols(x, y, intercept)</code>, <code>simple(x, y)</code>, <code>polynomial(x, y, degree)</code> → <code>LinearModel</code> (<code>coefficients</code>, <code>pValues</code>, <code>r2</code>, <code>adjR2</code>, <code>cooksDistance</code>, <code>predict</code>)</li>
+      <li><code>vif(x)</code>, <code>ridge(x, y, λ)</code>, <code>lasso(x, y, λ, maxIter)</code>, <code>robustHuber(x, y, c, maxIter)</code>, <code>quantile(x, y, τ, maxIter)</code>, <code>loess(x, y, span)</code></li>
+      <li><code>nls(x, y, f, p0)</code> with <code>ModelFn.at(params, x)</code></li>
+      <li><code>Glm.logistic(x, y)</code>, <code>Glm.poisson(x, y)</code> → <code>GlmModel</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (regression, LOESS, robust, logistic)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Fitting characteristics, assessing influencing variables, failure probability over a load.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – quadratic characteristic with diagnostics</h4>
+<pre><code>LinearModel m = Regression.polynomial(drehzahl, druckverhaeltnis, 2);
+double r2 = m.adjR2;                      // m.coefficients, m.pValues, m.cooksDistance</code></pre></div>
+  <div class="hinweis">R² rises with every added term; with enough terms it reaches 1 and has stored nothing but the data.</div>
+</div>
+
+<!-- =============================================================== ANOVA -->
+<h2 id="anova">Analysis of variance and multiple testing <span class="paket">envisionz.stats.anova</span></h2>
+
+<div class="karte">
+  <h3><code>Anova</code></h3>
+  <p class="zweck">One-way ANOVA with η², ω² and Cohen's f; p-value adjustment after Bonferroni, Holm, Hochberg and Benjamini-Hochberg; pairwise t-tests; Tukey HSD via the numerically integrated studentised range; Cohen's d. <a class="vertiefung" href="anova.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>oneWay(groups)</code> → <code>AnovaResult(fStatistic, df1, df2, pValue, ssBetween, ssWithin, etaSq, omegaSq, cohensF)</code></li>
+      <li><code>pAdjust(p, Adjust.HOLM)</code>, <code>pairwiseT(groups, method)</code>, <code>tukeyHSD(groups)</code> → <code>TukeyPair(i, j, diff, q, pValue)</code>, <code>cohensD(a, b)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (ANOVA with post hoc)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Comparing several batches, tools or test beds without multiplying the risk of error.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – ANOVA and Tukey for three batches</h4>
+<pre><code>Anova.AnovaResult a = Anova.oneWay(new double[][] {chargeA, chargeB, chargeC});
+Anova.TukeyPair[] paare = Anova.tukeyHSD(new double[][] {chargeA, chargeB, chargeC});</code></pre></div>
+</div>
+
+<!-- =============================================================== MULTIVARIATE -->
+<h2 id="multivariat">Multivariate methods <span class="paket">envisionz.stats.multivariate</span></h2>
+
+<div class="karte">
+  <h3><code>Multivariate</code></h3>
+  <p class="zweck">Principal components via the singular value decomposition (Golub-Kahan in framework-math), k-means with silhouette, hierarchical clustering (single, complete, average) with merge sequence, classical multidimensional scaling, Fisher discriminant direction. <a class="vertiefung" href="multivariat.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>pca(x, scale)</code> → <code>PcaResult(eigenvalues, proportion, loadings, scores)</code></li>
+      <li><code>kMeans(x, k, maxIter, rng)</code> → <code>KMeansResult</code>, <code>silhouette(x, assignment, k)</code></li>
+      <li><code>hclust(x, Linkage.AVERAGE)</code> → <code>Merge[]</code>, <code>classicalMDS(d, dims)</code>, <code>ldaDirection(g1, g2)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (PCA, k-means, hierarchical)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Condensing many measurement channels to a few directions; grouping operating states.</p></div>
+  </div>
+  <div class="hinweis">Since the move to Golub-Kahan, the signs of individual loading vectors can differ from before; the results are otherwise equivalent.</div>
+</div>
+
+<!-- =============================================================== TIME SERIES -->
+<h2 id="zeitreihen">Time series <span class="paket">envisionz.stats.timeseries</span></h2>
+
+<div class="karte">
+  <h3><code>TimeSeries</code></h3>
+  <p class="zweck">Moving averages, exponential smoothing, Holt with forecast, classical decomposition (additive or multiplicative), differencing, AR model after Yule-Walker, own FFT and periodogram, cross-correlation, ADF statistic, change point. <a class="vertiefung" href="zeitreihen.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>movingAverage(x, window)</code>, <code>expSmoothing(x, α)</code>, <code>holt(x, α, β)</code> → <code>HoltResult</code></li>
+      <li><code>decompose(x, period, additive)</code> → <code>Decomposition(trend, seasonal, remainder)</code>, <code>difference(x, lag)</code></li>
+      <li><code>arYuleWalker(x, order)</code>, <code>fft(x)</code>, <code>periodogram(x)</code>, <code>crossCorrelation(x, y, maxLag)</code>, <code>adfStatistic(x, lags)</code>, <code>changepoint(x)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (time series)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Detecting drift and periodicity in endurance runs; locating the moment of a change.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== SPC -->
+<h2 id="spc">Statistical process control <span class="paket">envisionz.stats.spc</span></h2>
+
+<div class="karte">
+  <h3><code>Spc</code> – control charts and process capability</h3>
+  <p class="zweck">x̄-R, x̄-s, individuals, p and c charts, CUSUM, EWMA, process capability C<sub>p</sub>, C<sub>pk</sub>, P<sub>p</sub>, P<sub>pk</sub>, Western Electric rule 1 and Pareto. Chart constants for subgroups of 2 to 10. <a class="vertiefung" href="spc.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>xbarR(subgroups)</code>, <code>xbarSMeans</code>, <code>individuals(x)</code>, <code>pChart(defects, sizes)</code>, <code>cChart(counts)</code> → <code>ControlChart(name, points, center, ucl, lcl)</code></li>
+      <li><code>cusum(x, target, k, sigma)</code>, <code>ewma(x, target, λ, L, sigma)</code></li>
+      <li><code>capability(x, lsl, usl)</code> → <code>Capability(cp, cpk, pp, ppk)</code>, <code>westernElectricRule1</code>, <code>pareto(labels, counts)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (I-MR, Cpk, CUSUM, EWMA)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Monitoring production and test beds; finding small sustained shifts with CUSUM.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – capability against the tolerance</h4>
+<pre><code>Spc.Capability c = Spc.capability(durchmesser, 11.95, 12.05);   // limits illustrative
+double cpk = c.cpk();</code></pre></div>
+  <div class="hinweis">Control limits are not specification limits. Capability indices presuppose a process in control.</div>
+</div>
+
+<!-- =============================================================== RESAMPLING -->
+<h2 id="resample">Resampling and data preparation <span class="paket">envisionz.stats.resample · envisionz.stats.prep</span></h2>
+
+<div class="karte">
+  <h3><code>Resample</code> and <code>Prep</code></h3>
+  <p class="zweck">Jackknife with bias and standard error, permutation test, Monte Carlo, k-fold cross-validation, power and sample size of the t-test. Preparation: mean and median imputation, log, square root, Box-Cox with optimal λ, Yeo-Johnson, standardising, min-max, ranks, weighted statistics, group aggregation. <a class="vertiefung" href="resampling.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>jackknife(x, f)</code> → <code>JackResult(estimate, bias, se)</code>, <code>permutationTest(x, y, B, rng)</code>, <code>monteCarlo</code>, <code>kFoldCV</code></li>
+      <li><code>powerTTest(d, n, alpha)</code>, <code>sampleSizeTTest(d, power, alpha)</code></li>
+      <li><code>Prep.meanImpute</code>, <code>medianImpute</code>, <code>boxCox(x, λ)</code>, <code>boxCoxLambda(x)</code>, <code>yeoJohnson</code>, <code>standardize</code>, <code>minMaxScale</code>, <code>rank</code>, <code>weightedMean</code>, <code>aggregate</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span><span class="chip">internal: BuiltinMethods (jackknife, Box-Cox, permutation test)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Planning the size of a test campaign; preparing skewed data for parametric methods.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – how many runs for d = 0.5 at 80 % power?</h4>
+<pre><code>int n = Resample.sampleSizeTTest(0.5, 0.80, 0.05);</code></pre></div>
+</div>
+
+<!-- =============================================================== CATALOGUE -->
+<h2 id="katalog">Method catalogue for the GUI <span class="paket">envisionz.stats.method · envisionz.stats.i18n</span></h2>
+
+<div class="karte">
+  <h3><code>StatMethod</code>, <code>MethodRegistry</code>, <code>BuiltinMethods</code>, <code>DataView</code>, <code>Params</code>, <code>ParamSpec</code>, <code>MethodResult</code></h3>
+  <p class="zweck">Each method declares which roles it needs (NUMERIC, NUMERIC_MULTI, GROUP, X, Y, TIME, WEIGHT, CATEGORY_TABLE) and which options it has. The GUI shows only what fits the assigned columns and builds the options card from <code>paramSpecs()</code>. The result carries the computed object, HTML and overlays for the chart. The catalogue: 34 univariate, 7 group comparisons, 6 for X/Y, 4 multivariate, 3 for contingency tables, registered explicitly, without reflection.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>MethodRegistry.defaultRegistry()</code>, <code>register(m)</code>, <code>all()</code>, <code>byCategory()</code>, <code>available(roles | data)</code></li>
+      <li><code>StatMethod</code>: <code>id()</code>, <code>category()</code>, <code>name()</code>, <code>requiredRoles()</code>, <code>paramSpecs()</code>, <code>run(data, params)</code></li>
+      <li><code>DataView.builder().numeric(v).group(labels).x(v).y(v).table(t).build()</code></li>
+      <li><code>ParamSpec.dbl</code>, <code>integer</code>, <code>bool</code>, <code>choice</code>; <code>Params.of(…)</code>, <code>getDouble</code>, <code>getString</code></li>
+      <li><code>MethodResult(title, result, html, overlays)</code>, <code>Overlay(kind, x, y, label)</code>; <code>Msg.tr(text)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-stats: StatsPanel (method tree, roles, results)</span><span class="chip">app-stats: OptionsPanel, StatsHelp</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>A statistics workbench whose method tree, role-based gating and options arise from the catalogue alone.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – suitable methods for values with groups</h4>
+<pre><code>MethodRegistry reg = MethodRegistry.defaultRegistry();
+DataView d = DataView.builder().numeric(werte).group(gruppeJeZeile).build();
+StatMethod m = reg.available(d).get(0);                  // choice illustrative
+MethodResult r = m.run(d, Params.empty());
+String html = r.html();</code></pre></div>
+</div>
+
+<!-- =============================================================== USAGE -->
+<h2 id="einsatz">Usage matrix in the framework</h2>
+<p class="einl">Which modules use which parts today, counted in the source code (probes excluded).</p>
+<table>
+  <tr><th>Module</th><th>Method catalogue (direct)</th><th>Compute packages (via the catalogue)</th><th>What for</th></tr>
+  <tr><td>app-stats</td><td class="x">●</td><td class="x">●</td><td>Statistics workbench: assign roles, choose methods, options, result HTML and overlays</td></tr>
+</table>
+<div class="hinweis">Outside the module only app-stats imports anything today, and only the package <code>method</code>. All compute packages are reachable through <code>BuiltinMethods</code> but are not yet called directly anywhere. Obvious next step: the embedded StatsPanel in app-charts that the module documentation foresees.</div>
+
+<footer>
+envisionz-framework-stats · 46 source files in 19 packages · five help pages DE/EN under <code>src/envisionz/stats/help/</code> · Probes: <code>pruefen.cmd --nur framework-stats</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>
