@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The decoder – display order, stream and concealment – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag aktiv" href="index.html">framework-video</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#dekoder">The decoder</a>
+<a class="unterseite aktiv" href="anzeigereihenfolge.html">Order and stream</a>
+<a class="rubrik" href="index.html#kopf">Header data and extensions</a>
+<a class="rubrik" href="index.html#schichten">Layers without decoding</a>
+<a class="rubrik" href="index.html#rekonstruktion">Reconstruction</a>
+<a class="unterseite" href="rekonstruktion.html">Background</a>
+<a class="rubrik" href="index.html#bit">Bit level</a>
+<a class="rubrik" href="index.html#bild">Pictures</a>
+<a class="rubrik" href="index.html#farbe">Colour and geometry</a>
+<a class="unterseite" href="farbe.html">Background</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-video</a> › The decoder – display order, stream and concealment</span><a class="sprachwahl" href="../../de/video/anzeigereihenfolge.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-video · envisionz.video.mpeg</div>
+  <h1>The decoder – display order, stream and concealment</h1>
+  <p class="unter">How <code>Dekoder</code> turns coding order into display order, reads a stream of any size with a sliding window and replaces missing picture parts. Pseudocode after the source, decisions and limits.</p>
+</header>
+
+<h2 id="reihenfolge">Coding order and display order</h2>
+<p>MPEG knows three picture types. An <b>I picture</b> can be decoded on its own. A <b>P picture</b> is predicted from an earlier I or P picture. A <b>B picture</b> is predicted from an earlier <em>and</em> a later reference picture and never serves as a reference itself. For a B picture to be decoded, the later reference picture must already be there – so it stands <b>before</b> the B pictures that precede it in time. The digit in the name is the temporal reference from the picture header (<code>temporal_reference</code>), i.e. the display position.</p>
+
+<figure>
+<svg viewBox="0 0 560 175" width="560" font-family="sans-serif" font-size="13">
+  <defs><marker id="pfeil-anz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker></defs>
+  <text x="40" y="20" fill="#5b6475">in the stream (coding order)</text>
+  <text x="40" y="115" fill="#5b6475">output (display order)</text>
+  <rect x="40" y="28" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="56" y="48" fill="#1f5f8b">I0</text>
+  <rect x="110" y="28" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="126" y="48" fill="#1f5f8b">P3</text>
+  <rect x="180" y="28" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="196" y="48" fill="#1f5f8b">B1</text>
+  <rect x="250" y="28" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="266" y="48" fill="#1f5f8b">B2</text>
+  <rect x="320" y="28" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="336" y="48" fill="#1f5f8b">P6</text>
+  <rect x="390" y="28" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="406" y="48" fill="#1f5f8b">B4</text>
+  <rect x="460" y="28" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="476" y="48" fill="#1f5f8b">B5</text>
+  <rect x="40" y="125" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="56" y="145" fill="#1f5f8b">I0</text>
+  <rect x="110" y="125" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="126" y="145" fill="#1f5f8b">B1</text>
+  <rect x="180" y="125" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="196" y="145" fill="#1f5f8b">B2</text>
+  <rect x="250" y="125" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="266" y="145" fill="#1f5f8b">P3</text>
+  <rect x="320" y="125" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="336" y="145" fill="#1f5f8b">B4</text>
+  <rect x="390" y="125" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="406" y="145" fill="#1f5f8b">B5</text>
+  <rect x="460" y="125" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="476" y="145" fill="#1f5f8b">P6</text>
+  <line x1="65" y1="58" x2="65" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="135" y1="58" x2="275" y2="123" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="205" y1="58" x2="135" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="275" y1="58" x2="205" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="345" y1="58" x2="485" y2="123" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="415" y1="58" x2="345" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="485" y1="58" x2="415" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+</svg>
+<figcaption>The same seven pictures, above as they stand in the stream, below as they are output. The two reference pictures P3 and P6 (orange) are held back until the next reference picture is finished; the B pictures go out at once.</figcaption>
+</figure>
+
+<p>The decoder therefore keeps <b>two reference pictures</b>: the newer one (<code>rueckwaerts</code>) and the one before (<code>vorwaerts</code>). A P picture predicts from the newer one, a B picture reads both. When a picture is finished:</p>
+<ul>
+  <li>a <b>B picture</b> goes straight to the sink;</li>
+  <li>an <b>I or P picture</b> first outputs the newer reference picture held so far – it is now certain that no B pictures come before it – and then becomes the newer reference itself, the former newer one becoming the older.</li>
+</ul>
+<p>At the end of the stream the reference picture still held is output. Whoever skips this gets a sequence that stutters and jumps back – and may take it for a tape fault.</p>
+
+<h3>Pseudocode – <code>Dekoder.bildAbschliessen(art, zeitbezug)</code></h3>
+<pre class="pseudo">verdecken()                                  <i>replace missing macroblocks, if requested</i>
+current.kennzeichnen(type, temporalReference)
+current.kodiernummer(count);  count ← count + 1
+<b>if</b> type = B:
+    sink(current)                            <i>B pictures never serve as reference</i>
+<b>else</b>:                                       <i>I or P</i>
+    <b>if</b> rueckwaerts ≠ empty: sink(rueckwaerts)       <i>the previous reference picture is now due</i>
+    vorwaerts ← rueckwaerts
+    rueckwaerts ← current
+current ← empty
+
+<i>// abschluss(): finish the open picture, then sink(rueckwaerts) if present</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-video/src/envisionz/video/mpeg/Dekoder.java</code> (<code>bildAbschliessen</code>, <code>abschluss</code>).</p>
+
+<h3>Worked example – the stream of the figure</h3>
+<table>
+  <tr><th>Finished decoding</th><th>to the sink</th><th>held (newer reference)</th></tr>
+  <tr><td>I0</td><td>–</td><td>I0</td></tr>
+  <tr><td>P3</td><td>I0</td><td>P3</td></tr>
+  <tr><td>B1</td><td>B1</td><td>P3</td></tr>
+  <tr><td>B2</td><td>B2</td><td>P3</td></tr>
+  <tr><td>P6</td><td>P3</td><td>P6</td></tr>
+  <tr><td>B4</td><td>B4</td><td>P6</td></tr>
+  <tr><td>B5</td><td>B5</td><td>P6</td></tr>
+  <tr><td>end of stream</td><td>P6</td><td>–</td></tr>
+</table>
+<p>The output is I0, B1, B2, P3, B4, B5, P6 – display order. Followed by hand through the source.</p>
+<div class="hinweis"><b>Decision in the framework:</b> The output is <em>display order</em>, not coding order, and it is delayed by at most one reference picture. This favours further processing: restoration steps that need neighbouring pictures get the pictures as a viewer sees them. Each <code>Bildpuffer</code> carries its temporal reference and coding number.</div>
+
+<h2 id="fenster">A stream that fits in no memory</h2>
+<p>A Java array holds at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{31}-1</annotation></semantics></math> elements, just under 2 GiB. The program stream of the sample recording measures 3,069,673,472 bytes, i.e. 2.86 GiB (class comment of <code>Dekoder</code>); it fits in no <code>byte[]</code>, and opening failed because of that, not because of decoding. <code>dekodieren(InputStream, senke)</code> therefore slides a <b>window</b> over the stream; the window is in memory, not the recording.</p>
+<p>It may be cut only at a <b>start code</b> (the byte sequence 00 00 01). The decoder finds the end of a unit by searching for the next start code; if a window ended in the middle of a slice, this remainder would be read as a complete slice and give a torn picture without any message. So processing goes only up to the <b>last</b> start code in the window; the rest moves to the start of the next. If a full window contains no further start code, it <b>grows</b> to twice the size instead of the decoder standing still.</p>
+
+<h3>Pseudocode – <code>Dekoder.dekodieren(ein, senke)</code></h3>
+<pre class="pseudo">window ← new array of size FENSTER;  fill ← 0
+<b>repeat</b>:
+    <b>while</b> source not empty <b>and</b> fill &lt; size(window):
+        n ← in.read(window, fill, rest);  <b>if</b> n &lt; 0: source empty, <b>leave</b>;  fill ← fill + n
+    <b>if</b> fill = 0: <b>stop</b>
+    limit ← <b>if</b> source empty <b>then</b> fill <b>else</b> letzterStartcode(window, fill)
+    <b>if</b> limit ≤ 0:
+        <b>if</b> source not empty:  window ← double(window);  <b>continue</b>     <i>no unit complete</i>
+        limit ← fill
+    abschnitt(window[0 .. limit))                                   <i>complete units only</i>
+    <b>if</b> abort set: <b>stop</b>
+    window[0 ..] ← window[limit .. fill);  fill ← fill − limit
+<b>abschluss()</b>                                                         <i>output the reference picture still held</i>
+
+<i>// letzterStartcode: search from fill−3 downwards to position 1 for 00 00 01; position 0 does not count</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-video/src/envisionz/video/mpeg/Dekoder.java</code> (<code>dekodieren</code>, <code>letzterStartcode</code>, <code>abschnitt</code>). The reading state is kept in a field between two sections.</p>
+<div class="hinweis"><b>Decision in the framework:</b> The window size is 1 MiB (<code>FENSTER = 1 &lt;&lt; 20</code>). Position 0 of the window does not count in the start code search – the start code the window begins with is there, and processing up to it would make no progress. An <b>abort</b> ends the run instead of reading the rest of a stream the decoder cannot decode anyway. A sequence header above 2048 × 2048 pixels (the standard allows up to 4095², which would be 384 MB per picture) is skipped and counted as an error mark.</div>
+
+<h2 id="verdeckung">Error concealment</h2>
+<p>If a slice breaks off or whole sectors of a damaged disc are missing, everything after used to stay black. With <code>fehlerverdeckung(true)</code>, at the <b>end of the picture</b> the decoder counts which macroblock positions were never written – it records which ones were occupied. This covers broken-off slices, wholly missing slices (which appear at no break point because they never begin) and a picture of which nothing arrived, with the same calculation. The substitute comes</p>
+<ul>
+  <li><b>temporally</b>, if a reference picture exists: the same position from the most recently decoded reference picture – the best approximation for a steady camera, and it costs nothing;</li>
+  <li><b>spatially</b>, if none exists: the nearest occupied macroblock in the same column, searched upwards first, then downwards – clearly worse, but it only affects the very first picture of a recording.</li>
+</ul>
+<p>Motion vectors are <b>not</b> guessed: that would be the next step and needs the neighbours' vectors; without evidence that it gets better it would only be more expensive.</p>
+
+<h3>Pseudocode – <code>Dekoder.verdecken()</code></h3>
+<pre class="pseudo"><b>if not</b> concealment <b>or not</b> concealable <b>or</b> no open picture: <b>return</b>
+source ← <b>if</b> rueckwaerts ≠ empty <b>then</b> rueckwaerts <b>else</b> vorwaerts
+count ← 0
+<b>for each</b> macroblock position (row, column) <b>with</b> written[position] = false:
+    <b>if</b> source ≠ empty:
+        copy block (column, row) from source to current
+    <b>else</b>:
+        neighbour ← nearest occupied row in this column      <i>up first, then down</i>
+        <b>if</b> neighbour &lt; 0: <b>continue</b>
+        copy block (column, neighbour) from current to (column, row)
+    count ← count + 1
+<b>if</b> count &gt; 0:  concealed ← concealed + count;  concealedPictures ← concealedPictures + 1</pre>
+<p class="quelle">Source: <code>envisionz-framework-video/src/envisionz/video/mpeg/Dekoder.java</code> (<code>verdecken</code>). Counters: <code>verdeckteMakrobloecke()</code>, <code>verdeckteBilder()</code>, <code>abgewieseneSlices()</code>.</p>
+<div class="hinweis"><b>Decision in the framework:</b> Concealment happens only on request, and everything concealed is counted. A concealed picture is thus never silently a “good” picture; whoever restores knows which parts are observation and which are substitute.</div>
+
+<h2 id="pruefung">How it is tested</h2>
+<p><code>Dekoderprobe</code> (605 checks according to the module description) secures the building blocks with anchors that can be calculated in closed form; <code>Sequenzkopfgrenzprobe</code> tests the skipping of oversized sequence headers, with a counter-test without the limit that turns red. According to the module description, everything above the building blocks remains untested against a second decoder: assembly of whole pictures, reordering, reference picture handling over a group of pictures, field and dual-prime prediction, scalability, data partitioning and error concealment. Against ffmpeg the pictures are at 69.7 to 76.4 dB (I 76.0–76.4, P 69.7–75.0, B 72.9–74.6); a picture comparison against the normative reference software is outstanding.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The output depends on correctly recognised picture types and start codes; a stream without a sequence header can be decoded only from the next one (<code>abSequenzkopf</code>).</li>
+  <li>A B picture without both reference pictures and a P picture without a forward one cannot be decoded.</li>
+  <li>Concealment is a substitute, not a reconstruction: good with a steady camera, poor with motion.</li>
+  <li>Scalable streams are recognised, not decoded.</li>
+</ul>
+
+<footer>
+envisionz-framework-video · Background to <a href="index.html#dekoder">The decoder</a> · Tests: <code>Dekoderprobe</code>, <code>Sequenzkopfgrenzprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

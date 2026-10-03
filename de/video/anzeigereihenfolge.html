@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Der Dekoder – Anzeigereihenfolge, Strom und Verdeckung – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag aktiv" href="index.html">framework-video</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#dekoder">Der Dekoder</a>
+<a class="unterseite aktiv" href="anzeigereihenfolge.html">Reihenfolge und Strom</a>
+<a class="rubrik" href="index.html#kopf">Kopfangaben und Erweiterungen</a>
+<a class="rubrik" href="index.html#schichten">Schichten ohne Dekodieren</a>
+<a class="rubrik" href="index.html#rekonstruktion">Rekonstruktion</a>
+<a class="unterseite" href="rekonstruktion.html">Hintergrund</a>
+<a class="rubrik" href="index.html#bit">Bitebene</a>
+<a class="rubrik" href="index.html#bild">Bilder</a>
+<a class="rubrik" href="index.html#farbe">Farbe und Geometrie</a>
+<a class="unterseite" href="farbe.html">Hintergrund</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-video</a> › Der Dekoder – Anzeigereihenfolge, Strom und Verdeckung</span><a class="sprachwahl" href="../../en/video/anzeigereihenfolge.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-video · envisionz.video.mpeg</div>
+  <h1>Der Dekoder – Anzeigereihenfolge, Strom und Verdeckung</h1>
+  <p class="unter">Wie <code>Dekoder</code> aus der Kodierreihenfolge die Anzeigereihenfolge macht, einen Strom von beliebiger Größe mit einem gleitenden Fenster liest und fehlende Bildteile ersetzt. Pseudocode nach dem Quelltext, Festlegungen und Grenzen.</p>
+</header>
+
+<h2 id="reihenfolge">Kodierreihenfolge und Anzeigereihenfolge</h2>
+<p>MPEG kennt drei Bildarten. Ein <b>I-Bild</b> ist für sich allein dekodierbar. Ein <b>P-Bild</b> wird aus einem früheren I- oder P-Bild vorhergesagt. Ein <b>B-Bild</b> wird aus einem früheren <em>und</em> einem späteren Bezugsbild vorhergesagt und dient selbst nie als Bezug. Damit ein B-Bild dekodiert werden kann, muss das spätere Bezugsbild schon da sein – es steht deshalb im Strom <b>vor</b> den B-Bildern, die zeitlich davor liegen. Die Ziffer im Namen ist der Zeitbezug aus dem Bildkopf (<code>temporal_reference</code>), also die Anzeigestelle.</p>
+
+<figure>
+<svg viewBox="0 0 560 175" width="560" font-family="sans-serif" font-size="13">
+  <defs><marker id="pfeil-anz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker></defs>
+  <text x="40" y="20" fill="#5b6475">im Strom (Kodierreihenfolge)</text>
+  <text x="40" y="115" fill="#5b6475">ausgegeben (Anzeigereihenfolge)</text>
+  <rect x="40" y="28" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="56" y="48" fill="#1f5f8b">I0</text>
+  <rect x="110" y="28" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="126" y="48" fill="#1f5f8b">P3</text>
+  <rect x="180" y="28" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="196" y="48" fill="#1f5f8b">B1</text>
+  <rect x="250" y="28" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="266" y="48" fill="#1f5f8b">B2</text>
+  <rect x="320" y="28" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="336" y="48" fill="#1f5f8b">P6</text>
+  <rect x="390" y="28" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="406" y="48" fill="#1f5f8b">B4</text>
+  <rect x="460" y="28" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="476" y="48" fill="#1f5f8b">B5</text>
+  <rect x="40" y="125" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="56" y="145" fill="#1f5f8b">I0</text>
+  <rect x="110" y="125" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="126" y="145" fill="#1f5f8b">B1</text>
+  <rect x="180" y="125" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="196" y="145" fill="#1f5f8b">B2</text>
+  <rect x="250" y="125" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="266" y="145" fill="#1f5f8b">P3</text>
+  <rect x="320" y="125" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="336" y="145" fill="#1f5f8b">B4</text>
+  <rect x="390" y="125" width="50" height="30" rx="4" fill="#fff" stroke="#1f5f8b"/>
+  <text x="406" y="145" fill="#1f5f8b">B5</text>
+  <rect x="460" y="125" width="50" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="476" y="145" fill="#1f5f8b">P6</text>
+  <line x1="65" y1="58" x2="65" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="135" y1="58" x2="275" y2="123" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="205" y1="58" x2="135" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="275" y1="58" x2="205" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="345" y1="58" x2="485" y2="123" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="415" y1="58" x2="345" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+  <line x1="485" y1="58" x2="415" y2="123" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-anz)"/>
+</svg>
+<figcaption>Dieselben sieben Bilder, oben wie sie im Strom stehen, unten wie sie ausgegeben werden. Die beiden Bezugsbilder P3 und P6 (orange) werden zurückgehalten, bis das nächste Bezugsbild fertig ist; die B-Bilder gehen sofort hinaus.</figcaption>
+</figure>
+
+<p>Der Dekoder hält deshalb <b>zwei Bezugsbilder</b>: das neuere (<code>rueckwaerts</code>) und das davor (<code>vorwaerts</code>). Ein P-Bild sagt aus dem neueren voraus, ein B-Bild liest beide. Ist ein Bild fertig, gilt:</p>
+<ul>
+  <li>ein <b>B-Bild</b> geht unmittelbar an die Senke;</li>
+  <li>ein <b>I- oder P-Bild</b> gibt zuerst das bisher gehaltene neuere Bezugsbild aus – jetzt steht fest, dass davor keine B-Bilder mehr kommen – und wird dann selbst zum neueren Bezugsbild, das bisherige neuere zum älteren.</li>
+</ul>
+<p>Am Ende des Stroms wird das noch gehaltene Bezugsbild ausgegeben. Wer das übergeht, bekommt eine Bildfolge, die ruckelt und zurückspringt – und hält es womöglich für einen Bandfehler.</p>
+
+<h3>Pseudocode – <code>Dekoder.bildAbschliessen(art, zeitbezug)</code></h3>
+<pre class="pseudo">verdecken()                                  <i>fehlende Makroblöcke ersetzen, falls gewünscht</i>
+aktuell.kennzeichnen(art, zeitbezug)
+aktuell.kodiernummer(bilder);  bilder ← bilder + 1
+<b>wenn</b> art = B:
+    senke(aktuell)                           <i>B-Bilder dienen nie als Bezug</i>
+<b>sonst</b>:                                      <i>I oder P</i>
+    <b>wenn</b> rueckwaerts ≠ leer: senke(rueckwaerts)     <i>das vorige Bezugsbild ist jetzt an der Reihe</i>
+    vorwaerts ← rueckwaerts
+    rueckwaerts ← aktuell
+aktuell ← leer
+
+<i>// abschluss(): offenes Bild abschließen, dann senke(rueckwaerts), falls vorhanden</i></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-video/src/envisionz/video/mpeg/Dekoder.java</code> (<code>bildAbschliessen</code>, <code>abschluss</code>).</p>
+
+<h3>Rechenbeispiel – der Strom der Abbildung</h3>
+<table>
+  <tr><th>Fertig dekodiert</th><th>an die Senke</th><th>gehalten (neueres Bezugsbild)</th></tr>
+  <tr><td>I0</td><td>–</td><td>I0</td></tr>
+  <tr><td>P3</td><td>I0</td><td>P3</td></tr>
+  <tr><td>B1</td><td>B1</td><td>P3</td></tr>
+  <tr><td>B2</td><td>B2</td><td>P3</td></tr>
+  <tr><td>P6</td><td>P3</td><td>P6</td></tr>
+  <tr><td>B4</td><td>B4</td><td>P6</td></tr>
+  <tr><td>B5</td><td>B5</td><td>P6</td></tr>
+  <tr><td>Ende des Stroms</td><td>P6</td><td>–</td></tr>
+</table>
+<p>Die Ausgabe lautet I0, B1, B2, P3, B4, B5, P6 – die Anzeigereihenfolge. Von Hand nachvollzogen nach dem Quelltext.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die Ausgabe ist <em>Anzeigereihenfolge</em>, nicht Kodierreihenfolge, und sie ist verzögert um höchstens ein Bezugsbild. Das ist eine Entscheidung zugunsten der Weiterverarbeitung: Restaurierungsschritte, die Nachbarbilder brauchen, bekommen die Bilder so, wie ein Betrachter sie sieht. Den Zeitbezug und die Kodiernummer trägt jeder <code>Bildpuffer</code> mit.</div>
+
+<h2 id="fenster">Ein Strom, der in keinen Speicher passt</h2>
+<p>Ein Java-Feld fasst höchstens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{31}-1</annotation></semantics></math> Elemente, knapp 2 GiB. Der Programmstrom der Beispielaufnahme misst 3.069.673.472 Byte, also 2,86 GiB (Klassenkommentar von <code>Dekoder</code>); er passt in kein <code>byte[]</code>, und daran scheiterte das Öffnen, nicht das Dekodieren. <code>dekodieren(InputStream, senke)</code> schiebt deshalb ein <b>gleitendes Fenster</b> über den Strom; im Speicher liegt das Fenster, nicht die Aufnahme.</p>
+<p>Geschnitten werden darf nur an einem <b>Startcode</b> (die Bytefolge 00 00 01). Der Dekoder bestimmt das Ende einer Einheit, indem er den nächsten Startcode sucht; endete ein Fenster mitten in einer Slice, würde dieser Rest als vollständige Slice gelesen und ergäbe ein zerrissenes Bild ohne jede Meldung. Verarbeitet wird daher nur bis zum <b>letzten</b> Startcode im Fenster; der Rest wandert an den Anfang des nächsten. Enthält ein volles Fenster keinen weiteren Startcode, <b>wächst</b> es auf das Doppelte, statt dass der Dekoder stehenbleibt.</p>
+
+<h3>Pseudocode – <code>Dekoder.dekodieren(ein, senke)</code></h3>
+<pre class="pseudo">fenster ← neues Feld der Größe FENSTER;  füllstand ← 0
+<b>wiederhole</b>:
+    <b>solange</b> Quelle nicht leer <b>und</b> füllstand &lt; Größe(fenster):
+        n ← ein.lies(fenster, füllstand, Rest);  <b>wenn</b> n &lt; 0: Quelle leer, <b>raus</b>;  füllstand ← füllstand + n
+    <b>wenn</b> füllstand = 0: <b>beende</b>
+    grenze ← <b>wenn</b> Quelle leer <b>dann</b> füllstand <b>sonst</b> letzterStartcode(fenster, füllstand)
+    <b>wenn</b> grenze ≤ 0:
+        <b>wenn</b> Quelle nicht leer:  fenster ← verdoppeln(fenster);  <b>weiter</b>     <i>keine Einheit vollständig</i>
+        grenze ← füllstand
+    abschnitt(fenster[0 .. grenze))                                 <i>nur vollständige Einheiten</i>
+    <b>wenn</b> abbruch gesetzt: <b>beende</b>
+    fenster[0 ..] ← fenster[grenze .. füllstand);  füllstand ← füllstand − grenze
+<b>abschluss()</b>                                                         <i>gehaltenes Bezugsbild ausgeben</i>
+
+<i>// letzterStartcode: von füllstand−3 abwärts bis Stelle 1 nach 00 00 01 suchen; Stelle 0 zählt nicht</i></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-video/src/envisionz/video/mpeg/Dekoder.java</code> (<code>dekodieren</code>, <code>letzterStartcode</code>, <code>abschnitt</code>). Der Lesestand bleibt zwischen zwei Abschnitten in einem Feld erhalten.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die Fenstergröße beträgt 1 MiB (<code>FENSTER = 1 &lt;&lt; 20</code>). Stelle 0 des Fensters zählt bei der Startcodesuche nicht mit – dort steht der Startcode, mit dem das Fenster beginnt, und wer bis dorthin verarbeitet, käme nicht voran. Ein <b>Abbruch</b> beendet den Lauf, statt den Rest eines Stroms zu lesen, den der Dekoder ohnehin nicht dekodieren kann. Ein Sequenzkopf über 2048 × 2048 Bildpunkte (der Standard erlaubt bis 4095², das wären 384 MB je Bild) wird übersprungen und als Fehlermarke gezählt.</div>
+
+<h2 id="verdeckung">Fehlerverdeckung</h2>
+<p>Bricht eine Slice ab oder fehlen ganze Sektoren einer beschädigten Scheibe, blieb früher alles Folgende schwarz. Mit <code>fehlerverdeckung(true)</code> wird am <b>Bildende</b> gezählt, welche Makroblocklagen nie beschrieben wurden – mitgeschrieben wird, welche besetzt wurden. Das erfasst abgebrochene Slices, ganz fehlende Slices (die an keiner Bruchstelle auftauchen, weil sie nie beginnen) und ein Bild, von dem nichts ankam, mit derselben Rechnung. Der Ersatz kommt</p>
+<ul>
+  <li><b>zeitlich</b>, wenn ein Bezugsbild da ist: dieselbe Lage aus dem zuletzt dekodierten Bezugsbild – für ruhige Kameras die beste Näherung, und sie kostet nichts;</li>
+  <li><b>räumlich</b>, wenn keines da ist: der nächste besetzte Makroblock derselben Spalte, erst nach oben, dann nach unten gesucht – deutlich schlechter, betrifft aber nur das allererste Bild einer Aufnahme.</li>
+</ul>
+<p>Bewegungsvektoren werden <b>nicht</b> geraten: Das wäre der nächste Schritt und braucht die Vektoren der Nachbarn; ohne Beleg, dass es besser wird, wäre es nur teurer.</p>
+
+<h3>Pseudocode – <code>Dekoder.verdecken()</code></h3>
+<pre class="pseudo"><b>wenn</b> nicht fehlerverdeckung <b>oder</b> nicht verdeckbar <b>oder</b> kein offenes Bild: <b>zurück</b>
+quelle ← <b>wenn</b> rueckwaerts ≠ leer <b>dann</b> rueckwaerts <b>sonst</b> vorwaerts
+wieviele ← 0
+<b>für jede</b> Makroblocklage (zeile, spalte) <b>mit</b> geschrieben[lage] = falsch:
+    <b>wenn</b> quelle ≠ leer:
+        kopiere Block (spalte, zeile) aus quelle nach aktuell
+    <b>sonst</b>:
+        nachbar ← nächste besetzte Zeile in dieser Spalte      <i>erst oben, dann unten</i>
+        <b>wenn</b> nachbar &lt; 0: <b>weiter</b>
+        kopiere Block (spalte, nachbar) aus aktuell nach (spalte, zeile)
+    wieviele ← wieviele + 1
+<b>wenn</b> wieviele &gt; 0:  verdeckt ← verdeckt + wieviele;  verdeckteBilder ← verdeckteBilder + 1</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-video/src/envisionz/video/mpeg/Dekoder.java</code> (<code>verdecken</code>). Zähler: <code>verdeckteMakrobloecke()</code>, <code>verdeckteBilder()</code>, <code>abgewieseneSlices()</code>.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Verdeckt wird nur auf Wunsch, und alles Verdeckte wird gezählt. Ein verdecktes Bild ist damit nie stillschweigend ein „gutes“ Bild; wer restauriert, weiß, welche Teile Beobachtung und welche Ersatz sind.</div>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<p>Die <code>Dekoderprobe</code> (605 Prüfungen laut Modulbeschreibung) sichert die Bausteine mit geschlossen berechenbaren Ankern; die <code>Sequenzkopfgrenzprobe</code> prüft das Überspringen übergroßer Sequenzköpfe, mit einer Gegenprobe ohne die Grenze, die rot wird. Ungeprüft bleibt laut Modulbeschreibung alles oberhalb der Bausteine gegen einen zweiten Dekoder: der Zusammenbau ganzer Bilder, die Umsortierung, die Bezugsbildhaltung über eine Bildgruppe, Halbbild- und Zweifachvorhersage, Skalierbarkeit, Datenaufteilung und die Fehlerverdeckung. Gegen ffmpeg liegen die Bilder bei 69,7 bis 76,4 dB (I 76,0–76,4, P 69,7–75,0, B 72,9–74,6); ein Bildvergleich gegen die normative Referenzsoftware steht aus.</p>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Die Ausgabe hängt an richtig erkannten Bildarten und Startcodes; ein Strom ohne Sequenzkopf lässt sich erst ab dem nächsten dekodieren (<code>abSequenzkopf</code>).</li>
+  <li>Ein B-Bild ohne beide Bezugsbilder und ein P-Bild ohne vorwärtiges lassen sich nicht dekodieren.</li>
+  <li>Die Verdeckung ist ein Ersatz, keine Rekonstruktion: Sie ist gut bei ruhiger Kamera und schlecht bei Bewegung.</li>
+  <li>Skalierbare Ströme werden erkannt, nicht dekodiert.</li>
+</ul>
+
+<footer>
+envisionz-framework-video · Hintergrund zu <a href="index.html#dekoder">Der Dekoder</a> · Proben: <code>Dekoderprobe</code>, <code>Sequenzkopfgrenzprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

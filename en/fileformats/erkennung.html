@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Format detection by magic bytes – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="unterseite aktiv" href="erkennung.html">Format detection</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="unterseite" href="kompression.html">Compression</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="unterseite" href="behaelter.html">Container formats</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › Format detection by magic bytes – background</span><a class="sprachwahl" href="../../de/fileformats/erkennung.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · envisionz.fileformats</div>
+  <h1>Format detection by magic bytes – background</h1>
+  <p class="unter">How <code>Formaterkennung</code> determines the format of a file from its first 4096 bytes: signatures, structure checks for formats without a signature, looking inside containers, and the order that decides accuracy.</p>
+</header>
+
+<h2 id="problem">What this is about: the extension says nothing</h2>
+<p>A file <code>daten.bin</code> can be an MDF 4 measurement, a renamed SQLite database or text. The extension is a convention of the file system, not part of the file; it is missing, gets changed or lies. Almost every file format, on the other hand, begins with a fixed byte sequence, a <b>signature</b> (<i>magic bytes</i>), by which it identifies itself. The module therefore always detects by content. Detection is the precondition for <code>Datenquellen.oeffne(pfad)</code> choosing the right reader without a format argument (see the <a href="index.html#abstraktion">overview</a>), and for wrongly named files to stand out.</p>
+<p>The table covers 55 formats, including some for which the module has no reader at all (PDF, PostScript, Tecplot binary, Java class file, zstd, LZ4): detection should also be able to say <i>what</i> a file is that it cannot read.</p>
+
+<h2 id="kennungen">Signatures and why one is not enough</h2>
+<p>The simplest signature is a fixed beginning. Well-chosen beginnings contain bytes that do not occur in text or that reveal transmission errors. The PNG signature <code>89 50 4E 47 0D 0A 1A 0A</code> begins with a byte above 127 (reveals a 7-bit transfer), names the format as text (<code>PNG</code>), contains carriage return and line feed (reveals a line-ending conversion) and the Ctrl-Z <code>1A</code> (stops old text viewers). HDF5 uses the same pattern with <code>89 48 44 46 0D 0A 1A 0A</code>.</p>
+<p>Not every signature is that long. Three examples from the table of how more than the beginning becomes necessary:</p>
+<ul>
+<li><b>BMP</b> has only the two characters <code>BM</code>, and “BM” is quite possible as the start of text (“BMW-Kennzahlen …” would otherwise be an image). Therefore the length of the description header from byte 14 is also read; it must be one of seven known numbers (12, 40, 52, 56, 64, 108 or 124). A random four-byte sequence hits one of them with a probability of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>7</mn><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">7/2^{32}</annotation></semantics></math>.</li>
+<li><b>WebP</b> lives in a RIFF container, and RIFF also carries WAV and AVI. The four characters <code>RIFF</code> alone say nothing; only the four characters at position 8 (<code>WEBP</code>) decide.</li>
+<li><b>JPEG 2000</b>: the signature box of a JP2 file is twelve bytes long; a bare code stream begins with <code>FF 4F</code> (SOC), which by the standard must be followed by <code>FF 51</code> (SIZ) – only the four bytes together count, two alone would be too little.</li>
+</ul>
+
+<figure>
+<svg viewBox="0 0 600 210" width="600" font-family="sans-serif" font-size="13">
+  <rect x="20" y="20" width="150" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="32" y="40" fill="#1f5f8b">first 4096 bytes</text>
+  <text x="32" y="57" fill="#5b6475">(Formaterkennung.KOPF)</text>
+  <line x1="170" y1="43" x2="205" y2="43" stroke="#1f5f8b" stroke-width="2"/>
+  <rect x="205" y="20" width="170" height="46" rx="4" fill="none" stroke="#1f5f8b"/>
+  <text x="217" y="40" fill="#1f5f8b">1. fixed signatures</text>
+  <text x="217" y="57" fill="#5b6475">HDF5, PNG, PK, SQLite …</text>
+  <line x1="375" y1="43" x2="410" y2="43" stroke="#1f5f8b" stroke-width="2"/>
+  <rect x="410" y="20" width="170" height="46" rx="4" fill="none" stroke="#1f5f8b"/>
+  <text x="422" y="40" fill="#1f5f8b">2. structure checks</text>
+  <text x="422" y="57" fill="#5b6475">Shape, dBASE, UFF, IGES</text>
+  <line x1="290" y1="66" x2="290" y2="105" stroke="#c9d1dc"/>
+  <rect x="20" y="105" width="170" height="46" rx="4" fill="#e8f0f6" stroke="#9a6400"/>
+  <text x="32" y="125" fill="#9a6400">Containers: look inside</text>
+  <text x="32" y="142" fill="#5b6475">ZIP, OLE2, HDF5, netCDF</text>
+  <rect x="205" y="105" width="170" height="46" rx="4" fill="none" stroke="#1f5f8b"/>
+  <text x="217" y="125" fill="#1f5f8b">3. rest: STL, offset HDF5</text>
+  <text x="217" y="142" fill="#5b6475">length, text, preamble</text>
+  <rect x="410" y="105" width="170" height="46" rx="4" fill="none" stroke="#5b6475"/>
+  <text x="422" y="132" fill="#5b6475">otherwise: unknown</text>
+  <text x="20" y="190" fill="#5b6475">The earlier in the sequence, the more unambiguous the signature; weak checks stand at the back.</text>
+</svg>
+<figcaption>Detection as a sequence of checks. Exact signatures come first, structure checks after everything that has a fixed signature; containers are opened after the signature to name their content.</figcaption>
+</figure>
+
+<h2 id="struktur">Formats without a signature: structure as proof</h2>
+<p>Some formats carry no signature but have a header with rules that together hold only for a genuine file. The more independent conditions hold at once, the rarer a chance match:</p>
+<ul>
+<li><b>dBASE</b>: first byte one of 15 known version marks (for example 0x03, 0x30, 0x83), month 1 to 12 and day 1 to 31 in the date, header length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>≥</mo><mn>33</mn></mrow><annotation encoding="application/x-tex">L \ge 33</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>mod</mo><mn>32</mn><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">(L-1) \bmod 32 = 0</annotation></semantics></math> (32 bytes per field plus preamble), record length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">&gt; 0</annotation></semantics></math> and – if the header was read long enough – the terminator byte 0x0D at position <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">L-1</annotation></semantics></math>. <i>Example:</i> a header with one field has <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mn>32</mn><mo>+</mo><mn>32</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn>65</mn></mrow><annotation encoding="application/x-tex">L = 32 + 32 + 1 = 65</annotation></semantics></math>; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>65</mn><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>mod</mo><mn>32</mn><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">(65-1) \bmod 32 = 0</annotation></semantics></math>, fits.</li>
+<li><b>Shapefile</b>: code 9994 (big endian), five zero words, version 1000 (little endian) and one of the 14 valid geometry types. Checked <i>before</i> dBASE, because the Shapefile header is fixed and the dBASE check only plausible.</li>
+<li><b>STEP</b>: <code>ISO-10303-21;</code> (whitespace may precede); <b>IGES</b> has no signature but a fixed form: 80 characters in the first line, column 73 is <code>S</code>, columns 74 to 80 carry the number 1.</li>
+<li><b>UFF</b>: a line <code>-1</code>, then the number of the dataset (at most five digits, 1 to 99999, optionally with <code>b</code> for binary); <b>Arrow stream</b>: no signature, but the continuation marker 0xFFFFFFFF, behind it the length of the first message and, in the FlatBuffer, the signature <code>ARROW</code> at offset 12 – without the second condition every file with four 0xFF bytes at the start would be an Arrow stream.</li>
+</ul>
+<h3>Pseudocode – <code>Formaterkennung.erkenne(Pfad)</code> and <code>erkenne(byte[])</code></h3>
+<pre class="pseudo">erkenne(pfad):
+    kopf ← the first min(4096, size) bytes
+    f ← erkenne(kopf)
+    <b>if</b> f = ZIP:    <b>return</b> imBehaelter(pfad)                  <i>look at the central directory</i>
+    <b>if</b> f = OLE2:   <b>return</b> imCompound(pfad)                   <i>open the directory tree</i>
+    <b>if</b> f = HDF5:   <b>return</b> imHdf5(pfad)                       <i>e.g. CGNS, netCDF-4, Exodus</i>
+    <b>if</b> f = NETCDF_CLASSIC <b>and</b> istExodus(pfad): <b>return</b> EXODUS
+    <b>if</b> f ≠ UNBEKANNT: <b>return</b> f
+    <b>if</b> the HDF5 signature stands at offset 512, 1024, 2048 … (up to 8 MiB): <b>return</b> imHdf5
+    <b>if</b> binary or text STL: <b>return</b> STL
+    <b>return</b> UNBEKANNT
+
+erkenne(kopf):                                        <i>top to bottom, the first match wins</i>
+    HDF5 | HDF4 | netCDF ("CDF" + 1, 2 or 5) | SQLite | PAR1 | TDSm | "MDF     " (→ version)
+    | $MeshFormat | "# vtk DataFile Version" | VTU (<i>VTKFile</i> <b>and</b> <i>UnstructuredGrid</i> in the head)
+    | NumPy | ARROW1 | Arrow stream | ORC | Avro | OLE2 | PK 03 04 | PK 05 06 (empty archive)
+    | gzip | zstd | LZ4 | SIMPLE | &lt;?xml | Tecplot | %PDF- | bzip2 | XZ | PNG | JPEG | JPEG 2000 | GIF | BMP (with header length) | WebP
+    | TIFF (II*\0 or MM\0*) | Java class | MATLAB | %!PS | LMDB | Ensight | UFF | STEP | IGES | Shape | dBASE (plausible)
+    <b>otherwise</b> UNBEKANNT</pre>
+<p class="quelle">Source: <code>envisionz-framework-fileformats/src/envisionz/fileformats/Formaterkennung.java</code> (<code>erkenne</code>, <code>istBmp</code>, <code>istShape</code>, <code>istPlausibelDbase</code>, <code>istStep</code>, <code>istIges</code>, <code>istUff</code>, <code>imBehaelter</code>, <code>hdf5Versetzt</code>). The order of the list follows the code.</p>
+
+<h2 id="behaelter">Looking inside: same shell, different content</h2>
+<p>XLSX, PPTX, NPZ, ODS, DOCX and JAR are outwardly the same ZIP container and differ only in content. Anyone who stops at <code>PK</code> calls a workbook “ZIP” – correct, but useless. <code>imBehaelter</code> therefore reads the directory: an entry <code>xl/workbook.xml</code> means XLSX, <code>ppt/presentation.xml</code> PPTX, an entry with the extension <code>.npy</code> NPZ, otherwise it stays ZIP. An <b>empty</b> archive does not begin with <code>PK 03 04</code> (it has no local header at all) but with the end of the central directory <code>PK 05 06</code>; without that line it counted as unknown.</p>
+<p>For a Compound File (old Office files) the directory tree is really opened instead of searching the start of the file for names. The name hunt read names that happen to stand in the start and would have said the wrong thing for an Excel workbook with an embedded Word object. The tree says it correctly: an entry <code>PowerPoint Document</code> means PPT, <code>WordDocument</code> DOC, <code>Workbook</code> or <code>Book</code> XLS. HDF5 files are opened because several formats lie only one layer above: if the root group carries the label <code>Root Node of HDF5 File</code>, it is CGNS (no other HDF5 file writes that); if it carries <code>_NCProperties</code> or a dataset has <code>CLASS = DIMENSION_SCALE</code>, it is netCDF-4, and Exodus is netCDF with fixed names – again one layer more. An HDF5 file may also begin behind a preamble; therefore offsets 512, 1024, 2048 … up to 8 MiB are searched.</p>
+<p>Binary <b>STL</b> has no signature at all but a length rule: 80 bytes of header, a counter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> (4 bytes, little endian) and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> triangles of 50 bytes each. The file is STL if <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">n &gt; 0</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>84</mn><mo>+</mo><mn>50</mn><mspace width="0.1667em"/><mi>n</mi><mo>=</mo><mtext>file size</mtext></mrow><annotation encoding="application/x-tex">84 + 50\,n = \text{file size}</annotation></semantics></math>. <i>Example:</i> 12 triangles (a cube) make 684 bytes. Textual STL begins with <code>solid</code>.</p>
+<div class="hinweis"><b>Decision in the framework:</b> the factory <code>Datenquellen.oeffne</code> is a <code>switch</code> over the formats that the compiler checks for completeness, deliberately not a <code>ServiceLoader</code>: a new format without a branch is a compile error, not a runtime error. The start of the file is only read (<code>READ</code>), never written. VTK legacy deliberately does not check the version number behind the signature: it has grown since 1.0, and no version takes anything away from another.</div>
+
+<h2 id="dateikunde">File profile: when no signature fits</h2>
+<p>For files that carry no signature or match no format, <code>Dateikunde.untersuche</code> adds a description from the content: size, share of printable characters, null bytes, suitability as UTF-8, byte order mark, line endings, Fortran record marks (<code>fortranSatzmarke</code>) and the tools of the hex view (<code>lese</code>, <code>suche</code>, <code>satzraster</code>). It returns a <code>Befund</code> with <code>kurz()</code> and <code>erkannt()</code>. With it unknown files can be classified and wrongly named files found.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+<li><code>Boeswilligprobe</code>: the seed is the module's genuine files (anchors) produced by third-party tools, as bytes in the source. From each, truncations and a fixed number of random mutants arise (default 8 per seed, key 0; about 7000 runs, two minutes); reading goes through the same path as in the file analysis. Required: no crash, no hang, no memory demand above the limit. Every seed must itself be readable, otherwise the rest measures nothing.</li>
+<li><code>Sauberabweisungsprobe</code>: for the formats whose readers have been converted to it (among others Gmsh, Arrow, TDMS, TIFF, BMP) it requires zero “unclean” rejections – that is, no foreign runtime exception such as <code>ArrayIndexOutOfBounds</code> instead of the format's own message.</li>
+<li>The reader probes of the individual formats (for example <code>Pngprobe</code>, <code>Mdfprobe</code>, <code>Shapeprobe</code>) call detection as part of their chain.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+<li>A signature covers only the beginning. A file with a valid header and a destroyed rest is detected as that format; whether it is readable is decided only by the reader (<code>lesbar(pfad)</code>) and its <code>befunde()</code>.</li>
+<li>At most the first 4096 bytes are read; signatures that stand further back need a search of their own (HDF5 with preamble up to 8 MiB).</li>
+<li>Text formats without a signature (Ensight, UFF, IGES) are detected by form rules that make chance matches harder, not impossible.</li>
+<li>The table is finite: a format that is not entered is <code>UNBEKANNT</code>; the file profile then only describes it.</li>
+</ul>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analysing a ciphertext – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag aktiv" href="index.html">framework-chiffre</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#grundlage">Catalogue, key, alphabets</a>
+<a class="rubrik" href="index.html#verfahren">Hand ciphers</a>
+<a class="rubrik" href="index.html#maschine">Cipher machines</a>
+<a class="unterseite" href="enigma.html">Enigma</a>
+<a class="rubrik" href="index.html#analyse">Analysis</a>
+<a class="unterseite aktiv" href="analyse.html">Background</a>
+<a class="rubrik" href="index.html#brecher">Breaking without the key</a>
+<a class="unterseite" href="brecher.html">Background</a>
+<a class="rubrik" href="index.html#sammlung">Collection of historical ciphertexts</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-chiffre</a> › Analysing a ciphertext – background</span><a class="sprachwahl" href="../../de/chiffre/analyse.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-chiffre · envisionz.chiffre.analyse</div>
+  <h1>Analysing a ciphertext – background</h1>
+  <p class="unter">The computation behind <code>Haeufigkeit</code>, <code>Periodik</code>, <code>Sprachmodell</code> and <code>Steckbrief</code>: index of coincidence, Friedman's estimate of the key length, Kasiski, chi-squared and the scoring of a text by four-letter groups.</p>
+</header>
+
+<h2 id="index">Index of coincidence</h2>
+<p>The first look at a ciphertext is counting the letters, al-Kindī's tool from the 9th century. A single figure derived from it already says much about the kind of encryption: the <b>index of coincidence</b> (Friedman 1922), the probability that two randomly drawn letters are equal. If a text has <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> characters and letter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> occurs <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">n_i</annotation></semantics></math> times, then</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">κ</mi><mo>=</mo><mfrac><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><msub><mrow><mi>n</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><mrow><mi>N</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex">\kappa = \frac{\sum_{i} n_i (n_i - 1)}{N\,(N-1)}</annotation></semantics></math></p>
+<p>For a language with single-letter frequencies <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">p_i</annotation></semantics></math> one expects <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">κ</mi><mo>=</mo><mo largeop="true" movablelimits="true">∑</mo><msubsup><mrow><mi>p</mi></mrow><mrow><mi>i</mi></mrow><mrow><mn>2</mn></mrow></msubsup></mrow><annotation encoding="application/x-tex">\kappa = \sum p_i^2</annotation></semantics></math>. From the frequency tables of the module this gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.0777</mn></mrow><annotation encoding="application/x-tex">0.0777</annotation></semantics></math> for German and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.0662</mn></mrow><annotation encoding="application/x-tex">0.0662</annotation></semantics></math> for English; uniformly distributed random letters give <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>26</mn><mo>≈</mo><mn>0.0385</mn></mrow><annotation encoding="application/x-tex">1/26 \approx 0.0385</annotation></semantics></math>. A <b>substitution</b> of the letters (Caesar, simple substitution) and a <b>transposition</b> leave the frequency distribution unchanged except for the names of the letters; the index stays high. A <b>polyalphabetic</b> encryption mixes several distributions and pushes it towards random.</p>
+
+<figure>
+<svg viewBox="0 0 540 179" width="540" font-family="sans-serif" font-size="13"><g transform="scale(0.93)">
+  <rect x="40" y="52" width="150" height="40" fill="#ffffff" stroke="#1f5f8b"/>
+  <rect x="190" y="52" width="130" height="40" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <rect x="320" y="52" width="220" height="40" fill="#e8f0f6" stroke="#1f5f8b" stroke-width="2"/>
+  <g fill="#1f5f8b"><text x="62" y="77">close to random</text><text x="222" y="77">medium</text><text x="404" y="77">high</text></g>
+  <g stroke="#5b6475"><line x1="190" y1="40" x2="190" y2="52"/><line x1="320" y1="40" x2="320" y2="52"/></g>
+  <g font-size="11" fill="#5b6475" text-anchor="middle"><text x="190" y="34">0.045</text><text x="320" y="34">0.058</text></g>
+  <g fill="#9a6400">
+    <polygon points="125,94 120,104 130,104"/><polygon points="402,94 397,104 407,104"/><polygon points="517,94 512,104 522,104"/>
+  </g>
+  <g font-size="11" fill="#9a6400" text-anchor="middle">
+    <text x="125" y="118">random 0.0385</text><text x="402" y="118">English 0.0662</text></g><g font-size="11" fill="#9a6400" text-anchor="end"><text x="540" y="118">German 0.0777</text></g><g>
+  </g>
+  <text x="40" y="146" fill="#5b6475">close to random: long key, autokey, machine, one-time pad</text>
+  <text x="40" y="164" fill="#5b6475">medium: short key (Vigenère …) or bigrams; Friedman, Kasiski</text>
+  <text x="40" y="182" fill="#5b6475">high: substitution (χ² per char ≥ 0.15) or transposition (&lt; 0.15)</text>
+</g>
+</svg>
+<figcaption>The index of coincidence on an axis from 0.030 to 0.080 with the thresholds of <code>Steckbrief</code> (0.045 and 0.058) and the values of the language tables. The thresholds are rules of thumb of classical cryptanalysis, not certainty.</figcaption>
+</figure>
+
+<h3>Pseudocode – <code>Haeufigkeit</code> and <code>Steckbrief.buchstaben</code></h3>
+<pre class="pseudo"><b>koinzidenzindex</b>():
+    <b>if</b> total &lt; 2: <b>return</b> 0
+    s ← sum over all characters of z·(z − 1)
+    <b>return</b> s / (total·(total − 1))
+
+<b>buchstaben</b>(t):
+    ic ← index of coincidence;  chiPer ← min(chi²(German), chi²(English)) / length
+    <b>if</b> length &lt; 60: finding "all measures fluctuate strongly"
+    <b>if</b> similarity(German or English) &gt; 0.6: finding "already reads like language"
+    <b>if</b> ic &gt; 0.058:
+        <b>if</b> chiPer &lt; 0.15: guess transposition (column, rail fence, scytale, spiral)
+        <b>else</b>:               guess substitution (Caesar, affine, Atbash, simple; Playfair for even length without J)
+    <b>else if</b> ic &gt; 0.045: guess Vigenère, Beaufort, variant, autokey (Playfair) with Friedman estimate
+    <b>else</b>:                 guess Vigenère, autokey, Enigma
+    <b>if</b> no J and length ≥ 100: finding "typical for 5×5 squares"</pre>
+<p class="quelle">Source: <code>envisionz-framework-chiffre/src/envisionz/chiffre/analyse/Haeufigkeit.java</code> and <code>…/Steckbrief.java</code>. Before the letter computation <code>Steckbrief.von</code> detects special cases by the character set: only A and B (Bacon), only ADFGX/ADFGVX, kana (Uesugi), Hebrew letters (Atbash, Albam, Atbah) and number sequences (Polybius, Uesugi square, homophonic table, book cipher).</p>
+<div class="hinweis"><b>Convention in the framework:</b> Every guess carries its reason. The thresholds 0.045 and 0.058, the limit 0.15 for chi-squared per character and the minimum length 60 are rules of thumb; for short texts the uncertainty is stated alongside. The profile names method identifiers that the breaker can use as input; it decides nothing.</div>
+
+<h2 id="periode">Key length: Friedman, Kasiski, column index</h2>
+<p>In a periodic cipher with a key word of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>, every <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math>-th position of the text is encrypted with the same alphabet. <b>Splitting the text into <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> columns</b>, each column is a simple shift, and the index of each column jumps to that of the language. With a wrong length the columns stay mixed and the index close to random. <code>Periodik.spaltenIndex</code> forms the mean of the column indices (columns with fewer than two characters are skipped).</p>
+<p><b>Friedman's estimate</b> needs no splitting. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">κ</mi></mrow><mrow><mi>r</mi></mrow></msub><mo>=</mo><mn>1</mn><mo>/</mo><mn>26</mn></mrow><annotation encoding="application/x-tex">\kappa_r = 1/26</annotation></semantics></math>, the index of the language <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">κ</mi></mrow><mrow><mi>p</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\kappa_p</annotation></semantics></math> (in the module the mean of German and English, about <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.072</mn></mrow><annotation encoding="application/x-tex">0.072</annotation></semantics></math>) and the measured <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">κ</mi></mrow><annotation encoding="application/x-tex">\kappa</annotation></semantics></math> for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> characters:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>L</mi><mo>≈</mo><mfrac><mrow><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">κ</mi></mrow><mrow><mi>p</mi></mrow></msub><mo>−</mo><msub><mrow><mi mathvariant="normal">κ</mi></mrow><mrow><mi>r</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>N</mi></mrow><mrow><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi mathvariant="normal">κ</mi><mo>−</mo><msub><mrow><mi mathvariant="normal">κ</mi></mrow><mrow><mi>r</mi></mrow></msub><mi>N</mi><mo>+</mo><msub><mrow><mi mathvariant="normal">κ</mi></mrow><mrow><mi>p</mi></mrow></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">L \approx \frac{(\kappa_p - \kappa_r)\,N}{(N-1)\,\kappa - \kappa_r N + \kappa_p}</annotation></semantics></math></p>
+<p>If the denominator is not positive, the method returns infinity. Example: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>100</mn></mrow><annotation encoding="application/x-tex">N = 100</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">κ</mi><mo>=</mo><mn>0.05</mn></mrow><annotation encoding="application/x-tex">\kappa = 0.05</annotation></semantics></math> give <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>≈</mo><mn>2.85</mn></mrow><annotation encoding="application/x-tex">L \approx 2.85</annotation></semantics></math> – a key of about three letters. For a text of this length the estimate fluctuates strongly; it is a hint, not a finding.</p>
+<p><b>Kasiski</b> (1863) uses the fact that equal plaintext pieces at a distance of a multiple of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> are encrypted equally. <code>Periodik.wiederholungen</code> searches all sequences of minimum length 3 that occur more than once; <code>kasiski</code> counts, for every number <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>2</mn><mo>,</mo><mo>…</mo><mo>,</mo><mtext>max</mtext></mrow><annotation encoding="application/x-tex">k = 2,\dots,\text{max}</annotation></semantics></math>, how often it divides the distance between two consecutive occurrences. The number with the largest count is a candidate for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> or a divisor of it.</p>
+<h3>Pseudocode – <code>Periodik</code></h3>
+<pre class="pseudo"><b>spaltenIndex</b>(x, p):
+    s ← 0;  count ← 0
+    <b>for</b> c ← 0 <b>to</b> p−1:
+        column ← x[c], x[c+p], x[c+2p], …
+        <b>if</b> length(column) ≥ 2: s ← s + index(column);  count ← count + 1
+    <b>return</b> s / count
+
+<b>laengen</b>(x, max, κp):
+    <b>for</b> p ← 1 <b>to</b> min(max, max(1, length(x) div 4)):  pair (p, spaltenIndex(x, p))
+    sort by  |index − κp| / (κp − 1/26) + 0.01·p        <i>smaller length wins ties</i>
+    <b>return</b> the lengths in this order
+
+<b>kasiski</b>(text, max):
+    <b>for each</b> sequence of length 3 with occurrences s₀ &lt; s₁ &lt; …:
+        <b>for</b> i ← 1 <b>to</b> …:  d ← sᵢ − sᵢ₋₁
+            <b>for</b> k ← 2 <b>to</b> max:  <b>if</b> d mod k = 0: count[k] ← count[k] + 1</pre>
+<p class="quelle">Source: <code>envisionz-framework-chiffre/src/envisionz/chiffre/analyse/Periodik.java</code>. <code>Steckbrief</code> asks for lengths up to 20 and shows the first five.</p>
+<div class="hinweis"><b>Convention in the framework:</b> Multiples of a good length are also good; the surcharge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.01</mn><mspace width="0.1667em"/><mi>p</mi></mrow><annotation encoding="application/x-tex">0.01\,p</annotation></semantics></math> prefers the smaller length at nearly equal index. Lengths are considered only up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>/</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">N/4</annotation></semantics></math> so that each column keeps enough characters. The lengths of the column analysis and Friedman's number are separate findings; they need not agree.</div>
+
+<h2 id="sprache">Language scoring: chi-squared and four-letter groups</h2>
+<p><b>Chi-squared</b> compares the letter count <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>z</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">z_i</annotation></semantics></math> with the expected <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>e</mi></mrow><mrow><mi>i</mi></mrow></msub><mi>N</mi></mrow><annotation encoding="application/x-tex">e_i N</annotation></semantics></math> of the language; small means language-like:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mrow><mi mathvariant="normal">χ</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mrow><mn>25</mn></mrow></munderover><mfrac><mrow><mo stretchy="false">(</mo><msub><mrow><mi>z</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>−</mo><msub><mrow><mi>e</mi></mrow><mrow><mi>i</mi></mrow></msub><mi>N</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><msub><mrow><mi>e</mi></mrow><mrow><mi>i</mi></mrow></msub><mi>N</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">\chi^2 = \sum_{i=0}^{25} \frac{(z_i - e_i N)^2}{e_i N}</annotation></semantics></math></p>
+<p>Single-letter frequencies do not tell whether the letters stand in a sensible order. For that the <b>scoring by four-letter groups</b> serves, the measure all breakers work against: the table holds, for each of the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>26</mn><mrow><mn>4</mn></mrow></msup><mo>=</mo><mn>456</mn><mspace width="0.1667em"/><mn>976</mn></mrow><annotation encoding="application/x-tex">26^4 = 456\,976</annotation></semantics></math> four-letter groups, the decimal logarithm of its frequency in a corpus. The score of a text <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>…</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_0 \ldots x_{n-1}</annotation></semantics></math> is the sum</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>S</mi><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>n</mi><mo>−</mo><mn>4</mn></mrow></munderover><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>+</mo><mn>2</mn></mrow></msub><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>+</mo><mn>3</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">S = \sum_{i=0}^{n-4} \log_{10} P(x_i x_{i+1} x_{i+2} x_{i+3})</annotation></semantics></math></p>
+<p>the closer to the language, the higher (less negative). The table is stored as one byte per group: 0 means “not seen” and carries the lower limit, a byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>≥</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">q \ge 1</annotation></semantics></math> stands for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi><mo>=</mo><mtext>lower</mtext><mo>+</mo><mfrac><mrow><mi>q</mi><mo>−</mo><mn>1</mn></mrow><mrow><mn>254</mn></mrow></mfrac><mspace width="0.1667em"/><mo stretchy="false">(</mo><mtext>upper</mtext><mo>−</mo><mtext>lower</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\log_{10}P = \text{lower} + \frac{q-1}{254}\,(\text{upper}-\text{lower})</annotation></semantics></math>. Two reference values are obtained from the table: the mean <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>S</mi></mrow></mrow><mrow><mtext>language</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">\bar S_{\text{language}}</annotation></semantics></math> of the logarithms weighted with the frequencies themselves, and the mean <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>S</mi></mrow></mrow><mrow><mtext>random</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">\bar S_{\text{random}}</annotation></semantics></math> over all entries. The <b>language similarity</b> of a text with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> letters is</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>a</mi><mo>=</mo><mfrac><mrow><mi>S</mi><mo>/</mo><mo stretchy="false">(</mo><mi>n</mi><mo>−</mo><mn>3</mn><mo stretchy="false">)</mo><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>S</mi></mrow></mrow><mrow><mtext>random</mtext></mrow></msub></mrow><mrow><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>S</mi></mrow></mrow><mrow><mtext>language</mtext></mrow></msub><mo>−</mo><msub><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>S</mi></mrow></mrow><mrow><mtext>random</mtext></mrow></msub></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>a</mi><mo>∈</mo><mo stretchy="false">[</mo><mn>0</mn><mo>;</mo><mspace width="0.1667em"/><mn>1.2</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">a = \frac{S/(n-3) - \bar S_{\text{random}}}{\bar S_{\text{language}} - \bar S_{\text{random}}}, \qquad a \in [0;\,1.2]</annotation></semantics></math></p>
+<p>0 means like random, 1 like the language on average; the value is limited to 0 to 1.2. Summing uses a running index: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>←</mo><mo stretchy="false">(</mo><mi>h</mi><mo>mod</mo><msup><mn>26</mn><mrow><mn>3</mn></mrow></msup><mo stretchy="false">)</mo><mo>⋅</mo><mn>26</mn><mo>+</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">h \leftarrow (h \bmod 26^3)\cdot 26 + x_i</annotation></semantics></math>.</p>
+<h3>Pseudocode – <code>Sprachmodell.bewerte</code> and <code>aehnlichkeit</code></h3>
+<pre class="pseudo"><b>bewerte</b>(x, n):
+    <b>if</b> n &lt; 4: <b>return</b> 0
+    h ← x[0]·17576 + x[1]·676 + x[2]·26 + x[3];  s ← table[h]
+    <b>for</b> i ← 4 <b>to</b> n−1:
+        h ← (h mod 17576)·26 + x[i];  s ← s + table[h]
+    <b>return</b> s
+
+<b>aehnlichkeit</b>(text):
+    n ← number of letters A–Z;  <b>if</b> n &lt; 4: <b>return</b> 0
+    mean ← bewerte(text) / (n − 3)
+    a ← (mean − randomMean) / (languageMean − randomMean)
+    <b>return</b> max(0, min(1.2, a))</pre>
+<p class="quelle">Source: <code>envisionz-framework-chiffre/src/envisionz/chiffre/analyse/Sprachmodell.java</code>. The tables (format <code>QG01</code>, GZIP) are generated by <code>Tafelbau</code> from a corpus: German from Europarl, English from a Gutenberg excerpt.</p>
+<div class="hinweis"><b>Convention in the framework:</b> The language tables are <b>generated, not maintained</b>; there are German and English, and the selection <code>nach("de" | "en")</code> throws an exception for other languages. When breaking, the command line reports “no convincing plaintext” (return value 10) if the language similarity stays below 0.6.</div>
+
+<h2 id="pruefung">How it is checked</h2>
+<p>The <code>Brecherprobe</code> checks the profile on generated texts: a Caesar text has an index above 0.06 and triggers the guess <code>caesar</code>; Vigenère with the key KEY guesses <code>vigenere</code> with length 3 among the first; a columnar transposition is recognised as transposition; numbers above 99 lead to the book cipher; only A and B to Bacon. A <b>counter-test</b> holds 300 random letters (a random sequence with a fixed seed) against it: even the best Caesar candidate stays below a language similarity of 0.5. The <code>Katalogprobe</code> checks the table construction.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>All measures fluctuate strongly for short texts; below 60 letters the profile warns explicitly.</li>
+  <li>The thresholds separate families, not methods. A medium index fits Vigenère as well as Playfair; the length does not separate methods of the same family.</li>
+  <li>Friedman's formula presupposes a plaintext with the frequencies of the language; the estimate takes the mean of German and English because the language is unknown.</li>
+  <li>The four-letter tables exist only for German and English, and only for the 26 Latin letters.</li>
+</ul>
+
+<footer>
+envisionz-framework-chiffre · background to <a href="index.html#analyse">Analysis</a> · probes: <code>Brecherprobe</code>, <code>Katalogprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>
