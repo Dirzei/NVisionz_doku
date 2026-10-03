@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triangulierung in 2D, Gitter und Rand – Hintergrund – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag aktiv" href="index.html">framework-data</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#tabelle">CSV und die Tabelle im Speicher</a>
+<a class="rubrik" href="index.html#zahl">Zahlen aus Text</a>
+<a class="rubrik" href="index.html#einheiten">Das Einheitensystem des Arbeitsbereichs</a>
+<a class="unterseite" href="einheiten.html">Einheiten und Zahlen</a>
+<a class="rubrik" href="index.html#h2">Ablage in H2</a>
+<a class="rubrik" href="index.html#formel">Berechnete Spalten</a>
+<a class="rubrik" href="index.html#schnitt">Schnitte, Raster, Kennzahlen</a>
+<a class="unterseite" href="raster.html">Schnitte und Raster</a>
+<a class="rubrik" href="index.html#tri">Triangulierung in 2D</a>
+<a class="unterseite aktiv" href="triangulierung.html">Triangulierung und Rand</a>
+<a class="rubrik" href="index.html#rand">Randverfahren und Nachbesserung</a>
+<a class="rubrik" href="index.html#drei">Netze und Flächen in 3D</a>
+<a class="unterseite" href="netze3d.html">Netze und Flächen in 3D</a>
+<a class="rubrik" href="index.html#tecplot">Tecplot-Daten und -Layouts</a>
+<a class="rubrik" href="index.html#hdf5">Brücke von HDF5 zur Tabelle</a>
+<a class="rubrik" href="index.html#vergleich">Vergleich zweier Datenstände und Übergabe</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-data</a> › Triangulierung in 2D, Gitter und Rand – Hintergrund</span><a class="sprachwahl" href="../../en/data/triangulierung.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-data · envisionz.data.tri</div>
+  <h1>Triangulierung in 2D, Gitter und Rand – Hintergrund</h1>
+  <p class="unter">Die Rechnung hinter <code>BowyerWatson</code>, <code>GuibasStolfi</code>, <code>SweepHull</code>, <code>Gitterfinder</code>, <code>AlphaShape</code> und <code>ChiShape</code>: wie aus einer Punktwolke ein Dreiecksnetz wird, wann man die Delaunay-Rechnung besser umgeht und wie der konkave Rand entsteht.</p>
+</header>
+
+<h2 id="delaunay">Delaunay: der leere Umkreis</h2>
+<p>Für ein Konturbild aus gestreuten Messpunkten braucht man ein Netz aus Dreiecken, auf dem die Größe linear verläuft. Viele Netze sind möglich; gut sind die mit möglichst wenig spitzen Dreiecken. Die <b>Delaunay-Triangulierung</b> wählt das Netz, in dem der Umkreis keines Dreiecks einen weiteren Punkt enthält. Sie maximiert den kleinsten Winkel aller Dreiecke, und sie ist – bis auf Grenzfälle mit vier Punkten auf einem Kreis – eindeutig.</p>
+<p>Zwei Vorzeichentests genügen, beide als Determinante. Die Orientierung sagt, ob <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> links von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>→</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">a \to b</annotation></semantics></math> liegt (Ergebnis größer null, gegen den Uhrzeigersinn), der Umkreistest, ob <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> im Umkreis des gegen den Uhrzeigersinn orientierten Dreiecks <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(a,b,c)</annotation></semantics></math> liegt:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>orient</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>x</mi></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">(</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>−</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>y</mi></mrow></msub><mo stretchy="false">)</mo><mo>−</mo><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>−</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>y</mi></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">(</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>x</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathrm{orient}(a,b,c) = (b_x-a_x)(c_y-a_y) - (b_y-a_y)(c_x-a_x)</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>inCircle</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>d</mi><mo stretchy="false">)</mo><mo>=</mo><mrow><mo fence="true" stretchy="true">|</mo><mtable><mtr><mtd style="text-align:left"><msub><mrow><mi>a</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>x</mi></mrow></msub></mtd><mtd style="text-align:left"><msub><mrow><mi>a</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>y</mi></mrow></msub></mtd><mtd style="text-align:left"><mo stretchy="false">(</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>x</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mo stretchy="false">(</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>y</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mtd></mtr><mtr><mtd style="text-align:left"><msub><mrow><mi>b</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>x</mi></mrow></msub></mtd><mtd style="text-align:left"><msub><mrow><mi>b</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>y</mi></mrow></msub></mtd><mtd style="text-align:left"><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>x</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>y</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mtd></mtr><mtr><mtd style="text-align:left"><msub><mrow><mi>c</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>x</mi></mrow></msub></mtd><mtd style="text-align:left"><msub><mrow><mi>c</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>y</mi></mrow></msub></mtd><mtd style="text-align:left"><mo stretchy="false">(</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>x</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mo stretchy="false">(</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>−</mo><msub><mrow><mi>d</mi></mrow><mrow><mi>y</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mtd></mtr></mtable><mo fence="true" stretchy="true">|</mo></mrow></mrow><annotation encoding="application/x-tex">\mathrm{inCircle}(a,b,c,d) = \left|\begin{matrix} a_x-d_x &amp; a_y-d_y &amp; (a_x-d_x)^2+(a_y-d_y)^2 \\ b_x-d_x &amp; b_y-d_y &amp; (b_x-d_x)^2+(b_y-d_y)^2 \\ c_x-d_x &amp; c_y-d_y &amp; (c_x-d_x)^2+(c_y-d_y)^2 \end{matrix}\right|</annotation></semantics></math></p>
+<p>Ist <code>inCircle</code> größer null, liegt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> im Umkreis; bei null auf dem Kreis. Verletzt ein Punkt den Umkreis, ist die gemeinsame Kante der beiden Dreiecke falsch und wird durch die andere Diagonale des Vierecks ersetzt (<b>Kantenflip</b>). Nach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Punkten mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi></mrow><annotation encoding="application/x-tex">h</annotation></semantics></math> Punkten auf der konvexen Hülle hat jede Delaunay-Triangulierung genau</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>T</mi><mo>=</mo><mn>2</mn><mi>n</mi><mo>−</mo><mi>h</mi><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">T = 2n - h - 2</annotation></semantics></math></p>
+<p>Dreiecke (Euler-Formel); die Proben nutzen das als unabhängige Zählprobe.</p>
+
+<figure>
+<svg viewBox="0 0 600 236" width="600" font-family="sans-serif" font-size="13">
+  <text x="40" y="14" fill="#9a6400">verletzt</text>
+  <text x="380" y="14" fill="#9a6400">nach dem Flip</text>
+  <circle cx="116" cy="106.3" r="82.3" fill="none" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <polygon points="40,138.0 192,138.0 116,24.0" fill="#e8f0f6" fill-opacity="0.6" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="40" cy="138.0" r="4.5" fill="#1f5f8b"/>
+  <text x="24" y="142.0" fill="#5b6475">A</text>
+  <circle cx="192" cy="138.0" r="4.5" fill="#1f5f8b"/>
+  <text x="200" y="142.0" fill="#5b6475">B</text>
+  <circle cx="116" cy="24.0" r="4.5" fill="#1f5f8b"/>
+  <text x="126.0" y="28.0" fill="#5b6475">C</text>
+  <circle cx="116" cy="176.0" r="4.5" fill="#9a6400"/>
+  <text x="124" y="192.0" fill="#5b6475">P</text>
+  <circle cx="446.5" cy="100.0" r="76.6" fill="none" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <polygon points="380,138.0 456,176.0 456,24.0" fill="#e8f0f6" fill-opacity="0.6" stroke="#1f5f8b" stroke-width="2"/>
+  <polygon points="456,176.0 532,138.0 456,24.0" fill="#e8f0f6" fill-opacity="0.6" stroke="#1f5f8b" stroke-width="2"/>
+  <circle cx="380" cy="138.0" r="4.5" fill="#1f5f8b"/>
+  <text x="364" y="142.0" fill="#5b6475">A</text>
+  <circle cx="532" cy="138.0" r="4.5" fill="#9a6400"/>
+  <text x="540" y="142.0" fill="#5b6475">B</text>
+  <circle cx="456" cy="24.0" r="4.5" fill="#1f5f8b"/>
+  <text x="466.0" y="28.0" fill="#5b6475">C</text>
+  <circle cx="456" cy="176.0" r="4.5" fill="#1f5f8b"/>
+  <text x="464" y="192.0" fill="#5b6475">P</text>
+  <text x="40" y="206" fill="#5b6475">inCircle(A,B,C,P) = 16 &gt; 0:</text>
+  <text x="40" y="224" fill="#5b6475">P liegt im Umkreis von ABC</text>
+  <text x="330" y="206" fill="#5b6475">Kante AB → CP, B liegt außen:</text>
+  <text x="330" y="224" fill="#5b6475">inCircle(A,P,C,B) = −16 &lt; 0</text>
+</svg>
+<figcaption>Vier Punkte A(0|0), B(4|0), C(2|3), P(2|−1). Links liegt P im Umkreis von ABC (Radius 13/6), die Kante AB ist nicht Delaunay. Rechts ist sie durch CP ersetzt; im Umkreis von APC liegt kein weiterer Punkt.</figcaption>
+</figure>
+
+<h2 id="normierung">Je Achse auf [0,1] gerechnet</h2>
+<p>Der Umkreis ist nicht invariant gegen ungleiche Streckung der Achsen: Ein Kennfeld mit Drehzahl auf der einen und Druckverhältnis auf der anderen Achse hat Spannen, die sich um Größenordnungen unterscheiden. Auf den Rohwerten sah die Delaunay-Triangulierung bei einer x-Spanne von 2,7 gegen eine y-Spanne von 0,1 im Diagramm zur Hälfte aus Splittern aus, und bei 50 000 gegen 1,5 fehlten Dreiecke ganz. Das Diagramm zeichnet aber beide Achsen auf volle Größe – gut müssen die Dreiecke also in <b>diesem</b> Raum sein.</p>
+<p>Alle Verfahren ziehen deshalb jede Achse für sich auf das Intervall [0,1]:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>'</mo><mo>=</mo><mfrac><mrow><mi>x</mi><mo>−</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>max</mi><mo>⁡</mo></mrow></msub><mo>−</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">x' = \frac{x - x_{\min}}{x_{\max} - x_{\min}}</annotation></semantics></math></p>
+<p>Eine Achse ohne Spanne wird nur verschoben. Die Delaunay-Eigenschaft gilt damit im je Achse normierten Raum, nicht im rohen.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Gerechnet wird normiert, <b>ausgegeben werden immer die Originalkoordinaten</b>, bitgleich als Kopie. Es wird nichts zurückgerechnet – der Aufrufer ordnet die Ecken über die unveränderten Werte seinen Tabellenzeilen zu. Auch <code>AlphaShape</code>, <code>ChiShape</code> und <code>DelaunayTet</code> messen in diesem Raum, ihre Schwellen sind dadurch einheitenfrei und für dasselbe Punktbild bei jedem Seitenverhältnis gleich.</div>
+
+<h2 id="bw">Bowyer-Watson mit Geisterdreiecken</h2>
+<p>Das Standardverfahren (<code>BOWYER_WATSON</code>) fügt die Punkte einzeln ein. Für jeden neuen Punkt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> werden alle Dreiecke gesucht, deren Umkreis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> enthält; sie bilden die <b>Kavität</b>. Man löscht sie und verbindet <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> mit allen Ecken des Kavitätsrandes. Weil jeder Randkante ein Dreieck ohne <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> im Umkreis gegenüberliegt, ist das Ergebnis wieder Delaunay.</p>
+<p>Üblich ist ein riesiges Hilfsdreieck um alle Punkte. Das hat einen Fehler: Ein flaches Randdreieck hat einen beliebig großen Umkreis, und liegt eine Ecke des Hilfsdreiecks darin, geht das Dreieck verloren. Mit einem festen Abstandsfaktor von 20 passierte das bei 21 von 40 Zufallsmengen mit 200 Punkten; auch Faktoren von 1000 und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^6</annotation></semantics></math> scheiterten an einzelnen Mengen. <b>Es gibt keinen Abstand, der immer reicht</b> – deshalb gibt es keinen. Statt der Hilfsecken tragen <b>Geisterdreiecke</b> über jeder Hüllkante einen einzigen symbolischen Punkt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> im Unendlichen. Der „Umkreis“ eines Geisterdreiecks über der Hüllkante <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>→</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u \to v</annotation></semantics></math> ist die offene Halbebene außerhalb samt dem offenen Kantenstück; der Umkreistest wird dort zum Orientierungstest.</p>
+<h3>Pseudocode – <code>BowyerWatson.triangulate(x, y, f)</code></h3>
+<pre class="pseudo"><b>wenn</b> n &lt; 3:  <b>gib</b> leeres Netz
+X, Y ← je Achse auf [0,1] gezogen  <i>Geom.aufEinheit</i>
+order ← Punkte in Hilbert-Kurven-Reihenfolge  <i>räumliche Nähe ⇒ kurze Wege beim Suchen</i>
+a ← order[0];  b ← erster Punkt, der von a verschieden ist
+c ← erster Punkt mit |orient(a, b, c)| &gt; EPS  <i>EPS = 1e-12; sonst: keine Dreiecke</i>
+<b>wenn</b> orient(a, b, c) &lt; 0:  vertausche b, c  <i>gegen den Uhrzeigersinn</i>
+Startnetz ← Dreieck (a,b,c) und drei Geisterdreiecke über seinen Kanten
+t ← Startdreieck
+<b>für</b> jeden Punkt p in order, außer a, b, c:
+    t ← suche(p, ab t)  <i>Lauf von Nachbar zu Nachbar; über eine Hüllkante hinaus ⇒ deren Geisterdreieck</i>
+    <b>wenn</b> t unauffindbar:  t ← suche durch alle Dreiecke
+    <b>wenn</b> ein Eckpunkt von t näher als EPS an p liegt:  <b>weiter</b>  <i>Doublette überspringen</i>
+    Kavität ← t, dazu schrittweise jeder Nachbar mit inCircle(Nachbar, p) &gt; 0
+    lösche alle Dreiecke der Kavität
+    <b>für</b> jede Randkante (va, vb) der Kavität:
+        neues Dreieck (va, vb, p);  Nachbarschaft nach außen und zu den Schwestern setzen
+    t ← eines der neuen Dreiecke
+<b>gib</b> alle Dreiecke ohne G, mit den Originalkoordinaten  <i>= Triangulierung der konvexen Hülle</i></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-data/src/envisionz/data/tri/BowyerWatson.java</code>. Der Speicher ist indexbasiert mit Freiliste, die Nachbarschaft wird beim Einfügen fortgeschrieben, kein Nachlauf über alle Dreiecke. Erwartete Laufzeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>n</mi><mspace width="0.1667em"/><mi>log</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>n</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(n \log n)</annotation></semantics></math>.</p>
+
+<h2 id="weitere">Weitere Verfahren hinter der Registry</h2>
+<p><code>Triangulierverfahren</code> ist die Registry: Kennung (wird gespeichert), Textschlüssel für die Oberfläche und Erzeuger. Ein neues Verfahren wird nur dort eingetragen; Auswahlfelder, Erzeugung und die <code>Verfahrensprobe</code> erfassen es von selbst. <code>erzeuge</code> wirft bei einer unbekannten Kennung <code>UnbekanntesVerfahren</code>, statt still auf die Vorgabe zurückzufallen.</p>
+<ul>
+  <li><b><code>GUIBAS_STOLFI</code></b> – Teile und herrsche (Guibas und Stolfi, 1985) auf einer Quad-Edge-Struktur: Punkte lexikografisch sortieren und entdoppeln, halbieren, jede Hälfte für sich triangulieren (zwei und drei Punkte sind die Grundfälle), die Hälften entlang der gemeinsamen unteren Tangente von unten nach oben zusammennähen. Auf jeder Seite wird der nächste Kandidat gesucht, Kanten, deren Umkreis ihn enthält, fallen weg, und der Kandidat, dessen Umkreis den anderen nicht enthält, wird mit der Basislinie verbunden. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>n</mi><mspace width="0.1667em"/><mi>log</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>n</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(n \log n)</annotation></semantics></math> garantiert, nicht nur im Mittel; rund viermal langsamer als Bowyer-Watson.</li>
+  <li><b><code>SWEEP_HULL</code></b> – Punkte entlang einer gedrehten Achse sortieren, jeden Punkt mit den von ihm sichtbaren Hüllkanten verbinden, am Ende ein Durchgang mit Lawson-Flips. Bei einem kollinearen Anfang fällt es auf Bowyer-Watson zurück.</li>
+  <li><b><code>ConstrainedDelaunay</code></b> – zwingt vorgegebene Strecken (Ränder, Löcher, Bruchkanten) ins Netz: zuerst die gewöhnliche Triangulierung, dann wird jede Strecke eingefügt, indem kreuzende Kanten weggeflippt werden (konvexe zuerst, nicht konvexe zurückgestellt), zuletzt ein Lawson-Durchgang, der die fixierten Kanten nicht anrührt.</li>
+</ul>
+<div class="hinweis"><b>Festlegung im Framework:</b> Die Prädikate sind <b>exakt</b>. Der Gleitkommawert zählt nur, wenn er außerhalb seiner Fehlerschranke liegt, sonst wird mit <code>BigDecimal</code> nachgerechnet – das Zusammennähen ist eine Folge von Ja-Nein-Entscheidungen über dieselben Kanten, und eine, die an der Rundung hängt, kann die Struktur widersprüchlich machen. Die Orientierung wird auf den Rohwerten bestimmt, der Umkreistest auf den ideal normierten Werten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub><mo stretchy="false">)</mo><mo>⋅</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>y</mi></mrow></msub></mrow><annotation encoding="application/x-tex">(x-x_{\min})\cdot s_y</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>y</mi><mo>−</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub><mo stretchy="false">)</mo><mo>⋅</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>x</mi></mrow></msub></mrow><annotation encoding="application/x-tex">(y-y_{\min})\cdot s_x</annotation></semantics></math> mit den Spannen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math>. <b>Nicht auf den gerundeten normierten Werten:</b> drei Punkte auf einer Diagonalen sind danach nicht mehr kollinear, und das Verfahren gab ein Dreieck der Fläche null aus (11 von 1956 Gitterausschnitten). Dieselbe Regel gilt für die Flips in <code>SweepHull</code>: Mit der Schwelle <code>EPS</code> statt des exakten Tests wichen 4 von 300 Wolken um 2000 Punkte vom exakten Ergebnis ab, mit dem exakten Test 0 von 300.</div>
+
+<h2 id="gitter">Struktur vor Delaunay: der Gitterfinder</h2>
+<p>Delaunay überdeckt die konvexe Hülle. Auf einem Rechennetz mit konkaven Bereichen – um eine Schaufel, in einer Einbuchtung – füllt es die Lücken: Auf einem CFD-Netz ergab es 102 % zu viel Fläche. Sind die Gitterindizes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math> bekannt, wird das Gitter deshalb <b>direkt</b> zerlegt: <code>StructuredMesh.ausZellen</code> bildet je vollständige Zelle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false">)</mo><mo>,</mo><mo stretchy="false">(</mo><mi>i</mi><mo>+</mo><mn>1</mn><mo>,</mo><mi>j</mi><mo stretchy="false">)</mo><mo>,</mo><mo stretchy="false">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>,</mo><mo stretchy="false">(</mo><mi>i</mi><mo>+</mo><mn>1</mn><mo>,</mo><mi>j</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(i,j),(i{+}1,j),(i,j{+}1),(i{+}1,j{+}1)</annotation></semantics></math> zwei Dreiecke, jedes einzeln gegen den Uhrzeigersinn gestellt, mit Löchern, und behält die Punktreihenfolge der Eingabe bei.</p>
+<p>Fehlen die Indizes, liest <code>Gitterfinder</code> sie aus der <b>Lage</b> der Punkte ab. Weil Delaunay die Gitterkanten schiefer, gestreckter Zellen oft nicht enthält (an einem Gitter mit 201 × 51 Punkten fehlten 12 624), sind die Kandidaten die Delaunay-Nachbarn <b>und deren Nachbarn</b>.</p>
+<h3>Pseudocode – <code>Gitterfinder.untersuche(x, y)</code></h3>
+<pre class="pseudo"><b>wenn</b> n &lt; 4 <b>oder</b> ein Punkt nicht endlich <b>oder</b> ein Punkt doppelt:  <b>gib</b> Befund ohne Gitter
+D ← GuibasStolfi.triangulate(x, y)
+kandidaten[p] ← Delaunay-Nachbarn von p und deren Nachbarn
+<b>für jeden</b> Punkt p:  slot[p] ← bis zu vier Nachbarn in den Richtungen +a, −a, +b, −b
+        <i>a: nächster Nachbar; b: nächster mit kleinem Anteil entlang a</i>
+        <i>Verhältnis der Maschen zur Gegenrichtung zwischen 0,55 und 1,8, Querversatz höchstens 0,35 Maschen</i>
+Nachbarn behalten, die einander gegenseitig nennen  <i>zweimal durchlaufen</i>
+
+<b>für</b> a ← 1 <b>bis</b> 4:  <i>vier Anläufe von verschiedenen Startpunkten</i>
+    <b>für</b> jeden noch freien Startpunkt:  neuer Block b; Start ← (i, j) = (0, 0)
+        <b>solange</b> es offene Punkte p gibt:
+            <b>für</b> jede Richtung r ∈ {(±1,0), (0,±1)}:
+                v ← Vorhersage der Nachbarposition  <i>Parallelogramm P + U − S aus einer Nachbarlinie,</i>
+                                                     <i>sonst linear mit dem Streckungsverhältnis der letzten Schritte</i>
+                q ← nächster Kandidat von p zu v
+                <b>wenn</b> |q − v| &gt; 0,3 · Schritt:  <b>weiter</b>
+                <b>wenn</b> q schon eingeordnet, aber woanders:  Widerspruch zählen
+                <b>sonst</b> q auf (i + r_i, j + r_j) setzen
+        <b>wenn</b> der Block weniger als 4 Punkte hat:  freigeben
+    gewählt: der widerspruchsfreie Anlauf mit den meisten Zellen
+
+<b>Befund ohne Gitter, wenn:</b> Widersprüche &gt; 0, <b>oder</b> Bruchkanten &gt; 0, <b>oder</b> nur geschert lesbar,
+    <b>oder</b> weniger als 90 % der Punkte eingeordnet, <b>oder</b> weniger Zellen als n/2
+sonst:  je Block auf (0, 0) schieben;  <b>gib</b> Gitter(i, j, block, blöcke, zellen)</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-data/src/envisionz/data/tri/Gitterfinder.java</code>, <code>StructuredMesh.java</code>. Getrennte Zusammenhangskomponenten werden getrennte Blöcke, jeder mit eigenem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>i</mi><mo>,</mo><mi>j</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(i,j)</annotation></semantics></math>; zwei Blöcke nebeneinander werden nicht verbunden.</p>
+<div class="hinweis"><b>Festlegung im Framework:</b> Lieber ein bekannter Umweg als ein falsches Netz – im Zweifel gibt es <code>null</code>, und der Aufrufer trianguliert. Eine <b>Bruchkante</b> ist eine kurze Delaunay-Kante zwischen zwei Blöcken (ein zerbrochenes Gitter, keine zwei Blöcke). <b>Geschert</b> heißt, dass die Zeilenanfänge im Indexraum fast überall um eins wandern: Das periodische Gitter ist dann mit einer Diagonale als Gitterrichtung gelesen, das Innere lückenlos, aber zwei Seiten verlieren eine Treppe von Randdreiecken. Gleiche Ablehnung gilt für Streupunkte, doppelte Punkte und einzelne Gitterlinien.</div>
+
+<h2 id="rand">Der Rand: Alpha-Shape und Chi-Shape</h2>
+<p>Auch ohne Struktur ist der wahre Rand einer Messwolke oft konkav. Delaunay überbrückt Lücken, die keine Messung hatten; ein <b>Randverfahren</b> entfernt anschließend Dreiecke. Die Registry <code>Randverfahren</code> kennt <code>KEINES</code>, <code>ALPHA</code> (Vorgabe) und <code>CHI</code>; <code>anwende(netz, einstellung)</code> ist die eine Stelle, an der gerechnet wird.</p>
+<h3>AlphaShape</h3>
+<p>Ein Dreieck wird verworfen, wenn sein Maß über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math> liegt. Wählbar sind der <b>Umkreisradius</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>=</mo><mstyle displaystyle="true"><mfrac><mrow><mi>a</mi><mi>b</mi><mi>c</mi></mrow><mrow><mn>4</mn><mi>A</mi></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">R = \dfrac{abc}{4A}</annotation></semantics></math> (das klassische Kriterium; ein entartetes Dreieck mit Fläche unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-15}</annotation></semantics></math> bekommt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∞</mi></mrow><annotation encoding="application/x-tex">\infty</annotation></semantics></math> und fällt) oder die <b>längste Kante</b>, die gegen Splitterdreiecke robuster ist. Für das Dreieck <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo>|</mo><mn>0</mn><mo stretchy="false">)</mo><mo>,</mo><mo stretchy="false">(</mo><mn>4</mn><mo>|</mo><mn>0</mn><mo stretchy="false">)</mo><mo>,</mo><mo stretchy="false">(</mo><mn>2</mn><mo>|</mo><mn>3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0|0),(4|0),(2|3)</annotation></semantics></math> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>=</mo><mn>4</mn><mo>⋅</mo><mn>13</mn><mo>/</mo><mo stretchy="false">(</mo><mn>4</mn><mo>⋅</mo><mn>6</mn><mo stretchy="false">)</mo><mo>=</mo><mn>13</mn><mo>/</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">R = 4\cdot 13/(4\cdot 6) = 13/6</annotation></semantics></math> und die längste Kante 4. Die automatische Schwelle ist die Tukey-Regel</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">α</mi><mo>=</mo><msub><mrow><mi>Q</mi></mrow><mrow><mn>3</mn></mrow></msub><mo>+</mo><mi>k</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>Q</mi></mrow><mrow><mn>3</mn></mrow></msub><mo>−</mo><msub><mrow><mi>Q</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\alpha = Q_3 + k\,(Q_3 - Q_1)</annotation></semantics></math></p>
+<p>aus den Quartilen aller Kriteriumswerte; kleineres <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> schneidet stärker (Richtwert 1,5). Gemessen wird im normierten Raum, die Werteliste für die Handwahl ist dimensionslos. Schwäche: Alpha misst die <b>Größe</b> eines Dreiecks, nicht seine Lage. An einem Probengitter entfernte es acht Dreiecke mitten aus dem Netz, vier Punkte fielen dabei ganz heraus (<code>alpha = 0,1339</code>).</p>
+<h3>ChiShape</h3>
+<p>Das Verfahren nach Duckham, Kulik, Worboys und Galton (2008) trägt nur <b>vom Rand nach innen</b> ab. Die Schwelle ist ein Vielfaches <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> der Median-Kantenlänge (Median über alle verschiedenen Kanten, im normierten Raum); groß heißt wenig entfernt, bei unendlich bleibt die konvexe Hülle.</p>
+<pre class="pseudo"><b>ChiShape.filter</b>(netz, λ):
+    xs, ys ← je Achse auf [0,1];  median ← Median aller Kantenlängen;  schwelle ← λ · median
+    q ← Warteschlange aller Randkanten, längste zuerst  <i>Endpunkte gelten als Randpunkte</i>
+    <b>solange</b> q nicht leer:
+        r ← längste Randkante entnehmen
+        <b>wenn</b> Länge(r) ≤ schwelle:  <b>Ende</b>  <i>alle übrigen sind kürzer</i>
+        <b>wenn</b> r keine Randkante mehr ist:  <b>weiter</b>
+        t ← das Dreieck an r;  g ← seine Gegenecke
+        <b>wenn</b> g schon am Rand liegt:  abgelehnt zählen;  <b>weiter</b>  <i>Regelmäßigkeitsbedingung</i>
+        t entfernen;  g wird Randpunkt
+        die beiden anderen Kanten von t, soweit nun Randkanten, in q einfügen
+    <b>gib</b> Netz ohne die entfernten Dreiecke, Nachbarschaft neu</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-data/src/envisionz/data/tri/ChiShape.java</code>. Gleich lange Kanten werden nach Punktnummern geordnet, damit das Ergebnis nicht von der Reihenfolge einer Hash-Tabelle abhängt.</p>
+<p>Weil kein Randpunkt ein zweites Mal an den Rand geraten darf, bleibt der Rand ein <b>einfaches Polygon</b>, das Netz schnürt sich nicht ab, und <b>kein Punkt fällt heraus</b>. Das ist der strukturelle Unterschied zu Alpha. Vorgabe: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>2,0</mn></mrow><annotation encoding="application/x-tex">\lambda = 2{,}0</annotation></semantics></math> (<code>VORGABE_LAMBDA</code>).</p>
+<h3>Nachbesserung von Hand</h3>
+<p>Eine Lücke und ein Rand sehen in einer Punktwolke gleich aus; am C-förmigen Probengitter (41 × 9 Punkte, 679 Dreiecke, 39 gehören nicht hinein) gibt es kein <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math>, bei dem Chi-Shape exakt richtig liegt: Bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>2,0</mn></mrow><annotation encoding="application/x-tex">\lambda = 2{,}0</annotation></semantics></math> bleiben zwei Dreiecke der Einbuchtung stehen, bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>1,0</mn></mrow><annotation encoding="application/x-tex">\lambda = 1{,}0</annotation></semantics></math> fällt das letzte zum Preis von 46 fälschlich entfernten. <code>Nachbesserung</code> wendet daher eine Ausnahmeliste an, mit nur zwei sicheren Arten: <b>BEHALTEN</b> holt ein verworfenes Dreieck zurück – aber nur eines, das in der Basis-Triangulierung vorkommt, nichts wird erfunden –, <b>VERWERFEN</b> entfernt ein behaltenes. Bezeichnet wird über die <b>Tabellenzeilen</b> der drei Ecken, nicht über Punkt- oder Dreiecksnummern, die sich bei jedem Neuaufbau ändern. Jede Ausnahme ist danach <code>ANGEWANDT</code>, <code>UEBERFLUESSIG</code> (das Netz ist ohnehin so) oder <code>VERFALLEN</code> (Zeilen fehlen im Schnitt oder das Dreieck gibt es in der Basis nicht); Verfallene werden gezählt und gemeldet.</p>
+
+<h2 id="beispiel">Rechenbeispiel</h2>
+<p>Die vier Punkte der Abbildung ergeben zwei Dreiecke: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">n = 4</annotation></semantics></math>, die Hülle ist das Viereck <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>,</mo><mi>P</mi><mo>,</mo><mi>B</mi><mo>,</mo><mi>C</mi></mrow><annotation encoding="application/x-tex">A, P, B, C</annotation></semantics></math>, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">h = 4</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>2</mn><mo>⋅</mo><mn>4</mn><mo>−</mo><mn>4</mn><mo>−</mo><mn>2</mn><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">T = 2\cdot 4 - 4 - 2 = 2</annotation></semantics></math>. Um zu prüfen, dass <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi></mrow><annotation encoding="application/x-tex">P</annotation></semantics></math> den Umkreis von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>B</mi><mi>C</mi></mrow><annotation encoding="application/x-tex">ABC</annotation></semantics></math> verletzt, genügt die Determinante: Mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mi>P</mi><mo>=</mo><mo stretchy="false">(</mo><mn>2</mn><mo>|</mo><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">d = P = (2|-1)</annotation></semantics></math> sind die Zeilen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>−</mo><mn>2</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>5</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(-2, 1, 5)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>5</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(2, 1, 5)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>4</mn><mo>,</mo><mn>16</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0, 4, 16)</annotation></semantics></math>, und die Entwicklung ergibt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>2</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>16</mn><mo>−</mo><mn>20</mn><mo stretchy="false">)</mo><mo>−</mo><mn>1</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>32</mn><mo>−</mo><mn>0</mn><mo stretchy="false">)</mo><mo>+</mo><mn>5</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>8</mn><mo>−</mo><mn>0</mn><mo stretchy="false">)</mo><mo>=</mo><mn>8</mn><mo>−</mo><mn>32</mn><mo>+</mo><mn>40</mn><mo>=</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">-2\,(16-20) - 1\,(32-0) + 5\,(8-0) = 8 - 32 + 40 = 16</annotation></semantics></math>. Die Orientierung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>4</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mn>3</mn><mo stretchy="false">)</mo><mo>−</mo><mn>0</mn><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">(4)(3) - 0 = 12</annotation></semantics></math> ist positiv, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mi>B</mi><mi>C</mi></mrow><annotation encoding="application/x-tex">ABC</annotation></semantics></math> also gegen den Uhrzeigersinn, und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>16</mn><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">16 &gt; 0</annotation></semantics></math> heißt: im Umkreis. Nach dem Flip gibt der Test für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>A</mi><mo>,</mo><mi>P</mi><mo>,</mo><mi>C</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(A, P, C)</annotation></semantics></math> und den Punkt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> den Wert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>16</mn></mrow><annotation encoding="application/x-tex">-16</annotation></semantics></math>.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li><b><code>Skalenprobe</code></b> (160 Prüfungen, über die Registry 204): dieselbe Dreiecksmenge bei Streckungen 1:1, 27:1, 33333:1 und 1:1000 für alle drei Verfahren und für Zwangskanten; Güte im Bildraum (höchstens 10 % Splitter, mittlerer kleinster Winkel über 20°, jeder Punkt in einem Dreieck); Ausgabekoordinaten bitgleich; <b>Euler-Formel</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>2</mn><mi>n</mi><mo>−</mo><mi>h</mi><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">T = 2n-h-2</annotation></semantics></math> und Hüllfläche über je 40 Zufallsmengen mit 200 und 1000 Punkten. Die Sollwerte werden berechnet, nicht gespeichert. Das Probengitter hat exakte Zeilen und je Punkt verschobenes x – an einem exakt regelmäßigen Gitter zeigt sich der Fehler nicht.</li>
+  <li><b><code>Verfahrensprobe</code></b> (71 Prüfungen, nur über die Registry): Euler mit eigener exakter Hülle, leerer Umkreis (Toleranz <code>Geom.EPS</code>), Skaleninvarianz, Überdeckung, entartete Lagen. <b><code>Sweepabgleichprobe</code></b>: 25 Wolken, dieselben Dreiecke wie Bowyer-Watson.</li>
+  <li><b><code>Gitterfinderprobe</code></b> (44 Prüfungen): 12 × 6, anisotrop 1:20 mit Streckung, gedrehter Kreisring, verrauscht, Loch, C-Form ohne Brücke, zwei Blöcke; Streupunkte, doppelte Punkte, starke Scherung und 45 % Rauschen werden treu gelesen oder abgelehnt. An 77 Blöcken der Beispielgitter eines CFD-Lösers (bekannte Indizes, Punkte ohne sie übergeben) wurden <b>56 exakt erkannt, 21 abgelehnt, keiner falsch</b>; abgelehnt wurden O-Gitter um Kreise, Düsen und Blöcke mit doppelten Punkten. Laufzeit: 321 × 81 Punkte in rund 0,6 s (vier Anläufe).</li>
+  <li><b><code>Randverfahrensprobe</code></b> (31 Prüfungen) an drei Vorrichtungen – einem Probengitter, 300 Streupunkte nach Franke und ein C-Gebiet. Kein Punkt verwaist für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>1,2</mn></mrow><annotation encoding="application/x-tex">\lambda = 1{,}2</annotation></semantics></math> bis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3,0</mn></mrow><annotation encoding="application/x-tex">3{,}0</annotation></semantics></math>; der Rand bleibt einfach, die Nachbarschaft symmetrisch. Entfernte Dreiecke: Gitter 0, Streupunkte 13/28/41/63, C-Gebiet 35/37/46/58. <b><code>Nachbesserungsprobe</code></b> (32): Chi mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>2,0</mn></mrow><annotation encoding="application/x-tex">\lambda = 2{,}0</annotation></semantics></math> behält am C-Bogen 642 Dreiecke, davon 2 falsch; zwei VERWERFEN ergeben 640, null zu viel, null zu wenig.</li>
+  <li>Zu jeder Probe gehören Gegenversuche: der alte Fehler wird wieder eingebaut und muss rot werden.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Delaunay garantiert in 2D den größten Mindestwinkel, aber nur im normierten Raum; ein anderer Achsenmaßstab im Diagramm kann das Bild verändern.</li>
+  <li>Doppelte Punkte werden übersprungen; liegen alle Punkte auf einer Geraden, entstehen keine Dreiecke.</li>
+  <li>Die Randverfahren können eine Lücke von einem echten Rand nicht unterscheiden – dafür gibt es die Nachbesserung von Hand.</li>
+  <li><code>Gitterfinder</code> lehnt ab, was er nicht sicher liest (O-Gitter, Düsen, doppelte Punkte); es bleibt dann bei Delaunay mit Randverfahren.</li>
+  <li>Die Triangulierung der Tetraeder in 3D und die Iso-Flächen stehen auf <a href="netze3d.html">einer eigenen Seite</a>.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>L. J. Guibas, J. Stolfi: Primitives for the manipulation of general subdivisions and the computation of Voronoi diagrams. ACM Transactions on Graphics 4(2), 1985.</li>
+  <li>H. Edelsbrunner, D. G. Kirkpatrick, R. Seidel: On the shape of a set of points in the plane. IEEE Transactions on Information Theory 29(4), 1983.</li>
+  <li>M. Duckham, L. Kulik, M. Worboys, A. Galton: Efficient generation of simple polygons for characterizing the shape of a set of points in the plane. Pattern Recognition 41(10), 2008.</li>
+</ul>
+
+<footer>
+envisionz-framework-data · Hintergrund zu <a href="index.html#tri">Triangulierung in 2D</a> und <a href="index.html#rand">Randverfahren und Nachbesserung</a> · Proben: <code>Skalenprobe</code>, <code>Verfahrensprobe</code>, <code>Gitterfinderprobe</code>, <code>Randverfahrensprobe</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

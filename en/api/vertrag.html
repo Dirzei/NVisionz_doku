@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App contract, session state and hardened XML – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag aktiv" href="index.html">framework-api</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#vertrag">The app contract</a>
+<a class="unterseite aktiv" href="vertrag.html">Background</a>
+<a class="rubrik" href="index.html#sitzung">Saved session state</a>
+<a class="rubrik" href="index.html#ereignisse">Events between apps</a>
+<a class="rubrik" href="index.html#dienste">Services and logging</a>
+<a class="rubrik" href="index.html#xml">Hardened XML readers</a>
+<a class="rubrik" href="index.html#achse">Axis with rotated labels</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-api</a> › App contract, session state and hardened XML – background</span><a class="sprachwahl" href="../../de/api/vertrag.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-api · envisionz.api</div>
+  <h1>App contract, session state and hardened XML – background</h1>
+  <p class="unter">How an app is found, built, saved and cleaned up, what shape its saved state has, and why every XML file in the framework is read through the same hardened factory.</p>
+</header>
+
+<h2 id="entdeckung">Discovery through ServiceLoader</h2>
+<p>The main window knows no app by name. It still has to know which apps are on the class path, which file extensions they open and which menu entry they get. The framework uses the mechanism the JDK already provides: each app library ships a text file <code>META-INF/services/envisionz.api.App</code> that holds the fully qualified class name of its <code>App</code> implementation. <code>ServiceLoader.load(App.class)</code> reads all such files on the class path and returns one instance per line.</p>
+<p>Two properties of this procedure are what the contract builds on:</p>
+<ul>
+  <li><b>The host needs no configuration.</b> An app is added by putting its module on the class path and removed by taking it out. The host stays unchanged.</li>
+  <li><b>Instances are created before anything is shown.</b> This is why an app's constructor may only set fields – no user interface, no file access – and why <code>descriptor()</code> must be cheap. Both are duties stated in the Javadoc of <code>App</code>.</li>
+</ul>
+<p>The metadata lives in a <code>record AppDescriptor</code>: identifier, display name, menu text, icon, file extensions, accelerator key. The identifier is the key under which the host finds the app again – in the menu, when opening a file and when restoring a saved session.</p>
+
+<figure>
+<svg viewBox="0 0 620 214" width="620" font-family="sans-serif" font-size="13">
+  <defs>
+    <marker id="pfeil-vertrag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker>
+  </defs>
+  <rect x="17" y="20" width="136" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="85" y="45" text-anchor="middle" fill="#1f5f8b">ServiceLoader</text>
+  <text x="85" y="78" text-anchor="middle" font-size="11" fill="#5b6475">finds app classes</text>
+  <rect x="167" y="20" width="136" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="235" y="45" text-anchor="middle" fill="#1f5f8b">descriptor()</text>
+  <text x="235" y="78" text-anchor="middle" font-size="11" fill="#5b6475">cheap, metadata only</text>
+  <rect x="317" y="20" width="136" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="385" y="45" text-anchor="middle" fill="#1f5f8b">createView(ctx)</text>
+  <text x="385" y="78" text-anchor="middle" font-size="11" fill="#5b6475">GUI only here, once</text>
+  <rect x="467" y="20" width="136" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="535" y="45" text-anchor="middle" fill="#1f5f8b">restoreState(tab)</text>
+  <text x="535" y="78" text-anchor="middle" font-size="11" fill="#5b6475">only with saved state</text>
+  <line x1="153" y1="40" x2="165" y2="40" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-vertrag)"/>
+  <line x1="303" y1="40" x2="315" y2="40" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-vertrag)"/>
+  <line x1="453" y1="40" x2="465" y2="40" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-vertrag)"/>
+  <line x1="535" y1="84" x2="535" y2="118" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-vertrag)"/>
+  <rect x="467" y="120" width="136" height="40" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="535" y="145" text-anchor="middle" fill="#9a6400">tab in use</text>
+  <rect x="317" y="120" width="136" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="385" y="145" text-anchor="middle" fill="#1f5f8b">captureState()</text>
+  <text x="385" y="178" text-anchor="middle" font-size="11" fill="#5b6475">before every save</text>
+  <rect x="167" y="120" width="136" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="235" y="145" text-anchor="middle" fill="#1f5f8b">dispose()</text>
+  <text x="235" y="178" text-anchor="middle" font-size="11" fill="#5b6475">when the tab closes</text>
+  <line x1="465" y1="140" x2="455" y2="140" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-vertrag)"/>
+  <line x1="315" y1="140" x2="305" y2="140" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-vertrag)"/>
+  <text x="17" y="145" font-size="11" fill="#5b6475">one instance</text>
+  <text x="17" y="160" font-size="11" fill="#5b6475">per tab</text>
+  <line x1="17" y1="196" x2="603" y2="196" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <text x="17" y="210" font-size="11" fill="#5b6475">Top: once per app type at start. Bottom: per open tab.</text>
+</svg>
+<figcaption>Life cycle of an app instance. The metadata is read at start-up, the user interface only when a tab opens; state is captured before the session is saved and cleaned up when the tab closes.</figcaption>
+</figure>
+
+<h2 id="lebenslauf">The life cycle of an instance</h2>
+<p>An <code>App</code> instance is <b>one open tab</b>, not the app type. If the user opens two files with the same app, two instances run side by side, each with its own state and its own working directory. The contract fixes the order of calls:</p>
+<ol>
+  <li><b>Constructor</b> – fields only, no Swing, no file access.</li>
+  <li><b><code>descriptor()</code></b> – at discovery time, immutable metadata.</li>
+  <li><b><code>createView(AppContext)</code></b> – exactly once per instance. The user interface is built here. Everything the app needs from the framework is in the <code>AppContext</code> it receives: log, event bus, service registry, a working directory of its own, setting the tab title, closing the tab. The app never touches a host class or a static singleton; whoever supplies the context (multi-app host, standalone starter, test) decides what the app can do.</li>
+  <li><b><code>restoreState(PersistableTab)</code></b> – after <code>createView</code>, when a saved state exists.</li>
+  <li><b><code>captureState()</code></b> – before the session is written; may return <code>null</code> if the app has nothing to save.</li>
+  <li><b><code>dispose()</code></b> – on closing: close connections, stop worker threads, cancel timers.</li>
+</ol>
+<p>The interface appears only in step 3 for a practical reason: discovery runs at start-up for <i>all</i> apps, including those the user never opens. If the constructor were expensive, every program start would pay for all 21 apps.</p>
+
+<h3>Pseudocode – registering and opening (host, after the source of <code>AppRegistry</code> and <code>TabManager</code>)</h3>
+<pre class="pseudo"><i>// start-up: once</i>
+<b>for each</b> instance app <b>of</b> ServiceLoader.load(App):
+    desc ← app.descriptor()
+    cls ← app.getClass()
+    catalog[desc.id] ← (desc, factory = () → cls.noArgConstructor().new())
+                                              <i>same id: the later one replaces the earlier</i>
+
+<i>// opening a tab: per tab</i>
+app ← catalog[id].factory()                   <i>fresh instance, never the one from start-up</i>
+ctx ← Context(Log(id), Bus, Services, workDir, Title, Close)
+view ← app.createView(ctx)
+tab ← view.component()
+<b>if</b> saved state ≠ null:
+    <b>try</b> app.restoreState(state)  <b>catch</b> exception → log, tab stays open
+view.onShown()</pre>
+<p class="quelle">Source: <code>envisionz-framework-core/src/envisionz/core/registry/AppRegistry.java</code> (<code>discover</code>, <code>newInstance</code>) and <code>envisionz-framework-swing/src/envisionz/swing/tabs/TabManager.java</code> (<code>openTab</code>); the contract itself is in <code>envisionz-framework-api/src/envisionz/api/App.java</code>. The host side is described under <a href="../core/index.html#registry">app catalog</a> and <a href="../swing/index.html#wirt">host</a>.</p>
+<div class="hinweis"><b>Decision in the framework:</b> The instance created at discovery serves only to read <code>descriptor()</code> and to remember the class. Each tab gets its own fresh instance through <code>getDeclaredConstructor().newInstance()</code> – which is why every app needs a no-argument constructor. The standalone starters register their app through <code>register(descriptor, supplier)</code> instead, without reflection.</div>
+
+<h3>The descriptor is a value</h3>
+<p>Two guarantees in the compact constructor of the record keep it dependable: <code>id</code>, <code>displayName</code> and <code>menuLabel</code> must not be <code>null</code>, and the extension list is <b>copied</b> with <code>List.copyOf</code> (a <code>null</code> list becomes empty). Without the copy an app could keep filling its list after construction and change the host's menu afterwards with nothing in sight to explain it. As a side effect, <code>List.of("csv")</code> and an <code>ArrayList</code> with the same content are equal after copying – whoever puts descriptors in a set or searches with <code>contains</code> relies on that. Display name and menu text are looked up in a resource bundle on every call (<code>envisionz.api.apps</code>, keys <code>&lt;id&gt;.name</code> and <code>&lt;id&gt;.menu</code>); if the key or the bundle is missing, the text stored in the record applies. Extensions are written without a leading dot and in lower case.</p>
+
+<h2 id="zustand">The saved session state</h2>
+<p>On exit – or at any time on request – the framework should record which tabs were open and what was set in them, and rebuild everything at the next start. The model for this is deliberately simple: <b>strings in ordered tables</b>, no object graphs.</p>
+<table>
+  <tr><th>Type</th><th>Content</th></tr>
+  <tr><td><code>PersistableState</code></td><td>format version (<code>"1.0"</code>), time of saving (ISO string), list of tabs in display order, index of the active tab</td></tr>
+  <tr><td><code>PersistableTab</code></td><td>app identifier, title, flat properties <code>key → value</code>, named sections</td></tr>
+  <tr><td><code>PersistableTab.Section</code></td><td>properties of the section and a list of repeated entries, each again <code>key → value</code></td></tr>
+</table>
+<p>An app writes its settings with <code>tab.set(key, value)</code>, structures them with <code>tab.section(name)</code> and adds repetitions – such as the rows of a table – with <code>section.addItem()</code>. Reading uses <code>get(key, default)</code>: if a key is missing because the file comes from an older version, the app's default stays.</p>
+<div class="hinweis"><b>Decision in the framework:</b> No reflection, no annotations, no JAXB. The model is a flat structure of strings, so that the GraalVM native image needs no reflection configuration for persistence and format changes are possible without changing the model code. All tables are <code>LinkedHashMap</code>: insertion order is kept and appears like that in the file, so two saved states can be compared line by line. <code>section(name)</code> returns the <b>same</b> section on the second call; <code>PersistableState.tabs()</code>, by contrast, is intentionally the live list the host fills while loading.</div>
+<p>The implementation of writing and reading (StAX, path relativisation, temporary file) is not in this module but in <a href="../core/index.html#persistenz">framework-core</a>. The file has the form</p>
+<pre class="pseudo">&lt;envisionz-state version="1.0" savedAt="…"&gt;
+  &lt;tabs&gt;
+    &lt;tab type="&lt;app id&gt;" title="…"&gt;
+      &lt;properties&gt;  &lt;property key="…"&gt;value&lt;/property&gt;  …  &lt;/properties&gt;
+      &lt;section name="…"&gt;
+        &lt;properties&gt; … &lt;/properties&gt;
+        &lt;items&gt;  &lt;item&gt; &lt;property key="…"&gt;…&lt;/property&gt; … &lt;/item&gt;  …  &lt;/items&gt;
+      &lt;/section&gt;
+    &lt;/tab&gt;
+  &lt;/tabs&gt;
+  &lt;activeTab&gt;0&lt;/activeTab&gt;
+&lt;/envisionz-state&gt;</pre>
+<p class="quelle">Source: <code>envisionz-framework-api/src/envisionz/api/persistence/PersistableState.java</code>, <code>PersistableTab.java</code>; shape of the file after the class comment of <code>PersistableState</code>.</p>
+
+<h2 id="ereignisse-dienste">Events and services as interfaces</h2>
+<p>The context hands two intermediaries to the apps that exist in this module only as interfaces. <code>EventBus</code> has <code>publish(event)</code> and <code>subscribe(class, listener)</code>; the result of <code>subscribe</code> is a handle for unsubscribing. Any object can be an event, usually a <code>record</code> – for example <code>FocusAppEvent(appId)</code>, with which an app asks the host to bring another one to the front. <code>ServiceRegistry</code> manages at most one implementation per interface type: <code>register</code>, <code>get</code> (as an <code>Optional</code>), <code>unregister</code>. The guarantees – who determines the recipients, in which order delivery happens – belong to the implementation and are therefore on the <a href="../core/index.html#bus">framework-core page</a>.</p>
+
+<h2 id="xml">Hardened XML readers</h2>
+<p>An ordinary XML factory does two things on the file's say-so that nobody wants here:</p>
+<ul>
+  <li><b>External entities.</b> A declaration of the form <code>&lt;!ENTITY x SYSTEM "file:///…"&gt;</code> makes the parser read a foreign file and put its content into the document. A diagram definition that is passed on could fetch an arbitrary file of the recipient into a title when opened.</li>
+  <li><b>Nested entities</b> (“billion laughs”). Ten levels of ten references each inflate a few hundred bytes to gigabytes.</li>
+</ul>
+<p>The framework's files never need either – they carry no DOCTYPE declaration. <code>SichereXml</code> therefore forbids the declaration altogether. That closes both routes with one measure; the further settings are the second safeguard in case another parser sits behind <code>DocumentBuilderFactory.newInstance()</code>.</p>
+<pre class="pseudo"><b>domFabrik</b>():
+    f ← new DocumentBuilderFactory
+    f.secureProcessing ← on
+    f.DOCTYPE declaration ← <b>forbidden</b>                 <i>the actual barrier</i>
+    f.external general entities ← off;  f.external parameter entities ← off
+    f.load external DTD ← off;  f.XInclude ← off;  f.expand entity references ← off
+    <b>try</b> ACCESS_EXTERNAL_DTD ← "";  ACCESS_EXTERNAL_SCHEMA ← ""
+    <b>catch</b> IllegalArgumentException → nothing   <i>parser does not know the attribute; the switches above hold</i>
+    <b>return</b> f
+
+<b>staxFabrik</b>():  SUPPORT_DTD ← false;  IS_SUPPORTING_EXTERNAL_ENTITIES ← false</pre>
+<p class="quelle">Source: <code>envisionz-framework-api/src/envisionz/api/xml/SichereXml.java</code> (<code>domFabrik</code>, <code>domLeser</code>, <code>staxFabrik</code>).</p>
+<div class="hinweis"><b>Decision in the framework:</b> <code>SichereXml</code> is <b>the</b> place where XML factories come from. New readers call it instead of building a factory themselves; a probe searches the workspace source for unhardened <code>DocumentBuilderFactory.newInstance()</code> calls.</div>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Vertragsprobe</code></b> (70 checks) measures the quiet spots of the module: the copy of the extension list, equality of two descriptors, that <code>section(name)</code> returns the same section on the second call, insertion order, the initial value of the active tab and the ISO format of the timestamp. Nine deliberate falsifications of the production code – such as dropping <code>List.copyOf</code>, replacing <code>LinkedHashMap</code> by <code>TreeMap</code>, making the tab list <code>static</code> – each turned the probe red.</li>
+  <li><b><code>SichereXmlprobe</code></b> (12 checks) reads an ordinary document, rejects an external entity pointing at a secret file and a “billion laughs” document, and checks the same for the StAX factory. As a <b>counter-test</b>, the unhardened factory reads the same secret file – otherwise the probe would be blind.</li>
+  <li><b>Descriptor comparison</b> reads the descriptors of <i>all</i> apps from the source and checks them against each other: duplicate identifier, duplicate accelerator, duplicate icon, form of the extensions. No probe inside one module can do that, because a collision arises only between two apps that know nothing of each other.</li>
+  <li><code>EventBus</code> and <code>ServiceRegistry</code> are deliberately <b>not</b> tested here: a probe would have to write an implementation itself and then test that – which measures nothing. The module that implements them tests their guarantees.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The state consists of strings only. Numbers, truth values and lists are converted by the app itself; object graphs with references cannot be stored.</li>
+  <li>The interface knows no format migration: <code>PersistableState.CURRENT_VERSION</code> is <code>"1.0"</code>; what the reader does with a foreign version is described in <a href="../core/index.html#persistenz">framework-core</a>.</li>
+  <li>A collision of identifiers is not reported at run time: with the same identifier the app found later replaces the earlier one. Only the descriptor-comparison tool catches that.</li>
+  <li><code>SichereXml</code> forbids DOCTYPE completely. Files that carry a DTD cannot be read with it.</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>

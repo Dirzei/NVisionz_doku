@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event bus, app catalog and session storage – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag aktiv" href="index.html">framework-core</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#registry">App registry</a>
+<a class="rubrik" href="index.html#bus">Event bus and service registry</a>
+<a class="rubrik" href="index.html#persistenz">Saving and loading the workspace</a>
+<a class="unterseite aktiv" href="kern.html">Background</a>
+<a class="rubrik" href="index.html#protokoll">Logging</a>
+<a class="rubrik" href="index.html#io">Files and streams</a>
+<a class="rubrik" href="index.html#json">Reading and writing JSON</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-core</a> › Event bus, app catalog and session storage – background</span><a class="sprachwahl" href="../../de/core/kern.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-core · envisionz.core</div>
+  <h1>Event bus, app catalog and session storage – background</h1>
+  <p class="unter">The procedures behind <code>SimpleEventBus</code>, <code>AppRegistry</code>, <code>PersistenceManager</code> and <code>StaxStateWriter</code>: by which rule events are delivered, how apps are discovered and how a session is saved so that the file also works on another machine.</p>
+</header>
+
+<h2 id="registry">App catalog</h2>
+<p><code>AppRegistry</code> is the catalog of all apps the host can open. <code>discover()</code> lets the <code>ServiceLoader</code> resolve all entries under <code>META-INF/services/envisionz.api.App</code> on the class path (more on the contract on the <a href="../api/vertrag.html#entdeckung">page of the api module</a>). For each app found, the catalog remembers two things: the <code>AppDescriptor</code> and a <b>factory</b> that creates a <i>fresh</i> instance through the no-argument constructor of the class found. The instance delivered by the loader serves only to read the descriptor.</p>
+<p>Queries: <code>all()</code> returns the entries <b>sorted by identifier</b> (not in discovery order), <code>findById</code> an <code>Optional</code>, <code>newInstance(id)</code> a new app – with <code>IllegalArgumentException</code> for an unknown identifier. If a class cannot be created, the error message names the missing no-argument constructor as the likely cause. For starters without reflection there is <code>register(descriptor, supplier)</code>.</p>
+
+<h2 id="bus">Event bus and service registry</h2>
+<p>Two apps should be able to talk to each other without knowing each other: one reports “file loaded”, the other reacts. The bus is the simplest form of this that holds up.</p>
+<h3>Delivery rule</h3>
+<p>Listeners are kept in a table <code>event class → list of listeners</code>. <code>publish(e)</code> looks up <b>the exact run-time class</b> of <code>e</code> (<code>listeners.get(event.getClass())</code>); whoever subscribes to a superclass or an interface receives nothing. This is a deliberate simplification: matching is a single table lookup, and inheritance causes no surprises. Events are usually <code>record</code>s without subclasses, so the restriction costs nothing.</p>
+<p>Three properties of delivery are fixed:</p>
+<ul>
+  <li><b>Synchronous on the calling thread.</b> When <code>publish</code> returns, all listeners have worked. If the call comes from Swing, that is the event dispatch thread (EDT). A worker thread that wants to publish has to go through <code>SwingUtilities.invokeLater</code> itself.</li>
+  <li><b>Snapshot.</b> The list is copied before delivery. A listener may unsubscribe during delivery without breaking the iteration.</li>
+  <li><b>Fault isolation.</b> If a listener throws a <code>RuntimeException</code>, it is written to the log (a warning with the event class) and the remaining listeners are served anyway. Otherwise all later apps would miss the event without anyone noticing.</li>
+</ul>
+<pre class="pseudo"><b>publish</b>(e):
+    list ← listeners[ e.getClass() ]
+    <b>if</b> list missing <b>or</b> empty: <b>return</b>
+    copy ← <b>synchronized</b>(list) { array from list }          <i>snapshot</i>
+    <b>for each</b> c <b>in</b> copy (subscription order):
+        <b>try</b> c.accept(e)
+        <b>catch</b> RuntimeException x: log a warning                 <i>continue with the next</i>
+
+<b>subscribe</b>(cls, c):
+    list ← listeners.getOrCreate(cls)
+    <b>synchronized</b>(list) { list.append(c) }
+    <b>return</b> handle that removes c again                      <i>unsubscribing twice is harmless</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-core/src/envisionz/core/events/SimpleEventBus.java</code>. An <code>Error</code> (such as out of memory) is <b>not</b> caught, only <code>RuntimeException</code>.</p>
+<p><code>SimpleServiceRegistry</code> is a <code>ConcurrentHashMap</code> from interface type to implementation: <code>register</code> replaces an earlier implementation of the same type, <code>get</code> returns an <code>Optional</code>, <code>unregister</code> removes. There is exactly one service per type and no ranking.</p>
+
+<h2 id="persistenz">Saving and loading the workspace</h2>
+<p>A saved session is an XML file with the open tabs (for the model see <a href="../api/vertrag.html#zustand">framework-api</a>). Three problems must be solved for it to hold up in daily use: paths should be right on another machine too, a crash while writing must not destroy the old file, and a file from a foreign hand must not get the application into trouble.</p>
+
+<figure>
+<svg viewBox="0 0 620 196" width="620" font-family="sans-serif" font-size="13">
+  <defs>
+    <marker id="pfeil-kern" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker>
+  </defs>
+  <rect x="12" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="66" y="40" text-anchor="middle" fill="#1f5f8b">state</text>
+  <text x="66" y="56" text-anchor="middle" font-size="11" fill="#5b6475">absolute paths</text>
+  <rect x="136" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="190" y="40" text-anchor="middle" fill="#1f5f8b">relativise</text>
+  <text x="190" y="56" text-anchor="middle" font-size="11" fill="#5b6475">“path:” values only</text>
+  <rect x="260" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="314" y="40" text-anchor="middle" fill="#1f5f8b">temp file</text>
+  <text x="314" y="56" text-anchor="middle" font-size="11" fill="#5b6475">next to the target</text>
+  <rect x="384" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="438" y="40" text-anchor="middle" fill="#1f5f8b">move</text>
+  <text x="438" y="56" text-anchor="middle" font-size="11" fill="#5b6475">atomic, replaces</text>
+  <rect x="508" y="20" width="100" height="46" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="558" y="40" text-anchor="middle" fill="#9a6400">originals</text>
+  <text x="558" y="56" text-anchor="middle" font-size="11" fill="#5b6475">put back</text>
+  <line x1="120" y1="43" x2="134" y2="43" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-kern)"/>
+  <line x1="244" y1="43" x2="258" y2="43" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-kern)"/>
+  <line x1="368" y1="43" x2="382" y2="43" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-kern)"/>
+  <line x1="492" y1="43" x2="506" y2="43" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-kern)"/>
+  <text x="12" y="104" fill="#5b6475">Example (Windows, paths written with “/”):</text>
+  <text x="12" y="124" font-family="monospace" font-size="12" fill="#5b6475">file    C:/ws/sessions/a.xml</text>
+  <text x="12" y="142" font-family="monospace" font-size="12" fill="#5b6475">value   C:/ws/data/m1.csv</text>
+  <text x="12" y="160" font-family="monospace" font-size="12" fill="#1f5f8b">saved   ../data/m1.csv</text>
+  <text x="12" y="178" font-family="monospace" font-size="12" fill="#5b6475">4 or more levels up, or other drive: keep absolute</text>
+  <line x1="316" y1="112" x2="316" y2="184" stroke="#c9d1dc"/>
+  <text x="326" y="124" font-size="12" fill="#5b6475">On loading: a value that is not</text>
+  <text x="326" y="142" font-size="12" fill="#5b6475">absolute is resolved against the</text>
+  <text x="326" y="160" font-size="12" fill="#5b6475">file's folder and normalised.</text>
+</svg>
+<figcaption>Saving: paths are written relative to the session file, the file is produced through a temporary file, afterwards the original values are back in memory. Loading resolves relative paths against the file's folder.</figcaption>
+</figure>
+
+<h3>Paths: save relative, load absolute</h3>
+<p>Properties whose <b>key begins with <code>path:</code></b> count as file paths. When saving, the value is made relative to the folder of the XML file; when loading it is made absolute again. This allows a whole working folder with its session file to be copied to another machine. Two exceptions leave the value absolute: if the target is on another drive (<code>relativize</code> then throws <code>IllegalArgumentException</code>), or if the relative path would begin with <code>../../../..</code>, i.e. lead four or more levels up – such chains are brittle and unreadable. Separators are normalised to <code>/</code> <b>before</b> this check, because <code>relativize</code> returns backslashes on Windows.</p>
+<pre class="pseudo"><b>save</b>(state, file):
+    state.version ← "1.0";  state.savedAt ← now
+    dir ← parent(absolute(file));  undo ← []
+    <b>try</b>
+        <b>for each</b> tab:  search tab properties, every section, every entry:
+            <b>for each</b> (key, value) <b>with</b> key starts with "path:" <b>and</b> value not empty:
+                abs ← absolute(value)
+                rel ← dir.relativize(abs), separators to "/"
+                <b>if</b> rel starts with "../../../.." <b>or</b> other drive: value ← abs   <i>("/" form)</i>
+                <b>else</b> value ← rel
+                undo.remember(key ← original value)
+        StaxStateWriter.write(state, file)
+    <b>finally</b>  run <b>all</b> undo steps                          <i>also on error</i>
+
+<b>load</b>(file):
+    state ← StaxStateReader.read(file);  StateMigrator.migrate(state)
+    <b>for each</b> path: value: <b>if</b> not absolute: value ← normalise(dir.resolve(value))</pre>
+<p class="quelle">Source: <code>envisionz-framework-core/src/envisionz/core/persistence/PersistenceManager.java</code>. Resetting in <code>finally</code> lets the caller keep working with absolute paths after saving.</p>
+
+<h3>Writing through a temporary file</h3>
+<p>Writing directly into the target file would leave half a file after a crash in mid-write – the session would be gone. <code>StaxStateWriter.write(state, file)</code> therefore creates a temporary file in the target's folder (name starts with the file name, suffix <code>.tmp</code>), writes there and moves it onto the target with <code>REPLACE_EXISTING</code> and <code>ATOMIC_MOVE</code>. If the file system does not support an atomic move (<code>AtomicMoveNotSupportedException</code>, as on some network drives), the move is done without <code>ATOMIC_MOVE</code> – still better than overwriting directly. In <code>finally</code> the temporary file is deleted if it still exists; after an error none is left behind.</p>
+<p>The writer produces the file by hand with <code>XMLStreamWriter</code>: UTF-8, two spaces per level, the system's line break. Its own indentation is needed because StAX supplies none. A <code>null</code> value is written as empty text; special characters are escaped by StAX.</p>
+
+<h3>Reading, versions and foreign files</h3>
+<p>The reader (<code>StaxStateReader</code>) switches off DTDs and external entities and <b>skips unknown properties</b> instead of failing – an older application can thus read a newer file without understanding the additional keys. <code>StateMigrator.migrate</code> is the place for future format changes: today <code>"1.0"</code> applies; an empty or missing version is read as <code>"1.0"</code>; <b>any other version throws</b> <code>IllegalStateException</code>. Guessing what an unknown version contains would be more dangerous than refusing.</p>
+<div class="hinweis"><b>Decision in the framework:</b> Event delivery follows the <b>exact</b> class, synchronously, on a snapshot and with fault isolation. The session file is never overwritten directly, <code>path:</code> values are changed only while writing and reset afterwards, and an unknown format version aborts loading.</div>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Kernprobe</code></b> (58 checks according to the module documentation; class coverage 16 of 16) checks against the <i>promised</i> behaviour of the interfaces: that the <b>concrete</b> event type determines the recipients – in both directions –, subscription order, harmless double unsubscribing, fault isolation and snapshot, the round trip of the session with XML special characters, path relativisation including its limit (more than three levels up stay absolute), that the passed state is not changed permanently, and that an unknown version throws. Ten counter-tests – from “no fault isolation” to “wave an unknown version through” – each turned it red.</li>
+  <li><b><code>Ablageprobe</code></b> checks writer and reader: round trip <i>field by field</i> through stream and through file (the latter additionally passes the temporary file and the move step), angle brackets, ampersand, quotation marks, line breaks, umlauts and characters outside the basic plane in values, a value of eighty thousand characters, and a file with an external entity as an attacker would present it. After a failed write attempt no temporary file may remain.</li>
+  <li>A crash in mid-write cannot be provoked from a probe; the indivisibility of the move is therefore <b>not</b> measured, only the error path.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The bus is neither asynchronous nor hierarchical; a listener that computes for long holds up all others and – under Swing – the user interface.</li>
+  <li>An event with a subclass reaches only listeners subscribed to exactly that subclass.</li>
+  <li>Duplicate app identifiers are not reported during discovery: the one found later replaces the earlier one.</li>
+  <li>Relativisation knows only values under keys with the prefix <code>path:</code>; paths in other properties stay as the app stores them.</li>
+  <li>On file systems without an atomic move the storage is not indivisible, only better than overwriting directly.</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>
