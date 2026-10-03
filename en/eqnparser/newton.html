@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newton method, Jacobian and damping – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag aktiv" href="index.html">commandline-eqnparser</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#nfml">The modelling language NFML</a>
+<a class="rubrik" href="index.html#ausdruck">Expressions and derivatives</a>
+<a class="rubrik" href="index.html#builtins">Built-in functions</a>
+<a class="rubrik" href="index.html#loeser">Twelve solvers behind one interface</a>
+<a class="unterseite" href="fortsetzung.html">Continuation</a>
+<a class="unterseite aktiv" href="newton.html">Newton and Jacobian</a>
+<a class="rubrik" href="index.html#normierung">Scaling and normalisation</a>
+<a class="rubrik" href="index.html#start">Start values and robustness</a>
+<a class="unterseite" href="zerlegung.html">Block ordering</a>
+<a class="rubrik" href="index.html#diagnose">Diagnostics</a>
+<a class="rubrik" href="index.html#ausgabe">C source, LaTeX and derivative overview</a>
+<a class="rubrik" href="index.html#konverter">Converters from other tools</a>
+<a class="rubrik" href="index.html#api">Embedding and command line</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">commandline-eqnparser</a> › Newton method, Jacobian and damping – background</span><a class="sprachwahl" href="../../de/eqnparser/newton.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-commandline-eqnparser · apps.eqnParser.solver</div>
+  <h1>Newton method, Jacobian and damping – background</h1>
+  <p class="unter">The loop in <code>AbstractSolver</code>: Newton step, building the Jacobian, Armijo line search, scaling and termination criteria, with pseudocode after the source code, a worked example and the tests.</p>
+</header>
+
+<h2 id="problem">What this is about</h2>
+<p>A system of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> equations for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> unknown quantities is to be solved. In thermodynamics and fluid mechanics the equations are nonlinear (equations of state, property functions, characteristic maps), and nobody can solve them explicitly for the unknowns. They are written as a root-finding problem</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">F</mi><mo stretchy="false">(</mo><mi mathvariant="normal">x</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">F</mi><mo>:</mo><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>n</mi></mrow></msup><mo>→</mo><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>n</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\mathbf F(\mathbf x) = \mathbf 0, \qquad \mathbf F:\mathbb R^n\to\mathbb R^n</annotation></semantics></math></p>
+<p>and the solution is approached step by step. The framework has twelve solvers behind one interface; they share a common loop in <code>AbstractSolver</code> and differ in the <i>step</i> (<code>computeStep</code>) and in the <i>damping</i> (<code>armijoStep</code>). This page describes the core they all rely on: the Newton method, the Jacobian matrix, damping, scaling and the termination criteria.</p>
+
+<h2 id="newton">The Newton method</h2>
+<p>If <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\mathbf x_k</annotation></semantics></math> is an approximation, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">F</mi></mrow><annotation encoding="application/x-tex">\mathbf F</annotation></semantics></math> is replaced near it by its tangent plane (first-order Taylor expansion):</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">F</mi><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>+</mo><mi>Δx</mi><mo stretchy="false">)</mo><mo>≈</mo><mi mathvariant="normal">F</mi><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo><mo>+</mo><mi mathvariant="normal">J</mi><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>Δx</mi><mo>,</mo><mspace width="2em"/><msub><mrow><mi>J</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mfrac><mrow><mi>∂</mi><msub><mrow><mi>F</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><mrow><mi>∂</mi><msub><mrow><mi>x</mi></mrow><mrow><mi>j</mi></mrow></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">\mathbf F(\mathbf x_k + \Delta\mathbf x) \approx \mathbf F(\mathbf x_k) + \mathbf J(\mathbf x_k)\,\Delta\mathbf x, \qquad J_{ij} = \frac{\partial F_i}{\partial x_j}</annotation></semantics></math></p>
+<p>The root of this linear approximation is the Newton step; it is obtained by solving a linear system, not by forming the inverse:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">J</mi><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>Δx</mi><mo>=</mo><mo>−</mo><mi mathvariant="normal">F</mi><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>+</mo><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>k</mi></mrow></msub><mspace width="0.1667em"/><mi>Δx</mi></mrow><annotation encoding="application/x-tex">\mathbf J(\mathbf x_k)\,\Delta\mathbf x = -\mathbf F(\mathbf x_k), \qquad \mathbf x_{k+1} = \mathbf x_k + \alpha_k\,\Delta\mathbf x</annotation></semantics></math></p>
+<p>With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\alpha_k = 1</annotation></semantics></math> this is the pure Newton method; near the solution it converges quadratically, the error being roughly squared in every step. Far from the solution the full step can overshoot. For that there is the <b>damping factor</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>∈</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">\alpha_k\in(0,1]</annotation></semantics></math> (see below).</p>
+
+<figure>
+<svg viewBox="0 0 560 230" width="560" font-family="sans-serif" font-size="13">
+  <defs><marker id="pfeil-newton" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><polygon points="0,0 8,4 0,8" fill="#9a6400"/></marker></defs>
+  <line x1="40" y1="115.0" x2="545" y2="115.0" stroke="#c9d1dc"/>
+  <text x="520" y="131.0" fill="#5b6475">X</text>
+  <text x="46.0" y="131.0" fill="#5b6475" font-size="11">0.5</text>
+  <text x="524.0" y="131.0" fill="#5b6475" font-size="11">3</text>
+  <text x="14" y="18" fill="#5b6475">F(X)</text>
+  <polyline points="50.0,198.1 62.3,196.0 74.6,193.8 86.9,191.4 99.2,188.9 111.5,186.3 123.8,183.6 136.2,180.7 148.5,177.7 160.8,174.6 173.1,171.3 185.4,167.9 197.7,164.4 210.0,160.7 222.3,156.9 234.6,153.0 246.9,149.0 259.2,144.8 271.5,140.5 283.8,136.1 296.2,131.5 308.5,126.8 320.8,122.0 333.1,117.0 345.4,111.9 357.7,106.7 370.0,101.4 382.3,95.9 394.6,90.3 406.9,84.5 419.2,78.7 431.5,72.7 443.8,66.6 456.2,60.3 468.5,53.9 480.8,47.4 493.1,40.7 505.4,34.0 517.7,27.1 530.0,20.0" fill="none" stroke="#1f5f8b" stroke-width="2"/>
+  <line x1="146.0" y1="178.3" x2="402.0" y2="115.0" stroke="#c9d1dc" stroke-width="1.5"/>
+  <line x1="402.0" y1="115.0" x2="402.0" y2="86.9" stroke="#c9d1dc" stroke-dasharray="3 3"/>
+  <line x1="402.0" y1="86.9" x2="341.8" y2="115.0" stroke="#c9d1dc" stroke-width="1.5"/>
+  <line x1="146.0" y1="178.3" x2="146.0" y2="115.0" stroke="#c9d1dc" stroke-dasharray="3 3"/>
+  <circle cx="146.0" cy="178.3" r="4" fill="#1f5f8b"/>
+  <circle cx="402.0" cy="86.9" r="4" fill="#1f5f8b"/>
+  <circle cx="338.0" cy="115.0" r="4" fill="#fff" stroke="#9a6400" stroke-width="2"/>
+  <text x="154.0" y="182.3" fill="#5b6475">start X = 1, F = −4</text>
+  <text x="410.0" y="82.9" fill="#5b6475">X = 2.333, F = 1.778</text>
+  <text x="278.0" y="81.0" fill="#9a6400">root X = 2</text>
+  <line x1="330.0" y1="89.0" x2="337.0" y2="109.0" stroke="#9a6400" marker-end="url(#pfeil-newton)"/>
+</svg>
+<figcaption>Two Newton steps for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mrow><mi>X</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mi>X</mi><mo>−</mo><mn>6</mn></mrow><annotation encoding="application/x-tex">F(X)=X^2+X-6</annotation></semantics></math>: the tangent at the current point meets the axis at the next approximation. From X = 1 it goes to 2.333 and from there to 2.0196; the root is at X = 2.</figcaption>
+</figure>
+
+<div class="hinweis"><b>Convention in the framework:</b> <code>NewtonArmijoSolver.computeStep</code> solves <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">J</mi><mspace width="0.1667em"/><mi>Δx</mi><mo>=</mo><mo>−</mo><mi mathvariant="normal">F</mi></mrow><annotation encoding="application/x-tex">\mathbf J\,\Delta\mathbf x=-\mathbf F</annotation></semantics></math> directly with column pivoting (<code>MatrixSimple.solveLinear</code>). Formerly the inverse was formed and multiplied with the vector; that cost twice as much and lost additional digits on ill-conditioned systems. Columns without a pivot (a variable with no influence on any active residual) would silently give <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>x</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\Delta x=0</annotation></semantics></math>; they are therefore mapped to variable names and reported.</div>
+
+<h3>Worked example</h3>
+<p>The solvers' test model is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>⋅</mo><mi>X</mi><mo>+</mo><mi>Y</mi><mo>=</mo><mn>6</mn><mo>,</mo><mspace width="0.2778em"/><mi>X</mi><mo>−</mo><mi>Y</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">X\cdot X + Y = 6,\; X - Y = 0</annotation></semantics></math>, i.e. <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mi>Y</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">X=Y=2</annotation></semantics></math>. With start <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mi>Y</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">X=Y=1</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">F</mi><mo>=</mo><mo stretchy="false">(</mo><mo>−</mo><mn>4</mn><mo>,</mo><mspace width="0.1667em"/><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf F=(-4,\,0)</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">J</mi><mo>=</mo><mtable><mtr><mtd style="text-align:left"><mn>2</mn><mi>X</mi></mtd><mtd style="text-align:left"><mn>1</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>1</mn></mtd><mtd style="text-align:left"><mo>−</mo><mn>1</mn></mtd></mtr></mtable><mo>=</mo><mtable><mtr><mtd style="text-align:left"><mn>2</mn></mtd><mtd style="text-align:left"><mn>1</mn></mtd></mtr><mtr><mtd style="text-align:left"><mn>1</mn></mtd><mtd style="text-align:left"><mo>−</mo><mn>1</mn></mtd></mtr></mtable></mrow><annotation encoding="application/x-tex">\mathbf J=\begin{pmatrix}2X&amp;1\\1&amp;-1\end{pmatrix}=\begin{pmatrix}2&amp;1\\1&amp;-1\end{pmatrix}</annotation></semantics></math>. The system <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>JΔx</mi><mo>=</mo><mo stretchy="false">(</mo><mn>4</mn><mo>,</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf J\Delta\mathbf x=(4,0)</annotation></semantics></math> gives <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>X</mi><mo>=</mo><mi mathvariant="normal">Δ</mi><mi>Y</mi><mo>=</mo><mn>4</mn><mo>/</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">\Delta X=\Delta Y=4/3</annotation></semantics></math>, so <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>7</mn><mo>/</mo><mn>3</mn><mo>=</mo><mn>2.3333</mn></mrow><annotation encoding="application/x-tex">X_1=7/3=2.3333</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>F</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>16</mn><mo>/</mo><mn>9</mn><mo>=</mo><mn>1.778</mn></mrow><annotation encoding="application/x-tex">F_1=16/9=1.778</annotation></semantics></math>. In the second step <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>X</mi><mo>+</mo><mn>1</mn><mo>=</mo><mn>17</mn><mo>/</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">2X+1=17/3</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>X</mi><mo>=</mo><mo>−</mo><mn>16</mn><mo>/</mo><mn>51</mn></mrow><annotation encoding="application/x-tex">\Delta X=-16/51</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>103</mn><mo>/</mo><mn>51</mn><mo>=</mo><mn>2.0196</mn></mrow><annotation encoding="application/x-tex">X_2=103/51=2.0196</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>F</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0.0984</mn></mrow><annotation encoding="application/x-tex">F_2=0.0984</annotation></semantics></math>. The third step: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>X</mi><mo>+</mo><mn>1</mn><mo>=</mo><mn>5.0392</mn></mrow><annotation encoding="application/x-tex">2X+1=5.0392</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>X</mi><mo>=</mo><mo>−</mo><mn>0.01953</mn></mrow><annotation encoding="application/x-tex">\Delta X=-0.01953</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>X</mi></mrow><mrow><mn>3</mn></mrow></msub><mo>=</mo><mn>2.00008</mn></mrow><annotation encoding="application/x-tex">X_3=2.00008</annotation></semantics></math>. The error goes from 1 via 0.333 and 0.0196 to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>7.6</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">7.6\cdot10^{-5}</annotation></semantics></math> – the squaring is easy to see. (Calculated by hand.)</p>
+
+<h2 id="jacobi">The Jacobian matrix</h2>
+<p>The quality of the Jacobian decides the behaviour of the method. <code>AbstractSolver.buildJacobian</code> builds it <b>row by row in parallel</b> (each thread writes its own row, evaluations are stateless), and only for the <i>free</i> variables; fixed variables have no column. For each equation the first applicable route is used:</p>
+<ol>
+<li><b>Forward automatic differentiation:</b> if the application supplies a row provider (<code>JacobianRowProvider</code>), a single pass with dual numbers yields the whole row exactly.</li>
+<li><b>Symbolic derivative:</b> from the pre-built <code>DerivativeMatrix</code> only the non-zero positions are evaluated. The derivatives come from the evaluation tree (section <a href="index.html#ausdruck">Expressions and derivatives</a>).</li>
+<li><b>Derivative of CALL equations:</b> an equation <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo>=</mo><mspace width="0.1667em"/><mi>output</mi><mo>⁡</mo><mo>−</mo><msub><mrow><mi>p</mi></mrow><mrow><mi>CALL</mi><mo>⁡</mo></mrow></msub><mo stretchy="false">(</mo><mi>inputs</mi><mo>⁡</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">F = \mathrm{output} - p_{\mathrm{CALL}}(\mathrm{inputs})</annotation></semantics></math> uses the derivative of the call (fourth order, fd5); the coefficient of the output variable is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">+1</annotation></semantics></math>.</li>
+<li><b>Finite differences</b> as fallback with a forward difference: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∂</mi><msub><mrow><mi>F</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>/</mo><mi>∂</mi><msub><mrow><mi>x</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>≈</mo><mo stretchy="false">(</mo><msub><mrow><mi>F</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>+</mo><mi>h</mi><mo stretchy="false">)</mo><mo>−</mo><msub><mrow><mi>F</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>/</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">\partial F_i/\partial x_j\approx\bigl(F_i(x_j+h)-F_i(x_j)\bigr)/h</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup><mspace width="0.1667em"/><mo>|</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>|</mo><mo>,</mo><mspace width="0.1667em"/><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">h=\max(10^{-6}\,|x_j|,\,10^{-8})</annotation></semantics></math>.</li>
+</ol>
+
+<h2 id="daempfung">Damping: the Armijo line search</h2>
+<p>For the measure <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">φ</mi><mo stretchy="false">(</mo><mi mathvariant="normal">x</mi><mo stretchy="false">)</mo><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">‖</mo><mi mathvariant="normal">F</mi><mo stretchy="false">(</mo><mi mathvariant="normal">x</mi><mo stretchy="false">)</mo><msup><mrow><mo stretchy="false">‖</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\varphi(\mathbf x)=\tfrac12\lVert\mathbf F(\mathbf x)\rVert^2</annotation></semantics></math> the Newton step always points downhill: the directional derivative is \(\varphi'(0)=-\lVert\mathbf F\rVert^2<0\). The Armijo condition ("sufficient decrease") accepts a step length \(\alpha\) if</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">φ</mi><mo stretchy="false">(</mo><mi mathvariant="normal">x</mi><mo>+</mo><mi mathvariant="normal">α</mi><mspace width="0.1667em"/><mi>Δx</mi><mo stretchy="false">)</mo><mspace width="0.2778em"/><mo>≤</mo><mspace width="0.2778em"/><mi mathvariant="normal">φ</mi><mo stretchy="false">(</mo><mi mathvariant="normal">x</mi><mo stretchy="false">)</mo><mo>+</mo><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mspace width="0.1667em"/><mi mathvariant="normal">α</mi><mspace width="0.1667em"/><mi mathvariant="normal">φ</mi><mo>'</mo><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\varphi(\mathbf x + \alpha\,\Delta\mathbf x) \;\le\; \varphi(\mathbf x) + c_1\,\alpha\,\varphi'(0)</annotation></semantics></math></p>
+<p>One starts with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">α</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\alpha=1</annotation></semantics></math> and halves until the condition holds (backtracking). If an evaluation gives NaN or infinity, the trial is treated as a failure and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math> is reduced as well.</p>
+<div class="hinweis"><b>Convention in the framework:</b> defaults from <code>SolverConfig</code>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\alpha_0=1</annotation></semantics></math>, reduction <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ρ</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">\rho=0.5</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">c_1=10^{-4}</annotation></semantics></math>, lower limit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>min</mi><mo>⁡</mo></mrow></msub><mo>=</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\alpha_{\min}=10^{-4}</annotation></semantics></math>. The line search runs in the <b>original space</b> of the variables, after the step has been scaled back. The merit is evaluated in the <b>physical</b> norm <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">‖</mo><mi mathvariant="normal">F</mi><mo stretchy="false">‖</mo></mrow><annotation encoding="application/x-tex">\lVert\mathbf F\rVert</annotation></semantics></math>, even when scaling is active (<code>cmd.equilibratedMerit</code> switches the old behaviour back on): the scaled norm spans several orders of magnitude, so stiff rows become practically invisible and steps without real progress were accepted. Measured on 178 recomputation cases of an engine model: scaled merit 175 of 178, physical merit 178 of 178. Optionally (default off) there is a <b>non-monotone</b> variant that tests against the maximum of the last five merit values instead of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">φ</mi><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\varphi(0)</annotation></semantics></math>, so that the residual may rise temporarily at regime boundaries.</div>
+
+<h2 id="skalierung">Scaling the Jacobian</h2>
+<p>The quantities of an engineering system differ by many powers of ten: pressures in Pa next to Mach numbers. This makes the Jacobian ill-conditioned. Before solving, rows and columns are therefore scaled, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi mathvariant="normal">J</mi></mrow><mo stretchy="true">˜</mo></mover><mo>=</mo><mi mathvariant="normal">R</mi><mspace width="0.1667em"/><mi mathvariant="normal">J</mi><mspace width="0.1667em"/><mi mathvariant="normal">C</mi></mrow><annotation encoding="application/x-tex">\tilde{\mathbf J}=\mathbf R\,\mathbf J\,\mathbf C</annotation></semantics></math>; the step is determined in the scaled space and transformed back with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">C</mi></mrow><annotation encoding="application/x-tex">\mathbf C</annotation></semantics></math>; the values themselves always stay in physical space. The choices are diagonal and unit-interval scaling (columns only), Sinkhorn-Knopp equilibration (factors at the start, then every 5 iterations or when the estimated condition number exceeds <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{10}</annotation></semantics></math>), <code>STATIC_NORM</code> (factors frozen at the start point) and <code>DYNAMIC_NORM</code> (row and column scales renewed every iteration). The condition number is estimated by <code>ConditionEstimator</code> in the infinity norm; the message "ill-conditioned" recommends switching to the Levenberg-Marquardt solver.</p>
+
+<h2 id="abbruch">Termination and robustness</h2>
+<p>The measure is the sum of absolute values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">‖</mo><mi mathvariant="normal">F</mi><msub><mrow><mo stretchy="false">‖</mo></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi></mrow></munder><mo>|</mo><msub><mrow><mi>F</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>|</mo></mrow><annotation encoding="application/x-tex">\lVert\mathbf F\rVert_1=\sum_i|F_i|</annotation></semantics></math>, optionally with residual normalisation. The iteration stops when</p>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">‖</mo><mi mathvariant="normal">F</mi><msub><mrow><mo stretchy="false">‖</mo></mrow><mrow><mn>1</mn></mrow></msub><mo>&lt;</mo><mspace width="0.1667em"/><mi>tol</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\lVert\mathbf F\rVert_1 &lt; \mathrm{tol}</annotation></semantics></math> (absolute), or</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">‖</mo><mi mathvariant="normal">F</mi><msub><mrow><mo stretchy="false">‖</mo></mrow><mrow><mn>1</mn></mrow></msub><mo>/</mo><mo stretchy="false">‖</mo><msub><mrow><mi mathvariant="normal">F</mi></mrow><mrow><mn>0</mn></mrow></msub><msub><mrow><mo stretchy="false">‖</mo></mrow><mrow><mn>1</mn></mrow></msub><mo>&lt;</mo><mspace width="0.1667em"/><msub><mi>tol</mi><mrow><mi>r</mi><mi>e</mi><mi>l</mi></mrow></msub><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\lVert\mathbf F\rVert_1/\lVert\mathbf F_0\rVert_1 &lt; \mathrm{tol}_{rel}</annotation></semantics></math> (relative, only if <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>tol</mi><mrow><mi>r</mi><mi>e</mi><mi>l</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\mathrm{tol}_{rel}&gt;0</annotation></semantics></math>), or</li>
+<li>the maximum number of iterations is reached, or the run is interrupted.</li>
+</ul>
+<p>A NaN in the residual counts as divergence (residual = maximum). Stagnation is detected when progress stays below one percent for eight iterations in a row; this gives a warning (hint towards equilibration) but does not stop the run. With the <b>restart ladder</b> switched on, however, the run stops early if the best value of the last 8 iterations improves on the best of the 8 before by less than 0.5 % (plateau, from 16 iterations on) or if the residual oscillates with period 2; the next rung of the ladder then starts immediately.</p>
+<div class="hinweis"><b>Convention in the framework:</b> defaults of <code>SolverConfig.Builder</code>: at most 100 iterations, tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math>, relative tolerance 0 (off). After every step <code>PhysicalProjector</code> projects the values onto the variable bounds.</div>
+
+<h3>Pseudocode – <code>AbstractSolver.solve</code></h3>
+<pre class="pseudo">F ← F(x);  fsum0 ← Σ|F|                         <i>at the start (xx = 0)</i>
+<b>while</b> xx &lt; maxIter:
+    <b>if</b> xx &gt; 0 <b>and</b> (fsum &lt; tol <b>or</b> fsum/fsum0 &lt; tolRel): <b>stop</b>
+    J ← Jacobian(x)                              <i>rows in parallel; AD, symbolic, CALL or differences</i>
+    <b>if</b> scaled: update R, C <b>if</b> needed;  J ← R·J·C;  F′ ← R·F
+    κ ← estimate condition number(J);  <b>warn</b> on poor conditioning
+    dx ← computeStep(J, F′)                      <i>Newton: solve J·dx = −F′ directly</i>
+    dx ← C·dx                                    <i>back to the original space</i>
+    α ← armijoStep(x, dx, F)                     <i>halve α until φ(x+α·dx) ≤ φ(x) − c1·α·‖F‖²</i>
+    x ← x + α·dx;  project x onto the bounds
+    F ← F(x)                                     <i>NaN: fsum ← maximum, divergence</i>
+    fsum ← Σ|F|  (or normalised)
+    count stagnation (8 iterations under 1 % progress: warning)
+    <b>if</b> restart ladder <b>and</b> (plateau <b>or</b> period-2 oscillation): <b>stop</b>
+    xx ← xx + 1</pre>
+<p class="quelle">Source: <code>eqnparser/src/apps/eqnParser/solver/AbstractSolver.java</code> (<code>solve</code>, <code>buildJacobian</code>), <code>NewtonArmijoSolver.java</code> (<code>computeStep</code>, <code>armijoStep</code>), <code>SolverConfig.java</code></p>
+
+<h2 id="varianten">How the solvers differ</h2>
+<p>The loop stays, the step changes: <code>NEWTON_SPARSE</code> solves the same system with a sparse LU (from framework-math), <code>NEWTON_GMRES</code> iteratively with GMRES, <code>BROYDEN</code> replaces the Jacobian by rank-1 updates and rebuilds it only rarely, <code>LEVENBERG_MARQUARDT</code> damps the step through a parameter instead of a line search. The overview section <a href="index.html#loeser">Twelve solvers behind one interface</a> lists them all. Difficult starts are handled by continuation, see <a href="fortsetzung.html">Continuation methods</a>.</p>
+
+<h2 id="pruefung">How it is tested</h2>
+<ul>
+<li><code>cmd.Loeservergleichprobe</code> (22 checks, 3 counter-experiments red): all methods solve <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>⋅</mo><mi>X</mi><mo>+</mo><mi>Y</mi><mo>=</mo><mn>6</mn><mo>,</mo><mspace width="0.2778em"/><mi>X</mi><mo>−</mo><mi>Y</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">X\cdot X+Y=6,\;X-Y=0</annotation></semantics></math> and must give the same root <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mi>Y</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">X=Y=2</annotation></semantics></math>, tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-6}</annotation></semantics></math>. The probe knows an exception list with the coarser bound <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><mi>X</mi><mo>−</mo><mn>2</mn><mo>|</mo><mo>≤</mo><mn>0.05</mn></mrow><annotation encoding="application/x-tex">|X-2|\le 0.05</annotation></semantics></math>; since the continuation fix up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">t=1</annotation></semantics></math> it is empty. In addition <code>SolverFactory</code> must map every type to the class it promises – someone choosing <code>BROYDEN_SPARSE</code> and secretly getting the dense Broyden would otherwise not notice, both converge.</li>
+<li><code>SkalierungSelfTest</code> (35 checks): scaling components, residual normalisation, projection onto bounds.</li>
+<li><code>NewtonGmresprobe</code> (12 checks) for the Newton-Krylov solver.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+<li>Newton finds only a local solution near the start; multiple roots, regime changes (IF/ELSE) and singularities (sonic limit) cannot be bridged. Start-value aids and continuation methods exist for that.</li>
+<li>If the Jacobian is singular, no step results or it is unusable; Levenberg-Marquardt is then the better solver.</li>
+<li>The statement <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">φ</mi><mo>'</mo><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo><mo>=</mo><mo>−</mo><mo stretchy="false">‖</mo><mi mathvariant="normal">F</mi><msup><mrow><mo stretchy="false">‖</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\varphi'(0)=-\lVert\mathbf F\rVert^2</annotation></semantics></math> holds for the exact Newton step; with Broyden updates the step is only approximately a descent step.</li>
+<li>Forward finite differences are only first-order accurate and lose digits through cancellation at very small step sizes.</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+</script>
+</body>
+</html>
