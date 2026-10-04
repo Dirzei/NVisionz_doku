@@ -69,6 +69,16 @@ nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;b
   border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
 nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
 nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:block}
+span.glnr{float:right;margin-left:12px;color:var(--mu)}
+a.glverweis{white-space:nowrap}
 nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
 nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
 nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
@@ -77,6 +87,7 @@ nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
 nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
 nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
 main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
 .pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
 .pfad a{color:var(--ak);text-decoration:none}
 a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
@@ -120,6 +131,7 @@ math[display="block"]{margin:10px 0}
 <body>
 <nav class="leiste">
 <a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
 <div class="gruppe">Application framework</div>
 <a class="eintrag" href="../api/index.html">framework-api</a>
 <a class="eintrag" href="../core/index.html">framework-core</a>
@@ -338,7 +350,7 @@ math[display="block"]{margin:10px 0}
 <p><b>Not computed</b> are thermocouple, RTD, strain gauge, thermistor and the combinations (<code>Add</code>, <code>Subtract</code>). They are <b>named</b>: if one stands on a channel, a finding says so and the values stay raw counts. They differ from the three built ones not in structure but in the curve — each brings its own table of physical constants, and those are not to be copied but measured. A foreign anchor for them can be produced with npTDMS; the work is outstanding and is not claimed here.</p>
 <p><b>T5</b> (property) — Extended floating point numbers — read since 2026-09-27, with an own anchor; closed with a known limit</p>
 <p><b>Addendum 2026-09-27 — read, and on what grounds.</b> The width does not come from the TDMS description but from two places at NI: the LabVIEW help <i>Flattened Data</i> says "LabVIEW stores flattened extended-precision, floating-point numbers as 16-byte quantities", and the NI forum (<i>Convert binary bytes to Labview Extended Precision type</i>) describes the x87 layout stored with six padding bytes after it. Accordingly the reader takes <b>sixteen bytes, eighty used</b>: little-endian mantissa (8 bytes, explicit integer bit), sign and exponent (2), six padding bytes; big-endian sign and exponent, mantissa, padding. Conversion to <code>double</code> rounds to nearest, ties to even, including into the subnormal range; beyond the range becomes infinite, 0x7FFF is infinity or not-a-number. A channel of this type carries a finding that values are rounded. Applies to type 11 and 0x1B, to channels and to properties. <b>The anchor is our own, the values are not:</b> <code>Tdmsschreiber</code> stores the ten payload bytes that <code>numpy.longdouble</code> 2.4.4 yields on x86-64, and the expected values are <code>float()</code> of the same numbers — the FPU's rounding, not this reader's (<code>test/proben/t5_x87.py</code>, 14 values including a tie, subnormals, x87 subnormals, ±infinity, plus a NaN; the sixteen bytes are stated in the writer itself, not taken from <code>Tdmstyp</code>). Measured in both byte orders, interleaved beside a <code>double</code>, as a property and with a unit. <b>The caveat remains:</b> this proves we read what we take the layout to be — not that LabVIEW writes exactly this. FSharp.Data.Tdms, for instance, reads ten bytes. A genuine file from LabVIEW is still the missing evidence; hence both rows stand at <i>partial</i> on our side: read, but not measured on a LabVIEW file.</p>
-<p><b>Closed 2026-09-27 (owner), with a known limit.</b> A real LabVIEW file with type 11 or 0x1B cannot be obtained: the owner has no LabVIEW, and eight public TDMS files (npTDMS test data, go-tdms, NREL TITANIC) do not contain the type; npTDMS itself does not read it. The sixteen-byte storage width therefore remains supported by the LabVIEW help and the NI forum, not by a file. Should one turn up, a single run of the reader over it suffices.</p>
+<p><b>Closed 2026-09-27, with a known limit.</b> A real LabVIEW file with type 11 or 0x1B cannot be obtained: no LabVIEW installation is available, and eight public TDMS files (npTDMS test data, go-tdms, NREL TITANIC) do not contain the type; npTDMS itself does not read it. The sixteen-byte storage width therefore remains supported by the LabVIEW help and the NI forum, not by a file. Should one turn up, a single run of the reader over it suffices.</p>
 <p><b>Re-stated on 2026-09-07 with the real reason.</b> It said here that Java has no 80-bit type and that a conversion to <code>double</code> would lose digits. That is true and beside the point: a conversion that loses digits would still beat nothing, and it could be reported.</p>
 <p><b>The real reason is that the width is not established.</b> NI's format description lists <code>tdsTypeExtendedFloat</code> (11) and <code>tdsTypeExtendedFloatWithUnit</code> (0x1B) in its type enumeration and gives a byte count for <b>no</b> type at all. The x87 layout from which LabVIEW's <code>EXT</code> comes occupies <b>ten, twelve or sixteen</b> bytes depending on the machine. And npTDMS 1.11.0 records the size <code>None</code> for this type — it does not know it either.</p>
 <p><b>There is therefore neither a writer nor a reader against which an implementation could be measured.</b> A built and unmeasured implementation would be worse in this workspace than a named gap: it would look like a capability. The type is therefore <b>named</b> — it carries the width −2 in the reader, "not known" — a channel of this type does not abort the reading, and its values stay empty. The item would close with <b>one</b> real file from LabVIEW; it is missing.</p>
@@ -402,6 +414,51 @@ Generated from <code>envisionz-framework-fileformats/docs/tdms/COMPARISON.md</co
     links[erstes.id].classList.add('jetzt');
   }, {rootMargin: '0px 0px -70% 0px'});
   ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
 })();
 </script>
 </body>
