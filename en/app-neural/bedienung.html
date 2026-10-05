@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using Neural Surrogate – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag aktiv" href="index.html">app-neural</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#zweck">What the app is for</a>
+<a class="rubrik" href="index.html#funktionen">What it can do</a>
+<a class="unterseite aktiv" href="bedienung.html">How to use</a>
+<a class="rubrik" href="index.html#daten">Data and formats</a>
+<a class="rubrik" href="index.html#aufbau">What it is built on</a>
+<a class="rubrik" href="index.html#stand">Status and limits</a>
+</div>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">app-neural</a> › Using Neural Surrogate</span><a class="sprachwahl" href="../../de/app-neural/bedienung.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-app-neural · how to use</div>
+  <h1>Using Neural Surrogate</h1>
+  <p class="unter">User page, as of 6 October 2026. How to learn a neural surrogate from a measurement table – assign data, choose or search an architecture, train, evaluate, save – and how the second workflow learns a small language model from text. The pictures are screenshots of the app with a simplified, invented compressor map and invented sentences.</p>
+</header>
+
+<p class="hinweis">Parts of the English interface still appear in German, among them status lines of the sequence workflow, some tooltips and the sample corpus in the pictures. Labels marked * below are quoted as the interface shows them.</p>
+
+<h2 id="fenster">The window</h2>
+<p class="einl">Open the app from the <i>Apps</i> menu with <i>New Neural Surrogate</i> or with <code>Alt</code>+<code>U</code>; it opens a model file <code>.ennet</code> directly.</p>
+<figure><img src="../../bilder/app-neural/fenster_en.png" alt="The Neural Surrogate window in the Data step: at the top the toolbar with Save model, Load model, Mode Surrogate or Sequence model and Help, on the left the four steps, on the right the load panel with the map CSV, below it the column assignment and the training-data filter, at the bottom the status line with Back and Next."><figcaption>Layout: (1) toolbar with the mode, (2) step bar, (3) data source CSV or H2, (4) column assignment, (5) status line with <i>Back</i> and <i>Next</i>.</figcaption></figure>
+<p>The <b>Surrogate</b> mode learns a surrogate model from a table: target quantities are predicted from input quantities, for example pressure ratio and efficiency from mass flow and speed. The <b>Sequence model</b> mode learns a small language model from text; it has steps of its own (<a href="#sequenz">below</a>). The buttons <b>Save model…</b> and <b>Load model…</b> belong to the surrogate and disappear in sequence mode.</p>
+<p>On the left are the four steps <i>Data</i>, <i>Model</i>, <i>Training</i> and <i>Evaluation</i>, each with a status line underneath; a finished step carries a green tick. A click on a step jumps there, as do <b>Next →</b> and <b>← Back</b>. <b>Help</b> at the top right shows the built-in help in place of the steps; <i>Close</i> returns.</p>
+
+<h2 id="ablauf">A surrogate in four steps</h2>
+<ol>
+  <li><b>Data:</b> load a CSV file and add columns as <i>Input</i> and <i>Target</i>.</li>
+  <li><b>Model:</b> set the hidden layers, or let <i>Automatic search</i> find the best architecture and apply it.</li>
+  <li><b>Training:</b> <b>Start training</b> and watch the loss curve.</li>
+  <li><b>Evaluation:</b> check the quality figures, prediction against measurement, slices and contour; then <b>Save model…</b></li>
+</ol>
+
+<h2 id="daten">Step 1: Data</h2>
+<p>At the top choose the source: <i>CSV file</i> with <b>Browse…</b>, or <i>H2 database</i> for a table that already sits in an H2 file. The load panel shows a preview; the delimiter is set under <i>Options</i>, the default is the comma.</p>
+<p>Under <i>Column assignment</i> search a column in the selection field and press <b>Add</b>; choose the <i>Role</i> in the table. Columns not added are not used; <b>Remove</b> takes a column out again.</p>
+<table>
+<tr><th>Role</th><th>Meaning</th></tr>
+<tr><td><i>Input</i></td><td>A quantity the prediction is made from.</td></tr>
+<tr><td><i>Target</i></td><td>A quantity that is predicted (regression). Several are allowed.</td></tr>
+<tr><td><i>Label (classification)</i></td><td>A class column, e.g. "stabil", "surge", "choke". Exactly one, and not together with targets.</td></tr>
+</table>
+<p>Whether the model becomes a regression or a classification follows from the roles; the line under the table gives the row count, inputs and targets, or reports an invalid mix. Empty or unreadable cells in a used column stop the data transfer with column name and row instead of silently computing with zero. A decimal comma is accepted.</p>
+<p>The <i>Training-data filter</i> is optional: choose column, comparison (<code>=</code>, <code>!=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;</code>, <code>&lt;=</code>) and value; <b>+</b> adds the condition, <b>−</b> removes the selected one. All conditions apply together, and only numeric columns can be filtered; the line below says how many rows remain. If a filter column is missing after a data change, its condition is dropped without notice.</p>
+
+<h2 id="modell">Step 2: Model</h2>
+<figure><img src="../../bilder/app-neural/modell_en.png" alt="Model step with Architecture manual: on the left the Hidden layers table with two layers of 32 neurons and the plus and minus Layer buttons, on the right Options activation SILU, initialization HE, dropout 0.0, normalization ZSCORE, seed 42, each with a question mark; at the bottom the help area."><figcaption>Architecture manual: two hidden layers of 32 neurons; each <b>?</b> explains the option in the help area below.</figcaption></figure>
+<p>At the top choose <i>Architecture manual</i> or <i>Automatic search</i>. Manually, set up the hidden layers in <i>Hidden layers</i>: <b>+ Layer</b> appends one, <b>− Layer</b> removes the bottom one, the neuron count is edited in the table. The app adds the output layer itself. On the right are <i>Activation</i> (SILU, RELU, LEAKY_RELU, TANH), <i>Initialization</i> (HE, XAVIER), <i>Dropout</i>, <i>Normalization</i> (ZSCORE, MINMAX) and <i>Seed</i>. Each number field shows its default next to it; a <b>?</b> explains the option in the help area at the bottom.</p>
+<figure><img src="../../bilder/app-neural/suche_en.png" alt="Automatic search: on the left the search space with topologies, activations, learning rates, weight decays, candidates 6 and random search, below it cross-validation with folds 3 and CV epochs 200; on the right the result table with six candidates, 16,16 at the top with R squared 0.9997."><figcaption>Six candidates with threefold cross-validation in 1.8 s; [16, 16] is in front.</figcaption></figure>
+<p>The <b>automatic search</b> tries architectures. Under <i>Search space</i> there is one topology per line (<code>32,32</code> = two layers of 32), plus the activations, learning rates and weight decays; each combination is a candidate, the number is shown under <i>Candidates</i>. <i>Random Search</i> instead draws <i>Random count</i> candidates with random learning rates. Under <i>Cross-validation</i>, <i>Folds (k)</i>, <i>CV epochs</i>, <i>Batch size</i>, <i>Seed</i> and <i>Threads</i> control the run.</p>
+<p><b>Start search</b> fills the table on the right as candidates finish; a click on a column heading sorts. <b>Stop</b> aborts after the current epoch. Select a row and press <b>Apply spec</b>: architecture and learning rate go to the Model and Training steps. The CV runs may be shorter than the final training – what counts is the ranking, not the final quality.</p>
+
+<h2 id="lernen">Step 3: Training</h2>
+<figure><img src="../../bilder/app-neural/lernen_en.png" alt="Training step: on the left the training configuration with loss MSE, optimizer Adam, LR schedule exponential, learning rate 3e-3, epochs 800, batch size 32, training fraction 0.8, early stopping 150, ensemble 1, quantile regression; on the right the train and validation loss curves on a logarithmic axis; at the bottom finished, R squared val 0.999972."><figcaption>800 epochs with Adam; training and validation loss run together, R²(val) = 0.99997.</figcaption></figure>
+<p>The loss follows from the data: mean squared error for targets, cross-entropy for a label. You choose <i>Optimizer</i> (Adam, AdamW, SGD + Momentum, L-BFGS full batch), <i>LR schedule</i> (exponential, cosine, 1-cycle), <i>Learning rate</i>, <i>Epochs</i>, <i>Batch size</i>, <i>LR decay/epoch</i> and <i>Training fraction</i>; <i>Weight decay</i> and <i>Momentum</i> are only enabled for AdamW and SGD respectively. <i>Early stopping</i> ends the training when the validation loss has not improved for <i>patience</i> epochs, and needs a training fraction below 1.</p>
+<p><i>Ensemble</i> trains several models with different seeds; their spread estimates how uncertain the prediction is – outside the measured points it becomes much larger. <i>Quantile regression</i> trains three models for 10, 50 and 90 % and gives a band that shows the scatter of the data, not the uncertainty of the model.</p>
+<p><b>Start training</b> draws the loss curves as it goes; <b>Stop</b> aborts and keeps the best model so far. Afterwards the app switches to the evaluation. Every trained or loaded model is available to other apps at once, for example to app-maps through <code>SUR(latest, …)</code> in working lines.</p>
+
+<h2 id="auswertung">Step 4: Evaluation</h2>
+<figure><img src="../../bilder/app-neural/auswertung_en.png" alt="Evaluation step: at the top the quality figures R squared, RMSE and MAE for PI and ETA, below it Load test dataset; tab Predicted vs. Actual with prediction against measurement and the residuals for PI."><figcaption>Quality figures per output; prediction against measurement on the left, residuals on the right.</figcaption></figure>
+<p>At the top are R², RMSE and MAE per output on the raw scale, below that the network layout, time and R² at training. The tabs below:</p>
+<ul>
+  <li><b>Predicted vs. Actual</b>: prediction against measurement with the ideal line, the residuals next to it; <i>Output</i> picks the quantity. For a classification this shows the confusion matrix (row = true, column = predicted class).</li>
+  <li><b>Map slices</b>: all outputs over one input (<i>X-axis</i>), the other inputs held by sliders; with a band for ensembles or quantiles, class probabilities for a classification.</li>
+  <li><b>2D contour</b>: one output as a colour field over two inputs; for a classification as a regime map whose colour boundaries are the class boundaries.</li>
+  <li><b>Sensitivity</b>: which input explains how much of an output's variance (see below).</li>
+</ul>
+<figure><img src="../../bilder/app-neural/schnitte_en.png" alt="Map slices tab: pressure ratio PI and efficiency ETA over MDOT_CORR, with N_CORR held at 0.9942 by the slider."><figcaption>A slice over mass flow at fixed speed: the slider on the left moves the slice.</figcaption></figure>
+<div class="gitter">
+<figure><img src="../../bilder/app-neural/kontur_en.png" alt="2D contour tab: efficiency ETA as a colour field over MDOT_CORR and N_CORR, with the maximum along a diagonal."><figcaption>Efficiency over mass flow and speed; the red ridge is where the efficiency is best.</figcaption></figure>
+<figure><img src="../../bilder/app-neural/sensitivitaet_en.png" alt="Sensitivity tab with source Surrogate Sobol and output ETA: bars for main effect, total effect and permutation per input; below it sum S1 0.591, interaction share 41 percent."><figcaption>41 % of ETA depends on the interaction of mass flow and speed.</figcaption></figure>
+</div>
+<p>Under <i>Sensitivity</i>, the source chooses between model-free main effects straight from the data – available before the first training – and <i>Surrogate (Sobol)</i>: main and total effect of each input, second-order interactions and permutation importance, computed from <i>Samples (n)</i> evaluations of the model. <b>Compute</b> starts; the line under the chart gives the interaction share.</p>
+<p><b>Load test dataset (.csv)…</b> rates the model on a separate CSV. Columns are matched by name; their order does not matter. The table gives RMSE and R² per output, or the accuracy, plus a verdict against the R² at training: generalises well, slight or clear overfitting.</p>
+<p class="hinweis"><b>Outside the measured points the network guesses.</b> It continues smoothly and confidently and does not say that it is extrapolating. Contour and slices show the model also where no measurement was taken; an ensemble makes the uncertainty visible. And a high R² is easier to get with widely scattered targets than it looks.</p>
+
+<h2 id="speichern">Saving and loading the model</h2>
+<p><b>Save model…</b> writes the model with its normalisations and the column names as an <code>.ennet</code> file; the button becomes available after the first training. <b>Load model…</b> opens such a file and goes straight to the evaluation. The column names are the contract between model and data: a test dataset or app-maps finds the quantities by their names. When the workspace is saved, the app remembers the CSV path, roles, model, search and training settings and the model file last saved or loaded, which it reopens at the next start.</p>
+
+<h2 id="sequenz">Sequence model mode</h2>
+<p>With <i>Mode: Sequence model</i> the app switches to five steps of its own. A step becomes available once the previous one is done.</p>
+<figure><img src="../../bilder/app-neural/sq-token_en.png" alt="Tokeniser step: vocabulary size 300, minimum frequency 2, Learn tokeniser, 41 merges; three sample texts and their segmentation into pieces."><figcaption>The learned tokeniser splits the sample texts; an umlaut can fall on two pieces and then shows as �.</figcaption></figure>
+<ol>
+  <li><b>Corpus:</b> <b>Load text file…</b> reads a text file, one example per line; lines with <code>#</code> do not count. With <i>Template file (intent | pattern)</i> the app generates <i>Examples per template</i> from patterns. The text can be edited in the field; <b>Apply edited text</b> takes it over.</li>
+  <li><b>Tokeniser:</b> choose <i>Vocabulary size</i> and <i>Minimum frequency</i>, <b>Learn tokeniser</b>. <b>Show segmentation</b> shows how the sample texts are split; the status line reports whether the round trip is lossless. <b>Save…</b> and <b>Load…</b> keep the tokeniser.</li>
+  <li><b>Model:</b> choose <i>Layers</i>, <i>Model width</i>, <i>Heads</i>, <i>Feedforward width</i>, <i>Sequence length</i> and <i>Variant</i> (classic or modern), <b>Build model</b>. The model width must be divisible by the head count.</li>
+  <li><b>Training:</b> <i>Epochs</i>, <i>Sequences per step</i> and <i>Learning rate</i>, then <b>Start training</b>; <b>Cancel</b> stops. The curve shows the cross-entropy for training and validation.</li>
+  <li><b>Sample:</b> the model continues a <i>Start</i> text by <i>Length (tokens)</i>. A <i>Temperature</i> below 1 makes the text more predictable, above 1 wilder; <i>top-k</i> admits only the k best tokens; the same <i>Seed</i> gives the same text. <b>Generate</b> writes, <b>Listen</b> reads the text with a rule-based voice.</li>
+</ol>
+<div class="gitter">
+<figure><img src="../../bilder/app-neural/sq-lernen_en.png" alt="Training step of the sequence model: 8 epochs, sequences per step 8, learning rate 3; training and validation curves fall; 48 steps in 3.1 s."><figcaption>A tiny model, 8 epochs on 48 sentences: the curves fall, but not far.</figcaption></figure>
+<figure><img src="../../bilder/app-neural/sq-probe_en.png" alt="Sample step: start Der Verdichter, length 40, temperature 0.8, top-k 20, seed 7; below it a generated text of word fragments."><figcaption>What a model sounds like after three seconds of training: word fragments from the corpus, no sentences yet.</figcaption></figure>
+</div>
+<p>The sequence mode is meant for trying things out: coherent text needs much more text and training than shown in these pictures. The <b>Save model…</b> and <b>Load model…</b> buttons do not apply here.</p>
+
+<h2 id="tasten">Keyboard and mouse</h2>
+<p><code>Alt</code>+<code>U</code> opens the app. The charts zoom with the mouse wheel. A click on a column heading of the search results sorts. The app has no other shortcuts.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The load panel does not guess the delimiter.</li>
+  <li>In the <i>Sensitivity</i> tab, <b>Compute</b> sits at the end of the input row and lies outside the visible area in a narrow window; widen the window.</li>
+  <li>The test evaluation needs the same column names as the training; column names with commas are not allowed.</li>
+  <li>The Sobol sensitivity and the contour evaluate the model many thousand times; with large networks this takes a while.</li>
+  <li>In sequence mode corpus, tokeniser and model are not saved with the workspace; only the tokeniser can be saved as a file.</li>
+</ul>
+
+<p>When a surrogate pays off and what the app can do is described in the <a href="index.html">overview</a>; the computation behind it in <a href="../neural/index.html">neural</a> and <a href="../autograd/index.html">autograd</a>.</p>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>
