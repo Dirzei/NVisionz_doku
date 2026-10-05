@@ -172,6 +172,14 @@ math[display="block"]{margin:10px 0}
 <a class="rubrik" href="#mp3">MP3-Dekoder</a>
 <a class="unterseite" href="dekoder.html">MP3 und Layer II</a>
 <a class="rubrik" href="#mp2">MPEG-1 Layer II</a>
+<a class="rubrik" href="#klang">Entzerrer, Gesangfilter, Abgriff</a>
+<a class="rubrik" href="#id3">Titelangaben</a>
+<a class="rubrik" href="#kodierer">MP3-Kodierer und verlustfreier Schnitt</a>
+<a class="rubrik" href="#schnitt">Schnittliste</a>
+<a class="rubrik" href="#trennung">Quellentrennung</a>
+<a class="rubrik" href="#aac">AAC-Dekoder</a>
+<a class="rubrik" href="#flac">FLAC-Dekoder</a>
+<a class="rubrik" href="#radio">Internetradio</a>
 <a class="rubrik" href="#mfcc">MFCC-Merkmale</a>
 <a class="unterseite" href="mfcc.html">MFCC und Lautmerkmale</a>
 <a class="rubrik" href="#kws">Worterkennung</a>
@@ -223,8 +231,8 @@ math[display="block"]{margin:10px 0}
 <header class="titel">
   <div class="modul">envisionz-framework-audio</div>
   <h1>Ton lesen, abspielen und erkennen – mit Bordmitteln</h1>
-  <p class="unter">Funktionsübersicht für die Präsentation des envisionz-Frameworks, Stand 28.09.2026. Eine gemeinsame Quellen-Schnittstelle für
-  PCM, eigene Dekoder für WAV, MP3 (Layer III) und MPEG-1 Layer II, Wiedergabe und Mikrofon über <code>javax.sound</code>, MFCC-Merkmale,
+  <p class="unter">Funktionsübersicht für die Präsentation des envisionz-Frameworks, Stand 05.10.2026. Eine gemeinsame Quellen-Schnittstelle für
+  PCM, eigene Dekoder für WAV, MP3 (Layer III), MPEG-1 Layer II, AAC und FLAC, ein eigener MP3-Kodierer mit verlustfreiem Schnitt, Entzerrer, Quellentrennung, Titelangaben lesen und schreiben, Internetradio, Wiedergabe und Mikrofon über <code>javax.sound</code>, MFCC-Merkmale,
   Worterkennung mit geschlossenem Vokabular und die Merkmalskette für eine spätere Lauterkennung.
   Je Verfahren: Zweck, Methoden, Einsatz im Framework, Anwendungen, Beispiele. Die Beispiele sind gekürzt.</p>
 </header>
@@ -232,11 +240,12 @@ math[display="block"]{margin:10px 0}
 <figure class="kopfbild"><img src="../../bilder/audio/kopf.svg" alt="Wellenform zweier erzeugter Sinustöne (440 Hz und 880 Hz) über einer Matrix aus MFCC-Koeffizienten, die beim Tonwechsel umspringt."><figcaption>Mit <code>SineSource</code> und <code>Mfcc</code> gezeichnet: zwei Töne und ihre MFCC-Matrix.</figcaption></figure>
 
 <div class="zahlen">
-  <div class="zahl"><b>49</b><span>Klassen in 7 Paketen</span></div>
+  <div class="zahl"><b>90</b><span>Klassen in 13 Paketen</span></div>
   <div class="zahl"><b>3</b><span>MPEG-Fassungen im MP3-Dekoder (1, 2, 2.5), dazu Layer II</span></div>
   <div class="zahl"><b>2,1·10<sup>−7</sup></b><span>RMS-Abweichung des MP3-Dekoders gegen ffmpeg (Norm 3,05·10<sup>−5</sup>)</span></div>
+  <div class="zahl"><b>138 dB</b><span>Abstand des AAC-Dekoders zu einer Fremddekodierung</span></div>
   <div class="zahl"><b>0</b><span>Fremdbibliotheken; FFT/DCT aus framework-math, Netz aus framework-neural</span></div>
-  <div class="zahl"><b>2</b><span>Probenklassen, 16 Testdateien</span></div>
+  <div class="zahl"><b>15</b><span>Probenklassen, 107 Gegenproben</span></div>
 </div>
 
 <h2 id="grundsaetze">Grundsätze des Moduls</h2>
@@ -319,7 +328,7 @@ try (Player p = new Player(kette)) {
       <li><code>Mp3FrameReader.naechster()</code> → <code>Rahmen</code>, <code>id3v2Laenge()</code>, <code>resyncStellen()</code></li>
       <li><code>Mp3Decoder.dekodiere(rahmen, ziel)</code>, <code>vergissZustand()</code></li>
       <li>Stufen einzeln: <code>StereoVerarbeitung.verarbeite</code>, <code>Hybridsynthese.reduziereAlias</code>/<code>synthetisiere</code>, <code>Synthesefilter.synthetisiere</code></li></ul></div>
-    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip frei">bereit, noch ohne Aufrufer außerhalb der Proben</span><span class="chip">intern: Synthesefilter auch für Layer II</span></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Wiedergabe, Editor, Bibliothek</span><span class="chip">intern: Synthesefilter auch für Layer II</span></div>
       <h4 style="margin-top:10px">Wofür</h4><p>MP3-Sammlungen ohne Fremdbibliothek abspielen und analysieren; Ausgangsmaterial für Codec-Messungen.</p></div>
   </div>
   <div class="bsp"><h4>Beispiel – ab Sekunde 60 abspielen</h4>
@@ -348,6 +357,173 @@ p.play();</code></pre></div>
 <pre><code>try (Mp2Source ton = new Mp2Source(ein)) {          // ein: InputStream des Tonstroms
     WavWriter.schreibe(ton, new File("ton.wav"), WavFormat.PCM_S16);
 }</code></pre></div>
+</div>
+
+<!-- =============================================================== KLANG -->
+<h2 id="klang">Entzerrer, Gesangfilter, Abgriff <span class="paket">envisionz.audio</span></h2>
+
+<div class="karte">
+  <h3><code>Entzerrer</code>, <code>Biquad</code>, <code>Entzerrerquelle</code> – zehn Bänder</h3>
+  <p class="zweck">Zehn Glockenfilter in Oktavabständen von 31 Hz bis 16 kHz (Güte 1,41, ±12 dB) nach den bekannten Biquad-Formeln, Vorverstärkung und ein Umgehen-Schalter, der über 1024 Werte weich überblendet statt zu knacken. <code>antwortDb(f)</code> rechnet den Betragsgang aus den Koeffizienten; die Probe misst ihn am gefilterten Sinus nach.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Entzerrer(fs, kanaele)</code>, <code>setBand(i, db)</code>, <code>setBaender(werte)</code>, <code>setVorverstaerkung(db)</code>, <code>setUmgangen(b)</code></li>
+      <li><code>antwortDb(f)</code>, <code>spitzeDb()</code>, <code>verarbeite(daten, off, n)</code>, <code>leeren()</code></li>
+      <li><code>Biquad.entwurf(Form, fs, f0, db, guete)</code>, <code>schritt(x, stand)</code></li>
+      <li><code>Entzerrerquelle(quelle, entzerrer)</code> – als <code>AudioSource</code> in jede Kette</li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Wiedergabe, Ausgabe</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Klang anpassen beim Abspielen und beim Speichern.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>Gesangfilter</code>, <code>Abgriff</code> – Mitte/Seite und was gerade erklingt</h3>
+  <p class="zweck"><code>Gesangfilter</code> entfernt oder hebt die Stimme über Mitte und Seite heraus (Stimmband 120 Hz bis 8 kHz, Bass und Höhen der Mitte bleiben). <code>Abgriff</code> hält fest, welche Werte der <code>Player</code> gerade an die Soundkarte gibt, damit Anzeigen synchron zum Klang laufen und nicht zum Lesen.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Gesangfilter(fs, kanaele)</code>, <code>setModus(Modus.AUS|ENTFERNEN|HERAUSHEBEN)</code>, <code>quelle(quelle, filter)</code></li>
+      <li><code>Abgriff(kanaele, kapazitaet)</code>, <code>schreibe</code>, <code>quellRahmenBei(ausgabeStelle)</code>, <code>lies(bis, ziel, n)</code></li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Auswahl Gesang, alle Anzeigen</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Karaoke-Fassungen, Anzeigen ohne Versatz.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== ID3 -->
+<h2 id="id3">Titelangaben <span class="paket">envisionz.audio.id3</span></h2>
+
+<div class="karte">
+  <h3><code>Id3Leser</code>, <code>Id3Schreiber</code> – ID3 lesen und schreiben</h3>
+  <p class="zweck">Gelesen werden ID3v1 (mit Spurnummer) und ID3v2.2 bis 2.4 samt Cover, UTF-16, Unsynchronisation und erweitertem Kopf. Geschrieben wird ID3v2.4 mit Titel, Interpret, Album, Jahr, Spur, Genre und Cover; fremde Rahmen eines vorhandenen v2.3/v2.4-Kopfes bleiben erhalten, ein ID3v1-Block wird nachgezogen. Geschrieben wird in eine Nachbardatei, die nachgelesen wird – die Tonbytes müssen per SHA-256 gleich sein –, erst dann ersetzt sie das Original.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Id3Leser.lies(pfad)</code> → <code>Angaben(titel, interpret, album, jahr, spur, genre, bild, bildart)</code></li>
+      <li><code>Id3Leser.v2(block)</code>, <code>v1(block)</code></li>
+      <li><code>Id3Schreiber.schreibe(pfad, angaben)</code>, <code>MAX_BILD</code> (16 MB)</li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Wiedergabe, Bibliothek, Karte Titelangaben</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Musiksammlungen beschriften, ohne den Ton anzufassen.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – Titel und Cover setzen</h4>
+<pre><code>Id3Schreiber.schreibe(Path.of("lied.mp3"), new Id3Leser.Angaben(
+        "Titel", "Band", "Album", "2026", "3/12", "Rock", cover, "image/jpeg"));</code></pre></div>
+</div>
+
+<!-- =============================================================== KODIERER -->
+<h2 id="kodierer">MP3-Kodierer und verlustfreier Schnitt <span class="paket">envisionz.audio.mp3</span></h2>
+
+<div class="karte">
+  <h3><code>Mp3Kodierer</code> – MPEG-1 Layer III, CBR und VBR</h3>
+  <p class="zweck">Analysefilterbank (Gegenstück zum Synthesefilter, Rundlauf mit 84 dB Abstand), MDCT mit Fensterumschaltung (kurze Blöcke bei Anschlägen), psychoakustisches Modell mit Bark-Spreizung und Tonalität, innere und äußere Quantisierungsschleife, Skalenfaktoren, freie Regionsgrenzen, Bit-Reservoir bis 511 Byte, Mitte/Seite. VBR mit Qualität 0 bis 9 wählt je Rahmen die kleinste passende Bitrate und schreibt einen Xing-Kopf mit Inhaltsverzeichnis.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Mp3Kodierer(aus, rate, kanaele, kbps)</code>, <code>schreibe(pcm, off, n)</code>, <code>close()</code></li>
+      <li><code>Mp3Kodierer.kodiere(quelle, datei, kbps)</code>, <code>kodiereVbr(quelle, datei, qualitaet)</code></li>
+      <li>Stufen einzeln: <code>Analysefilterbank</code>, <code>Hybridanalyse</code>, <code>Psychoakustik</code>, <code>Granulkodierer</code>, <code>Bitstrom</code></li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Ausgabe MP3</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Eigene MP3-Dateien erzeugen, ohne Fremdkodierer.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – Datei als VBR kodieren</h4>
+<pre><code>double kbitS = Mp3Kodierer.kodiereVbr(new WavReader(new File("roh.wav")), new File("lied.mp3"), 4);</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>Rahmenschnitt</code> – MP3 schneiden ohne Neukodieren</h3>
+  <p class="zweck">Originalrahmen werden kopiert, nur an den Nähten entstehen kurze Brücken aus neu kodierten Rahmen. Die Brücke trägt am Ende die Reservoirbytes, die der folgende Originalrahmen erwartet; zwei Einschwingrahmen und der Versatz der Filterbank (1057 Werte) sind berücksichtigt. Drei Minuten Musik: über 95 % der Rahmen bleiben bitgleich.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Rahmenschnitt(original)</code>, <code>moeglich(rate, kanaele)</code>, <code>schreibe(liste, ton, aus, fortschritt)</code> → <code>Bericht</code></li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Ausgabe „MP3, verlustfrei geschnitten“</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Werbung, Stille oder Fehlstellen aus Aufnahmen schneiden, ohne Qualitätsverlust.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== SCHNITT -->
+<h2 id="schnitt">Schnittliste <span class="paket">envisionz.audio.schnitt</span></h2>
+
+<div class="karte">
+  <h3><code>Schnittliste</code>, <code>Schnittquelle</code>, <code>Wellenuebersicht</code> – zerstörungsfrei schneiden</h3>
+  <p class="zweck">Die Zeitachse ist eine Liste von Abschnitten der Quelle mit Pegel am Anfang und Ende; Ausschneiden, Einfügen, Blenden und Lautstärke ändern nur die Liste (200 Schritte rückgängig). <code>Schnittquelle</code> spielt die Liste rahmengenau ab, mit kurzer Rampe gegen Knacken an Nähten. <code>Wellenuebersicht</code> hält Spitzenwerte je 256 und 4096 Werte, damit die Wellenform jede Zoomstufe sofort zeichnet.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Schnittliste(quelle, laenge)</code>, <code>loesche</code>, <code>schneideAus</code>, <code>fuegeEin</code>, <code>blende</code>, <code>pegel</code>, <code>rueckgaengig</code></li>
+      <li><code>Schnittquelle(liste, oeffner, rate, kanaele, von, bis)</code>, <code>knackschutz(an)</code></li>
+      <li><code>Wellenuebersicht.miss(quelle, fortschritt)</code>, <code>spitzen(von, bis, kanal, aus)</code></li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Editor</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Audio-Editor mit beliebig vielen Schritten zurück, ohne Zwischendateien.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== TRENNUNG -->
+<h2 id="trennung">Quellentrennung <span class="paket">envisionz.audio.trennung</span></h2>
+
+<div class="karte">
+  <h3><code>Spektraltrenner</code> – Gesang, Begleitung, Schlagzeug</h3>
+  <p class="zweck">Kurzzeit-Fourier-Transformation (2048/512, Wurzel-Hann), eine Maske nach der Lage im Stereobild (Mitte) und eine harmonisch/perkussive Trennung per Medianfilter über Zeit und Frequenz. Vier Ausgaben: Gesang, Begleitung (Gesang + Begleitung = Original), Schlagzeug, ohne Schlagzeug. Rund zehnfache Echtzeit.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Spektraltrenner(quelle, Modus.GESANG|BEGLEITUNG|SCHLAGZEUG|OHNE_SCHLAGZEUG)</code>, <code>setModus</code>, <code>seek</code></li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Auswahl Gesang und Schlagzeug</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Mitsingfassungen, Übungsspuren, Analyse einzelner Stimmen.</p></div>
+  </div>
+  <div class="hinweis">Eine Schätzung aus der fertigen Mischung, keine echte Spurtrennung: hart seitlich gemischte Instrumente trennt sie gut, Instrumente in der Mitte bleiben teilweise im Gesang.</div>
+</div>
+
+<!-- =============================================================== AAC -->
+<h2 id="aac">AAC-Dekoder <span class="paket">envisionz.audio.aac</span></h2>
+
+<div class="karte">
+  <h3><code>AacSource</code>, <code>AacDekoder</code>, <code>Mp4Leser</code>, <code>Mp4Schreiber</code> – AAC-LC aus M4A, MP4 und ADTS</h3>
+  <p class="zweck">Eigener AAC-LC-Dekoder: Huffman-Codebücher mit Escape, Skalenfaktoren, Pulse, TNS, Rauschersatz, Mitte/Seite, Intensität, IMDCT über FFT mit Sinus- und KBD-Fenster und allen Fensterfolgen. 5.1 wird auf Stereo gemischt, von HE-AAC erklingt der AAC-LC-Kern mit halber Rate. <code>Mp4Leser</code> liest Probentabelle, Kodierer-Vorlauf (Edit-Liste oder iTunSMPB) und iTunes-Angaben samt Cover; <code>Mp4Schreiber</code> schreibt sie und berichtigt die Chunk-Lagen, wenn sich die Tondaten verschieben. Gegen eine Fremddekodierung 138 dB Abstand.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>AacSource(datei)</code> – springgenau; <code>AacSource(inputStream)</code> – fortlaufender ADTS-Strom</li>
+      <li><code>AacDekoder(konfig).dekodiere(b, off, len)</code> → <code>[kanal][1024]</code>; <code>AacKonfig.ausAsc</code>, <code>ausAdts</code></li>
+      <li><code>Mp4Leser.spur(datei)</code>, <code>angaben(datei)</code>; <code>Mp4Schreiber.schreibe(pfad, angaben)</code></li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: M4A, MP4, AAC öffnen, Bibliothek, Radio</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Musik aus Apple- und Android-Umgebungen abspielen, Internetradio im AAC-Format.</p></div>
+  </div>
+  <div class="hinweis">Robust gegen kaputte Dateien: die Probe verfälscht 3000 Blöcke und 300 Dateien, herauskommen dürfen nur Lesefehler – kein Absturz, kein Hängen.</div>
+</div>
+
+<!-- =============================================================== FLAC -->
+<h2 id="flac">FLAC-Dekoder <span class="paket">envisionz.audio.flac</span></h2>
+
+<div class="karte">
+  <h3><code>FlacSource</code>, <code>FlacLeser</code>, <code>FlacSchreiber</code> – verlustfrei</h3>
+  <p class="zweck">Rahmenkopf mit CRC-8, Unterrahmen CONSTANT, VERBATIM, FIXED und LPC bis Ordnung 32 mit „wasted bits“, Rice-Rest mit Partitionen und Escape, Stereo links/Seite, rechts/Seite und Mitte/Seite, Fuß mit CRC-16. 8, 16 und 24 Bit kommen wertgleich heraus; die MD5-Summe aus STREAMINFO wird beim Durchlesen nachgerechnet. Springen per Halbierungssuche über die Rahmenköpfe. Vorbis-Kommentare und Cover lesen und schreiben. Drei Minuten CD-Qualität in rund 0,3 s.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>FlacSource(datei)</code>, <code>seek</code>, <code>md5Stimmt()</code>, <code>fehlerRahmen()</code></li>
+      <li><code>FlacLeser.info(datei)</code>, <code>angaben(datei)</code>; <code>FlacSchreiber.schreibe(pfad, angaben)</code></li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: FLAC öffnen, Bibliothek, Titelangaben</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Verlustfreie Musiksammlungen abspielen und beschriften.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== RADIO -->
+<h2 id="radio">Internetradio <span class="paket">envisionz.audio.radio</span></h2>
+
+<div class="karte">
+  <h3><code>Radiostrom</code>, <code>HttpLeser</code>, <code>Netzregeln</code> – Sender sicher empfangen</h3>
+  <p class="zweck">MP3- und AAC-Sender mit ICY-Titeln hinter einem Vorpuffer von 512 KB; Playlisten (M3U, PLS) werden aufgelöst. Der eigene HTTP-Leser verbindet mit genau der geprüften Adresse: nur <code>http</code>/<code>https</code>, keine Ziele auf dem eigenen Rechner oder im Heimnetz (auch nicht nach einer Weiterleitung), höchstens drei Weiterleitungen, Grenzen für Kopfzeilen und Inhalte, Zeitlimits. Titel und Sendernamen werden bereinigt (<code>Netztext</code>): keine Steuerzeichen, keine Richtungswechsel, kein HTML für Swing. Auf die Platte kommt nichts.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Radiostrom.oeffne(url, Netzregeln.STRENG, titelHoerer)</code> – <code>name()</code>, <code>art()</code>, <code>titel()</code>, <code>fuellstand()</code></li>
+      <li><code>HttpLeser.oeffne(url, regeln, icy, maxBytes)</code>, <code>HttpLeser.text(url, regeln, maxBytes)</code></li>
+      <li><code>Netzregeln.STRENG.pruefe(url)</code>, <code>oeffentlich(adresse)</code>; <code>Playliste.adressen(text)</code>; <code>Netztext.sauber(s, max)</code></li>
+    </ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-audio: Karte Radio</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Internetradio in der eigenen Anwendung, abschaltbar und ohne Einfallstor.</p></div>
+  </div>
+  <div class="hinweis">Ogg-Ströme (Vorbis, Opus) und HLS werden mit einer Meldung abgewiesen. In den Anwendungen ist der Netzzugriff standardmäßig aus und wird in den App-Einstellungen unter Sicherheit eingeschaltet.</div>
 </div>
 
 <!-- =============================================================== MFCC -->
@@ -419,13 +595,14 @@ try (Horcher h = new Horcher(mic, e.modell())) {
 <h2 id="einsatz">Einsatzmatrix im Framework</h2>
 <p class="einl">Welche Module welche Pakete heute nutzen, im Quelltext gezählt (ohne Proben).</p>
 <table>
-  <tr><th>Modul</th><th>Quellen / Player / Mischer</th><th>WAV</th><th>MP3</th><th>Layer II</th><th>MFCC</th><th>Wort&shy;erkennung</th><th>Laut&shy;merkmale</th><th>Wofür</th></tr>
-  <tr><td>app-forensik</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td></td><td>Ton einer DVD-Sicherung abspielen, mischen, gegen das Bild versetzen, als WAV auslesen</td></tr>
+  <tr><th>Modul</th><th>Quellen / Player / Mischer</th><th>WAV</th><th>MP3</th><th>Layer II</th><th>AAC / FLAC</th><th>Kodierer / Schnitt</th><th>Radio</th><th>MFCC</th><th>Wort&shy;erkennung</th><th>Laut&shy;merkmale</th><th>Wofür</th></tr>
+  <tr><td>app-forensik</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Ton einer DVD-Sicherung abspielen, mischen, gegen das Bild versetzen, als WAV auslesen</td></tr>
+  <tr><td>app-audio</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td>Abspieler und Editor mit Bibliothek, Entzerrer, Trennung, Titelangaben und Internetradio</td></tr>
 </table>
-<div class="hinweis">MP3-Dekoder, MFCC, Worterkennung und Lautmerkmale sind geprüft, haben aber noch keinen Aufrufer außerhalb des Moduls. Die Ausgabelogik von <code>Player</code> ist bewusst getrennt von der eigenen in framework-voice; wer eine davon repariert, muss an die andere denken.</div>
+<div class="hinweis">MFCC, Worterkennung und Lautmerkmale sind geprüft, haben aber noch keinen Aufrufer außerhalb des Moduls. Die Ausgabelogik von <code>Player</code> ist bewusst getrennt von der eigenen in framework-voice; wer eine davon repariert, muss an die andere denken.</div>
 
 <footer>
-envisionz-framework-audio · 49 Klassen in 7 Paketen · Abhängigkeiten: framework-math, framework-neural · Proben: <code>pruefen.cmd --nur framework-audio</code>
+envisionz-framework-audio · 90 Klassen in 13 Paketen · Abhängigkeiten: framework-math, framework-neural · Proben: <code>pruefen.cmd --nur framework-audio</code>
 </footer>
 </div>
 </main>
