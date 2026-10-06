@@ -197,7 +197,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -279,8 +279,8 @@ math[display="block"]{margin:10px 0}
 <p><code>Messstrecke</code> wird mit Vorgaben angelegt und über verkettbare Methoden verstellt:</p>
 <table>
   <tr><th>Methode</th><th>Vorgabe</th><th>Wirkung</th></tr>
-  <tr><td><code>rahmenlaenge(n)</code></td><td>1024</td><td>Rahmen der spektralen Maße und Abschnitt des Segment-SNR; muss Zweierpotenz sein; setzt den Vorschub auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n/2</annotation></semantics></math> mit</td></tr>
-  <tr><td><code>vorschub(n)</code></td><td>512</td><td>Abstand der Rahmen bei Spektralabstand und NMR</td></tr>
+  <tr><td><code>rahmenlaenge(n)</code></td><td>1024</td><td>Rahmen der spektralen Maße und Abschnitt des Segment-SNR; muss eine Zweierpotenz ab 2 sein, sonst <code>IllegalArgumentException</code>; setzt den Vorschub auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n/2</annotation></semantics></math> mit</td></tr>
+  <tr><td><code>vorschub(n)</code></td><td>512</td><td>Abstand der Rahmen bei Spektralabstand und NMR; mindestens 1, sonst <code>IllegalArgumentException</code></td></tr>
   <tr><td><code>maxVersatz(n)</code></td><td>8192</td><td>größter gesuchter Versatz in beide Richtungen</td></tr>
   <tr><td><code>ausrichten(b)</code></td><td>an</td><td>Versatz schätzen und ausgleichen</td></tr>
   <tr><td><code>pegelanpassung(b)</code></td><td>aus</td><td>zusätzlich Pegelfaktor schätzen, anwenden und ausgeben</td></tr>
@@ -368,16 +368,16 @@ zahl(x):  NaN → leer;  +∞ → "1e308";  −∞ → "-1e308";  sonst "%.6f" m
 <ul>
   <li><code>Masseprobe</code>: Die Messstrecke gleicht einen bekannten Versatz von 137 Werten selbst aus (SNR über 100 dB bei Rahmen 256); sie liefert mindestens sieben Werte, alle benannt; die Bitrate aus 16 000 Byte und 1 s ist 128 kbit/s (Schranke <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>).</li>
   <li><code>Fensterprobe</code> prüft den Bericht als Datei: Kopfzeile nur beim ersten Mal und unverändert oben; die Werte als <code>lauf-1;128.000000;42.500000;-1.250000</code>; keine Kommas als Dezimalzeichen; Semikolon in Spaltenname und Kennung wird zum Komma, Kopf- und Datenzeile haben dann gleich viele Spalten; NaN wird leer, ±∞ wird ±1e308; eine leere Datei bekommt einen Kopf; ohne Messwerte bleiben die beiden festen Spalten.</li>
+  <li><code>Randfallprobe</code>: Vorschub 0 und −5 sowie Rahmenlänge 1 werden abgewiesen, Vorschub 1 ist erlaubt; eine Stufe Abweichung bei 32 Bit ist nicht bitgenau; eine CSV-Zeile mit anderer Spaltenzahl wird abgewiesen, die Datei behält Kopf und die beiden passenden Zeilen.</li>
 </ul>
 <p>Ohne eigene Probe sind <code>kompressionsverhaeltnis</code>, <code>alsZeile</code> und der Lauf mit ausgeschalteter Ausrichtung oder eingeschalteter Pegelanpassung über die Messstrecke.</p>
 
 <h2 id="grenzen">Grenzen</h2>
 <ul>
-  <li><b>Spalten der CSV.</b> Die Kopfzeile entsteht beim ersten Aufruf aus dessen Messwerten. Wird die Pegelanpassung zwischen zwei Aufrufen umgeschaltet, hat die neue Zeile eine Spalte mehr oder weniger als der Kopf; der Bericht prüft das nicht, und die Werte rutschen in falsche Spalten.</li>
-  <li><b>Vorschub ungeprüft.</b> <code>vorschub</code> nimmt jeden Wert an. Bei 0 kommen Spektralabstand und NMR aus ihrer Rahmenschleife nicht mehr heraus; nur die Rahmenlänge wird auf eine Zweierpotenz geprüft.</li>
+<!-- GEAENDERT 2026-10-06 (WT37) -->
+  <li><b>Spalten der CSV.</b> Die Kopfzeile entsteht beim ersten Aufruf aus dessen Messwerten. Wird die Pegelanpassung zwischen zwei Aufrufen umgeschaltet, hat die neue Zeile eine Spalte mehr oder weniger als der Kopf; der Bericht weist sie dann mit einer <code>IOException</code> ab, statt die Werte in falsche Spalten zu schreiben. Läufe mit und ohne Pegelanpassung brauchen deshalb getrennte Dateien.</li>
   <li><b>Kurze Signale.</b> Ist das Signal kaum länger als zwei Rahmen plus Versatz, bleibt nach dem Zuschnitt weniger als ein Rahmen; Segment-SNR, Spektralabstand und NMR liefern dann NaN, in der Ausgabe „n.v.“, in der CSV eine leere Zelle.</li>
   <li><b>Ohne Ausrichtung</b> gibt es keine Prüfung auf gleiche Abtastrate und Kanalzahl; ein Prüfling mit weniger Kanälen führt zu einem Feldgrenzenfehler.</li>
-  <li><b>Bitgenau</b> mit Schranke <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math> unterscheidet bei 32-Bit-PCM keine Abweichungen von ein oder zwei Quantisierungsstufen (siehe <a href="masse.html">Die Maße</a>).</li>
   <li><b>Speicher.</b> Beide Signale liegen ganz im Speicher, dazu die Felder der Kreuzkorrelation (siehe <a href="ausrichtung.html">Ausrichtung</a>).</li>
 </ul>
 

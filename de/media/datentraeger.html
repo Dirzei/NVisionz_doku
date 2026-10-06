@@ -194,7 +194,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -343,7 +343,11 @@ nutzlast ← <b>wenn</b> nicht roh: 2048;  <b>sonst</b> (modus = 2 <b>und</b> fo
     <b>wenn</b> Kennung 261: Länge der erweiterten Attribute bei 168, der Adressen bei 172
     <b>wenn</b> Kennung 266: <i>(um 40 Byte länger)</i> bei 208 und 212
     <b>wenn</b> Adressart = 3: Daten stehen im Eintrag selbst, lad Byte lang
-    <b>sonst</b>: länge ← Feld &amp; 0x3FFFFFFF;  ort ← P + nächstes Feld   <i>obere 2 Bit sind Kennzeichen</i>
+    <b>sonst</b>: <b>für</b> jede Adresse (kurz 8, lang 16, erweitert 20 Byte):
+        länge ← Feld &amp; 0x3FFFFFFF;  art ← obere 2 Bit;  <b>wenn</b> länge = 0: Ende
+        <b>wenn</b> art = 3: weiter im Ausdehnungsbeschreiber (Kennung 258) bei P + Ort
+        <b>sonst</b>: Ausdehnung (P + Ort, länge) merken;  gesamt ← gesamt + länge
+    ort ← Ort der ersten Ausdehnung;  länge ← gesamt
 
 <b>sammle</b>(icb, pfad):                                  <i>Tiefe ≤ 10</i>
     <b>für</b> jeden Verzeichniseintrag (Kennung 257):
@@ -352,12 +356,12 @@ nutzlast ← <b>wenn</b> nicht roh: 2048;  <b>sonst</b> (modus = 2 <b>und</b> fo
         melde Eintrag; <b>wenn</b> Verzeichnis: <b>sammle</b>(kindIcb, pfad/name)
         nächster Eintrag: auf Vielfache von 4 auffüllen</pre>
 <p class="quelle">Quelle: <code>envisionz-framework-media/src/envisionz/media/disc/Udf.java</code>. Normen: ECMA-167 und UDF 2.01, gegen die auch die Probe geprüft ist.</p>
-<div class="hinweis"><b>Festlegung im Framework:</b> Ein gelöschter Eintrag erscheint nicht in der Liste. Ein Dateisatz mit falscher Kennungsprüfsumme wird gemeldet und <b>nicht benutzt</b>; ISO 9660 kann die Dateien dann trotzdem nennen. Verzeichnisse, die im Dateieintrag selbst eingebettet sind, werden gelesen.</div>
+<div class="hinweis"><b>Festlegung im Framework:</b> Ein gelöschter Eintrag erscheint nicht in der Liste. Ein Dateisatz mit falscher Kennungsprüfsumme wird gemeldet und <b>nicht benutzt</b>; ISO 9660 kann die Dateien dann trotzdem nennen. Verzeichnisse, die im Dateieintrag selbst eingebettet sind, werden gelesen. Dateien und Verzeichnisse aus mehreren Ausdehnungen werden über alle Ausdehnungen verfolgt, auch über Fortsetzungsblöcke; das ist gerade bei Dateien über vier Gigabyte nötig, denn eine Ausdehnung fasst höchstens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>30</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{30}-1</annotation></semantics></math> Byte. Nicht aufgezeichnete Ausdehnungen stehen beim Lesen als Nullen da.</div> <!-- GEAENDERT 2026-10-06 (WT39) -->
 
 <h2 id="lesbarkeit">Lesbarkeit: Lesefehler und Sitzungen</h2>
 <p>Die C2-Fehlermeldung entsteht am Laufwerk beim Lesen und steht in <b>keinem</b> Abbild; ein Abbild ist ein Abzug der Nutzdaten, nicht des Lesevorgangs. Sitzungsgrenzen stehen im Inhaltsverzeichnis der Scheibe, nicht in den Sektoren. <code>Lesbarkeit</code> behauptet beides deshalb nie aus dem Abbild, sondern sieht nach, was das <b>Auslesewerkzeug</b> festgehalten hat:</p>
 <ul>
-  <li>Eine <code>.cue</code>- oder <code>.toc</code>-Datei nennt Spuren. Die Zeile <code>INDEX 01 mm:ss:ff</code> ergibt bei 75 Rahmen je Sekunde die Sektornummer <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>60</mn><mspace width="0.1667em"/><mi>m</mi><mo>+</mo><mi>s</mi><mo stretchy="false">)</mo><mo>⋅</mo><mn>75</mn><mo>+</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">(60\,m + s)\cdot 75 + f</annotation></semantics></math>. Beispiel: <code>04:30:12</code> ist Sektor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>270</mn><mo>⋅</mo><mn>75</mn><mo>+</mo><mn>12</mn><mo>=</mo><mn>20262</mn></mrow><annotation encoding="application/x-tex">270 \cdot 75 + 12 = 20262</annotation></semantics></math>.</li>
+  <li>Eine <code>.cue</code>- oder <code>.toc</code>-Datei nennt Spuren. Die Zeile <code>INDEX 01 mm:ss:ff</code> ergibt bei 75 Rahmen je Sekunde die Sektornummer <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>60</mn><mspace width="0.1667em"/><mi>m</mi><mo>+</mo><mi>s</mi><mo stretchy="false">)</mo><mo>⋅</mo><mn>75</mn><mo>+</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">(60\,m + s)\cdot 75 + f</annotation></semantics></math>. Beispiel: <code>04:30:12</code> ist Sektor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>270</mn><mo>⋅</mo><mn>75</mn><mo>+</mo><mn>12</mn><mo>=</mo><mn>20262</mn></mrow><annotation encoding="application/x-tex">270 \cdot 75 + 12 = 20262</annotation></semantics></math>. Eine Spur ist aber <b>keine Sitzung</b> – eine Audio-CD hat ein Dutzend Spuren in einer Sitzung. Sitzungsgrenzen schreiben die Auslesewerkzeuge als <code>REM SESSION nn</code>; eine Sitzung beginnt beim <code>INDEX 01</code> ihrer ersten Spur. Ohne solche Zeile gibt es genau eine Sitzung, die mit der ersten Spur beginnt. Spuren (<code>spuren()</code>) und Sitzungsanfänge (<code>sitzungen()</code>) werden getrennt geführt; nur bei mehr als einer Sitzung gibt es eine Warnung, weil dann die letzte gilt und frühere ältere Fassungen derselben Dateien enthalten können.</li> <!-- GEAENDERT 2026-10-06 (WT39) -->
   <li>Eine Fehlerkarte von <code>ddrescue</code> (<code>.map</code>, <code>.mapfile</code>, <code>.log</code>, <code>.ddrescue</code>) gibt je Zeile Anfang, Länge und ein Zustandszeichen; alles außer <code>+</code> gilt als nicht gelesen. Aus Byteangaben werden Sektoren: von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mtext>Anfang</mtext><mo>/</mo><mn>2048</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor \text{Anfang}/2048 \rfloor</annotation></semantics></math> bis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mo stretchy="false">(</mo><mtext>Anfang</mtext><mo>+</mo><mtext>Länge</mtext><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2048</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor (\text{Anfang}+\text{Länge}-1)/2048 \rfloor</annotation></semantics></math>. Beispiel: <code>0x00100000 0x00004000 -</code> betrifft die Sektoren 512 bis 519.</li>
   <li>Fehlt beides, bleibt der <b>Verdacht</b>: lange zusammenhängende Läufe aus Nullsektoren. Ein Schwarzbild sieht genauso aus.</li>
 </ul>
@@ -375,15 +379,15 @@ lauf ← keiner
 <b>wenn</b> Lauf noch offen <b>und</b> n − lauf &gt; n div 100:    <i>Nullbereich bis zum Ende des Abbilds</i>
     melde Lücke(lauf, n − 1, Verdacht)</pre>
 <p class="quelle">Quelle: <code>envisionz-framework-media/src/envisionz/media/disc/Lesbarkeit.java</code>. Jede Lücke trägt ein Feld <code>nachgewiesen</code> und ihre Herkunft; nur eine Fehlerkarte macht sie zum Nachweis.</p>
-<div class="hinweis"><b>Festlegung im Framework:</b> Gemeldet wird erst ab mehr als einem Hundertstel des Abbilds. Der Schlusslauf wird mitgeprüft: Ein abgebrochenes Auslesen endet genau so, und der erste Stand der Klasse übersah das, weil ein Lauf nur abgeschlossen wurde, wenn danach noch ein beschriebener Sektor folgte. Bei mehreren Spuren gilt die <b>letzte</b>; frühere können ältere Fassungen derselben Dateien enthalten.</div>
+<div class="hinweis"><b>Festlegung im Framework:</b> Gemeldet wird erst ab mehr als einem Hundertstel des Abbilds. Der Schlusslauf wird mitgeprüft: Ein abgebrochenes Auslesen endet genau so, und der erste Stand der Klasse übersah das, weil ein Lauf nur abgeschlossen wurde, wenn danach noch ein beschriebener Sektor folgte. Bei mehreren Sitzungen gilt die <b>letzte</b>; frühere können ältere Fassungen derselben Dateien enthalten.</div>
 
 <h2 id="pruefung">Wie geprüft wird</h2>
 <p>Die Probe <code>Medienprobe</code> legt Sektoren, ISO-9660-Verzeichnisse und Beschreiber Byte für Byte selbst an; es gibt keine abgelegten Prüfdateien. <code>disc.Udfprobe</code> prüft die UDF-Kette gegen ECMA-167/UDF 2.01 mit erzeugten Prüfstücken. Zu jedem Schadensfall gehört ein Fall mit unversehrtem Material, denn ein Beurteiler, der alles für kaputt hält, ist so falsch wie einer, der nichts merkt.</p>
 <ul>
   <li><b>Sektorquelle:</b> verstümmelte Sync-Folge wird nicht als Rohabbild gedeutet, die Sektorzahl wird dann mit 2048 gerechnet.</li>
   <li><b>ISO 9660:</b> Abbild ohne Joliet meldet keines; ein Joliet-Abbild liefert den Datenträgernamen und lange Namen in UCS-2; ein zu kurzes Abbild löst die FALLE aus.</li>
-  <li><b>UDF:</b> gelöschte Einträge fehlen, eingebettete Verzeichnisse erscheinen, ein Dateisatz mit falscher Prüfsumme wird gemeldet.</li>
-  <li><b>Lesbarkeit:</b> nachgewiesene Lücken aus einer Fehlerkarte, Verdacht ohne Karte, heiles Material ohne Meldung, Nullbereich am Ende des Abbilds.</li>
+  <li><b>UDF:</b> gelöschte Einträge fehlen, eingebettete Verzeichnisse erscheinen, ein Dateisatz mit falscher Prüfsumme wird gemeldet; eine Datei aus zwei Ausdehnungen und eine mit Fortsetzungsblock haben die Summe der Längen als Größe, die Einträge eines Verzeichnisses in zwei Ausdehnungen erscheinen vollständig.</li>
+  <li><b>Lesbarkeit:</b> nachgewiesene Lücken aus einer Fehlerkarte, Verdacht ohne Karte, heiles Material ohne Meldung, Nullbereich am Ende des Abbilds; zwei Spuren ohne <code>REM SESSION</code> sind eine Sitzung ohne Warnung, drei Spuren in zwei Sitzungen ergeben zwei Sitzungsanfänge und eine Warnung.</li>
 </ul>
 
 <h2 id="grenzen">Grenzen</h2>
@@ -391,7 +395,7 @@ lauf ← keiner
   <li>Nicht prüfbar und nicht behauptet: die C2-Meldung des Laufwerks und echte Sitzungsgrenzen ohne Begleitdatei. Beides wird als LÜCKE im Befund genannt.</li>
   <li>Der Verdacht ist eine Stichprobe: Ein Nullbereich, der kürzer ist als der Stichprobenabstand, kann unentdeckt bleiben, und die Grenzen eines gemeldeten Laufs sind um bis zu einen Stichprobenabstand ungenau. Jeder Lauf über der Meldeschwelle (vierzig Stichprobenabstände) wird gesehen.</li>
   <li>Rock Ridge wird nur erkannt. Verzeichnisse werden je mit höchstens 1 MiB gelesen; die Tiefe ist bei ISO 9660 auf 12, bei UDF auf 10 begrenzt.</li>
-  <li><code>Udf</code> liest eingebettete Daten (Adressart 3), sonst die <b>erste</b> Kurzadresse des Steuerblocks. Eine Datei aus mehreren Ausdehnungen wird nicht über alle Ausdehnungen verfolgt.</li>
+  <li>Eine Folge von Fortsetzungsblöcken wird höchstens 64 Glieder weit verfolgt.</li>
 </ul>
 
 <footer>

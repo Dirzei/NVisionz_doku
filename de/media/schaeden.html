@@ -194,7 +194,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -265,41 +265,47 @@ math[display="block"]{margin:10px 0}
 </figure>
 
 <h3>Pseudocode – <code>Bitfehler</code></h3>
+<!-- GEAENDERT 2026-10-06 (WT39) -->
 <pre class="pseudo"><i>// Eingang: ein ELEMENTARER Videostrom</i>
-R ← max(1, (höhe + 15) div 16)
-bilder ← 0;  heil ← 0
+R ← max(1, (höhe + 15) div 16)                      <i>Reihen eines Vollbilds</i>
+R½ ← max(1, ((höhe + 1) div 2 + 15) div 16)         <i>Reihen eines Halbbilds</i>
+bilder ← 0;  heil ← 0;  mehrfach ← 0;  halbbilder ← 0
 <b>untersuchen</b>(d):
-    gesehen ← leer;  doppelt ← 0;  imBild ← falsch
+    gesehen ← leer;  doppelt ← 0;  imBild ← falsch;  halbbild ← falsch
     <b>für</b> jeden Startcode 00 00 01 cc:
         <b>wenn</b> cc = 00:                                    <i>neues Bild</i>
-            <b>wenn</b> imBild: <b>auswerten</b>(gesehen, doppelt)
-            gesehen ← leer;  doppelt ← 0;  imBild ← wahr;  bilder ← bilder + 1
+            <b>wenn</b> imBild: <b>auswerten</b>(gesehen, doppelt, halbbild)
+            gesehen ← leer;  doppelt ← 0;  halbbild ← falsch;  imBild ← wahr;  bilder ← bilder + 1
+        <b>sonst wenn</b> cc = B5 <b>und</b> imBild <b>und</b> Erweiterungskennung = 8:   <i>Bildkodier-Erweiterung</i>
+            halbbild ← (picture_structure = 1 <b>oder</b> 2)
         <b>sonst wenn</b> 01 ≤ cc ≤ AF:                          <i>Slice</i>
             <b>wenn</b> cc schon in gesehen: doppelt ← doppelt + 1
             cc zu gesehen hinzufügen
-    <b>wenn</b> imBild: <b>auswerten</b>(gesehen, doppelt)
+    <b>wenn</b> imBild: <b>auswerten</b>(gesehen, doppelt, halbbild)
 
-<b>auswerten</b>(gesehen, doppelt):
-    <b>wenn</b> gesehen leer: Schaden(Reihen 1..R, "kein einziger Slice — Bild verloren");  <b>fertig</b>
-    <b>für</b> r ← 1 <b>bis</b> R:  fasse zusammenhängende fehlende Reihen zu <i>einem</i> Schaden "Slices fehlen"
-    <b>wenn</b> höchste Nummer &gt; R: Schaden(R+1..höchste, "Slice-Nummer über der erwarteten Bildhöhe")
-    <b>wenn</b> doppelt &gt; 0: Schaden(1..R, "n doppelte Slice-Nummern")
+<b>auswerten</b>(gesehen, doppelt, halbbild):
+    n ← <b>wenn</b> halbbild: R½ <b>sonst</b> R;   <b>wenn</b> halbbild: halbbilder ← halbbilder + 1
+    <b>wenn</b> gesehen leer: Schaden(Reihen 1..n, "kein einziger Slice — Bild verloren");  <b>fertig</b>
+    <b>für</b> r ← 1 <b>bis</b> n:  fasse zusammenhängende fehlende Reihen zu <i>einem</i> Schaden "Slices fehlen"
+    <b>wenn</b> höchste Nummer &gt; n: Schaden(n+1..höchste, "Slice-Nummer über der erwarteten Bildhöhe")
+    mehrfach ← mehrfach + doppelt                      <i>mehrere Slices je Reihe: erlaubt, kein Schaden</i>
     <b>wenn</b> kein Schaden: heil ← heil + 1
 
 heilAnteil ← heil / max(1, bilder)</pre>
 <p class="quelle">Quelle: <code>envisionz-framework-media/src/envisionz/media/ps/Bitfehler.java</code>.</p>
 <div class="hinweis"><b>Festlegung im Framework:</b> Zusammenhängende Lücken werden zu <b>einem</b> Schaden verschmolzen, denn eine Meldung je Kratzer ist brauchbarer als sechzehn je fehlender Reihe. Der Befund (Stufe FALLE) nennt Zahl der Schäden und Anteil der betroffenen Bilder und empfiehlt, die Stellen im Vertrauensbild als „ersetzt“ zu kennzeichnen und von der Verschmelzung auszunehmen. Aufgelistet werden die ersten zwölf Schäden, der Rest wird gezählt.</div>
+<div class="hinweis"><b>Festlegung im Framework:</b> MPEG-2 erlaubt mehrere Slices je Makroblockreihe. Eine Reihennummer, die im selben Bild noch einmal beginnt, ist deshalb kein Schaden; sie wird nur gezählt (<code>mehrfacheSlices()</code>) und im Befund als Hinweis genannt. Halbbilder erkennt die Klasse an der Bildkodier-Erweiterung (picture_structure 1 oder 2); für sie gilt die halbe Bildhöhe, bei 576 Zeilen also 18 statt 36 Reihen. Die Zahl der Halbbilder liefert <code>halbbilder()</code>.</div>
 <div class="hinweis"><b>Festlegung im Framework:</b> Die Prüfung gehört auf den <b>Elementarstrom</b>. Auf einem Programmstrom liefert sie falsche Ergebnisse, weil dessen PES-Köpfe Bytefolgen enthalten, die wie Startcodes aussehen; erst <code>Elementarstrom</code> macht sie verlässlich.</div>
 
 <h2 id="pruefung">Wie geprüft wird</h2>
-<p>Die Probe (<code>Medienprobe</code>, Abschnitt „Bitfehler – fehlende Slices, und der heile Fall“) baut Bilder aus selbst gelegten Startcodes und prüft in beide Richtungen: Ein Strom mit Lücke meldet Art „Slices fehlen“ und die richtigen Reihen, ein Bild ohne jeden Slice meldet „kein einziger Slice“, doppelte Nummern und Nummern über der Bildhöhe werden benannt – und ein unversehrter Strom meldet keinen Schaden. Nach dem Elementarstrom-Auszug eines Programmstroms stimmt das Ergebnis (ein Schaden, Reihen 15 bis 16, zweites Bild).</p>
+<p>Die Probe (<code>Medienprobe</code>, Abschnitt „Bitfehler – fehlende Slices, und der heile Fall“) baut Bilder aus selbst gelegten Startcodes und prüft in beide Richtungen: Ein Strom mit Lücke meldet Art „Slices fehlen“ und die richtigen Reihen, ein Bild ohne jeden Slice meldet „kein einziger Slice“, Nummern über der Bildhöhe werden benannt – und ein unversehrter Strom meldet keinen Schaden. Zwei Slices auf derselben Reihe und ein Strom, in dem jede Reihe in zwei Slices geteilt ist, ergeben keinen Schaden; der mehrfache Slice wird gezählt und im Befund genannt. Halbbilder mit 18 Reihen (576 Zeilen) sind heil, ein Halbbild ohne Reihe 18 meldet genau diese Reihe, ein Vollbild mit Bildkodier-Erweiterung braucht weiter 36 Reihen. Nach dem Elementarstrom-Auszug eines Programmstroms stimmt das Ergebnis (ein Schaden, Reihen 15 bis 16, zweites Bild).</p>
 
 <h2 id="grenzen">Grenzen</h2>
 <ul>
   <li>Sichtbar ist nur der <b>Slice-Anfang</b>. Ein Bitfehler <i>innerhalb</i> eines Slice, der den Startcode verschont, wird nicht gefunden; der Dekoder verdeckt ihn trotzdem.</li>
-  <li>Angenommen wird ein Slice je Makroblockreihe, wie bei DVD. Ein Strom mit mehreren Slices je Reihe würde als doppelte Nummern gemeldet.</li>
   <li>Als Slice zählen die Codes 01 bis AF; höhere Bilder als 175 Reihen sind damit nicht erfasst.</li>
-  <li>Die erwartete Reihenzahl kommt aus der Bildhöhe des Aufrufers. Für Halbbild-Bilder, die je Halbbild nur die halben Reihen tragen, rechnet die Klasse nicht um; dort wäre die Höhe des Halbbilds zu übergeben.</li>
+  <li>Die erwartete Reihenzahl kommt aus der Bildhöhe des Aufrufers. Ohne Bildkodier-Erweiterung (MPEG-1) gilt jedes Bild als Vollbild.</li>
+  <li>Mehrere Slices auf derselben Reihe gelten immer als erlaubt; ein Slice, der durch einen Bitfehler eine falsche, aber schon vorhandene Reihennummer trägt, fällt deshalb nicht auf.</li>
   <li>Die Klasse sagt, <b>wo</b> verdeckt werden musste, nicht, was ursprünglich dort stand.</li>
 </ul>
 

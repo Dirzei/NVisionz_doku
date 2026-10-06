@@ -197,7 +197,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -279,8 +279,8 @@ math[display="block"]{margin:10px 0}
 <p><code>Messstrecke</code> is created with defaults and adjusted via chainable methods:</p>
 <table>
   <tr><th>Method</th><th>Default</th><th>Effect</th></tr>
-  <tr><td><code>rahmenlaenge(n)</code></td><td>1024</td><td>frame of the spectral measures and segment of the segmental SNR; must be a power of two; also sets the hop to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n/2</annotation></semantics></math></td></tr>
-  <tr><td><code>vorschub(n)</code></td><td>512</td><td>distance between frames for spectral distance and NMR</td></tr>
+  <tr><td><code>rahmenlaenge(n)</code></td><td>1024</td><td>frame of the spectral measures and segment of the segmental SNR; must be a power of two of at least 2, otherwise <code>IllegalArgumentException</code>; also sets the hop to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n/2</annotation></semantics></math></td></tr>
+  <tr><td><code>vorschub(n)</code></td><td>512</td><td>distance between frames for spectral distance and NMR; at least 1, otherwise <code>IllegalArgumentException</code></td></tr>
   <tr><td><code>maxVersatz(n)</code></td><td>8192</td><td>largest offset searched in both directions</td></tr>
   <tr><td><code>ausrichten(b)</code></td><td>on</td><td>estimate and compensate the offset</td></tr>
   <tr><td><code>pegelanpassung(b)</code></td><td>off</td><td>additionally estimate, apply and report a level factor</td></tr>
@@ -368,16 +368,16 @@ number(x):  NaN → empty;  +∞ → "1e308";  −∞ → "-1e308";  otherwise "
 <ul>
   <li><code>Masseprobe</code>: the measurement chain compensates a known offset of 137 values by itself (SNR above 100 dB at frame 256); it delivers at least seven values, all named; the bit rate from 16,000 bytes and 1 s is 128 kbit/s (bound <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>).</li>
   <li><code>Fensterprobe</code> checks the report as a file: header only the first time and unchanged at the top; the values as <code>lauf-1;128.000000;42.500000;-1.250000</code>; no commas as decimal separators; a semicolon in column name and label becomes a comma, header and data line then have the same number of columns; NaN becomes empty, ±∞ becomes ±1e308; an empty file gets a header; without measured values the two fixed columns remain.</li>
+  <li><code>Randfallprobe</code>: hop 0 and −5 as well as frame length 1 are rejected, hop 1 is allowed; one step of deviation at 32 bit is not bit-exact; a CSV line with a different column count is rejected, and the file keeps the header and the two matching lines.</li>
 </ul>
 <p>Without a probe of their own are <code>kompressionsverhaeltnis</code>, <code>alsZeile</code> and runs of the measurement chain with alignment switched off or level matching switched on.</p>
 
 <h2 id="grenzen">Limits</h2>
 <ul>
-  <li><b>CSV columns.</b> The header line is created on the first call from its measured values. If level matching is switched between two calls, the new line has one column more or less than the header; the report does not check this, and the values slip into wrong columns.</li>
-  <li><b>Hop unchecked.</b> <code>vorschub</code> accepts any value. At 0, spectral distance and NMR no longer get out of their frame loop; only the frame length is checked for being a power of two.</li>
+<!-- GEAENDERT 2026-10-06 (WT37) -->
+  <li><b>CSV columns.</b> The header line is created on the first call from its measured values. If level matching is switched between two calls, the new line has one column more or less than the header; the report then rejects it with an <code>IOException</code> instead of writing the values into wrong columns. Runs with and without level matching therefore need separate files.</li>
   <li><b>Short signals.</b> If the signal is hardly longer than two frames plus offset, less than one frame remains after trimming; segmental SNR, spectral distance and NMR then return NaN, “n.v.” in the output, an empty cell in the CSV.</li>
   <li><b>Without alignment</b> there is no check for equal sample rate and channel count; a test signal with fewer channels leads to an index-out-of-bounds error.</li>
-  <li><b>Bit-exact</b> with tolerance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math> does not distinguish deviations of one or two quantisation steps at 32-bit PCM (see <a href="masse.html">The measures</a>).</li>
   <li><b>Memory.</b> Both signals are held completely in memory, plus the arrays of the cross-correlation (see <a href="ausrichtung.html">Alignment</a>).</li>
 </ul>
 

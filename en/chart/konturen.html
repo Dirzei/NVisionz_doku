@@ -192,7 +192,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -311,8 +311,9 @@ math[display="block"]{margin:10px 0}
     <b>for</b> each corner cur with predecessor prev (cyclic):
         in_cur ← keepAbove ? cur.z ≥ threshold : cur.z ≤ threshold     <i>likewise in_prev</i>
         <b>if</b> in_cur ≠ in_prev:                                 <i>the edge crosses the threshold</i>
-            t ← (threshold − prev.z) / (cur.z − prev.z)             <i>skipped if |denominator| ≤ 1e−300</i>
-            append intersection prev + t·(cur − prev), z = threshold
+            (a, e) ← (prev, cur), ordered by (x, y)             <i>direction-independent: neighbouring cells agree bit for bit</i>
+            t ← (threshold − a.z) / (e.z − a.z)                     <i>skipped if |denominator| ≤ 1e−300</i>
+            append intersection a + t·(e − a), z = threshold
         <b>if</b> in_cur: append cur
 
 <b>drawIsoBands</b>(cell):
@@ -321,9 +322,17 @@ math[display="block"]{margin:10px 0}
     <b>for</b> b ← b0 <b>to</b> b1−1:
         bandLo ← lo + b·(hi−lo)/B;  bandHi ← bandLo + (hi−lo)/B
         P ← clipHalfPlane(cell, bandLo, above);  P ← clipHalfPlane(P, bandHi, below)
-        <b>if</b> P has at least three corners: fill P in colour(bandLo) and trace its edge 0.7 px wide in the same colour</pre>
+        <b>if</b> P has at least three corners: add P (in image coordinates) to band b
+
+<b>drawBands</b>():                                            <i>second pass, once per chart</i>
+    <b>for</b> each band b with partial polygons:
+        U ← union(partial polygons of b)                     <i>shared edges cancel</i>
+        fill U in colour(b) and trace its edge 0.7 px wide in the same colour</pre>
 <p class="quelle">Source: <code>envisionz-framework-chart/src/envisionz/chart/contour/ContourRenderer.java</code>. The grid refinement (<code>ContourDataset.refine</code>) uses the same bilinear formula and returns the whole point as NaN if one corner value is NaN.</p>
 <div class="hinweis"><b>Convention in the framework:</b> The band colour follows the <b>lower</b> band limit – as in the 2020 predecessor program. Fill and edge are drawn together in the same colour so that neighbouring cell polygons overlap slightly and no light seams appear. Cells with a NaN corner value are not filled.</div>
+<!-- GEAENDERT 2026-10-06 (CT8) -->
+<p><b>Union per band.</b> Partial polygons are no longer drawn one by one. In the first pass the renderer collects the partial polygons per band, in the second <code>Baendervereinigung</code> merges them into a few outlines and draws <b>one path per band</b>. The method removes shared edges: every partial polygon is oriented the same way and entered as directed edges; if an edge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>→</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u \to v</annotation></semantics></math> meets its counter-edge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi><mo>→</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">v \to u</annotation></semantics></math>, it is an inner edge between two partial cells of the same band, and both are dropped. The remaining edges close into loops – outer boundaries positive, holes negative –, so that the <i>nonzero</i> fill rule fills exactly the band area; collinear intermediate points are removed. For the edges to cancel, neighbouring cells must compute their shared intersection points <b>bit for bit identically</b>; that is why <code>clipHalfPlane</code> always interpolates from the endpoint that is smaller in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(x, y)</annotation></semantics></math>. If an edge still remains unpaired (T-junction, folded grid), it stays in the outline without any error.</p>
+<p>In SVG export this makes the difference: instead of two elements per partial cell the file holds one path per band; for a 21 × 21 grid it shrinks from a good 7 MB to about 200 kB. <code>SvgExport</code> also rounds the coordinates to 1/100 pixel (where the JFreeSVG version allows it, from 4.x); otherwise the full <code>float</code> length made up about two thirds of the file.</p>
 
 <h2 id="tri">Triangle meshes</h2>
 <p>For scattered points <code>framework-data</code> supplies a triangulation; <code>TriIsoLines</code> and <code>TriContourRenderer</code> compute the same on it, only simpler: a triangle has three edges, and an isoline crosses either two of them or none – <b>there is no saddle</b>, the assignment is unambiguous. The band fill clips every triangle with the same two half-planes as above and in addition at the visible window, so that nothing outside is computed when zooming.</p>
@@ -353,6 +362,7 @@ math[display="block"]{margin:10px 0}
 <li><code>contour.Konturprobe</code>: grid index ↔ cell index (a swapped <code>i</code>/<code>j</code> would give a mirrored but plausible picture), <code>refine</code> against hand-computed bilinear values, <code>levels</code>/<code>bandLevels</code>, <code>IsoPolyline.chain</code> (a tolerance too coarse or too fine breaks lines), <code>Colormap.at</code> including clamping just below 0 and just above 1. Tolerance of the number comparisons <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math>.</li>
 <li><code>contour.Isolinienprobe</code>: the level examples above, layers and slot numbers of the isolines, clean-up with <code>remove</code>.</li>
 <li><code>contour.Isoeinrastprobe</code>: <code>einrasten</code> with the limiting cases named, then on grid and triangle mesh the number of line pieces against the number of lines.</li>
+<li><code>contour.Baenderexportprobe</code>: SVG export of a band picture above 1 MiB before, at most a twentieth and below 300 KiB after; coordinates with at most two decimals; one path per band; the drawn picture differs from the non-merged one only at edges (anti-aliasing) and on less than 2 % of the area; a ring of eight squares gives two loops of four corners each, and the hole stays empty; shared edges give bit-identical intersection points in both directions.</li>
 <li><code>tri.Dreiecksprobe</code> and <code>tri.Isofarbprobe</code>: used range (0…10, the unused point 1000 does not count), five bands with the grey values 50, 80, 110, 140, 170, each in the colour of the lower limit, behaviour when zoomed and with a scale without span.</li>
 </ul>
 

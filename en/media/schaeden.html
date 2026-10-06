@@ -194,7 +194,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -265,41 +265,47 @@ math[display="block"]{margin:10px 0}
 </figure>
 
 <h3>Pseudocode – <code>Bitfehler</code></h3>
+<!-- GEAENDERT 2026-10-06 (WT39) -->
 <pre class="pseudo"><i>// input: an ELEMENTARY video stream</i>
-R ← max(1, (height + 15) div 16)
-pictures ← 0;  intact ← 0
+R ← max(1, (height + 15) div 16)                    <i>rows of a frame</i>
+R½ ← max(1, ((height + 1) div 2 + 15) div 16)       <i>rows of a field</i>
+pictures ← 0;  intact ← 0;  multiple ← 0;  fields ← 0
 <b>examine</b>(d):
-    seen ← empty;  duplicate ← 0;  inPicture ← false
+    seen ← empty;  duplicate ← 0;  inPicture ← false;  field ← false
     <b>for</b> each start code 00 00 01 cc:
         <b>if</b> cc = 00:                                      <i>new picture</i>
-            <b>if</b> inPicture: <b>evaluate</b>(seen, duplicate)
-            seen ← empty;  duplicate ← 0;  inPicture ← true;  pictures ← pictures + 1
+            <b>if</b> inPicture: <b>evaluate</b>(seen, duplicate, field)
+            seen ← empty;  duplicate ← 0;  field ← false;  inPicture ← true;  pictures ← pictures + 1
+        <b>else if</b> cc = B5 <b>and</b> inPicture <b>and</b> extension id = 8:     <i>picture coding extension</i>
+            field ← (picture_structure = 1 <b>or</b> 2)
         <b>else if</b> 01 ≤ cc ≤ AF:                             <i>slice</i>
             <b>if</b> cc already in seen: duplicate ← duplicate + 1
             add cc to seen
-    <b>if</b> inPicture: <b>evaluate</b>(seen, duplicate)
+    <b>if</b> inPicture: <b>evaluate</b>(seen, duplicate, field)
 
-<b>evaluate</b>(seen, duplicate):
-    <b>if</b> seen empty: damage(rows 1..R, "kein einziger Slice — Bild verloren");  <b>done</b>
-    <b>for</b> r ← 1 <b>to</b> R:  merge contiguous missing rows into <i>one</i> damage "Slices fehlen"
-    <b>if</b> highest number &gt; R: damage(R+1..highest, "Slice-Nummer über der erwarteten Bildhöhe")
-    <b>if</b> duplicate &gt; 0: damage(1..R, "n doppelte Slice-Nummern")
+<b>evaluate</b>(seen, duplicate, field):
+    n ← <b>if</b> field: R½ <b>else</b> R;   <b>if</b> field: fields ← fields + 1
+    <b>if</b> seen empty: damage(rows 1..n, "kein einziger Slice — Bild verloren");  <b>done</b>
+    <b>for</b> r ← 1 <b>to</b> n:  merge contiguous missing rows into <i>one</i> damage "Slices fehlen"
+    <b>if</b> highest number &gt; n: damage(n+1..highest, "Slice-Nummer über der erwarteten Bildhöhe")
+    multiple ← multiple + duplicate                    <i>several slices per row: allowed, no damage</i>
     <b>if</b> no damage: intact ← intact + 1
 
 intactShare ← intact / max(1, pictures)</pre>
 <p class="quelle">Source: <code>envisionz-framework-media/src/envisionz/media/ps/Bitfehler.java</code>.</p>
 <div class="hinweis"><b>Convention in the framework:</b> Contiguous gaps are merged into <b>one</b> damage, because one message per scratch is more useful than sixteen per missing row. The finding (level FALLE) names the number of damages and the share of affected pictures and recommends marking the places in the confidence picture as “replaced” and excluding them from fusion. The first twelve damages are listed, the rest is counted.</div>
+<div class="hinweis"><b>Convention in the framework:</b> MPEG-2 allows several slices per macroblock row. A row number that starts again within the same picture is therefore no damage; it is only counted (<code>mehrfacheSlices()</code>) and named as a note in the finding. The class recognises field pictures by the picture coding extension (picture_structure 1 or 2); for them half the picture height applies, i.e. 18 instead of 36 rows at 576 lines. <code>halbbilder()</code> returns the number of fields.</div>
 <div class="hinweis"><b>Convention in the framework:</b> The check belongs on the <b>elementary stream</b>. On a program stream it gives wrong results, because its PES headers contain byte sequences that look like start codes; only <code>Elementarstrom</code> makes it reliable.</div>
 
 <h2 id="pruefung">How it is checked</h2>
-<p>The probe (<code>Medienprobe</code>, section “Bitfehler – fehlende Slices, und der heile Fall”) builds pictures from start codes laid out by hand and checks both directions: a stream with a gap reports the kind “Slices fehlen” and the right rows, a picture without any slice reports “kein einziger Slice”, duplicate numbers and numbers above the picture height are named – and an intact stream reports no damage. After the elementary-stream extract of a program stream the result agrees (one damage, rows 15 to 16, second picture).</p>
+<p>The probe (<code>Medienprobe</code>, section “Bitfehler – fehlende Slices, und der heile Fall”) builds pictures from start codes laid out by hand and checks both directions: a stream with a gap reports the kind “Slices fehlen” and the right rows, a picture without any slice reports “kein einziger Slice”, numbers above the picture height are named – and an intact stream reports no damage. Two slices on the same row, and a stream in which every row is split into two slices, give no damage; the extra slice is counted and named in the finding. Fields with 18 rows (576 lines) are intact, a field without row 18 reports exactly that row, a frame with picture coding extension still needs 36 rows. After the elementary-stream extract of a program stream the result agrees (one damage, rows 15 to 16, second picture).</p>
 
 <h2 id="grenzen">Limits</h2>
 <ul>
   <li>Only the <b>slice start</b> is visible. A bit error <i>inside</i> a slice that spares the start code is not found; the decoder conceals it all the same.</li>
-  <li>One slice per macroblock row is assumed, as on DVD. A stream with several slices per row would be reported as duplicate numbers.</li>
   <li>Codes 01 to AF count as slices; pictures taller than 175 rows are thus not covered.</li>
-  <li>The expected row count comes from the picture height given by the caller. For field pictures, which carry only half the rows per field, the class does not convert; the height of the field would have to be passed.</li>
+  <li>The expected row count comes from the picture height given by the caller. Without a picture coding extension (MPEG-1) every picture counts as a frame.</li>
+  <li>Several slices on the same row always count as allowed; a slice that carries a wrong but already present row number because of a bit error therefore goes unnoticed.</li>
   <li>The class says <b>where</b> concealment was necessary, not what originally stood there.</li>
 </ul>
 

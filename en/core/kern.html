@@ -190,7 +190,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -227,7 +227,7 @@ math[display="block"]{margin:10px 0}
 
 <h2 id="registry">App catalog</h2>
 <p><code>AppRegistry</code> is the catalog of all apps the host can open. <code>discover()</code> lets the <code>ServiceLoader</code> resolve all entries under <code>META-INF/services/envisionz.api.App</code> on the class path (more on the contract on the <a href="../api/vertrag.html#entdeckung">page of the api module</a>). For each app found, the catalog remembers two things: the <code>AppDescriptor</code> and a <b>factory</b> that creates a <i>fresh</i> instance through the no-argument constructor of the class found. The instance delivered by the loader serves only to read the descriptor.</p>
-<p>Queries: <code>all()</code> returns the entries <b>sorted by identifier</b> (not in discovery order), <code>findById</code> an <code>Optional</code>, <code>newInstance(id)</code> a new app – with <code>IllegalArgumentException</code> for an unknown identifier. If a class cannot be created, the error message names the missing no-argument constructor as the likely cause. For starters without reflection there is <code>register(descriptor, supplier)</code>.</p>
+<p>Queries: <code>all()</code> returns the entries <b>sorted by identifier</b> (not in discovery order), <code>findById</code> an <code>Optional</code>, <code>newInstance(id)</code> a new app – with <code>IllegalArgumentException</code> for an unknown identifier. If a class cannot be created, the error message names the missing no-argument constructor as the likely cause. For starters without reflection there is <code>register(descriptor, supplier)</code>. If discovery finds two app classes with the same identifier, the one found later wins; every such case is logged as a warning and listed in <code>doppelteKennungen()</code> as a line <code>kennung: KlasseAlt ersetzt durch KlasseNeu</code>.</p> <!-- GEAENDERT 2026-10-06 (WT40) -->
 
 <h2 id="bus">Event bus and service registry</h2>
 <p>Two apps should be able to talk to each other without knowing each other: one reports “file loaded”, the other reacts. The bus is the simplest form of this that holds up.</p>
@@ -325,7 +325,7 @@ math[display="block"]{margin:10px 0}
 
 <h2 id="pruefung">How it is checked</h2>
 <ul>
-  <li><b><code>Kernprobe</code></b> (58 checks according to the module documentation; class coverage 16 of 16) checks against the <i>promised</i> behaviour of the interfaces: that the <b>concrete</b> event type determines the recipients – in both directions –, subscription order, harmless double unsubscribing, fault isolation and snapshot, the round trip of the session with XML special characters, path relativisation including its limit (more than three levels up stay absolute), that the passed state is not changed permanently, and that an unknown version throws. Ten counter-tests – from “no fault isolation” to “wave an unknown version through” – each turned it red.</li>
+  <li><b><code>Kernprobe</code></b> (62 checks; class coverage 16 of 16) checks against the <i>promised</i> behaviour of the interfaces: that the <b>concrete</b> event type determines the recipients – in both directions –, subscription order, harmless double unsubscribing, fault isolation and snapshot, the round trip of the session with XML special characters, path relativisation including its limit (more than three levels up stay absolute), that the passed state is not changed permanently, and that an unknown version throws; also that <code>discover</code> reports two apps with the same identifier. Ten counter-tests – from “no fault isolation” to “wave an unknown version through” – each turned it red.</li>
   <li><b><code>Ablageprobe</code></b> checks writer and reader: round trip <i>field by field</i> through stream and through file (the latter additionally passes the temporary file and the move step), angle brackets, ampersand, quotation marks, line breaks, umlauts and characters outside the basic plane in values, a value of eighty thousand characters, and a file with an external entity as an attacker would present it. After a failed write attempt no temporary file may remain.</li>
   <li>A crash in mid-write cannot be provoked from a probe; the indivisibility of the move is therefore <b>not</b> measured, only the error path.</li>
 </ul>
@@ -334,7 +334,8 @@ math[display="block"]{margin:10px 0}
 <ul>
   <li>The bus is neither asynchronous nor hierarchical; a listener that computes for long holds up all others and – under Swing – the user interface.</li>
   <li>An event with a subclass reaches only listeners subscribed to exactly that subclass.</li>
-  <li>Duplicate app identifiers are not reported during discovery: the one found later replaces the earlier one.</li>
+<!-- GEAENDERT 2026-10-06 (WT40) -->
+  <li>Duplicate app identifiers during discovery remain allowed: the one found later replaces the earlier one. This is, however, logged as a warning and can be queried via <code>doppelteKennungen()</code>; which class wins still depends on the order on the class path.</li>
   <li>Relativisation knows only values under keys with the prefix <code>path:</code>; paths in other properties stay as the app stores them.</li>
   <li>On file systems without an atomic move the storage is not indivisible, only better than overwriting directly.</li>
 </ul>

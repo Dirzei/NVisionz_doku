@@ -197,7 +197,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -406,8 +406,9 @@ puffer ← Feld der Länge (2r+1)·(2rz+1)
 </figure>
 
 <p>Warum zwei Grenzen? Ein langer, dünner Kratzer hat wenig Fläche, ist aber weit ausgedehnt. Mit der Fläche allein würde er als Störung entfernt; ob man das will, hängt vom Material ab. Die Ausdehnung trennt die beiden Fälle: Ein Kratzer von 30 Punkten Länge und einem Punkt Breite liegt mit der Fläche 30 unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo>=</mo><mn>40</mn></mrow><annotation encoding="application/x-tex">F = 40</annotation></semantics></math>, überschreitet aber <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">A = 12</annotation></semantics></math> und bleibt stehen.</p>
-<div class="hinweis"><b>Festlegung im Framework:</b> Vorgabe <code>new Sprenkel()</code> = Abweichung 30, Fläche höchstens 40, Ausdehnung höchstens 12. Der Konstruktor setzt jede der drei Größen auf mindestens 1. Zusammenhang über vier Nachbarn, nicht acht: Zwei Flecken, die sich nur an einer Ecke berühren, zählen als zwei. Die Sammlung eines Gebildes bricht ab, sobald es mehr als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>F</mi></mrow><annotation encoding="application/x-tex">4F</annotation></semantics></math> Punkte hat; dann ist es sicher zu groß, und der Rest muss nicht mehr abgesucht werden. <code>gefundeneStoerungen()</code> liefert die Zahl der zuletzt ersetzten Gebilde.</div>
-<div class="hinweis"><b>Festlegung im Framework:</b> Beim Abbruch wird der Stapel geleert. Ohne das wanderten die noch nicht abgearbeiteten Punkte des großen Gebildes in das nächste und verfälschten dort Fläche und Ausdehnung – ein einzelner Sprenkel wurde dann nicht mehr entfernt, sobald anderswo im Bild ein zu großes Gebilde lag. Die Probe prüft genau diesen Fall.</div>
+<div class="hinweis"><b>Festlegung im Framework:</b> Vorgabe <code>new Sprenkel()</code> = Abweichung 30, Fläche höchstens 40, Ausdehnung höchstens 12. Der Konstruktor setzt jede der drei Größen auf mindestens 1. Zusammenhang über vier Nachbarn, nicht acht: Zwei Flecken, die sich nur an einer Ecke berühren, zählen als zwei. Hat ein Gebilde mehr als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>F</mi></mrow><annotation encoding="application/x-tex">4F</annotation></semantics></math> Punkte, ist es sicher zu groß: Seine Punkte werden ab da nicht mehr gesammelt, das Gebilde wird aber trotzdem ganz abgelaufen und als besucht markiert. <code>gefundeneStoerungen()</code> liefert die Zahl der zuletzt ersetzten Gebilde.</div>
+<!-- GEAENDERT 2026-10-06 (WT30) -->
+<div class="hinweis"><b>Festlegung im Framework:</b> Ein zu großes Gebilde wird nicht abgebrochen, sondern zu Ende abgelaufen. Bräche die Suche ab, blieben seine noch nicht erreichten Teile unbesucht; sie würden später als eigene kleine Flecken gefunden und ersetzt – eine lange Linie verlöre so ihr Ende. Weil der Stapel nach jedem Gebilde leer ist, wandern auch keine Punkte in das nächste Gebilde. Die Probe prüft beide Fälle.</div>
 
 <h3>Pseudocode – <code>Sprenkel.anwenden(e, w, h)</code></h3>
 <pre class="pseudo">mittel ← Median(3, false).anwenden(e)         <i>7×7-Median als Bezug</i>
@@ -415,16 +416,17 @@ auffällig[i] ← |e[i] − mittel[i]| &gt; a         <i>für alle i</i>
 aus ← Kopie von e;  besucht ← falsch;  gefunden ← 0
 <b>für</b> start ← 0 <b>bis</b> w·h − 1:
     <b>wenn nicht</b> auffällig[start] <b>oder</b> besucht[start]: weiter
-    gebilde ← leer;  stapel ← {start};  besucht[start] ← wahr
+    gebilde ← leer;  zuGroß ← falsch;  stapel ← {start};  besucht[start] ← wahr
     Hüllrechteck ← leer
     <b>solange</b> stapel nicht leer:
-        i ← stapel.hole();  gebilde.füge(i);  Hüllrechteck erweitern um i
-        <b>wenn</b> |gebilde| &gt; 4·F:  stapel leeren;  abbrechen    <i>sicher zu groß</i>
+        i ← stapel.hole();  Hüllrechteck erweitern um i
+        <b>wenn nicht</b> zuGroß:  gebilde.füge(i)
+        <b>wenn</b> |gebilde| &gt; 4·F:  zuGroß ← wahr;  gebilde ← leer    <i>sicher zu groß, weiter ablaufen</i>
         <b>für</b> die vier Nachbarn j von i im Bild:
             <b>wenn</b> auffällig[j] <b>und nicht</b> besucht[j]:
                 besucht[j] ← wahr;  stapel.lege(j)
     ausdehnung ← max(Breite, Höhe) des Hüllrechtecks
-    <b>wenn</b> |gebilde| &gt; F <b>oder</b> ausdehnung &gt; A: weiter      <i>keine Störung</i>
+    <b>wenn</b> zuGroß <b>oder</b> |gebilde| &gt; F <b>oder</b> ausdehnung &gt; A: weiter      <i>keine Störung</i>
     <b>für</b> jedes i in gebilde:  aus[i] ← mittel[i]
     gefunden ← gefunden + 1
 <b>gib</b> aus <b>zurück</b></pre>
@@ -469,6 +471,7 @@ aus ← Kopie von e;  besucht ← falsch;  gefunden ← 0
   <li><b>Median:</b> konstantes Bild bleibt konstant; ein einzelner Ausreißer (250 in 100) wird <em>exakt</em> entfernt, auch aus den Nachbarpunkten; ebenso ein Ausreißer von −1000 in der Bildecke; ein waagerechter Verlauf bleibt unter dem waagerechten Median exakt stehen; jeder Ausgabewert kommt in der Eingabe vor; 1×1-Bild; Bild schmaler als der Kern.</li>
   <li><b>Sprenkel:</b> konstantes Bild unverändert und nichts gefunden; ein einzelner Punkt wird durch den Hintergrund ersetzt und genau eine Störung gezählt; ein 4×4-Block bleibt bei Flächengrenze 9 vollständig stehen und wird bei Grenze 20 entfernt; ein Strich von sieben Punkten bleibt bei Ausdehnungsgrenze 5 stehen und wird bei 7 entfernt; eine Abweichung von 20 bei Grenze 30 bleibt stehen.</li>
   <li><b>Unabhängigkeit der Gebilde:</b> ein Kratzer von 2 × 50 Punkten und ein einzelner Sprenkel im selben Bild – der Sprenkel muss entfernt werden, der Kratzer an der geprüften Stelle stehen bleiben.</li>
+  <li><b>Zu großes Gebilde bleibt ganz:</b> eine Linie von 170 × 1 Punkten (Fläche über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>F</mi><mo>=</mo><mn>160</mn></mrow><annotation encoding="application/x-tex">4F = 160</annotation></semantics></math>) bleibt in voller Länge stehen, und es wird keine Störung gezählt.</li>
   <li><b>Gemeinsam mit allen Filtern:</b> Eingabe unverändert, Verschiebungsgleichheit, Kleinstbilder, Extremwerte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">±</mo><msup><mn>10</mn><mrow><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\pm 10^6</annotation></semantics></math> ohne Toleranz im Wertebereich.</li>
 </ul>
 

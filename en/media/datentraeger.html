@@ -194,7 +194,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -343,7 +343,11 @@ payload ← <b>if</b> not raw: 2048;  <b>else</b> (mode = 2 <b>and</b> form = 2)
     <b>if</b> tag 261: length of extended attributes at 168, of allocation descriptors at 172
     <b>if</b> tag 266: <i>(40 bytes longer)</i> at 208 and 212
     <b>if</b> address type = 3: data sits in the entry itself, lad bytes long
-    <b>else</b>: length ← field &amp; 0x3FFFFFFF;  place ← P + next field   <i>upper 2 bits are flags</i>
+    <b>else</b>: <b>for</b> each address (short 8, long 16, extended 20 bytes):
+        length ← field &amp; 0x3FFFFFFF;  type ← upper 2 bits;  <b>if</b> length = 0: end
+        <b>if</b> type = 3: continue in the allocation extent descriptor (tag 258) at P + place
+        <b>else</b>: note extent (P + place, length);  total ← total + length
+    place ← place of the first extent;  length ← total
 
 <b>collect</b>(icb, path):                                  <i>depth ≤ 10</i>
     <b>for</b> each directory entry (tag 257):
@@ -352,12 +356,12 @@ payload ← <b>if</b> not raw: 2048;  <b>else</b> (mode = 2 <b>and</b> form = 2)
         report entry; <b>if</b> directory: <b>collect</b>(childIcb, path/name)
         next entry: pad to a multiple of 4</pre>
 <p class="quelle">Source: <code>envisionz-framework-media/src/envisionz/media/disc/Udf.java</code>. Standards: ECMA-167 and UDF 2.01, against which the probe is also checked.</p>
-<div class="hinweis"><b>Convention in the framework:</b> A deleted entry does not appear in the list. A file set with a wrong tag checksum is reported and <b>not used</b>; ISO 9660 can then still name the files. Directories embedded in the file entry itself are read.</div>
+<div class="hinweis"><b>Convention in the framework:</b> A deleted entry does not appear in the list. A file set with a wrong tag checksum is reported and <b>not used</b>; ISO 9660 can then still name the files. Directories embedded in the file entry itself are read. Files and directories made of several extents are followed across all extents, including continuation blocks; this is needed precisely for files over four gigabytes, because one extent holds at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>30</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{30}-1</annotation></semantics></math> bytes. Extents that are not recorded read as zeros.</div> <!-- GEAENDERT 2026-10-06 (WT39) -->
 
 <h2 id="lesbarkeit">Readability: read errors and sessions</h2>
 <p>The C2 error report arises in the drive while reading and is in <b>no</b> image; an image is a copy of the payload, not of the reading process. Session borders are in the table of contents of the disc, not in the sectors. <code>Lesbarkeit</code> therefore never asserts either from the image, but looks at what the <b>read-out tool</b> has recorded:</p>
 <ul>
-  <li>A <code>.cue</code> or <code>.toc</code> file names tracks. The line <code>INDEX 01 mm:ss:ff</code> gives, at 75 frames per second, the sector number <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>60</mn><mspace width="0.1667em"/><mi>m</mi><mo>+</mo><mi>s</mi><mo stretchy="false">)</mo><mo>⋅</mo><mn>75</mn><mo>+</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">(60\,m + s)\cdot 75 + f</annotation></semantics></math>. Example: <code>04:30:12</code> is sector <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>270</mn><mo>⋅</mo><mn>75</mn><mo>+</mo><mn>12</mn><mo>=</mo><mn>20262</mn></mrow><annotation encoding="application/x-tex">270 \cdot 75 + 12 = 20262</annotation></semantics></math>.</li>
+  <li>A <code>.cue</code> or <code>.toc</code> file names tracks. The line <code>INDEX 01 mm:ss:ff</code> gives, at 75 frames per second, the sector number <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>60</mn><mspace width="0.1667em"/><mi>m</mi><mo>+</mo><mi>s</mi><mo stretchy="false">)</mo><mo>⋅</mo><mn>75</mn><mo>+</mo><mi>f</mi></mrow><annotation encoding="application/x-tex">(60\,m + s)\cdot 75 + f</annotation></semantics></math>. Example: <code>04:30:12</code> is sector <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>270</mn><mo>⋅</mo><mn>75</mn><mo>+</mo><mn>12</mn><mo>=</mo><mn>20262</mn></mrow><annotation encoding="application/x-tex">270 \cdot 75 + 12 = 20262</annotation></semantics></math>. A track, however, is <b>not a session</b> – an audio CD has a dozen tracks in one session. Ripping tools write session borders as <code>REM SESSION nn</code>; a session starts at the <code>INDEX 01</code> of its first track. Without such a line there is exactly one session, starting with the first track. Tracks (<code>spuren()</code>) and session starts (<code>sitzungen()</code>) are kept separately; only with more than one session is there a warning, because then the last one counts and earlier ones may hold older versions of the same files.</li> <!-- GEAENDERT 2026-10-06 (WT39) -->
   <li>An error map from <code>ddrescue</code> (<code>.map</code>, <code>.mapfile</code>, <code>.log</code>, <code>.ddrescue</code>) gives per line start, length and a status character; everything except <code>+</code> counts as not read. Byte values become sectors: from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mtext>start</mtext><mo>/</mo><mn>2048</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor \text{start}/2048 \rfloor</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mo stretchy="false">(</mo><mtext>start</mtext><mo>+</mo><mtext>length</mtext><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2048</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor (\text{start}+\text{length}-1)/2048 \rfloor</annotation></semantics></math>. Example: <code>0x00100000 0x00004000 -</code> concerns sectors 512 to 519.</li>
   <li>If both are missing, the <b>suspicion</b> remains: long contiguous runs of zero sectors. A black picture looks the same.</li>
 </ul>
@@ -375,15 +379,15 @@ run ← none
 <b>if</b> run still open <b>and</b> n − run &gt; n div 100:     <i>zero area up to the end of the image</i>
     report gap(run, n − 1, suspicion)</pre>
 <p class="quelle">Source: <code>envisionz-framework-media/src/envisionz/media/disc/Lesbarkeit.java</code>. Each gap carries a field <code>nachgewiesen</code> (proven) and its origin; only an error map turns it into proof.</p>
-<div class="hinweis"><b>Convention in the framework:</b> A gap is reported only above one hundredth of the image. The final run is checked as well: an aborted read-out ends exactly like this, and the first version of the class missed it because a run was closed only if a written sector followed. With several tracks the <b>last</b> one counts; earlier ones may contain older versions of the same files.</div>
+<div class="hinweis"><b>Convention in the framework:</b> A gap is reported only above one hundredth of the image. The final run is checked as well: an aborted read-out ends exactly like this, and the first version of the class missed it because a run was closed only if a written sector followed. With several sessions the <b>last</b> one counts; earlier ones may contain older versions of the same files.</div>
 
 <h2 id="pruefung">How it is checked</h2>
 <p>The probe <code>Medienprobe</code> lays out sectors, ISO 9660 directories and descriptors byte by byte itself; no stored test files exist. <code>disc.Udfprobe</code> checks the UDF chain against ECMA-167/UDF 2.01 with generated test pieces. Every damage case has a case with intact material beside it, because a judge that deems everything broken is as wrong as one that notices nothing.</p>
 <ul>
   <li><b>Sektorquelle:</b> a mangled sync pattern is not read as a raw image; the sector count is then computed with 2048.</li>
   <li><b>ISO 9660:</b> an image without Joliet reports none; a Joliet image yields the volume name and long names in UCS-2; a too short image raises the FALLE finding.</li>
-  <li><b>UDF:</b> deleted entries are missing, embedded directories appear, a file set with a wrong checksum is reported.</li>
-  <li><b>Lesbarkeit:</b> proven gaps from an error map, suspicion without a map, intact material without a report, a zero area at the end of the image.</li>
+  <li><b>UDF:</b> deleted entries are missing, embedded directories appear, a file set with a wrong checksum is reported; a file made of two extents and one with a continuation block have the sum of the lengths as their size, and the entries of a directory in two extents all appear.</li>
+  <li><b>Lesbarkeit:</b> proven gaps from an error map, suspicion without a map, intact material without a report, a zero area at the end of the image; two tracks without <code>REM SESSION</code> are one session without a warning, three tracks in two sessions give two session starts and a warning.</li>
 </ul>
 
 <h2 id="grenzen">Limits</h2>
@@ -391,7 +395,7 @@ run ← none
   <li>Not checkable and not asserted: the drive's C2 report and real session borders without a companion file. Both are named as LÜCKE in the finding.</li>
   <li>The suspicion is a sample: a zero area shorter than the sampling step can stay undetected, and the borders of a reported run are inexact by up to one sampling step. Every run above the reporting threshold (forty sampling steps) is seen.</li>
   <li>Rock Ridge is only recognised. Directories are read with at most 1 MiB each; depth is limited to 12 for ISO 9660 and 10 for UDF.</li>
-  <li><code>Udf</code> reads embedded data (address type 3), otherwise the <b>first</b> short address of the control block. A file made of several extents is not followed across all extents.</li>
+  <li>A chain of continuation blocks is followed for at most 64 links.</li>
 </ul>
 
 <footer>

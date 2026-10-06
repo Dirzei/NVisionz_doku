@@ -172,6 +172,7 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="rakete-stoss.html">Rocket, shock, detonation</a>
 <a class="rubrik" href="#wasser">Water and steam</a>
 <a class="unterseite" href="if97.html">IAPWS-IF97</a>
+<a class="rubrik" href="#feuchte">Humid air</a>
 <a class="rubrik" href="#realgas">Real gases and mixtures</a>
 <a class="unterseite" href="helmholtz.html">Helmholtz equations</a>
 <a class="unterseite" href="kubisch.html">Peng-Robinson, SRK</a>
@@ -208,7 +209,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -250,7 +251,7 @@ math[display="block"]{margin:10px 0}
 
 <div class="zahlen">
   <div class="zahl"><b>SI</b><span>strictly, units only at the data boundaries</span></div>
-  <div class="zahl"><b>11</b><span>packages, 70 classes</span></div>
+  <div class="zahl"><b>14</b><span>packages, 80 classes</span></div> <!-- GEAENDERT 2026-10-06: feuchte, kinetik, kinetik.mechanismen added -->
   <div class="zahl"><b>23</b><span>species from partition functions</span></div>
   <div class="zahl"><b>36 + air</b><span>pure fluids with Helmholtz equations, GERG-2008 with 21 components</span></div>
   <div class="zahl"><b>&gt; 1080</b><span>checks in the probes since 09/2026</span></div>
@@ -333,7 +334,7 @@ double v  = AeroThermo.vtasOfMn(0.8, 10668, 0, 0);     // ram drag W·v</code></
 </div>
 
 <!-- =============================================================== COMBUSTION -->
-<h2 id="verbrennung">Combustion, fuels and kinetics <span class="paket">envisionz.thermo</span></h2>
+<h2 id="verbrennung">Combustion, fuels and kinetics <span class="paket">envisionz.thermo · envisionz.thermo.kinetik</span></h2>
 
 <div class="karte">
   <h3><code>Combustion</code> – combustion calculation (port of VERB2, ACM)</h3>
@@ -377,6 +378,22 @@ double tad = Combustion.adiabaticTFuel(a2, 3e6, 1.0, 0.0, 800, 400, true, true);
   </div>
   <div class="bsp"><h4>Example – ignition delay of methane-air</h4>
 <pre><code>double tau = Reactor0D.ignitionDelay(1400, 101325, 1.0, 0.05);   // s</code></pre></div>
+</div>
+
+<!-- NEU 2026-10-06 (WS11/WS12) -->
+<div class="karte">
+  <h3>Package <code>kinetik</code> – mechanisms, box solver and stiff Rodas wrapper</h3>
+  <p class="zweck">The kinetics core of the CFD solver, moved here from app-machieve (bit-identical, only package and imports changed). Species with NASA polynomial property data, reactions with element balance check, the isothermal 0D box solver and <code>RodasIVChemistry</code>, the stiff integration of the source terms with the Rodas method from framework-math and a projection onto the element balance. Mechanisms in the subpackage <code>kinetik.mechanismen</code>: H₂-O₂ (Stowers-Rhie), methane-air global (two steps) and methane-air after Smooke (16 species). Not yet merged with <code>Kinetics</code>/<code>Reactor0D</code> – that would change numbers.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>MechanismRegistry.fromName("h2o2" | "ch4air" | "smooke")</code>, <code>defaultMechanism()</code>, <code>availableNames()</code></li>
+      <li><code>ChemicalMechanism.builder(composition)</code>, <code>reactions()</code>, <code>elementMatrix()</code></li>
+      <li><code>ChemKineticsBoxSolver.integrateIsothermal(c0, T, dt[, integrator])</code></li>
+      <li><code>RodasIVChemistry.integrate(sourceTerm, …)</code>, <code>letzteSchritte()</code>, <code>letzteVerworfen()</code></li>
+      <li><code>SpeciesProperties.cp(T)</code>, <code>enthalpy(T)</code>; <code>ElementBalanceProjection.project(c, inventory)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-machieve: chemistry in the CFD solver (SI and non-dimensional)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Reacting flows with finite rates, stiff source terms, check calculations on the 0D reactor.</p></div>
+  </div>
 </div>
 
 <!-- =============================================================== EQUILIBRIUM -->
@@ -438,6 +455,28 @@ double wt = ein.h() - aus.h();</code></pre>
     <h4>Example 2 – Prandtl number of feedwater</h4>
 <pre><code>double pr = Wassertransport.prandtl(If97.vonPT(150e5, 470));</code></pre>
   </div>
+</div>
+
+<!-- NEU 2026-10-06 (WS11/WS12) -->
+<h2 id="feuchte">Humid air <span class="paket">envisionz.thermo.feuchte</span></h2>
+
+<div class="karte">
+  <h3><code>FeuchteLuft</code> – psychrometrics on an IAPWS basis</h3>
+  <p class="zweck">Humid air as a mixture of ideal gases after ASHRAE Fundamentals (2017): humidity ratio, relative humidity, partial pressure, dew point or frost point, enthalpy and specific volume. The saturation pressure comes from IAPWS-IF97 over water and, below the triple point, from the IAPWS sublimation pressure equation over ice; optionally over supercooled water everywhere or from a function of your own. The enhancement factor of the real mixture is not included (at standard pressure about 0.4 % less saturation humidity than the ASHRAE tables).</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>FeuchteLuft.standard()</code>, <code>new FeuchteLuft(Saettigung.WASSER)</code>, <code>new FeuchteLuft(name, psat)</code></li>
+      <li><code>saettigungsdruck(T)</code>, <code>saettigungsfeuchte(T, p)</code>, <code>sublimationsdruck(T)</code></li>
+      <li><code>feuchtegradAusRelativ(T, p, φ)</code>, <code>relativeFeuchte(T, p, W)</code>, <code>taupunkt(p, W)</code></li>
+      <li><code>enthalpie(T, W)</code>, <code>temperaturAusEnthalpie(h, W)</code>, <code>spezifischesVolumen(T, p, W)</code>, <code>dichte(T, p, W)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip frei">ready, no callers outside the probes yet</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Gas turbine intake air, air conditioning, cooling towers, dew point checks.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – air at 25 °C and 50 % relative humidity</h4>
+<pre><code>FeuchteLuft fl = FeuchteLuft.standard();
+double w  = fl.feuchtegradAusRelativ(298.15, 101325, 0.5);   // 0.009883 kg/kg
+double td = fl.taupunkt(101325, w);                          // 287.01 K (13.86 °C)
+double h  = FeuchteLuft.enthalpie(298.15, w);                // 50,326 J/kg dry air</code></pre></div>
 </div>
 
 <!-- =============================================================== REAL GAS -->
@@ -599,12 +638,12 @@ double lambda = w.wert(Kennwert.LAMBDA, tAllow);</code></pre></div>
   <tr><td>app-maps</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td>Map conversion PQ ↔ Δh/T, stage work, Smith chart</td></tr>
   <tr><td>app-charts</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td>Joule and T-s diagram, mixer</td></tr>
   <tr><td>commandline-eqnparser / app-eqnparser</td><td></td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td>Built-ins VERBXX, VERBTAD, PSATOFT in NFML decks</td></tr>
-  <tr><td>app-machieve</td><td></td><td></td><td></td><td></td><td class="x">●</td><td class="x">●</td><td>CFD solver: flux schemes, boundaries, chemistry; GERG mixtures</td></tr>
+  <tr><td>app-machieve</td><td></td><td></td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td>CFD solver: flux schemes, boundaries, chemistry (package kinetik); GERG mixtures</td></tr> <!-- GEAENDERT 2026-10-06 (WS12) -->
 </table>
-<div class="hinweis">The packages from the “heat transfer and properties” project (equilibrium, cubic, transport, heat transfer, materials) are verified and ready for use, but hardly connected outside the probes yet. Obvious next steps: cooling demand and life of blades in the eqnparser (materials, heat transfer, heat conduction), property data and kinetics in machieve (WS12), recuperator and steam cycles as NFML building blocks.</div>
+<div class="hinweis">The packages from the “heat transfer and properties” project (equilibrium, cubic, transport, heat transfer, materials) are verified and ready for use, but hardly connected outside the probes yet. Obvious next steps: cooling demand and life of blades in the eqnparser (materials, heat transfer, heat conduction), merging the two kinetics cores (<code>kinetik</code> and <code>Kinetics</code>/<code>Reactor0D</code>), recuperator and steam cycles as NFML building blocks.</div>
 
 <footer>
-envisionz-framework-thermo · 70 classes in 11 packages · help pages DE/EN, documentation <code>doc/thermo-dokumentation-bilingual.html</code> · example catalogues under <code>envisionz-examples/thermo</code> · probes: <code>pruefen.cmd --nur framework-thermo</code>
+envisionz-framework-thermo · 80 classes in 14 packages · help pages DE/EN, documentation <code>doc/thermo-dokumentation-bilingual.html</code> · example catalogues under <code>envisionz-examples/thermo</code> · probes: <code>pruefen.cmd --nur framework-thermo</code>
 </footer>
 </div>
 </main>

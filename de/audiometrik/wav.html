@@ -197,7 +197,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -370,13 +370,14 @@ leseWert(p):
 <p class="quelle">Quelle: <code>envisionz-framework-audiometrik/src/envisionz/audiometrik/Wavleser.java</code>. Das Vorzeichen bei 16 und 24 Bit entsteht, indem das höchstwertige Byte ohne Maske verschoben wird: Java erweitert das Vorzeichen des <code>byte</code> beim Umwandeln in <code>int</code> von selbst.</p>
 
 <h3>Pseudocode – <code>Wavschreiber.alsBytes(signal, bits, gleitkomma)</code></h3>
-<pre class="pseudo">N ← Rahmen · Kanäle · bits/8
+<pre class="pseudo"><b>wenn</b> gleitkomma <b>und</b> bits ∉ {32, 64}: Ausnahme (IllegalArgumentException)
+N ← Rahmen · Kanäle · bits/8
 schreibe Kopf: "RIFF", 36+N, "WAVE", "fmt ", 16, Art (1 oder 3), Kanäle, Rate,
                Rate·Kanäle·bits/8, Kanäle·bits/8, bits, "data", N
 <b>für</b> jeden Rahmen r, <b>für</b> jeden Kanal c:
     x ← signal[c][r];  <b>wenn</b> x = NaN: x ← 0
     <b>wenn</b> gleitkomma:
-        bits = 32 → float(x) als 4 Byte;  <b>sonst</b> → double(x) als 8 Byte
+        bits = 32 → float(x) als 4 Byte;  bits = 64 → double(x) als 8 Byte
     <b>sonst</b>:
         V ← 2^(bits−1)
         k ← round(x · V);  begrenze k auf [−V, V−1]      <i>quantisiere</i>
@@ -428,6 +429,7 @@ schreibe Kopf: "RIFF", 36+N, "WAVE", "fmt ", 16, Art (1 oder 3), Kanäle, Rate,
 <ul>
   <li>Für 8, 16, 24 und 32 Bit PCM: Abtastrate, Kanalzahl und Länge bleiben erhalten, und der größte Fehler liegt unter einer halben Quantisierungsstufe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0,5</mn><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">0{,}5 / 2^{b-1}</annotation></semantics></math> (mit dem Faktor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1 + 10^{-9}</annotation></semantics></math> als Rundungsluft). Die Schranke ist geschlossen bekannt und stammt nicht aus einem früheren Lauf.</li>
   <li>32 Bit Gleitkomma: Abweichung unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math> – nur die Rundung auf <code>float</code>.</li>
+  <li><code>Randfallprobe</code>: 64 Bit Gleitkomma kommt exakt zurück; Gleitkomma mit 16 Bit wird mit <code>IllegalArgumentException</code> abgewiesen.</li>
   <li>Der Steckbrief (<code>liesFormat</code>) einer 16-Bit-Datei meldet 16 Bit, PCM und 4 Byte je Rahmen.</li>
 </ul>
 <p>Die Probe räumt ihr Verzeichnis anschließend wieder ab. Die Testdaten werden erzeugt, nicht mitgeliefert.</p>
@@ -438,7 +440,8 @@ schreibe Kopf: "RIFF", 36+N, "WAVE", "fmt ", 16, Art (1 oder 3), Kanäle, Rate,
   <li>Unterstützt werden PCM mit 8, 16, 24 und 32 Bit und Gleitkomma mit 32 und 64 Bit. Andere Formatarten (etwa komprimierte WAV-Varianten) werden mit einer Ausnahme abgewiesen, 64-Bit-PCM ebenso.</li>
   <li>Bei der erweiterten Form wird die Angabe der gültigen Bit gelesen, aber nicht verwendet: maßgeblich ist die Containerbreite. Eine 20-Bit-Aufnahme in 24-Bit-Containern wird wie 24 Bit behandelt. Die Kanalmaske wird nicht ausgewertet.</li>
   <li>Eine abgeschnittene Datei wird nicht abgewiesen: Ist ein Block länger als die Datei, zählt der Rest als Inhalt. Ein unvollständiger letzter Rahmen verfällt.</li>
-  <li>Der Schreiber prüft bei Gleitkomma die Wortbreite nicht. Nur 32 und 64 Bit sind vorgesehen; bei jeder anderen Angabe schreibt er je Wert 8 Byte in ein zu kleines Feld und bricht mit einer Feldgrenzen-Ausnahme ab.</li>
+<!-- GEAENDERT 2026-10-06 (WT37) -->
+  <li>Der Schreiber nimmt Gleitkomma nur mit 32 oder 64 Bit an; jede andere Wortbreite weist er mit einer <code>IllegalArgumentException</code> ab, bevor etwas geschrieben wird.</li>
   <li>Die WAV-Klassen doppeln die aus framework-audio; die Zusammenführung ist ein offener Punkt.</li>
 </ul>
 

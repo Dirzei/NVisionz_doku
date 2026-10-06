@@ -172,6 +172,7 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="rakete-stoss.html">Rakete, Stoß, Detonation</a>
 <a class="rubrik" href="#wasser">Wasser und Wasserdampf</a>
 <a class="unterseite" href="if97.html">IAPWS-IF97</a>
+<a class="rubrik" href="#feuchte">Feuchte Luft</a>
 <a class="rubrik" href="#realgas">Reale Gase und Gemische</a>
 <a class="unterseite" href="helmholtz.html">Helmholtz-Gleichungen</a>
 <a class="unterseite" href="kubisch.html">Peng-Robinson, SRK</a>
@@ -208,7 +209,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -249,7 +250,7 @@ math[display="block"]{margin:10px 0}
 
 <div class="zahlen">
   <div class="zahl"><b>SI</b><span>streng, Einheiten nur an den Datengrenzen</span></div>
-  <div class="zahl"><b>11</b><span>Pakete, 70 Klassen</span></div>
+  <div class="zahl"><b>14</b><span>Pakete, 80 Klassen</span></div> <!-- GEAENDERT 2026-10-06: feuchte, kinetik, kinetik.mechanismen dazu -->
   <div class="zahl"><b>23</b><span>Spezies aus Zustandssummen</span></div>
   <div class="zahl"><b>36 + Luft</b><span>Reinstoffe mit Helmholtz-Gleichung, GERG-2008 mit 21 Komponenten</span></div>
   <div class="zahl"><b>&gt; 1080</b><span>Prüfungen in den Proben seit 09/2026</span></div>
@@ -332,7 +333,7 @@ double v  = AeroThermo.vtasOfMn(0.8, 10668, 0, 0);     // Staudruckwiderstand W�
 </div>
 
 <!-- =============================================================== VERBRENNUNG -->
-<h2 id="verbrennung">Verbrennung, Brennstoffe und Kinetik <span class="paket">envisionz.thermo</span></h2>
+<h2 id="verbrennung">Verbrennung, Brennstoffe und Kinetik <span class="paket">envisionz.thermo · envisionz.thermo.kinetik</span></h2>
 
 <div class="karte">
   <h3><code>Combustion</code> – Verbrennungsrechnung (Port von VERB2, ACM)</h3>
@@ -376,6 +377,22 @@ double tad = Combustion.adiabaticTFuel(a2, 3e6, 1.0, 0.0, 800, 400, true, true);
   </div>
   <div class="bsp"><h4>Beispiel – Zündverzug Methan-Luft</h4>
 <pre><code>double tau = Reactor0D.ignitionDelay(1400, 101325, 1.0, 0.05);   // s</code></pre></div>
+</div>
+
+<!-- NEU 2026-10-06 (WS11/WS12) -->
+<div class="karte">
+  <h3>Paket <code>kinetik</code> – Mechanismen, Box-Löser und steife Rodas-Hülle</h3>
+  <p class="zweck">Der Kinetik-Kern des CFD-Lösers, aus app-machieve hierher umgezogen (bitgleich, nur Paket und Importe). Spezies mit NASA-Polynom-Stoffdaten, Reaktionen mit Elementbilanzprüfung, der isotherme 0D-Box-Löser und <code>RodasIVChemistry</code>, die steife Integration der Quellterme mit dem Rodas-Verfahren aus framework-math und einer Projektion auf die Elementbilanz. Mechanismen im Unterpaket <code>kinetik.mechanismen</code>: H₂-O₂ (Stowers-Rhie), Methan-Luft global (zwei Schritte) und Methan-Luft nach Smooke (16 Spezies). Noch nicht zusammengeführt mit <code>Kinetics</code>/<code>Reactor0D</code> – das würde Zahlen ändern.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>MechanismRegistry.fromName("h2o2" | "ch4air" | "smooke")</code>, <code>defaultMechanism()</code>, <code>availableNames()</code></li>
+      <li><code>ChemicalMechanism.builder(zusammensetzung)</code>, <code>reactions()</code>, <code>elementMatrix()</code></li>
+      <li><code>ChemKineticsBoxSolver.integrateIsothermal(c0, T, dt[, integrator])</code></li>
+      <li><code>RodasIVChemistry.integrate(quellterm, …)</code>, <code>letzteSchritte()</code>, <code>letzteVerworfen()</code></li>
+      <li><code>SpeciesProperties.cp(T)</code>, <code>enthalpy(T)</code>; <code>ElementBalanceProjection.project(c, inventar)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-machieve: Chemie im CFD-Löser (SI und entdimensioniert)</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Reaktive Strömungen mit endlichen Raten, steife Quellterme, Prüfrechnungen am 0D-Reaktor.</p></div>
+  </div>
 </div>
 
 <!-- =============================================================== GLEICHGEWICHT -->
@@ -437,6 +454,28 @@ double wt = ein.h() - aus.h();</code></pre>
     <h4>Beispiel 2 – Prandtl-Zahl von Speisewasser</h4>
 <pre><code>double pr = Wassertransport.prandtl(If97.vonPT(150e5, 470));</code></pre>
   </div>
+</div>
+
+<!-- NEU 2026-10-06 (WS11/WS12) -->
+<h2 id="feuchte">Feuchte Luft <span class="paket">envisionz.thermo.feuchte</span></h2>
+
+<div class="karte">
+  <h3><code>FeuchteLuft</code> – Psychrometrie auf IAPWS-Grundlage</h3>
+  <p class="zweck">Feuchte Luft als Gemisch idealer Gase nach ASHRAE Fundamentals (2017): Feuchtegrad, relative Feuchte, Partialdruck, Taupunkt bzw. Reifpunkt, Enthalpie und spezifisches Volumen. Der Sättigungsdruck kommt über Wasser aus IAPWS-IF97, unter dem Tripelpunkt über Eis aus der IAPWS-Sublimationsdruckgleichung; wahlweise überall über unterkühltem Wasser oder aus einer eigenen Funktion. Der Verstärkungsfaktor des realen Gemischs ist nicht enthalten (bei Normdruck etwa 0,4 % weniger Sättigungsfeuchte als die ASHRAE-Tafeln).</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>FeuchteLuft.standard()</code>, <code>new FeuchteLuft(Saettigung.WASSER)</code>, <code>new FeuchteLuft(name, psat)</code></li>
+      <li><code>saettigungsdruck(T)</code>, <code>saettigungsfeuchte(T, p)</code>, <code>sublimationsdruck(T)</code></li>
+      <li><code>feuchtegradAusRelativ(T, p, φ)</code>, <code>relativeFeuchte(T, p, W)</code>, <code>taupunkt(p, W)</code></li>
+      <li><code>enthalpie(T, W)</code>, <code>temperaturAusEnthalpie(h, W)</code>, <code>spezifischesVolumen(T, p, W)</code>, <code>dichte(T, p, W)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip frei">bereit, noch ohne Aufrufer außerhalb der Proben</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Ansaugluft von Gasturbinen, Klimatechnik, Kühltürme, Taupunktprüfung.</p></div>
+  </div>
+  <div class="bsp"><h4>Beispiel – Luft bei 25 °C und 50 % relativer Feuchte</h4>
+<pre><code>FeuchteLuft fl = FeuchteLuft.standard();
+double w  = fl.feuchtegradAusRelativ(298.15, 101325, 0.5);   // 0,009883 kg/kg
+double td = fl.taupunkt(101325, w);                          // 287,01 K (13,86 °C)
+double h  = FeuchteLuft.enthalpie(298.15, w);                // 50 326 J/kg trockene Luft</code></pre></div>
 </div>
 
 <!-- =============================================================== REALGAS -->
@@ -598,12 +637,12 @@ double lambda = w.wert(Kennwert.LAMBDA, tZul);</code></pre></div>
   <tr><td>app-maps</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td>Kennfeldumrechnung PQ ↔ Δh/T, Stufenarbeit, Smith-Karte</td></tr>
   <tr><td>app-charts</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td>Joule- und T-s-Diagramm, Mischer</td></tr>
   <tr><td>commandline-eqnparser / app-eqnparser</td><td></td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td>Built-ins VERBXX, VERBTAD, PSATOFT in NFML-Decks</td></tr>
-  <tr><td>app-machieve</td><td></td><td></td><td></td><td></td><td class="x">●</td><td class="x">●</td><td>CFD-Löser: Flussverfahren, Ränder, Chemie; GERG-Gemische</td></tr>
+  <tr><td>app-machieve</td><td></td><td></td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td>CFD-Löser: Flussverfahren, Ränder, Chemie (Paket kinetik); GERG-Gemische</td></tr> <!-- GEAENDERT 2026-10-06 (WS12) -->
 </table>
-<div class="hinweis">Die Pakete aus dem Vorhaben „Wärmeübertragung und Stoffwerte“ (Gleichgewicht, Kubisch, Transport, Wärmeübertragung, Werkstoffe) sind geprüft und einsatzbereit, aber außerhalb der Proben noch kaum angeschlossen. Naheliegend als Nächstes: Kühlbedarf und Lebensdauer von Schaufeln im eqnparser (Werkstoffe, Wärmeübergang, Wärmeleitung), Stoffdaten und Kinetik in machieve (WS12), Rekuperator- und Dampfkreisläufe als NFML-Bausteine.</div>
+<div class="hinweis">Die Pakete aus dem Vorhaben „Wärmeübertragung und Stoffwerte“ (Gleichgewicht, Kubisch, Transport, Wärmeübertragung, Werkstoffe) sind geprüft und einsatzbereit, aber außerhalb der Proben noch kaum angeschlossen. Naheliegend als Nächstes: Kühlbedarf und Lebensdauer von Schaufeln im eqnparser (Werkstoffe, Wärmeübergang, Wärmeleitung), die Zusammenführung der beiden Kinetik-Kerne (<code>kinetik</code> und <code>Kinetics</code>/<code>Reactor0D</code>), Rekuperator- und Dampfkreisläufe als NFML-Bausteine.</div>
 
 <footer>
-envisionz-framework-thermo · 70 Klassen in 11 Paketen · Hilfeseiten DE/EN, Dokumentation <code>doc/thermo-dokumentation-bilingual.html</code> · Beispielkataloge unter <code>envisionz-examples/thermo</code> · Proben: <code>pruefen.cmd --nur framework-thermo</code>
+envisionz-framework-thermo · 80 Klassen in 14 Paketen · Hilfeseiten DE/EN, Dokumentation <code>doc/thermo-dokumentation-bilingual.html</code> · Beispielkataloge unter <code>envisionz-examples/thermo</code> · Proben: <code>pruefen.cmd --nur framework-thermo</code>
 </footer>
 </div>
 </main>

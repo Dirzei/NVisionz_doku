@@ -197,7 +197,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -370,13 +370,14 @@ readValue(p):
 <p class="quelle">Source: <code>envisionz-framework-audiometrik/src/envisionz/audiometrik/Wavleser.java</code>. The sign for 16 and 24 bit arises because the most significant byte is shifted without a mask: Java sign-extends the <code>byte</code> by itself when converting it to <code>int</code>.</p>
 
 <h3>Pseudocode – <code>Wavschreiber.alsBytes(signal, bits, gleitkomma)</code></h3>
-<pre class="pseudo">N ← frames · channels · bits/8
+<pre class="pseudo"><b>if</b> floating point <b>and</b> bits ∉ {32, 64}: exception (IllegalArgumentException)
+N ← frames · channels · bits/8
 write header: "RIFF", 36+N, "WAVE", "fmt ", 16, type (1 or 3), channels, rate,
               rate·channels·bits/8, channels·bits/8, bits, "data", N
 <b>for</b> each frame r, <b>for</b> each channel c:
     x ← signal[c][r];  <b>if</b> x = NaN: x ← 0
     <b>if</b> floating point:
-        bits = 32 → float(x) as 4 bytes;  <b>else</b> → double(x) as 8 bytes
+        bits = 32 → float(x) as 4 bytes;  bits = 64 → double(x) as 8 bytes
     <b>else</b>:
         V ← 2^(bits−1)
         k ← round(x · V);  clamp k to [−V, V−1]          <i>quantisiere</i>
@@ -428,6 +429,7 @@ write header: "RIFF", 36+N, "WAVE", "fmt ", 16, type (1 or 3), channels, rate,
 <ul>
   <li>For 8, 16, 24 and 32 bit PCM: sample rate, channel count and length are preserved, and the largest error stays below half a quantisation step <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.5</mn><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">0.5 / 2^{b-1}</annotation></semantics></math> (with the factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1 + 10^{-9}</annotation></semantics></math> as rounding slack). The bound is known in closed form and does not come from an earlier run.</li>
   <li>32-bit floating point: deviation below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-7}</annotation></semantics></math> – only the rounding to <code>float</code>.</li>
+  <li><code>Randfallprobe</code>: 64-bit floating point comes back exactly; floating point with 16 bit is rejected with <code>IllegalArgumentException</code>.</li>
   <li>The profile (<code>liesFormat</code>) of a 16-bit file reports 16 bit, PCM and 4 bytes per frame.</li>
 </ul>
 <p>The probe removes its directory afterwards. The test data are generated, not shipped.</p>
@@ -438,7 +440,8 @@ write header: "RIFF", 36+N, "WAVE", "fmt ", 16, type (1 or 3), channels, rate,
   <li>Supported are PCM with 8, 16, 24 and 32 bit and floating point with 32 and 64 bit. Other format types (such as compressed WAV variants) are rejected with an exception, as is 64-bit PCM.</li>
   <li>With the extensible form, the valid-bits field is read but not used: the container width is what counts. A 20-bit recording in 24-bit containers is treated as 24 bit. The channel mask is not evaluated.</li>
   <li>A truncated file is not rejected: if a chunk is longer than the file, the rest counts as content. An incomplete last frame is dropped.</li>
-  <li>For floating point, the writer does not check the word length. Only 32 and 64 bit are intended; for any other value it writes 8 bytes per sample into an array that is too small and fails with an index-out-of-bounds exception.</li>
+<!-- GEAENDERT 2026-10-06 (WT37) -->
+  <li>The writer accepts floating point only with 32 or 64 bit; any other word length is rejected with an <code>IllegalArgumentException</code> before anything is written.</li>
   <li>The WAV classes duplicate those in framework-audio; merging them is an open point.</li>
 </ul>
 

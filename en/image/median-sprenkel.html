@@ -197,7 +197,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../app-charts/index.html">app-charts</a>
 <a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
 <a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
-<a class="eintrag" href="../app-epds/index.html">app-epds</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
 <a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
 <a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
 <a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
@@ -406,8 +406,9 @@ buffer ← array of length (2r+1)·(2rz+1)
 </figure>
 
 <p>Why two limits? A long, thin scratch has little area but a large extent. With the area alone it would be removed as a defect; whether that is wanted depends on the material. The extent separates the two cases: a scratch 30 points long and one point wide stays below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo>=</mo><mn>40</mn></mrow><annotation encoding="application/x-tex">F = 40</annotation></semantics></math> with its area of 30, but exceeds <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">A = 12</annotation></semantics></math> and remains.</p>
-<div class="hinweis"><b>Convention in the framework:</b> Default <code>new Sprenkel()</code> = deviation 30, area at most 40, extent at most 12. The constructor sets each of the three quantities to at least 1. Connectivity via four neighbours, not eight: two blotches that touch only at a corner count as two. Collecting a blob stops as soon as it has more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>F</mi></mrow><annotation encoding="application/x-tex">4F</annotation></semantics></math> points; it is then certainly too large, and the rest need not be searched. <code>gefundeneStoerungen()</code> returns the number of blobs replaced last.</div>
-<div class="hinweis"><b>Convention in the framework:</b> On stopping, the stack is cleared. Without that, the not yet processed points of the large blob moved into the next one and falsified its area and extent there – a single speckle was then no longer removed as soon as a blob that was too large lay elsewhere in the image. The probe tests exactly this case.</div>
+<div class="hinweis"><b>Convention in the framework:</b> Default <code>new Sprenkel()</code> = deviation 30, area at most 40, extent at most 12. The constructor sets each of the three quantities to at least 1. Connectivity via four neighbours, not eight: two blotches that touch only at a corner count as two. Once a blob has more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>F</mi></mrow><annotation encoding="application/x-tex">4F</annotation></semantics></math> points it is certainly too large: from then on its points are no longer collected, but the blob is still traversed completely and marked as visited. <code>gefundeneStoerungen()</code> returns the number of blobs replaced last.</div>
+<!-- GEAENDERT 2026-10-06 (WT30) -->
+<div class="hinweis"><b>Convention in the framework:</b> A blob that is too large is not abandoned but traversed to the end. If the search stopped, its parts not yet reached would stay unvisited; they would later be found as separate small blotches and replaced – a long line would lose its end that way. Because the stack is empty after every blob, no points move into the next blob either. The probe tests both cases.</div>
 
 <h3>Pseudocode – <code>Sprenkel.anwenden(e, w, h)</code></h3>
 <pre class="pseudo">ref ← Median(3, false).anwenden(e)            <i>7×7 median as reference</i>
@@ -415,16 +416,17 @@ conspicuous[i] ← |e[i] − ref[i]| &gt; a          <i>for all i</i>
 out ← copy of e;  visited ← false;  found ← 0
 <b>for</b> start ← 0 <b>to</b> w·h − 1:
     <b>if not</b> conspicuous[start] <b>or</b> visited[start]: continue
-    blob ← empty;  stack ← {start};  visited[start] ← true
+    blob ← empty;  tooLarge ← false;  stack ← {start};  visited[start] ← true
     bounding box ← empty
     <b>while</b> stack not empty:
-        i ← stack.pop();  blob.add(i);  extend bounding box by i
-        <b>if</b> |blob| &gt; 4·F:  clear stack;  stop       <i>certainly too large</i>
+        i ← stack.pop();  extend bounding box by i
+        <b>if not</b> tooLarge:  blob.add(i)
+        <b>if</b> |blob| &gt; 4·F:  tooLarge ← true;  blob ← empty    <i>certainly too large, keep traversing</i>
         <b>for</b> the four neighbours j of i inside the image:
             <b>if</b> conspicuous[j] <b>and not</b> visited[j]:
                 visited[j] ← true;  stack.push(j)
     extent ← max(width, height) of the bounding box
-    <b>if</b> |blob| &gt; F <b>or</b> extent &gt; A: continue          <i>not a defect</i>
+    <b>if</b> tooLarge <b>or</b> |blob| &gt; F <b>or</b> extent &gt; A: continue          <i>not a defect</i>
     <b>for</b> each i in blob:  out[i] ← ref[i]
     found ← found + 1
 <b>return</b> out</pre>
@@ -469,6 +471,7 @@ out ← copy of e;  visited ← false;  found ← 0
   <li><b>Median:</b> a constant image stays constant; a single outlier (250 in 100) is removed <em>exactly</em>, also from the neighbouring points; likewise an outlier of −1000 in the image corner; a horizontal ramp stays exactly under the horizontal median; every output value occurs in the input; 1×1 image; image narrower than the kernel.</li>
   <li><b>Speckle:</b> constant image unchanged and nothing found; a single point is replaced by the background and exactly one defect counted; a 4×4 block stays completely at area limit 9 and is removed at limit 20; a line of seven points stays at extent limit 5 and is removed at 7; a deviation of 20 at limit 30 stays.</li>
   <li><b>Independence of blobs:</b> a scratch of 2 × 50 points and a single speckle in the same image – the speckle must be removed, the scratch must remain at the tested location.</li>
+  <li><b>A blob that is too large stays whole:</b> a line of 170 × 1 points (area above <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>F</mi><mo>=</mo><mn>160</mn></mrow><annotation encoding="application/x-tex">4F = 160</annotation></semantics></math>) remains over its full length, and no defect is counted.</li>
   <li><b>Together with all filters:</b> input unchanged, shift equivariance, tiny images, extreme values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">±</mo><msup><mn>10</mn><mrow><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\pm 10^6</annotation></semantics></math> within the value range without tolerance.</li>
 </ul>
 
