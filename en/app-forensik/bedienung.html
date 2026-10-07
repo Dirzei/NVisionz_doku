@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using video forensics – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag aktiv" href="index.html">app-forensik</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#zweck">What the app is for</a>
+<a class="rubrik" href="index.html#funktionen">What it can do</a>
+<a class="unterseite aktiv" href="bedienung.html">How to use</a>
+<a class="rubrik" href="index.html#daten">Data and formats</a>
+<a class="rubrik" href="index.html#aufbau">What it builds on</a>
+<a class="rubrik" href="index.html#stand">Status and limits</a>
+</div>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">app-forensik</a> › Using video forensics</span><a class="sprachwahl" href="../../de/app-forensik/bedienung.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-app-forensik · How to use</div>
+  <h1>Using video forensics</h1>
+  <p class="unter">User page, as of 7 October 2026. How to open a recording, compare original and treatment, denoise, deinterlace, sharpen, adjust the colour, stack frames, measure, save evidence images and listen to the sound; plus the command-line tools <code>Steckbrief</code> and <code>VideoRestore</code>. The pictures are screenshots of the app with entirely invented test material: a drawn street scene with a house, a tree and clouds, into which a car drives from frame 62, as an MPEG-1 picture stream of 100 frames at 720 × 576 pixels with artificial noise.</p>
+</header>
+
+<h2 id="fenster">The window</h2>
+<p class="einl">The app is opened from the <i>Applications</i> menu with <i>Open video forensics…</i> or with <code>Alt</code>+<code>Z</code>. On the left is the picture, on the right the narrow vertical tool bar with the cards, below the playback bar and underneath the message line.</p>
+<figure><img src="../../bilder/app-forensik/fenster_en.png" alt="The video forensics window: on the left the street scene with house, tree and blue car, a vertical dividing line in the middle, the label Original at the top left and treated at the top right; on the right the bar with ten symbols and the question mark at the bottom, next to it the open Compare card; at the bottom the playback buttons, the position slider and the message line with frame 80, threshold 33 and window 3."><figcaption>Layout: (1) comparison view, here as a slider with a draggable dividing line, (2) vertical tool bar with ten cards, (3) the open card, here <i>Compare</i>, (4) playback buttons, (5) sound button, (6) time and frame number, (7) message line, (8) help.</figcaption></figure>
+<p>The view always shows a <b>pair of pictures</b> of the same spot: on the left what the decoder delivered (<i>Original</i>), on the right the same frame after the configured filter chain (<i>treated</i>). How the two are set against each other is chosen on the <a href="#vergleich">Compare</a> card. The picture is fitted with its aspect ratio; if the pixels are not square (about 1.067 to 1 for PAL 4:3), it is corrected.</p>
+<p>Each button of the bar opens its card next to it; a second click on the same button closes it again, and the picture gets the full width. The cards are 350 pixels wide and scroll vertically when their content is longer. All controls take effect immediately, there is no <i>Apply</i>; every slider shows its value in its label. Below each block of settings a grey hint explains what the setting is good for and what it costs.</p>
+<figure><img src="../../bilder/app-forensik/start_en.png" alt="The window after opening: black area with the text No recording loaded, on the right the Source card with the button Open recording, the check box Conceal missing picture areas, two hints and the empty Findings field; at the bottom the message No recording loaded, open the Source tool."><figcaption>After opening: no recording yet, the <i>Source</i> card is open.</figcaption></figure>
+
+<h2 id="leiste">The tool bar</h2>
+<p class="einl">The buttons carry symbols only; their name is in the tooltip and in the heading of the card. The ten card buttons are mutually exclusive: at most one card is open at a time. The help button sits at the bottom and opens no card.</p>
+<table>
+<tr><th>Symbol</th><th>Tooltip</th><th>What happens</th></tr>
+<tr><td><img src="../../bilder/app-forensik/television--arrow.png" alt="Television with arrow"></td><td>Source</td><td>Open a recording, concealment in the decoder, findings of the loaded recording (<a href="#oeffnen">Opening a recording</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/application-tile-horizontal.png" alt="Two windows side by side"></td><td>Compare</td><td>Kind of comparison, difference gain, labels, save still frame (<a href="#vergleich">Comparing</a>, <a href="#belege">Evidence</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/picture-sunset.png" alt="Picture"></td><td>Denoising</td><td>Temporal mean with motion threshold, motion-compensated mean, deblocking (<a href="#entstoeren">Denoising</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/image-resize.png" alt="Picture with frame"></td><td>Deinterlacing</td><td>Combine the fields of interlaced material (<a href="#entschraenken">Deinterlacing and sharpening</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/magnifier-zoom-in.png" alt="Magnifier"></td><td>Sharpening</td><td>Deconvolution against blur (<a href="#entschraenken">Deinterlacing and sharpening</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/palette.png" alt="Colour palette"></td><td>Colour</td><td>Colour on or off, saturation, colour cast, upsampling of the colour planes (<a href="#farbe">Colour</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/layers.png" alt="Layers"></td><td>Stack</td><td>Stack the sharpest frames of one spot; Drizzle onto a doubled grid (<a href="#stapel">Stacking and Drizzle</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/control.png" alt="Play"></td><td>Playback</td><td>Play and pause, with a hint on the lead (<a href="#abspielen">Playing and jumping</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/chart.png" alt="Chart"></td><td>Measurement</td><td>Noise, sharpness and blockiness before and after the treatment (<a href="#messen">Measuring</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/report--exclamation.png" alt="Report with exclamation mark"></td><td>Log</td><td>The findings collected on loading: picture stream, disc, sound tracks (<a href="#protokoll">Log</a>).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/question-frame.png" alt="Question mark"></td><td>Help: user guide in the documentation app</td><td>Brings the documentation app to the front and shows this user guide there, like <code>F1</code>. The message line says <i>The user guide is in the documentation app.</i></td></tr>
+</table>
+<p>The <b>playback bar</b> below the picture also carries symbols only:</p>
+<table>
+<tr><th>Symbol</th><th>Tooltip</th><th>What happens</th></tr>
+<tr><td><img src="../../bilder/app-forensik/control-skip-180.png" alt="To the start"></td><td>To the start</td><td>jumps to frame 0.</td></tr>
+<tr><td><img src="../../bilder/app-forensik/control-double-180.png" alt="Back"></td><td>10 seconds back</td><td>jumps back ten seconds, computed with the frame rate of the recording.</td></tr>
+<tr><td><img src="../../bilder/app-forensik/arrow-180.png" alt="Arrow left"></td><td>One frame back</td><td>one frame back.</td></tr>
+<tr><td><img src="../../bilder/app-forensik/control.png" alt="Play"></td><td>Play</td><td>starts playback from the spot shown; while it runs the button is called <i>Pause</i> <img src="../../bilder/app-forensik/control-pause.png" alt="Pause">.</td></tr>
+<tr><td><img src="../../bilder/app-forensik/arrow.png" alt="Arrow right"></td><td>One frame forward</td><td>one frame forward.</td></tr>
+<tr><td><img src="../../bilder/app-forensik/control-double.png" alt="Forward"></td><td>10 seconds forward</td><td>jumps forward ten seconds.</td></tr>
+<tr><td><img src="../../bilder/app-forensik/control-skip.png" alt="To the end"></td><td>To the end</td><td>jumps to the last frame — only if the total number of frames is known (see below).</td></tr>
+<tr><td><img src="../../bilder/app-forensik/speaker-volume.png" alt="Loudspeaker"></td><td>Sound options: track, mixer, sync, extract</td><td>opens the sound window (<a href="#ton">Sound</a>).</td></tr>
+</table>
+
+<h2 id="oeffnen">Opening a recording</h2>
+<ol>
+  <li>Open the <b>Source</b> card and press <i>Open recording…</i>.</li>
+  <li>Choose a file or a directory in the file dialog (see table).</li>
+  <li>The app reads the beginning of the recording — the first 64 frames —, measures the noise on them, sets the motion threshold and shows frame 0. The message line gives the frame number, threshold, window and the mean change made by the filter in grey levels.</li>
+  <li>The <b>Findings</b> field of the card shows what was read: file name, picture size, pixel aspect ratio and frame rate, the number of frames, MPEG-1 or MPEG-2, the first time code and any user data from the stream.</li>
+</ol>
+<table>
+<tr><th>Chosen</th><th>What is read</th></tr>
+<tr><td>a directory containing a subdirectory <code>VIDEO_TS</code></td><td>that <code>VIDEO_TS</code>; the message line says <i>VIDEO_TS found in the chosen directory.</i></td></tr>
+<tr><td>a directory (such as <code>VIDEO_TS</code> itself)</td><td>all VOB files of the first title set as <b>one</b> stream; picture and sound are separated in the process</td></tr>
+<tr><td>a <code>.vob</code>, <code>.ifo</code> or <code>.bup</code> file</td><td>the directory it lies in — a title is spread over several VOB files of at most one gibibyte anyway</td></tr>
+<tr><td>an <code>.iso</code> file</td><td>nothing: <i>An ISO image cannot be read directly — please mount it and choose the VIDEO_TS directory.</i> For an image there is the <a href="#steckbrief">Steckbrief</a>.</td></tr>
+<tr><td>any other file</td><td>a raw MPEG picture stream, such as <code>.m2v</code></td></tr>
+</table>
+<p><b>How long the recording is</b> is known after opening only for a <code>VIDEO_TS</code>: the app reads the playing time from the file <code>VTS_01_0.IFO</code> and converts it into a number of frames with the frame rate. Then the playback bar shows <i>Frame n of m</i>, the position slider can be used and <i>To the end</i> works. For a raw picture stream the total stays open; the bar shows only <i>Frame n</i>, the slider stays locked, and the findings say <i>64 frames read so far (total still open)</i>.</p>
+<p><b>Conceal missing picture areas</b> (on by default) lets the decoder replace areas the stream did not deliver from the reference picture instead of leaving them black. Changing the check box reloads the recording. For a finding it belongs off: what is concealed does not come from this point of the recording, and switched off you can see where the disc is damaged. How many macroblocks were concealed is listed in the <a href="#protokoll">Log</a>.</p>
+
+<h2 id="vergleich">Comparing</h2>
+<figure><img src="../../bilder/app-forensik/unterschied_en.png" alt="Difference view, amplified 8 times: an almost black picture with fine grey noise everywhere, dark cloud areas and bright edges at the car."><figcaption><i>Difference</i> view, amplified 8×: the averaged-out noise everywhere, while at the edges of the moving car the filter has changed picture content.</figcaption></figure>
+<p>Under <i>View</i> the <b>Compare</b> card chooses one of five kinds:</p>
+<table>
+<tr><th>View</th><th>What you see</th></tr>
+<tr><td>Slider</td><td>one picture, the original left of the dividing line, the treatment to the right. The line is dragged with the mouse button held down; a click puts it at that spot. Both sides show the same spot of the picture.</td></tr>
+<tr><td>Side by side</td><td>left half of the picture from the original, right half from the treatment, divided in the middle.</td></tr>
+<tr><td>Original only</td><td>only the original.</td></tr>
+<tr><td>Treated only</td><td>only the treatment.</td></tr>
+<tr><td>Difference</td><td>the absolute difference of the luma, multiplied by <i>Difference gain</i> (1× to 32×, default 8×).</td></tr>
+</table>
+<p><i>Show labels</i> switches the marks in the corners of the picture: <i>Original</i> and <i>treated</i>, after a stack <i>sharpest single frame</i> and <i>stack of n frames</i>, in the Difference view the gain. Difference is the strictest view: if the structure of the subject remains recognisable in it, the filter goes too far. A good denoiser changes little, so without gain the difference picture would be almost black.</p>
+
+<h2 id="abspielen">Playing and jumping</h2>
+<p>The buttons of the playback bar jump by one frame, by ten seconds or to the start and the end; if the total is known, the position slider jumps too. To its right are the time (minutes and seconds, with the total time when the length is known) and the frame number. The <b>Playback</b> card carries the same <i>Play</i>/<i>Pause</i> button once more.</p>
+<p>A frame in the middle of a recording does not exist on its own: it depends on its reference pictures. If a spot is no longer among the last 64 frames held, the app reads it again in the background (<i>Seeking frame n …</i>). For a <code>VIDEO_TS</code> of known length it jumps via an estimated entry sector from frame 400 on, otherwise it decodes from the start; the interface stays usable meanwhile, and a new jump replaces the old one.</p>
+<p><b>Playback</b> runs from the spot shown at the frame rate of the recording and through the same filter chain. It first fills one second of lead and then starts the clock. The message line counts frame number and time and reports skipped frames if the computer cannot keep up. During playback the colour is upsampled linearly instead of guided (see <a href="#farbe">Colour</a>). A jump during playback stops it and rebuilds it at the new spot. For a <code>VIDEO_TS</code> the sound plays along (see <a href="#ton">Sound</a>).</p>
+
+<h2 id="entstoeren">Denoising</h2>
+<figure><img src="../../bilder/app-forensik/entstoerung_en.png" alt="The Denoising card: section Temporal mean with the check box Derive threshold from noise ticked, locked slider Motion threshold 33 and slider Window 3 frames, hints below; section Motion-compensated with check box, Window 5 frames and Search range."><figcaption>The Denoising card: the motion threshold of 33 is derived from the measured noise, so its slider is locked.</figcaption></figure>
+<p>The <b>Denoising</b> card has three sections.</p>
+<p><b>Temporal mean</b> (always in the chain unless the motion-compensated one is chosen): each pixel is averaged over <i>Window</i> consecutive frames (2 to 7, default 3) — but only where it changes by less than the <i>Motion threshold</i> (0 to 60 grey levels). Where it changes more, there is motion, and nothing is averaged. With <i>Derive threshold from noise</i> (on by default) the app measures the noise temporally on loading, as the difference of consecutive frames at the same spot, averaged over eight pairs of frames, and sets the threshold to thirteen times the spread; the slider is then locked and the message line says <i>Noise sigma … measured — motion threshold n.</i> Untick the box to set the threshold by hand; ticking it again measures anew at the spot shown.</p>
+<p><b>Motion-compensated</b>: with <i>instead of the temporal mean</i> the filter first finds where a patch of the picture has moved and averages along that motion, over its own <i>Window</i> (3 to 9 frames, default 5) and a <i>Search range</i> (2 to 24 pixels, default 12). It replaces the temporal mean, the two never run together; the motion threshold applies to both.</p>
+<p><b>Deblocking</b>: <i>apply as well</i> additionally smooths the block boundaries of the compression, with an adjustable <i>Strength</i> (0 to 100 %, default 50 %). Apply it only if the blockiness of the <a href="#messen">Measurement</a> justifies it.</p>
+<p>The filters run in a fixed order: deinterlacing, then the temporal or the motion-compensated mean, then deblocking, then deconvolution. Every control recomputes the spot shown immediately.</p>
+
+<h2 id="entschraenken">Deinterlacing and sharpening</h2>
+<p><b>Deinterlacing</b>: <i>Apply deinterlacing</i> combines the two fields of interlaced material, with a <i>Tolerance</i> (1 to 40 levels, default 8) and the field order <i>top field first</i> (on by default). Only for interlaced material; with progressive material it does harm. It is too slow for playback and a tool for the still frame.</p>
+<p><b>Sharpening</b>: <i>Apply deconvolution</i> removes an assumed blur. <i>Spread</i> is the width of the blur kernel in tenths of a pixel (2 to 40, default 10, i.e. 1.0 pixel), <i>Steps</i> the number of passes (1 to 12, default 4). Deconvolution amplifies noise; denoising and deconvolution should be judged separately.</p>
+
+<h2 id="farbe">Colour</h2>
+<figure><img src="../../bilder/app-forensik/farbe_en.png" alt="The Colour card: check box Show colour, slider Saturation 100 percent, button Measure colour cast here, check box Subtract colour cast, choice Colour upsampling with guided by luma, hints below."><figcaption>The Colour card.</figcaption></figure>
+<p>The filters work on the luma. What is shown is the treated luma with the untreated colour planes of the same frame. The <b>Colour</b> card only sets up the display and does not recompute the filter chain:</p>
+<ul>
+  <li><i>Show colour</i> (on): off, and the picture is grey.</li>
+  <li><i>Saturation</i> 0 to 400 %, default 100 %.</li>
+  <li><i>Measure colour cast here</i> averages Cb and Cr over the frame shown, keeps the distance from the zero point and subtracts it at once (grey-world assumption); the message line gives the values. The check box <i>Subtract colour cast</i> is then ticked and switches the subtraction of the kept value on and off. It is measured once, at a spot you choose — in a shot that really is dominated by one colour the calculation would drain the colour.</li>
+  <li><i>Colour upsampling</i>: <i>repeat</i>, <i>linear</i> or <i>guided by luma</i> (default). With 4:2:0 there is one colour value per four luma values; guided moves the colour edge onto the luma edge. During playback <i>linear</i> is used automatically instead of <i>guided</i>.</li>
+</ul>
+
+<h2 id="stapel">Stacking and Drizzle</h2>
+<figure><img src="../../bilder/app-forensik/stapel_en.png" alt="Side-by-side view after a stack at frame 0: on the left, labelled sharpest single frame, the noisy scene; on the right, labelled stack of 18 frames, the same scene calmer, the drifting clouds there with blurred edges; on the right the Stack card with its sliders; at the bottom the message Stack of 18 of 60 frames."><figcaption>Stack at frame 0, side by side: on the left the sharpest of the frames used, on the right the stack of the 18 sharpest. What moves — here the clouds — becomes soft in the stack.</figcaption></figure>
+<ol>
+  <li>Jump to the desired spot and open the <b>Stack</b> card.</li>
+  <li>Set <i>Frames to use</i> (10 to 150, default 60), <i>of which the sharpest</i> (10 to 100 %, default 30 %) and <i>Discard outliers from</i> (10 to 50 tenths of the spread, default 25).</li>
+  <li>Press <i>Compute stack at this spot</i>. The app decodes the frames from that spot in a run of its own in the background (<i>Stacking n frames from m …</i>), selects the sharpest, aligns them and stacks them.</li>
+  <li>The result takes the place of the treated side; on the left is the sharpest of the single frames used, and the labels say so. The message line gives how many frames went in, noise and sharpness before and after, and the share of discarded values.</li>
+</ol>
+<p>The stack stays until a filter control is moved or the spot is changed; then the ordinary chain computes again. A second stack starts only when the first is finished.</p>
+<p><b>Drizzle</b>: <i>Compute on a doubled grid</i> drops the pixels of the same frames used (number from <i>Frames to use</i>, at least three) as shrunken drops onto a grid twice as fine. <i>Drop size</i> 15 to 100 %, default 40 %. The result is twice as large as the recording and therefore does not appear in the view: it is written as a grey picture <code>drizzle_&lt;source&gt;_&lt;frame number&gt;.png</code> next to the source, without asking; the message line gives size, share of holes, contributions per cell, sharpness, noise and the file name.</p>
+
+<h2 id="messen">Measuring</h2>
+<p><i>Measure this spot</i> on the <b>Measurement</b> card measures the pair of pictures shown: for the original (<i>as recorded</i>) and the treatment, noise, sharpness and blockiness each, plus a <i>Verdict</i> that sets noise reduction against loss of sharpness, and a <i>Suggested threshold</i>. Above a blockiness of 1.6 a note on visible blocking follows. The verdict also appears in the message line. Only the pair of noise reduction and loss of sharpness allows a judgement: if sharpness drops about as much as noise, the filter has blurred.</p>
+
+<h2 id="belege">Saving evidence images</h2>
+<ol>
+  <li>Set up the desired view (on the <b>Compare</b> card).</li>
+  <li>Press <i>Save still frame…</i>. The file dialog suggests <code>&lt;source&gt;_&lt;frame number, six digits&gt;_&lt;view&gt;.png</code>, for example <code>scene01_000080_schieber.png</code>.</li>
+  <li>A PNG is saved at the full resolution of the recording, not of the window, corrected for the pixel aspect ratio, in the same view and colour as on screen and always with the labels, even if they are hidden on screen. With the slider, the dividing line in the evidence image is always in the middle.</li>
+</ol>
+<p>Below the picture is a <b>footer</b>: source, frame number, time position and view, underneath the treatment and the date and time. As treatment it gives the temporal or the motion-compensated mean with threshold and window, preceded by deinterlacing and followed by deblocking and deconvolution as far as they are active; after a stack it gives the stack instead, with number of frames, share and outlier limit. A wrongly labelled evidence image is worse than none.</p>
+
+<h2 id="ton">Sound</h2>
+<p>Sound is available for a <code>VIDEO_TS</code>: on loading the app looks for the sound tracks in the beginning of the recording, names them in the log and selects the first MPEG track. The loudspeaker button of the playback bar opens the <b>sound window</b>, a separate window beside the main window that can stay open:</p>
+<ul>
+  <li><b>Sound track</b>: choice of the track. MPEG-1 Layer II is decoded; AC-3, DTS and LPCM are detected and named but not played.</li>
+  <li><b>Level</b>: peak (bright line) and RMS value (bar) in dBFS, measured before the volume control; above −1 dBFS it turns red.</li>
+  <li><b>Mixer</b>: volume 0 to 200 %, balance, channels (stereo, mono, left only, right only, swap sides), mute, <i>Play sound along during playback</i>.</li>
+  <li><b>Sync</b>: picture and sound do not lie side by side in time in the program stream. <i>Take offset from the time stamps</i> corrects that from the time stamps of both streams; <i>Shift sound by hand</i> (−1000 to +1000 ms, positive means sound later) takes effect only with <i>Apply shift</i>.</li>
+  <li><b>Extract</b>: <i>Save as WAV…</i> asks how many seconds from the spot shown (default 30, at most 3600), suggests <code>ton_&lt;frame number&gt;.wav</code> and writes 16-bit PCM as the mixer outputs it.</li>
+</ul>
+
+<h2 id="protokoll">Log</h2>
+<p>The <b>Log</b> card lists the findings collected on loading: the header data of the picture stream, whether it is MPEG-1, rejected slices, concealed macroblocks, error markers in the stream, broken links between groups of pictures, user, display and copyright data, repeated fields (film material), for a <code>VIDEO_TS</code> the findings on the VOB and IFO files and the sound tracks found. A character in front of a line, such as <code>!</code>, marks what needs attention. If the recording has nothing to report, it says <i>No findings.</i></p>
+
+<h2 id="speichern">What is saved</h2>
+<p>When the workspace is saved, the app remembers, provided a recording is loaded: the path of the source, the frame number, the view, the difference gain, motion threshold and window of the temporal mean, deblocking (on/off, strength), deconvolution (on/off, spread, steps), deinterlacing (on/off, field order) and the concealment. At the next start it restores the values including the controls, loads the source if it still exists and jumps to the spot. Because the automatic threshold is on at that point, it measures the threshold anew on loading.</p>
+<p>Not saved are the settings of the Colour and Stack cards, of the motion-compensated mean, the tolerance of the deinterlacing, the switch of the automatic threshold and the sound settings. Evidence images, Drizzle pictures and WAV extracts are files of their own.</p>
+
+<h2 id="steckbrief">Command line</h2>
+<p class="einl">The tools run without a user interface, with the <code>bin</code> folders of the app and the framework modules on the class path; below this is written as <code>-cp bin</code>. Their output is in German.</p>
+<h3>Steckbrief: survey before restoration</h3>
+<pre><code>java -cp bin envisionz.apps.forensik.Steckbrief &lt;abbild.iso | verzeichnis | film.mpg&gt;
+     [--quelle VHS|S_VHS|VIDEO8|HI8|BETAMAX|DV|DIGITAL] [--plan]</code></pre>
+<p>The Steckbrief (profile) only reads and decodes nothing. It prints the findings grouped by area (general, disc, file system, DVD, container, video stream, sound) and finally counts traps, points to note and gaps in the tool. It then determines the source material as far as the data stream allows and names what is open and how it could be settled; <code>--quelle</code> fixes the kind. With <code>--plan</code> a proposed processing route follows, with settings per step, marked as necessary (<code>**</code>), recommended (<code>+</code>), optional (<code>o</code>) or only after a decision (<code>!</code>), and as reconstructing, estimating, generating or measuring; only the reconstructing steps deliver picture content that can serve as evidence.</p>
+<table>
+<tr><th>Input</th><th>What it examines</th></tr>
+<tr><td>image (<code>.iso</code>, <code>.img</code>, <code>.bin</code>, <code>.nrg</code>)</td><td>sector format, readability, UDF and ISO 9660 and whether both name the same number of files, the structure (DVD video, video CD, super video CD), the title-set IFO and the largest video file</td></tr>
+<tr><td>directory</td><td>every file with its size, for <code>VIDEO_TS</code> the title-set IFO files, plus the largest video file</td></tr>
+<tr><td>file</td><td>container, video stream and sound</td></tr>
+</table>
+<p>Of large files it reads the first 24 MB. Without an argument it prints the usage line. The return value is always 0; the result is in the output.</p>
+
+<h3>VideoRestore: measuring and evidence</h3>
+<pre><code>java -cp bin cmd.forensik.VideoRestore &lt;strom.m2v | datei.vob | VIDEO_TS&gt; [-o:&lt;verzeichnis&gt;]
+     [-bild:N[,N...]] [-alle:N] [-schwelle:N] [-fenster:N]
+     [-ansicht:ART] [-verstaerkung:N] [-verhaeltnis:X] [-messen]</code></pre>
+<p>Decodes the whole stream in one pass, sends it through the temporal mean and writes the requested frames as evidence images, like <i>Save still frame…</i> in the app, with a footer. A directory is read as <code>VIDEO_TS</code>, all VOB files of the first title set as one stream; a single file is read as a picture stream.</p>
+<table>
+<tr><th>Switch</th><th>Meaning</th><th>Default</th></tr>
+<tr><td><code>-o:</code></td><td>target directory of the evidence images; created when something is written</td><td><code>.</code></td></tr>
+<tr><td><code>-bild:</code></td><td>frame numbers, separated by commas</td><td>none</td></tr>
+<tr><td><code>-alle:</code></td><td>every N-th frame (frame number divisible by N)</td><td>none</td></tr>
+<tr><td><code>-schwelle:</code></td><td>motion threshold</td><td>12</td></tr>
+<tr><td><code>-fenster:</code></td><td>number of frames averaged</td><td>3</td></tr>
+<tr><td><code>-ansicht:</code></td><td><code>SCHIEBER</code> (slider), <code>NEBENEINANDER</code> (side by side), <code>ORIGINAL</code>, <code>BEHANDELT</code> (treated) or <code>UNTERSCHIED</code> (difference)</td><td><code>SCHIEBER</code></td></tr>
+<tr><td><code>-verstaerkung:</code></td><td>gain of the Difference view</td><td>8</td></tr>
+<tr><td><code>-verhaeltnis:</code></td><td>pixel aspect ratio, such as <code>1.067</code> for PAL 4:3</td><td>1.0</td></tr>
+<tr><td><code>-messen</code></td><td>measure only, write nothing</td><td>off</td></tr>
+</table>
+<p>Return value 0: read (and written); 1: source missing, not readable or yields no frame; 2: usage help or unknown switch. The output gives stream and header data, decoding and filtering time per frame, the files written, whether the chain is fast enough for playback (judged only from 50 frames on), the mean change per pixel and the number of evidence images. On the invented test material of this page:</p>
+<pre><code>$ java -cp bin cmd.forensik.VideoRestore scene01.m2v -o:belege -alle:40 -schwelle:20
+Strom       scene01.m2v
+Angaben     720x576, quadratische Bildpunkte, 25,000 Bilder/s, Datenrate unbegrenzt
+Dekodiert   100 Bilder in 2525 ms = 25.25 ms je Bild (1.6fache Echtzeit)
+Geschrieben belege/scene01_000000_schieber.png
+Geschrieben belege/scene01_000040_schieber.png
+Geschrieben belege/scene01_000080_schieber.png
+Gefiltert   100 Bilder in 661 ms = 6.61 ms je Bild
+Haushalt    40.00 ms je Bild bei 25.000 B/s → 31.86 ms gemessen, reicht für Wiedergabe (1.3fach)
+Wirkung     2.429 Stufen mittlere Änderung je Bildpunkt
+Standbilder 3</code></pre>
+
+<h3>Further tools</h3>
+<p>They take their arguments in order. <code>QUELLE</code> is a picture stream or a <code>VIDEO_TS</code> directory; return value 2 means usage help, 1 too few or no frames read.</p>
+<table>
+<tr><th>Call</th><th>Purpose</th></tr>
+<tr><td><code>java -cp bin cmd.forensik.Lupe QUELLE ZIEL BILDNR X Y BREITE HOEHE [ZOOM]</code></td><td>the same detail from every version, enlarged by an integer factor (default 3), pixels as squares</td></tr>
+<tr><td><code>java -cp bin cmd.forensik.Farbversatz QUELLE [AB-BILD] [BILDER]</code></td><td>measures whether the colour is offset against the luma (defaults 900 and 12)</td></tr>
+<tr><td><code>java -cp bin cmd.forensik.StapelBeleg QUELLE ZIEL BILDNR [BILDER] [ANTEIL]</code></td><td>labelled evidence image of a stack (defaults 60 and 0.3)</td></tr>
+<tr><td><code>java -cp bin cmd.forensik.DrizzleProbe QUELLE ZIEL BILDNR [BILDER] [TROPFEN]</code></td><td>Drizzle against an upscaled single frame (defaults 30 and 0.6)</td></tr>
+<tr><td><code>java -cp bin cmd.forensik.TonAuszug QUELLE ZIEL.wav [SEKUNDEN]</code></td><td>MPEG-1 Layer II sound track as WAV (default 20 seconds)</td></tr>
+</table>
+
+<h2 id="tasten">Keyboard and mouse</h2>
+<p><code>Alt</code>+<code>Z</code> opens the app, <code>F1</code> the documentation, like the help button. In the Slider view a click sets the dividing line and dragging with the mouse button held down moves it; the mouse pointer shows a double arrow there. The bar buttons take no keyboard focus. The app has no other shortcuts.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>For a <code>VIDEO_TS</code> only the first title set (<code>VTS_01</code>) is read; an ISO image has to be mounted first. The decoder is designed for MPEG-2; MPEG-1 is read but noted in the log.</li>
+  <li>The app knows the total length only from the IFO file; for a raw picture stream the position slider stays locked.</li>
+  <li>Deinterlacing and deconvolution are too slow for playback, stacking and Drizzle compute at one spot only.</li>
+  <li>The stack and the sharpest single frame are coloured with the colour planes of the frame shown; where something moves, the colours therefore do not match. For judging the stack the grey display (<i>Show colour</i> off) is the more honest one.</li>
+  <li>The findings in the log, the header data in the findings, the measured values and the channel choice in the sound window are worded by the framework modules; they appear in German in the English interface too.</li>
+  <li>The sound window and the question about the length of the WAV extract are separate windows, not cards.</li>
+</ul>
+
+<p>What the app can do and what it builds on is in the <a href="index.html">overview</a>.</p>
+
+<p class="quelle">Icons: Fugue Icons by Yusuke Kamiyamane, licence CC BY 3.0.</p>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewing HDF5 files and experiment catalogues – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag aktiv" href="index.html">app-hdf5reader</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#zweck">What the app is for</a>
+<a class="rubrik" href="index.html#funktionen">What it can do</a>
+<a class="unterseite aktiv" href="bedienung.html">How to use</a>
+<a class="rubrik" href="index.html#daten">Data and formats</a>
+<a class="rubrik" href="index.html#aufbau">What it builds on</a>
+<a class="rubrik" href="index.html#stand">Status and limits</a>
+</div>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">app-hdf5reader</a> › Viewing HDF5 files and experiment catalogues</span><a class="sprachwahl" href="../../de/app-hdf5reader/bedienung.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-app-hdf5reader · how to use</div>
+  <h1>Viewing HDF5 files and experiment catalogues</h1>
+  <p class="unter">User page, as of 7 October 2026. How to open an HDF5 file, move through its tree, look at the values, attributes and properties of a dataset and pass it on as a table; and how to reach a result file in the catalogue tab through stock, project and experiment, read its columns, values and model texts and save the values as CSV. The pictures are screenshots of the app with invented example files: a run-up with six series and a small map, plus a catalogue with one stock, two projects and three result files.</p>
+</header>
+
+<h2 id="fenster">The window</h2>
+<p class="einl">Open the app from the <i>Apps</i> menu with <i>Open HDF5 file…</i> or with <code>Alt</code>+<code>W</code>. It has two main tabs: <b>File</b> for a single HDF5 file and <b>Catalogue</b> for result files stored in a fixed folder order. Both only read; there is no button that changes an HDF5 file.</p>
+<figure><img src="../../bilder/app-hdf5reader/fenster_en.png" alt="The File tab: at the top the main tabs File and Catalogue, below them the toolbar with five icons; top left the working directory data with three files, demo.h5 selected; bottom left the tree with the groups map and run_01 and the six datasets of run_01, p2 selected; on the right the tabs Values, Attributes and Properties with the value column p2; below it the line 600 rows, 1 columns; at the very bottom the status line with the path /run_01/p2."><figcaption>Layout: (1) main tabs File and Catalogue, (2) toolbar, (3) working directory and its files, (4) tree of the open file, (5) tabs Values, Attributes and Properties of the selected node, (6) line below the value table, (7) status line.</figcaption></figure>
+<p>Top left is the list of the working directory, below it the tree of the open file; on the right the three tabs for the selected node. Both dividers can be moved. After opening, the status line gives the file name, the number of datasets and the note <i>read-only</i>; after that the path of the selected node or the latest message.</p>
+
+<h2 id="leiste">The toolbar</h2>
+<p class="einl">The buttons carry icons only; what they do is in the tooltip. <i>Load as table</i> is active only once a node is selected in the tree, <i>Save as CSV</i> only after a table has been loaded.</p>
+<table>
+<tr><th>Icon</th><th>Tooltip</th><th>What happens</th></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/folder-open.png" alt="folder"></td><td>Open an HDF5 file for viewing (read-only)</td><td>File chooser for <code>*.h5</code>, <code>*.hdf5</code>, <code>*.he5</code> and <code>*.hdf</code>; the chosen file replaces the open one.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/cross-button.png" alt="red cross"></td><td>Close the file and clear the tree</td><td>Closes the file; tree and tabs become empty.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/blue-folder-open-table.png" alt="folder with table"></td><td>Provide the selected dataset or group as a table — for statistics, units and export</td><td>Turns the selected node into a table and provides it to the charts app (see <a href="#tabelle">Passing on as a table</a>).</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/blue-document-excel-csv.png" alt="CSV document"></td><td>Write the displayed table to a CSV file</td><td>Writes the most recently loaded table to a file.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/question-frame.png" alt="question mark"></td><td>Help: opens the docs for this app (like F1)</td><td>Opens this page in the docs app, like <code>F1</code>. Without the docs app the status line gives the address of the online docs.</td></tr>
+</table>
+
+<h2 id="oeffnen">Opening a file</h2>
+<p>There are two ways. The folder button in the toolbar opens a single file through the file chooser. For many files in one folder the <b>working directory</b> is more convenient:</p>
+<ol>
+  <li>Press the button <img src="../../bilder/app-hdf5reader/folder-horizontal-open.png" alt="folder"> at the top left (<i>Choose a working directory</i>) and choose a directory.</li>
+  <li>The list below shows all files with the extension <code>.hdf</code>, <code>.h5</code> or <code>.hdf5</code> in that directory, sorted by name. Subdirectories are not searched. Next to the button are the name of the directory and the number of files, the full path in the tooltip.</li>
+  <li>A click on a name opens the file.</li>
+</ol>
+<p>Opening reads only what is needed: the tree fetches the children of a group only when it is expanded. A large file therefore opens as fast as a small one. If the file is an <b>HDF4</b> file (the extension <code>.hdf</code> is used for both formats), the status line says so and a notice window explains it; the tree stays empty. If a file cannot be read, an error window gives the reason.</p>
+
+<h2 id="baum">The tree</h2>
+<p>The root is called <code>/</code>. Groups carry a folder icon, datasets a document icon and their shape after the name, for example <i>p2 (600)</i> for 600 values or <i>eta_map (24 × 40)</i> for a two-dimensional array. A click on a group shows its attributes and properties, a click on a dataset its values as well.</p>
+
+<h2 id="werte">Values</h2>
+<p>The <b>Values</b> tab shows the selected dataset as a table:</p>
+<table>
+<tr><th>Dataset</th><th>Display</th></tr>
+<tr><td>one-dimensional</td><td>one column named after the dataset</td></tr>
+<tr><td>multi-dimensional</td><td>index columns <code>i</code>, <code>j</code>, <code>k</code> … and one value column; the last index runs fastest (the HDF5 order)</td></tr>
+<tr><td>compound type</td><td>one column per member</td></tr>
+<tr><td>strings</td><td>one column; fixed and variable length</td></tr>
+</table>
+<p>Numbers are read page by page, 4096 rows at a time, namely the page containing the visible rows. The line below the table gives rows and columns. Text and compound types are read completely, at most 200,000 rows; if the dataset is longer, the line says which part is shown.</p>
+
+<h2 id="attribute">Attributes and properties</h2>
+<figure><img src="../../bilder/app-hdf5reader/attribute_en.png" alt="Attributes tab for the group run_01: table with the columns Attribute, Type and Value; date with string(var) and 2026-10-07, comment with string(var) and invented values."><figcaption>The attributes of the group <i>run_01</i>.</figcaption></figure>
+<p>The <b>Attributes</b> tab lists every attribute of the selected node with <i>Attribute</i>, <i>Type</i> (for example <code>float64</code>, <code>int32</code>, <code>string(var)</code>, with several values followed by the count in square brackets) and <i>Value</i>.</p>
+<figure><img src="../../bilder/app-hdf5reader/eigenschaften_en.png" alt="Properties tab for the dataset map/eta_map: Path, File demo.h5, Superblock v0, Kind Dataset, Datatype float32, Shape (24 × 40), Values 960, Storage in file 2791 B, Chunk shape (12 × 20), Filter chain shuffle and deflate, Compression ratio 1.38, extensible yes, Maximum shape (∞ × 40)."><figcaption>The properties of a chunked, compressed, extensible array.</figcaption></figure>
+<p>The <b>Properties</b> tab gives for every node <i>Path</i>, <i>File</i>, the <i>Superblock</i> version and, if the file carries it, the modification time. For a group the number of its <i>Children</i> follows, for a dataset:</p>
+<ul>
+  <li><i>Datatype</i>, <i>Shape</i> and the number of <i>Values</i>;</li>
+  <li><i>Storage in file</i> in bytes and the <i>Chunk shape</i> (a dash for contiguous storage);</li>
+  <li>the <i>Filter chain</i> in the order in which it was applied, and the <i>Compression ratio</i>;</li>
+  <li>whether the dataset is <i>extensible</i> and, if so, its <i>Maximum shape</i>; ∞ stands for unlimited.</li>
+</ul>
+
+<h2 id="tabelle">Passing on as a table</h2>
+<ol>
+  <li>Select a dataset or a group in the tree.</li>
+  <li>Press <b>Load as table</b>. A dataset becomes a table as in the Values tab. A group has its one-dimensional series placed side by side; if they differ in length, the length that occurs most often applies and the other series are left out rather than padded or cut. The unit from the attribute <code>unit</code> or <code>UNITS</code> is carried over.</li>
+  <li>The table is then available to the charts app (see <a href="../app-charts/index.html">Charts</a>); the status line gives source, rows and columns.</li>
+  <li>If you need the table as a file, press <b>Save as CSV</b> and choose a file name. It is written as UTF-8 with semicolon as separator, a header row with the column names and decimal point.</li>
+</ol>
+<p>A table holds each value as text and thus needs about thirteen times the memory of the numbers. Hence a limit of 200,000 cells applies: above it a window says that the dataset is too large for the table form.</p>
+
+<h2 id="katalog">The catalogue tab</h2>
+<p class="einl">The <b>Catalogue</b> tab opens up result files stored in a fixed order: a <b>stock</b> contains projects, a <b>project</b> experiments, an <b>experiment</b> the result files. The entry point is a catalogue file with the extension <code>.dbs</code> that names the stocks.</p>
+<figure><img src="../../bilder/app-hdf5reader/katalog_en.png" alt="The Catalogue tab: at the top the toolbar with five icons; below it the selection Stock DEMO, Project P-100, Experiment T-01, each with a load button, and the reset; on the left the file list with Run 1, Run 2 and c_003.hdf as unreadable; on the right the tabs Columns, Values, Model texts, Header and Diagnosis, Columns selected with six rows; at the bottom the status line c_001.hdf: 6 column(s), 480 row(s), 4 model section(s)."><figcaption>Layout: (1) toolbar, (2) selection of stock, project and experiment with the load buttons, (3) files of the experiment, (4) content tabs, (5) content of the selected file, (6) status line.</figcaption></figure>
+<table>
+<tr><th>Icon</th><th>Tooltip</th><th>What happens</th></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/folder-open.png" alt="folder"></td><td>Open a catalogue file (.dbs) and read its stocks</td><td>Reads the catalogue file and selects the first stock, its first project and that project's first experiment.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/arrow-repeat.png" alt="arrows in a circle"></td><td>Read the catalogue file again</td><td>Reads the same catalogue file once more, for example after something has been added on disk.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/blue-folder-open-table.png" alt="folder with table"></td><td>Open the selected container file as an HDF5 tree in the "File" tab</td><td>Opens the selected file in the File tab and switches there.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/document-code.png" alt="document with code"></td><td>Inspect the selected file byte by byte — the hex viewer must be open</td><td>Hands the file to the hex viewer of <a href="../app-fileanalysis/index.html">file analysis</a>; that must be open, otherwise the status line says so.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/question-frame.png" alt="question mark"></td><td>Help: opens the docs for this app (like F1)</td><td>Opens this page in the docs app.</td></tr>
+</table>
+
+<h3>How a catalogue is built</h3>
+<p>The catalogue file is a text file with one line per stock; the fields are separated by commas, lines starting with <code>#</code> and empty lines do not count. The first field is the name of the stock. The stock's directory is the first field that points to an existing directory, preferably one with a subdirectory <code>Projects</code>; otherwise the second field. Below it the app expects:</p>
+<pre><code>&lt;stock&gt;/Projects/&lt;project&gt;/experiments/&lt;experiment&gt;/dtfs/*.hdf</code></pre>
+<p>Every directory under <code>Projects</code> is a project, every one under <code>experiments</code> an experiment. A property file <code>db.attrs</code> (or another <code>*.attrs</code>, <code>*.attr</code>) in it is not required; if it contains <code>name=…</code>, that is the displayed name, otherwise the name is formed from the directory name. An experiment without a <code>dtfs</code> folder still appears, marked <i>(no files)</i>. Result files are <code>*.hdf</code> and <code>*.hdf5</code>.</p>
+
+<h3>Down to a file</h3>
+<ol>
+  <li>Press <b>Open catalogue</b> and choose the <code>.dbs</code>. The app selects the first stock, its first project and that project's first experiment and fills the file list.</li>
+  <li>If needed, choose something else in <i>Stock:</i>, <i>Project:</i> and <i>Experiment:</i>; every choice refills the fields below it.</li>
+  <li>The file list shows <i>Name</i>, <i>Created</i> and <i>Version</i> for each file, sorted by file name. Only the header of each file is read for this, not its content; a folder with hundreds of files thus stays usable. The name is the one stored in the file's header, otherwise the file name. A file that cannot be read stays in the list and is marked <i>unreadable</i>; selecting it makes the status line give the reason.</li>
+  <li>Click a file. Its content is read in the background; afterwards the status line gives columns, rows and model sections.</li>
+</ol>
+
+<h3>The content tabs</h3>
+<table>
+<tr><th>Tab</th><th>Content</th></tr>
+<tr><td>Columns</td><td>per column <i>Column</i>, <i>Unit</i>, number of <i>Values</i>, <i>Minimum</i> and <i>Maximum</i> finite value. The column names come from the name directory in the header area of the file.</td></tr>
+<tr><td>Values</td><td>the values as a matrix, one column per data column, at most 5000 rows; if the file has more, the status line says so. Columns of unequal length end in empty cells.</td></tr>
+<tr><td>Model texts</td><td>the model files stored with the result: on the left the sections with kind, file name and number of lines, on the right the text of the selected section.</td></tr>
+<tr><td>Header</td><td>all attributes of the header area, sorted by name.</td></tr>
+<tr><td>Diagnosis</td><td>for the selected stock: every field of its catalogue line with a verdict, which directory is used, and the projects with the state of their property files. The text is computed only when the tab is in front. Whatever the reader skipped in a file is appended here.</td></tr>
+</table>
+<figure><img src="../../bilder/app-hdf5reader/modelltexte_en.png" alt="Model texts tab: on the left four sections, Controls model controller.mdl with three lines, Model example.mdl, Case set cases.cs and Names list names.nl; on the right the text of the first section with Kp, Ki and set point n1."><figcaption>The model texts stored with a result file.</figcaption></figure>
+<p>The column width in <i>Values</i> is fixed at 80 pixels; the table scrolls horizontally, and the full column name is in the tooltip of the column header. Columns can be made wider but not moved.</p>
+
+<h3 id="csv">Saving values as CSV</h3>
+<figure><img src="../../bilder/app-hdf5reader/werte_en.png" alt="Values tab: to the left of the table the card CSV output with separator semicolon, comma, tab or pipe, decimal mark point or comma, the boxes Header row with column names, Append unit to the names and All rows instead of the shown ones, at the bottom the button Save…; on the right the value table with columns 80 pixels wide."><figcaption>The card <i>CSV output</i> next to the value table.</figcaption></figure>
+<p>Next to the value table is the card <b>CSV output</b>, opened through the icon in the narrow bar on the left edge. It stays visible while you look at the table:</p>
+<ul>
+  <li><i>Separator</i>: semicolon, comma, tab or pipe.</li>
+  <li><i>Decimal mark</i>: point or comma. For a German spreadsheet choose semicolon <em>and</em> comma. Comma as both separator and decimal mark is rejected, because the file could no longer be split.</li>
+  <li><i>Header row with column names</i>, and with <i>Append unit to the names</i> in the form <code>p2 [Pa]</code>.</li>
+  <li><i>All rows instead of the shown ones</i>: unticked the first 5000 rows, ticked all of them.</li>
+</ul>
+<p><b>Save…</b> suggests the name of the result file with the extension <code>.csv</code> and appends the extension if it is missing. The file is written as UTF-8; columns of unequal length get empty cells and are not shortened. The status line gives file, rows and columns.</p>
+
+<h3 id="ebenen">Loading one level on its own</h3>
+<p>Sometimes there is no catalogue file at hand, or you only want to look at one project or experiment. For this there is a load button next to each selection field, plus a reset button. Their tooltips say in detail what they do; here is their short name:</p>
+<table>
+<tr><th>Icon</th><th>Button</th><th>What happens</th></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/database-import.png" alt="database with arrow"></td><td>Load stocks</td><td>Choose a <code>.dbs</code>; only the stocks are read, the project and experiment fields stay empty.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/folder-open.png" alt="folder"></td><td>Load projects</td><td>Choose a directory or a property file in it: a collection directory <code>Projects</code> (or one containing it) brings all projects from it, a single project directory exactly that one.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/flask.png" alt="flask"></td><td>Load experiments</td><td>Likewise for experiments: a collection directory <code>experiments</code> or a single experiment directory.</td></tr>
+<tr><td><img src="../../bilder/app-hdf5reader/arrow-circle-double-135.png" alt="two arrows in a circle"></td><td>Reset</td><td>Clears all fields, the file list and the content tabs and releases all load buttons again. Always available.</td></tr>
+</table>
+<figure><img src="../../bilder/app-hdf5reader/ebene_en.png" alt="Catalogue tab after loading the project level: stock and experiment fields empty, their load buttons grey; P-100 in the project field; in the Diagnosis tab name, location, file and the three keys of the property file; the status line reports that the level was loaded on its own."><figcaption>The project level loaded on its own: the project shows its properties.</figcaption></figure>
+<p>Loading one level on its own locks the load buttons of the other two; its own stays available for reading the same level again. As long as a level is loaded on its own, a choice in the selection field does not fill the level below. Instead a selected project shows its properties (location, property file, every key) in the <i>Diagnosis</i> tab; a selected experiment fills the file list and shows its properties likewise. <b>Reset</b> lifts the lock.</p>
+
+<h2 id="speichern">What is saved</h2>
+<p>When the workspace is saved, the app remembers the path of the file open in the File tab and opens it again at the next start, provided it is still readable; otherwise the tab stays empty, without an error window. Working directory, catalogue, selection and the settings of the CSV card are not saved. The app writes only the CSV files you save explicitly.</p>
+
+<h2 id="tasten">Keyboard and mouse</h2>
+<p><code>Alt</code>+<code>W</code> opens the app, <code>F1</code> this page. In the tree the arrow keys and a mouse click select; the right and left arrow keys and a double click expand and collapse a group. In the lists and tables the arrow keys and a mouse click select; column borders can be dragged with the mouse. The app has no other shortcuts.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>The app only reads. HDF4 files are recognised but not shown; it does not open netCDF files.</li>
+  <li>The catalogue's value table shows at most 5000 rows; the CSV card can write all of them.</li>
+  <li>Passing on as a table works up to 200,000 cells; the interface has no way to hand datasets directly to the charts as number arrays.</li>
+  <li>The working directory is not searched recursively.</li>
+  <li>The text in the <i>Diagnosis</i> tab for a stock is in German only and gives the full path of the stock.</li>
+  <li>Only <code>*.hdf</code> and <code>*.hdf5</code> count as result files in the catalogue, not <code>*.h5</code>.</li>
+</ul>
+
+<p>What the app can do and what it builds on is in the <a href="index.html">overview</a>; the HDF5 reader itself in <a href="../fileformats/index.html">fileformats</a>.</p>
+
+<p class="quelle">Icons: Fugue Icons by Yusuke Kamiyamane, licence CC BY 3.0.</p>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>
