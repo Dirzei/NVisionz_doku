@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ein eigener Übersetzer von OpenCL C nach SPIR-V – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze</a>
+<a class="rubrik" href="index.html#weg">Der Weg: FFM statt Bindungsbibliothek</a>
+<a class="unterseite" href="weg.html">Der Weg zur Karte</a>
+<a class="rubrik" href="index.html#bitgleich">Bitgleich zur CPU</a>
+<a class="unterseite" href="bitgleich.html">Bitgleich zur CPU</a>
+<a class="rubrik" href="index.html#uebersetzer">Der Übersetzer OpenCL C → SPIR-V</a>
+<a class="unterseite aktiv" href="uebersetzer.html">Übersetzer OpenCL C → SPIR-V</a>
+<a class="rubrik" href="index.html#cfd">Der ganze CFD-Schritt auf der Karte</a>
+<a class="unterseite" href="cfdschritt.html">Der CFD-Schritt auf der Karte</a>
+<a class="rubrik" href="index.html#starten">Kerne starten und warten</a>
+<a class="unterseite" href="starten.html">Kerne starten und warten</a>
+<a class="rubrik" href="index.html#neuerkern">Einen eigenen Kern schreiben</a>
+<a class="unterseite" href="anleitung.html">Einen Kern schreiben</a>
+<a class="rubrik" href="index.html#module">Die Module</a>
+</div>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-opencl/vulkan</a> › Ein eigener Übersetzer von OpenCL C nach SPIR-V</span><a class="sprachwahl" href="../../en/gpu/uebersetzer.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-vulkan · envisionz.vulkan.clc · envisionz.vulkan.spirv</div>
+  <h1>Ein eigener Übersetzer von OpenCL C nach SPIR-V</h1>
+  <p class="unter">Warum Vulkan-Kerne im Framework aus demselben OpenCL-C-Text entstehen wie die OpenCL-Kerne, wie der Übersetzer
+  aufgebaut ist (Präprozessor, Zerleger, Syntaxbaum, Erzeuger), wie ein SPIR-V-Modul aussieht, und wie die drei schwierigen Stellen
+  gelöst sind: strukturierter Kontrollfluss, Kurzschlussoperatoren und Puffer als Argumente von Hilfsfunktionen – mit Pseudocode nach
+  dem Quelltext.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Ein OpenCL-Treiber übersetzt Kernquelltext selbst. Ein Vulkan-Treiber nimmt nur <b>SPIR-V</b>: eine Zwischensprache aus 32-Bit-Wörtern,
+in der jeder Wert eine Nummer hat, jede Rechnung eine Anweisung ist und jede Verzweigung einen ausdrücklichen Zusammenführungspunkt
+nennt. Die üblichen Wege dorthin sind fremde Übersetzer – glslang für GLSL, clspv für OpenCL C – mit eigenem Bau, eigenen Fassungen und
+eigenem nativen Code.</p>
+<p>Das Framework geht einen anderen Weg. Die Kerne des CFD-Schritts sind schon in OpenCL C geschrieben und gegen die CPU bitgleich
+geprüft. Ein zweiter Satz in einer anderen Sprache wäre eine zweite Stelle, an der sich Fehler einschleichen, und eine, die bei jeder
+Berichtigung mitgezogen werden muss. Also übersetzt das Framework die <b>Teilmenge von OpenCL C, die seine Kerne benutzen</b>, selbst nach
+SPIR-V. Was außerhalb liegt, wird mit Zeilennummer abgewiesen statt halb übersetzt. Rund 1 900 Zeilen Java, ohne Abhängigkeit.</p>
+
+<figure>
+<svg viewBox="0 0 640 210" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker></defs>
+  <rect x="10" y="30" width="100" height="56" rx="6" fill="#fff7e6" stroke="#9a6400"/><text x="60" y="54" text-anchor="middle" fill="#9a6400">OpenCL C</text><text x="60" y="72" text-anchor="middle" fill="#9a6400" font-size="11">ein Text</text>
+  <rect x="135" y="30" width="100" height="56" rx="6" fill="#e8f0f6" stroke="#1f5f8b"/><text x="185" y="54" text-anchor="middle" fill="#1f5f8b">Präprozessor</text><text x="185" y="72" text-anchor="middle" fill="#1f5f8b" font-size="11">Makros, Zeilen</text>
+  <rect x="260" y="30" width="100" height="56" rx="6" fill="#e8f0f6" stroke="#1f5f8b"/><text x="310" y="54" text-anchor="middle" fill="#1f5f8b">Zerleger</text><text x="310" y="72" text-anchor="middle" fill="#1f5f8b" font-size="11">Wörter, Zahlen</text>
+  <rect x="385" y="30" width="100" height="56" rx="6" fill="#e8f0f6" stroke="#1f5f8b"/><text x="435" y="54" text-anchor="middle" fill="#1f5f8b">Syntaxbaum</text><text x="435" y="72" text-anchor="middle" fill="#1f5f8b" font-size="11">Records</text>
+  <rect x="510" y="30" width="120" height="56" rx="6" fill="#e8f0f6" stroke="#1f5f8b"/><text x="570" y="54" text-anchor="middle" fill="#1f5f8b">Erzeuger</text><text x="570" y="72" text-anchor="middle" fill="#1f5f8b" font-size="11">je Kern ein Modul</text>
+  <rect x="510" y="130" width="120" height="56" rx="6" fill="#1f5f8b"/><text x="570" y="154" text-anchor="middle" fill="#ffffff">SPIR-V-Wörter</text><text x="570" y="172" text-anchor="middle" fill="#ffffff" font-size="11">+ Parameter</text>
+  <rect x="135" y="130" width="350" height="56" rx="6" fill="#ffffff" stroke="#c9d1dc"/>
+  <text x="310" y="152" text-anchor="middle" fill="#5b6475">Fehler mit Zeile: Rekursion, float, Strukturen, #if,</text>
+  <text x="310" y="170" text-anchor="middle" fill="#5b6475">unbekannte Funktion, Zeiger auf Zeiger …</text>
+  <g stroke="#5b6475" stroke-width="1.3" fill="none" marker-end="url(#pu)">
+    <line x1="110" y1="58" x2="133" y2="58"/><line x1="235" y1="58" x2="258" y2="58"/><line x1="360" y1="58" x2="383" y2="58"/><line x1="485" y1="58" x2="508" y2="58"/>
+    <line x1="570" y1="86" x2="570" y2="128"/>
+  </g>
+  <g stroke="#c9d1dc" stroke-width="1" stroke-dasharray="4,3" fill="none"><line x1="185" y1="86" x2="220" y2="128"/><line x1="310" y1="86" x2="310" y2="128"/><line x1="435" y1="86" x2="400" y2="128"/><line x1="530" y1="86" x2="470" y2="128"/></g>
+</svg>
+<figcaption>Vier Stufen; jede kann mit einer Zeilennummer abweisen. Heraus kommt je <code>__kernel</code> eine <code>Kernbau.Beschreibung</code>: SPIR-V-Wörter, Arbeitsgruppe, Parameter und Größe des Push-Blocks – dieselbe Form, die der Java-Baukasten <code>Kernbau</code> liefert.</figcaption>
+</figure>
+
+<h2 id="umfang">Sprachumfang</h2>
+<table>
+  <tr><th>Bereich</th><th>übersetzt</th><th>abgewiesen</th></tr>
+  <tr><td>Präprozessor</td><td><code>#define</code> mit und ohne Parameter, <code>#undef</code>, <code>#pragma</code> (überlesen)</td><td><code>#if</code>, <code>#include</code></td></tr>
+  <tr><td>Typen</td><td><code>int</code>, <code>double</code>, <code>bool</code>, <code>void</code>; Felder fester Größe (privat oder <code>__local</code>)</td><td><code>float</code>, Strukturen, Zeiger auf Zeiger, mehrdimensionale Felder</td></tr>
+  <tr><td>Kernparameter</td><td><code>__global [const] double*</code>/<code>int*</code> (Puffer), <code>[const] int</code>/<code>double</code> (Zahlen)</td><td>Bilder, Abtaster</td></tr>
+  <tr><td>Anweisungen</td><td>if/else, for, while, do, break, continue, return, Blöcke</td><td>switch, goto, Kommaoperator</td></tr>
+  <tr><td>Ausdrücke</td><td>Arithmetik, Vergleiche, Bitoperationen, <code>&amp;&amp;</code>, <code>||</code>, <code>?:</code>, Zuweisungen mit Rechnung, ++/--, Umwandlung</td><td>Zeichenketten</td></tr>
+  <tr><td>Eingebaut</td><td><code>get_global_id</code>, <code>get_local_id</code>, <code>get_group_id</code>, <code>get_local_size</code>, <code>barrier</code>, <code>sqrt</code>, <code>fabs</code>, <code>fmin</code>, <code>fmax</code>, <code>isnan</code>, <code>isinf</code>, <code>signbit</code>, <code>min</code>/<code>max</code> (int), <code>atomic_min/max/add</code>, <code>DBL_MAX</code>, <code>INT_MAX</code>, <code>M_PI</code></td><td>alles andere (etwa <code>cbrt</code>, <code>exp</code>)</td></tr>
+  <tr><td>Funktionen</td><td>Hilfsfunktionen mit Wert- und Zeigerparametern</td><td>Rekursion, Vorausdeklaration</td></tr>
+</table>
+
+<h2 id="modul">Wie ein SPIR-V-Modul aussieht</h2>
+<p>Ein Modul ist eine Folge von 32-Bit-Wörtern: fünf Wörter Kopf (die magische Zahl <code>0x07230203</code>, die Fassung 1.3 für
+Vulkan 1.1, der Erzeuger, die höchste vergebene Nummer plus eins, null), dann Anweisungen. Jede Anweisung beginnt mit einem Wort, das
+Länge und Befehlsnummer trägt. Die Reihenfolge der Abschnitte ist vorgeschrieben:</p>
+<pre class="pseudo">OpCapability Shader, Float64                    <i>was das Modul braucht</i>
+OpExtInstImport "GLSL.std.450"                  <i>Wurzel, Betrag, NMin, NMax</i>
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %kern "axpy" %gid …      <i>Einstieg: Name wie im Quelltext</i>
+OpExecutionMode %kern LocalSize 64 1 1          <i>die Arbeitsgruppe</i>
+OpName …                                        <i>Namen für Fehlermeldungen des Treibers</i>
+OpDecorate …                                    <i>Bindungen, Versätze, Builtins, NoContraction</i>
+Typen, Konstanten, globale Variablen            <i>Puffer, Push-Block, __local-Felder</i>
+OpFunction … OpFunctionEnd                      <i>Hilfsfunktionen und der Kern</i></pre>
+<p>Der Erzeuger sammelt die Abschnitte in getrennten Listen und fügt sie am Ende in dieser Reihenfolge zusammen. Typen und Konstanten
+werden zwischengespeichert, damit jeder genau einmal erklärt ist – SPIR-V verlangt das für Typen.</p>
+
+<h2 id="parameter">Parameter: Puffer als Bindungen, Zahlen im Push-Block</h2>
+<p>In OpenCL C sind Puffer Zeiger. In SPIR-V für Vulkan gibt es keine Zeiger, die von außen kommen; ein Puffer ist eine globale Variable
+in der Speicherklasse <code>StorageBuffer</code>, ein Block mit einem Feld unbestimmter Länge, dekoriert mit Satz 0 und einer Bindung.
+Zahlen liegen in einem gemeinsamen Push-Block mit Versätzen nach std430: <code>int</code> auf 4, <code>double</code> auf 8 Byte
+ausgerichtet.</p>
+<pre class="pseudo"><b>für jeden</b> Parameter p des Kerns, in Reihenfolge:
+    <b>wenn</b> p ist Puffer:
+        typ ← Block { Feld[] von double bzw. int }     <i>ArrayStride 8 bzw. 4</i>
+        v ← globale Variable StorageBuffer;  DescriptorSet 0, Binding = nächste Nummer
+        <b>wenn</b> p const:  NonWritable
+    <b>sonst</b>:
+        versatz ← aufrunden(pushGröße, Größe(p.typ));  pushGröße ← versatz + Größe(p.typ)
+        Mitglied im Push-Block an versatz
+<i>im Kern: jede Zahl einmal aus dem Push-Block laden und in eine eigene Variable legen –</i>
+<i>so darf der Kern sie wie in C verändern</i></pre>
+<p>Der Puffer an Bindung <i>k</i> und die Zahl an Versatz <i>v</i> sind genau das, was <code>Kern.arg(i, …)</code> auf der Java-Seite
+befüllt. Die Reihenfolge der Kernparameter bleibt dieselbe wie unter OpenCL, sodass derselbe Aufrufcode beide Rückenden bedienen kann.</p>
+
+<h2 id="kontrollfluss">Strukturierter Kontrollfluss</h2>
+<p>SPIR-V für Vulkan verlangt <i>strukturierte</i> Verzweigungen: vor jeder bedingten Verzweigung steht, wo die Wege wieder
+zusammenlaufen (<code>OpSelectionMerge</code>), und jede Schleife nennt im Kopf ihren Ausgang und ihren Fortsetzungsblock
+(<code>OpLoopMerge</code>). <code>break</code> springt zum Ausgang, <code>continue</code> zur Fortsetzung. Der Erzeuger bildet die
+C-Anweisungen genau darauf ab.</p>
+<h3>Pseudocode – <code>if</code> und Schleifen (nach <code>Erzeuger.anweisung</code>, <code>Erzeuger.schleife</code>)</h3>
+<pre class="pseudo">wenn(bed, dann, sonst):
+    c ← ausdruck(bed)
+    merge, bDann, bSonst ← neue Blöcke   (<b>ohne</b> sonst: bSonst = merge)
+    OpSelectionMerge merge;  OpBranchConditional c, bDann, bSonst
+    Block bDann:   anweisung(dann);   <b>wenn</b> nicht beendet: springe merge
+    Block bSonst:  anweisung(sonst);  <b>wenn</b> nicht beendet: springe merge
+    Block merge
+
+schleife(init; bed; schritt) rumpf:
+    anweisung(init)
+    kopf, prüfung, körper, weiter, aus ← neue Blöcke
+    springe kopf
+    Block kopf:     OpLoopMerge aus, weiter;  springe prüfung
+    Block prüfung:  c ← ausdruck(bed);  OpBranchConditional c, körper, aus
+    Block körper:   (break → aus, continue → weiter)  anweisung(rumpf);  springe weiter
+    Block weiter:   ausdruck(schritt);  springe kopf
+    Block aus
+<i>do … while: der Kopf springt gleich in den Körper, geprüft wird im Fortsetzungsblock</i></pre>
+<p>Code hinter <code>return</code>, <code>break</code> oder <code>continue</code> im selben Block ist tot und wird nicht erzeugt –
+SPIR-V erlaubt nach einer Sprunganweisung keine weitere im Block.</p>
+
+<h2 id="kurzschluss">Kurzschluss: <code>&amp;&amp;</code>, <code>||</code> und <code>?:</code></h2>
+<p>In C wertet <code>a &amp;&amp; b</code> den rechten Teil nur aus, wenn der linke wahr ist. Das ist nicht nur Geschwindigkeit, sondern
+oft Bedingung: <code>i &lt; n &amp;&amp; x[i] &gt; 0</code> liest <code>x[i]</code> nur innerhalb des Puffers. Eine einfache Übersetzung
+in <code>OpLogicalAnd</code> würde beide Seiten rechnen. Der Erzeuger verzweigt deshalb wirklich und führt das Ergebnis mit
+<code>OpPhi</code> zusammen, das je nach Herkunftsblock einen Wert wählt:</p>
+<pre class="pseudo">und(a, b):
+    ca ← ausdruck(a);  vonA ← aktueller Block
+    rechts, merge ← neue Blöcke
+    OpSelectionMerge merge
+    OpBranchConditional ca, rechts, merge          <i>falsch: rechts gar nicht rechnen</i>
+    Block rechts:  cb ← ausdruck(b);  vonB ← aktueller Block;  springe merge
+    Block merge:   r ← OpPhi(false aus vonA, cb aus vonB)
+    <b>gib zurück</b> r
+<i>oder(a, b): ebenso, nur verzweigt wahr direkt zu merge und der Phi-Wert von dort ist true</i></pre>
+<p>Wichtig ist <code>vonB</code>: der rechte Teil kann selbst verzweigen, und dann ist der Block, aus dem es zu <code>merge</code> geht,
+nicht mehr <code>rechts</code>. Eine Gegenprobe vertauscht die Herkunftsblöcke im <code>OpPhi</code> und muss rot werden.</p>
+
+<h2 id="funktionen">Hilfsfunktionen und Puffer als Argumente</h2>
+<p>Die CFD-Kerne rufen Hilfsfunktionen, die Zeiger nehmen: einen Zustand aus einem Puffer lesen, einen Geist in ein privates Feld
+schreiben, einen Fluss rechnen. In SPIR-V hat ein Zeiger eine Speicherklasse als Teil seines Typs; eine Funktion mit
+„Zeiger auf double“ müsste wissen, ob er auf ein privates Feld, ein <code>__local</code>-Feld oder einen Puffer zeigt. Zeiger auf
+Puffer als Funktionsargument verlangen zudem die Fähigkeit <code>VariablePointers</code>, die nicht jedes Gerät hat.</p>
+<p>Der Erzeuger löst beides durch <b>Spezialisierung</b>: für jede Form, in der eine Hilfsfunktion gerufen wird, entsteht eine eigene
+SPIR-V-Funktion. Ein Argument, das ein privates oder lokales Feld ist, wird ein Zeiger der passenden Speicherklasse. Ein Argument, das ein
+Puffer ist, wird gar nicht übergeben: die Fassung spricht die globale Variable dieser Bindung direkt an.</p>
+<pre class="pseudo">rufe(f, argumente):
+    form ← für jedes Zeigerargument: (privat, Länge) | (lokal, Länge) | (Puffer, Bindung)
+    <b>wenn</b> (f, form) schon erzeugt:  fn ← diese Fassung
+    <b>sonst</b>:
+        <b>wenn</b> f steht im Aufrufstapel:  <b>wirf</b> Fehler(Zeile, "Rekursion")
+        fn ← neue Funktion;  Parameter nur für Werte und Feld-Zeiger
+        im Rumpf: Puffer-Parameter p ↦ globale Variable der Bindung
+        merke (f, form) ↦ fn;  erzeuge den Rumpf
+    OpFunctionCall fn(Werte, Feld-Zeiger)</pre>
+<p>Ein Modul enthält nur die Funktionen, die sein Kern erreicht, und je Kern entsteht ein eigenes Modul. Die Rekursionsprüfung steht
+<i>vor</i> dem Nachschlagen im Zwischenspeicher – sonst würde eine Funktion, die sich selbst ruft, ihre halb erzeugte Fassung finden
+und still eine Endlosschleife bilden. Diese Reihenfolge sichert eine Gegenprobe.</p>
+
+<h2 id="einzelheiten">Einzelheiten, die zählen</h2>
+<ul>
+  <li><b>Variablen im ersten Block:</b> SPIR-V verlangt alle <code>OpVariable</code> einer Funktion am Anfang ihres ersten Blocks. Der
+  Erzeuger sammelt sie in einer eigenen Liste und setzt sie beim Zusammenfügen vor den Code; deklariert werden darf in C trotzdem überall.</li>
+  <li><b>Rest wie in C:</b> <code>%</code> wird <code>OpSRem</code> (Vorzeichen des Dividenden, wie Java), nicht <code>OpSMod</code>
+  (Vorzeichen des Divisors). Gegenprobe vorhanden.</li>
+  <li><b>Umwandlung:</b> int nach double mit Vorzeichen (<code>OpConvertSToF</code>), double nach int abschneidend; Mischrechnungen nach
+  den Regeln von C.</li>
+  <li><b><code>signbit</code></b> liest das Vorzeichenbit aus dem oberen 32-Bit-Wort des double – eine Gegenprobe nimmt das untere.</li>
+  <li><b>Kennungen:</b> <code>get_global_id(0)</code> ist das Builtin <code>GlobalInvocationId</code>, <code>get_local_id</code>
+  <code>LocalInvocationId</code>, <code>get_group_id</code> <code>WorkgroupId</code>.</li>
+  <li><b><code>barrier</code></b> wird <code>OpControlBarrier</code> mit Arbeitsgruppen-Gültigkeit und Speichersemantik für lokalen
+  Speicher; <code>__local</code>-Felder sind globale Variablen der Speicherklasse <code>Workgroup</code>.</li>
+  <li><b>Kein fma:</b> jede Gleitkommarechnung erhält <code>NoContraction</code> (siehe <a href="bitgleich.html">Bitgleich zur CPU</a>).</li>
+</ul>
+
+<h2 id="pruefung">Wie der Übersetzer geprüft wird</h2>
+<table>
+  <tr><th>Prüfung</th><th>was sie zeigt</th></tr>
+  <tr><td>CL-01</td><td>drei Kerne der Probe übersetzen; jede Gleitkommarechnung trägt <code>NoContraction</code>; der Validierer der Spezifikation (<code>spirv-val</code>) nimmt sie an – er ist nur Schiedsrichter in der Probe, nicht Teil des Frameworks</td></tr>
+  <tr><td>CL-02</td><td>ein Kern mit allen Sprachmitteln über 5 000 Werte, Ergebnis bitgleich zur selben Rechnung in Java</td></tr>
+  <tr><td>CL-03</td><td>lokale Summe mit Sperre und <code>atomic_min</code></td></tr>
+  <tr><td>CL-04</td><td>Division und Wurzel in double: auf der CPU-Nachbildung bitgleich, auf einer Karte in ULP gemeldet</td></tr>
+  <tr><td>CL-05</td><td>acht Fehlerfälle mit der richtigen Zeile: Rekursion, float-Zahl, Struktur, unbekannte Funktion, Puffer im falschen Speicherraum, <code>min</code> auf double, Zeiger auf Zeiger, <code>#if</code></td></tr>
+  <tr><td>Gegenproben</td><td>neun: <code>&amp;&amp;</code> vertauscht, ohne <code>NoContraction</code>, Rest als <code>OpSMod</code>, <code>OpPhi</code> vertauscht, <code>signbit</code> aus dem unteren Wort, int nach double ohne Vorzeichen, Schleife vertauscht, Rekursion still, Makroargument nicht eingesetzt</td></tr>
+  <tr><td>Anwendung</td><td>alle 22 Kerne des CFD-Schritts und die 2 des Residuums ergeben gültiges SPIR-V; der ganze Schritt über Vulkan ist auf der CPU-Nachbildung bitgleich zur CPU</td></tr>
+</table>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

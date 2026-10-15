@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bitgleich zur CPU – welche Freiheiten eine Grafikeinheit hat und wie man sie ihr nimmt – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze</a>
+<a class="rubrik" href="index.html#weg">Der Weg: FFM statt Bindungsbibliothek</a>
+<a class="unterseite" href="weg.html">Der Weg zur Karte</a>
+<a class="rubrik" href="index.html#bitgleich">Bitgleich zur CPU</a>
+<a class="unterseite aktiv" href="bitgleich.html">Bitgleich zur CPU</a>
+<a class="rubrik" href="index.html#uebersetzer">Der Übersetzer OpenCL C → SPIR-V</a>
+<a class="unterseite" href="uebersetzer.html">Übersetzer OpenCL C → SPIR-V</a>
+<a class="rubrik" href="index.html#cfd">Der ganze CFD-Schritt auf der Karte</a>
+<a class="unterseite" href="cfdschritt.html">Der CFD-Schritt auf der Karte</a>
+<a class="rubrik" href="index.html#starten">Kerne starten und warten</a>
+<a class="unterseite" href="starten.html">Kerne starten und warten</a>
+<a class="rubrik" href="index.html#neuerkern">Einen eigenen Kern schreiben</a>
+<a class="unterseite" href="anleitung.html">Einen Kern schreiben</a>
+<a class="rubrik" href="index.html#module">Die Module</a>
+</div>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-opencl/vulkan</a> › Bitgleich zur CPU – welche Freiheiten eine Grafikeinheit hat und wie man sie ihr nimmt</span><a class="sprachwahl" href="../../en/gpu/bitgleich.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-opencl · envisionz-framework-vulkan · envisionz-framework-cfd-opencl · envisionz.cfd.opencl.Abweichung</div>
+  <h1>Bitgleich zur CPU – welche Freiheiten eine Grafikeinheit hat und wie man sie ihr nimmt</h1>
+  <p class="unter">Warum ein Kern auf der Grafikeinheit dieselben Bits liefern kann wie der Java-Code, welche vier Stellen dafür sorgfältig
+  gebaut sein müssen (fma, Summenreihenfolge, Minimum und Maximum, Division und Wurzel), wie Reduktionen trotzdem parallel laufen,
+  wie man eine Abweichung richtig misst – und wie ein falsches Maß einen Übersetzerfehler vortäuschte.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Eine Probe, die „ungefähr gleich“ verlangt, findet keinen Fehler, der kleiner ist als ihre Toleranz – und in einem
+Strömungslöser wächst ein kleiner Fehler über tausend Schritte oft zu einem großen. Das Framework verlangt deshalb, wo immer es geht,
+<b>Bitgleichheit</b>: der Kern auf dem Gerät liefert für jede Zelle dieselben 64 Bit wie der Java-Code. Dann ist jeder Unterschied ein
+Befund, und die Probe kann ihn bis auf die Zelle eingrenzen.</p>
+<p>Möglich ist das, weil Java und die Grafikeinheit beide nach IEEE 754 rechnen: Addition, Subtraktion, Multiplikation, Division und
+Wurzel in double sind <i>korrekt gerundet</i>, das Ergebnis ist der exakte Wert, auf die nächste darstellbare Zahl gerundet. Wer
+dieselben Rechnungen in derselben Reihenfolge ausführt, erhält dieselben Bits. Die Kunst liegt darin, dem Gerät jede Gelegenheit zu
+nehmen, davon abzuweichen.</p>
+
+<h2 id="fma">Erste Freiheit: fma</h2>
+<p>Ein <i>fused multiply-add</i> rechnet <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>⋅</mo><mi>b</mi><mo>+</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">a\cdot b + c</annotation></semantics></math> mit einer einzigen Rundung statt zweien:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>getrennt: </mtext><mspace width="0.1667em"/><mi>rd</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>rd</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>a</mi><mo>⋅</mo><mi>b</mi><mo stretchy="false">)</mo><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo><mspace width="2em"/><mspace width="2em"/><mtext>fma: </mtext><mspace width="0.1667em"/><mi>rd</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>a</mi><mo>⋅</mo><mi>b</mi><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{getrennt: } \operatorname{rd}\big(\operatorname{rd}(a\cdot b) + c\big) \qquad\qquad \text{fma: } \operatorname{rd}(a\cdot b + c)</annotation></semantics></math>
+<p>Das fma ist genauer – aber eben anders. Java zieht nie selbsttätig zusammen. C-Übersetzer für Grafikeinheiten tun es gern, denn
+ein fma ist eine Anweisung statt zwei. Dagegen hilft auf jedem Rückende genau eine Zeile:</p>
+<ul>
+  <li><b>OpenCL:</b> <code>#pragma OPENCL FP_CONTRACT OFF</code> am Kopf des Quelltexts.</li>
+  <li><b>Vulkan:</b> SPIR-V kennt kein Pragma, sondern eine Dekoration je Ergebnis. Der Baukasten und der Übersetzer setzen
+  <code>NoContraction</code> an <b>jede</b> Gleitkomma-Addition, -Subtraktion, -Multiplikation und -Division. Die Probe CL-01 zählt
+  nach, dass keine fehlt; eine Gegenprobe nimmt die Dekoration weg und muss rot werden.</li>
+</ul>
+
+<figure>
+<svg viewBox="0 0 640 170" width="640" font-family="sans-serif" font-size="12">
+  <line x1="40" y1="90" x2="600" y2="90" stroke="#5b6475" stroke-width="1.5"/>
+  <g stroke="#5b6475"><line x1="80" y1="82" x2="80" y2="98"/><line x1="240" y1="82" x2="240" y2="98"/><line x1="400" y1="82" x2="400" y2="98"/><line x1="560" y1="82" x2="560" y2="98"/></g>
+  <text x="150" y="115" text-anchor="middle" fill="#5b6475">benachbarte double-Zahlen (1 ULP)</text>
+  <circle cx="335" cy="90" r="5" fill="#9a6400"/>
+  <text x="345" y="70" text-anchor="middle" fill="#9a6400">exakt: a·b + c</text>
+  <path d="M335,96 C335,135 400,135 400,98" fill="none" stroke="#1f5f8b" stroke-width="1.5"/>
+  <text x="410" y="138" fill="#1f5f8b">fma: eine Rundung → nächste Zahl</text>
+  <circle cx="292" cy="90" r="4" fill="#5b6475"/>
+  <text x="262" y="40" text-anchor="middle" fill="#5b6475">rd(a·b) + c</text>
+  <path d="M292,84 C292,50 240,50 240,82" fill="none" stroke="#5b6475" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="40" y="162" fill="#5b6475">getrennt: erst a·b gerundet, dann die Summe → kann eine andere Zahl treffen</text>
+</svg>
+<figcaption>Schema: das exakte Ergebnis liegt zwischen zwei double-Zahlen. Das fma rundet es einmal; getrennt wird schon das Produkt gerundet, und die Summe kann auf der anderen Seite landen. Java rechnet getrennt – also muss der Kern es auch.</figcaption>
+</figure>
+
+<h2 id="reihenfolge">Zweite Freiheit: Reihenfolge der Summen</h2>
+<p>Gleitkomma-Addition ist nicht assoziativ: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo stretchy="false">)</mo><mo>+</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">(a+b)+c</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mo stretchy="false">(</mo><mi>b</mi><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">a+(b+c)</annotation></semantics></math> können sich im letzten Bit unterscheiden. Eine parallele
+Summe über viele Fäden ordnet die Summanden zwangsläufig anders als eine Schleife. Das Framework löst das auf drei Wegen:</p>
+<ul>
+  <li><b>Summen je Zelle</b> rechnet ein Faden je Zelle, in genau der Reihenfolge der Flächenliste der Zelle – der Reihenfolge, in der
+  auch <code>EulerLoeser</code> summiert. Parallel ist nur, <i>welche</i> Zelle ein Faden nimmt, nicht die Reihenfolge innerhalb.</li>
+  <li><b>Summen über das ganze Netz</b> (die Norm des Residuums) rechnet das Gerät nicht. Es legt die Quadrate je Zelle in einen Puffer,
+  die CPU holt sie und summiert der Reihe nach wie <code>EulerLoeser.norm</code>. Das kostet eine Übertragung von 8 Byte je Zelle und
+  Schritt – und erspart jede Diskussion über die Reihenfolge.</li>
+  <li><b>Minimum und Maximum über das ganze Netz</b> (der globale Zeitschritt, die Bezugsgrößen des Begrenzers) dürfen parallel
+  laufen: ein Maximum hängt nicht von der Reihenfolge ab. Gerechnet wird zweistufig, wie unten gezeigt.</li>
+</ul>
+
+<h3>Pseudocode – Summe je Zelle (Kern <code>zellen</code>)</h3>
+<pre class="pseudo">c ← Kennung des Fadens;  <b>wenn</b> c ≥ zz:  <b>ende</b>
+r ← (0, 0, 0, 0, 0)
+<b>für</b> q = anfang[c] … anfang[c+1] − 1:            <i>dieselbe Reihenfolge wie die CPU</i>
+    f ← zf[q]
+    s ← +1, wenn c Eigner von f ist, sonst −1
+    r ← r + s · fluss[f]                         <i>komponentenweise, ohne fma</i>
+res[c] ← r</pre>
+
+<h3>Pseudocode – Maximum in zwei Stufen (Kerne <code>bezugTeil</code>, <code>bezugEnde</code>)</h3>
+<pre class="pseudo"><i>Stufe 1: TEILE = 1024 Fäden, jeder nimmt jede 1024. Zelle</i>
+i ← Kennung;  m ← 0
+<b>für</b> c = i, i + 1024, … &lt; zz:   m ← jmax(m, wert(c))
+teil[i] ← m
+
+<i>Stufe 2: eine Arbeitsgruppe von ENDE = 256 Fäden</i>
+j ← lokale Kennung;  m ← 0
+<b>für</b> i = j, j + 256, … &lt; 1024:   m ← jmax(m, teil[i])
+l[j] ← m;  Sperre
+<b>für</b> h = 128, 64, …, 1:                         <i>Baum im lokalen Speicher</i>
+    <b>wenn</b> j &lt; h:  l[j] ← jmax(l[j], l[j + h])
+    Sperre
+<b>wenn</b> j = 0:  ergebnis ← l[0]</pre>
+<p class="quelle">Quelle: <code>OpenClSchritt.quelle()</code> in <code>envisionz-framework-cfd-opencl</code>; derselbe Text läuft über den Übersetzer auf Vulkan.</p>
+<p>Ein ähnlicher Fall ist die Prüfung auf physikalischen Zustand: jeder Faden, der eine Zelle mit nicht positiver Dichte oder innerer
+Energie findet, ruft <code>atomic_min(schlecht, c)</code>. Welcher Faden zuerst kommt, ist gleich – am Ende steht die kleinste
+Zellnummer, dieselbe, die die CPU-Schleife zuerst gefunden hätte.</p>
+
+<h2 id="minmax">Dritte Freiheit: Minimum und Maximum</h2>
+<p><code>fmin</code> und <code>fmax</code> in OpenCL C – und <code>NMin</code>/<code>NMax</code> in SPIR-V – geben bei einem NaN den
+anderen Wert zurück und dürfen −0 und +0 als gleich behandeln. <code>Math.max</code> in Java gibt NaN zurück, wenn ein Argument NaN ist,
+und hält +0 für größer als −0. Die Kerne rufen deshalb nie <code>fmax</code> direkt, sondern zwei kleine Hilfsfunktionen:</p>
+<pre class="pseudo">jmax(a, b):
+    <b>wenn</b> isnan(a) <b>oder</b> isnan(b):  <b>gib zurück</b> a + b      <i>NaN setzt sich durch</i>
+    <b>wenn</b> a = 0 <b>und</b> b = 0:  <b>gib zurück</b> (signbit(a) ? b : a)    <i>+0 &gt; −0</i>
+    <b>gib zurück</b> (a ≥ b ? a : b)
+
+jmin(a, b):  ebenso, mit (signbit(a) ? a : b) und (a ≤ b ? a : b)</pre>
+<p>Das NaN-Verhalten ist kein Zierrat: ein NaN in einer Zelle soll den Zeitschritt vergiften und damit auffallen, nicht still durch ein
+„Minimum“ verschwinden.</p>
+
+<h2 id="division">Vierte Freiheit: Division und Wurzel</h2>
+<p>OpenCL verlangt für double eine korrekt gerundete Division und Wurzel. Bei Vulkan hängt die Genauigkeit von <code>OpFDiv</code>
+und der Wurzel aus GLSL.std.450 am Treiber; das Framework verlässt sich deshalb nicht darauf, sondern misst. Auf der CPU-Nachbildung von Vulkan sind beide korrekt
+gerundet – dort verlangt die <code>Uebersetzerprobe</code> (CL-04) Bitgleichheit; auf einer Karte meldet sie die größte Abweichung in
+ULP und lässt höchstens 4 zu. Deshalb prüfen die Proben des CFD-Schritts über Vulkan auf einer Karte gegen eine Toleranz, auf der
+Nachbildung bitgleich.</p>
+
+<h2 id="optimierung">Die Optimierung des Treibers</h2>
+<p>Auch mit allen vier Regeln bleibt ein Rest: der optimierende Übersetzer des Treibers darf Rechnungen umstellen, solange er die
+Regeln von OpenCL einhält – und was die Regeln genau erlauben, legt jeder Treiber ein wenig anders aus. Gemessen am ganzen
+CFD-Schritt auf einer integrierten Grafikeinheit:</p>
+<table>
+  <tr><th>OpenCL, 80 000 Zellen, 2. Ordnung</th><th>ms je Schritt</th><th>gegen CPU</th></tr>
+  <tr><td>alle Kerne mit <code>-cl-opt-disable</code></td><td>37,0</td><td>bitgleich</td></tr>
+  <tr><td>alle außer dem Flächenkern optimiert (<code>-Denvisionz.cfd.gpu.optimiert=bitgleich</code>)</td><td>21,6</td><td>bitgleich</td></tr>
+  <tr><td>alle optimiert (Vorgabe)</td><td>16,1</td><td>1,9·10<sup>−15</sup> bezogen</td></tr>
+</table>
+<p>Nur der Flächenkern – Rekonstruktion und Roe-Fluss, der längste Kern – rechnet optimiert anders, und das um Rundung. Weil
+<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-15}</annotation></semantics></math> weit unter jeder physikalisch relevanten Genauigkeit liegt, ist „alle optimiert“ die Vorgabe; der bitgleiche Weg bleibt
+mit einem Schalter erreichbar, und die strengste Probe nimmt ihn ausdrücklich. Unter Vulkan optimiert der Treiber immer; die
+Abweichung lag dort in derselben Größe.</p>
+
+<h2 id="mass">Wie man eine Abweichung misst</h2>
+<p>Wenn nicht bitgleich, dann wie weit daneben? Die naheliegende Antwort – die Abweichung je Wert durch den Wert – ist falsch für Felder,
+deren Werte durch null gehen. Das Framework misst je Variable bezogen auf den größten Betrag dieser Variable, und bei den fünf
+Erhaltungsgrößen teilen sich die drei Impulskomponenten <b>einen</b> Bezug:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>e</mi></mrow><mrow><mi>v</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mi>max</mi><mrow><mi>c</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo>|</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>c</mi><mo>,</mo><mi>v</mi></mrow></msub><mo>−</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>c</mi><mo>,</mo><mi>v</mi></mrow></msub><mo>|</mo></mrow><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>v</mi></mrow></msub></mrow></mfrac><mo>,</mo><mspace width="2em"/><msub><mrow><mi>s</mi></mrow><mrow><mi>v</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><msub><mi>max</mi><mrow><mi>c</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo>|</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>c</mi><mo>,</mo><mi>v</mi></mrow></msub><mo>|</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi>s</mi></mrow><mrow><mi mathvariant="normal">ρ</mi><mi>u</mi></mrow></msub><mo>=</mo><msub><mrow><mi>s</mi></mrow><mrow><mi mathvariant="normal">ρ</mi><mi>v</mi></mrow></msub><mo>=</mo><msub><mrow><mi>s</mi></mrow><mrow><mi mathvariant="normal">ρ</mi><mi>w</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>s</mi></mrow><mrow><mi mathvariant="normal">ρ</mi><mi>u</mi></mrow></msub><mo>,</mo><msub><mrow><mi>s</mi></mrow><mrow><mi mathvariant="normal">ρ</mi><mi>v</mi></mrow></msub><mo>,</mo><msub><mrow><mi>s</mi></mrow><mrow><mi mathvariant="normal">ρ</mi><mi>w</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">e_v = \frac{\max_c |a_{c,v} - b_{c,v}|}{s_v}, \qquad s_v = \max_c |a_{c,v}|, \qquad s_{\rho u} = s_{\rho v} = s_{\rho w} = \max(s_{\rho u}, s_{\rho v}, s_{\rho w})</annotation></semantics></math>
+<p>und meldet <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>max</mi><mrow><mi>v</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi>e</mi></mrow><mrow><mi>v</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\max_v e_v</annotation></semantics></math>. Umgesetzt in <code>Abweichung.bezogen</code>; alle Proben und das Messwerkzeug nehmen dieselbe Stelle.</p>
+
+<div class="hinweis"><b>Eine Lehre:</b> Zuerst hatte jede Variable ihren eigenen Bezug. In einem zweidimensionalen Fall ist der Impuls
+senkrecht zur Ebene aber nur Rundungsrauschen um <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>18</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-18}</annotation></semantics></math>. Ein anderes letztes Bit dort ergab „Abweichung“ 10<sup>−2</sup> bis 1,
+und es sah aus, als rechne der optimierende Übersetzer der Karte falsch. Erst die Gegenprüfung auf unserer Seite – alle Flüsse jeder
+Stufe Fläche für Fläche gleich bis aufs letzte Bit, der Schritt trotzdem „35 % daneben“ – zeigte, dass das Maß falsch war, nicht die
+Karte. Seither gilt der gemeinsame Bezug für den Impuls.</div>
+
+<h2 id="regel">Die Regel der Proben</h2>
+<table>
+  <tr><th>Gerät</th><th>verlangt</th></tr>
+  <tr><td>Nachbildung auf der CPU (OpenCL- oder Vulkan-Software-Treiber)</td><td>bitgleich: Zustand, Residuum jedes Schritts, Zeit</td></tr>
+  <tr><td>Karte</td><td>Zustand bezogen &lt; 10<sup>−10</sup>, Residuen relativ &lt; 10<sup>−8</sup>, gleiche Zahl der Schritte</td></tr>
+  <tr><td>Karte, strengster Fall (OpenCL, Ordnung 1, bitgleicher Weg)</td><td>Normen bitgleich</td></tr>
+</table>
+<p>Die Toleranz auf der Karte ist fünf Größenordnungen weiter als die gemessenen 10<sup>−15</sup>: sie soll Fehler fangen, nicht
+Rundung. Die Gegenproben verderben gezielt – die Norm rückwärts summiert, <code>NoContraction</code> weggelassen, die Reduktion nur über
+eine Hälfte der Gruppe, das Abweichungsmaß mit eigenem Bezug je Impulskomponente – und müssen auf der Nachbildung rot werden.</p>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

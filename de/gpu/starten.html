@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kerne starten und warten – Befehlspuffer, Sperren, Deskriptorsätze und wohin die Zeit geht – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze</a>
+<a class="rubrik" href="index.html#weg">Der Weg: FFM statt Bindungsbibliothek</a>
+<a class="unterseite" href="weg.html">Der Weg zur Karte</a>
+<a class="rubrik" href="index.html#bitgleich">Bitgleich zur CPU</a>
+<a class="unterseite" href="bitgleich.html">Bitgleich zur CPU</a>
+<a class="rubrik" href="index.html#uebersetzer">Der Übersetzer OpenCL C → SPIR-V</a>
+<a class="unterseite" href="uebersetzer.html">Übersetzer OpenCL C → SPIR-V</a>
+<a class="rubrik" href="index.html#cfd">Der ganze CFD-Schritt auf der Karte</a>
+<a class="unterseite" href="cfdschritt.html">Der CFD-Schritt auf der Karte</a>
+<a class="rubrik" href="index.html#starten">Kerne starten und warten</a>
+<a class="unterseite aktiv" href="starten.html">Kerne starten und warten</a>
+<a class="rubrik" href="index.html#neuerkern">Einen eigenen Kern schreiben</a>
+<a class="unterseite" href="anleitung.html">Einen Kern schreiben</a>
+<a class="rubrik" href="index.html#module">Die Module</a>
+</div>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-opencl/vulkan</a> › Kerne starten und warten – Befehlspuffer, Sperren, Deskriptorsätze und wohin die Zeit geht</span><a class="sprachwahl" href="../../en/gpu/starten.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-vulkan · envisionz-framework-opencl · envisionz.vulkan.Warteschlange</div>
+  <h1>Kerne starten und warten – Befehlspuffer, Sperren, Deskriptorsätze und wohin die Zeit geht</h1>
+  <p class="unter">Was zwischen <code>starte</code> und dem Ergebnis passiert: wie Vulkan Starts in einen Befehlspuffer aufzeichnet und als
+  Paket abschickt, warum zwischen zwei Kernen eine Sperre stehen muss, wie Puffer über Deskriptorsätze an Kerne kommen, und was die
+  Messung auf einer Karte über die Kosten eines Starts sagt – mit Pseudocode und Zahlen.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Ein Kern auf der Karte ist schnell; teuer ist oft alles drumherum. Ein Kern über 4 096 Werte rechnet auf einer integrierten
+Grafikeinheit rund eine Mikrosekunde. Ihn einzeln abzuschicken und auf das Ende zu warten, kostet auf demselben Gerät unter OpenCL
+9 µs und unter Vulkan rund 90 µs. Wer viele kleine Kerne startet – ein CFD-Schritt hat je Stufe ein Dutzend –, muss deshalb vor allem
+eines vermeiden: auf jeden einzeln zu warten.</p>
+
+<figure>
+<svg viewBox="0 0 640 200" width="640" font-family="sans-serif" font-size="12">
+  <text x="10" y="30" fill="#5b6475">einzeln</text>
+  <g>
+    <rect x="80" y="16" width="14" height="20" fill="#1f5f8b"/><rect x="94" y="16" width="70" height="20" fill="#c9d1dc"/>
+    <rect x="166" y="16" width="14" height="20" fill="#1f5f8b"/><rect x="180" y="16" width="70" height="20" fill="#c9d1dc"/>
+    <rect x="252" y="16" width="14" height="20" fill="#1f5f8b"/><rect x="266" y="16" width="70" height="20" fill="#c9d1dc"/>
+    <rect x="338" y="16" width="14" height="20" fill="#1f5f8b"/><rect x="352" y="16" width="70" height="20" fill="#c9d1dc"/>
+  </g>
+  <text x="10" y="90" fill="#5b6475">als Paket</text>
+  <g>
+    <rect x="80" y="76" width="14" height="20" fill="#1f5f8b"/><rect x="95" y="76" width="14" height="20" fill="#1f5f8b"/>
+    <rect x="110" y="76" width="14" height="20" fill="#1f5f8b"/><rect x="125" y="76" width="14" height="20" fill="#1f5f8b"/>
+    <rect x="140" y="76" width="70" height="20" fill="#c9d1dc"/>
+  </g>
+  <rect x="80" y="140" width="14" height="14" fill="#1f5f8b"/><text x="100" y="152" fill="#5b6475">Kern rechnet auf der Karte</text>
+  <rect x="300" y="140" width="14" height="14" fill="#c9d1dc"/><text x="320" y="152" fill="#5b6475">Abschicken, Anlauf, Fertigmeldung, Warten</text>
+  <line x1="80" y1="118" x2="440" y2="118" stroke="#5b6475"/><text x="440" y="132" text-anchor="end" fill="#5b6475" font-size="11">Zeit →</text>
+</svg>
+<figcaption>Schema: vier Kerne einzeln (jeder mit eigenem Abschicken und Warten) gegen vier Kerne als Paket (einmal abschicken, einmal warten). Die Sperren zwischen den Kernen eines Pakets kosten fast nichts.</figcaption>
+</figure>
+
+<h2 id="paket">Aufzeichnen und abschicken</h2>
+<p>Unter Vulkan rechnet <code>vkCmdDispatch</code> nicht, es schreibt einen Befehl in einen <b>Befehlspuffer</b>. Erst
+<code>vkQueueSubmit</code> gibt den Puffer an die Karte, und ein <b>Zaun</b> (Fence) meldet, wann alles fertig ist. Die
+<code>Warteschlange</code> des Frameworks bildet das so ab:</p>
+<pre class="pseudo">starte(k, n):
+    <b>wenn</b> ein Paket abgeschickt und nicht abgewartet:  abwarten()
+    <b>wenn</b> der Satz von k veraltet ist:  neuer Deskriptorsatz (siehe unten)
+    <b>wenn</b> erster Start im Paket:  vkBeginCommandBuffer
+    <b>sonst</b>:  Sperre: Schreiben der Shader → Lesen und Schreiben der Shader
+    vkCmdBindPipeline(k);  vkCmdBindDescriptorSets(k.satz)
+    vkCmdPushConstants(k.zahlen)                     <i>die Zahlen werden jetzt kopiert</i>
+    vkCmdDispatch(⌈n / gruppe⌉, 1, 1)
+
+fertig():   abschicken();  abwarten()
+
+abschicken():
+    Sperre: Schreiben der Shader → Lesen durch den Rechner
+    vkEndCommandBuffer;  vkQueueSubmit(puffer, zaun)   <i>unter der Sperre des Geräts</i>
+
+abwarten():
+    warte auf den Zaun (kreisen oder schlafen, siehe unten)
+    vkResetFences;  vkResetCommandBuffer;  verbrauchte Satzvorräte zurücksetzen
+
+lies(p, ziel):   fertig();  kopiere aus dem eingeblendeten Speicher
+schreibe(p, w):  fertig();  kopiere in den eingeblendeten Speicher</pre>
+<p class="quelle">Quelle: <code>envisionz-framework-vulkan/src/envisionz/vulkan/Warteschlange.java</code>.</p>
+<p>Weil die Zahlen eines Starts beim Aufzeichnen kopiert werden, darf der Aufrufer zwischen zwei Starts desselben Kerns <code>arg</code>
+ändern – so laufen die vier Stufen von Jameson mit vier verschiedenen α im selben Paket. Weil <code>lies</code> und <code>schreibe</code>
+vorher <code>fertig()</code> rufen, sieht der Aufrufer nie einen halb gerechneten Puffer.</p>
+
+<h2 id="sperren">Sperren zwischen den Kernen</h2>
+<p>Die Karte darf aufeinanderfolgende Dispatches überlappen. Liest der zweite Kern, was der erste schreibt, muss eine Sperre
+(<code>vkCmdPipelineBarrier</code>) dazwischen stehen: alle Schreibzugriffe der Shader-Stufe werden sichtbar, bevor die nächste
+Shader-Stufe liest. Das Framework setzt sie zwischen <b>jeden</b> zwei Starts – auch wo sie nicht nötig wäre. Bei Kernketten wie im
+CFD-Schritt, in denen fast jeder Kern vom vorigen abhängt, kostet das kaum etwas, und es verhindert eine Klasse von Fehlern, die nur
+manchmal und nur auf manchen Karten auftritt. Unter OpenCL leistet die Befehlswarteschlange dasselbe von selbst.</p>
+<p>Eine Sperre zum <b>Rechner</b> hin (Shader-Schreiben → Lesen durch den Rechner) steht am Ende jedes Pakets. Erst danach und nach dem
+Zaun sind die Ergebnisse im eingeblendeten Speicher verlässlich zu lesen.</p>
+
+<h2 id="saetze">Deskriptorsätze</h2>
+<p>Ein Kern sieht seine Puffer über einen Deskriptorsatz: Bindung 0 ist dieser Puffer, Bindung 1 jener. Ein Satz, den ein
+aufgezeichnetes, noch nicht fertiges Paket benutzt, darf nicht verändert werden. Das Framework hält sich an eine einfache Regel:</p>
+<ul>
+  <li>Jeder Kern hat einen <b>Vorrat</b> von 256 Sätzen.</li>
+  <li><code>arg(i, puffer)</code> mit einem anderen Puffer als bisher markiert den aktuellen Satz als veraltet. Der nächste Start holt
+  einen <b>neuen</b> Satz aus dem Vorrat und beschreibt ihn; der alte bleibt für die schon aufgezeichneten Starts unberührt.</li>
+  <li>Ist der Vorrat leer, wird das Paket von selbst abgeschickt und abgewartet; danach steht der ganze Vorrat wieder bereit.</li>
+</ul>
+<p>Im CFD-Schritt wechseln die Puffer eines Kerns nie – jeder Kern bekommt einmal seine Sätze und behält sie. Die Probe VK-09 wechselt
+600-mal in einem Paket und verlangt jedes Ergebnis richtig; eine Gegenprobe lässt den Satz nach einem Pufferwechsel stehen und muss rot
+werden.</p>
+
+<h2 id="warten">Warten: kreisen oder schlafen</h2>
+<p><code>vkWaitForFences</code> legt den Faden schlafen, bis der Treiber ihn weckt. Die erste Messung auf der Karte legte nahe, dass das
+Aufwachen spät kommt. Das Framework fragt deshalb auf Karten den Zaun selbst ab (<code>vkGetFenceStatus</code> in einer Schleife,
+höchstens 50 ms, dann doch schlafen); auf CPU-Geräten schläft es gleich, weil das Kreisen dort dem Treiber die Kerne wegnimmt.
+Umschalten mit <code>-Denvisionz.vulkan.warten=kreisen|schlafen</code> oder in den Einstellungen.</p>
+
+<h2 id="zeit">Wohin die Zeit geht – Messung</h2>
+<p>Das Messwerkzeug <code>tools\vulkan-messen.cmd</code> rechnet <code>y = a x + y</code> in double, 1 000 Starts, einmal als Paket und
+einmal einzeln, und schlüsselt die Zeit auf. „Auf der Karte“ ist der Abstand zweier Zeitstempel, die die Karte selbst vor dem ersten und
+nach dem letzten Kern schreibt (<code>vkCmdWriteTimestamp</code>):</p>
+<table>
+  <tr><th>µs je Start, 4 096 Werte</th><th>Abschluss</th><th>Abschicken</th><th>Warten</th><th>davon auf der Karte</th><th>Rest</th></tr>
+  <tr><td>Vulkan einzeln</td><td>0,8</td><td>14</td><td>90</td><td>12</td><td>78</td></tr>
+  <tr><td>Vulkan als Paket</td><td>0,0</td><td>0,01</td><td>0,94</td><td>0,86</td><td>0,08</td></tr>
+</table>
+<table>
+  <tr><th>µs je Start, 4 096 Werte</th><th>als Paket</th><th>einzeln</th></tr>
+  <tr><td>Vulkan</td><td>1,1</td><td>89–100</td></tr>
+  <tr><td>OpenCL</td><td>1,6–2,3</td><td>8,7–9,2</td></tr>
+</table>
+<p>Als Paket ist Vulkan schneller als OpenCL. Einzeln rechnet die Karte nur 12 µs; der große Rest von rund 80 µs liegt zwischen dem
+Abschicken und der Meldung, dass der Zaun steht – im Weg durch Treiber und Betriebssystem, nicht im Warten des Frameworks. Kreisen statt
+Schlafen bringt deshalb nur rund 10 %.</p>
+<p>Daraus folgen zwei Regeln für das Framework:</p>
+<ul>
+  <li><b>So selten wie möglich warten.</b> Der CFD-Schritt schickt ohne CPU-Ränder genau ein Paket je Schritt ab; Norm und Zeitschritt
+  werden erst am Ende gelesen. Mit dieser Regel war der ganze Schritt über Vulkan in sieben von acht gemessenen Fällen schneller als über
+  OpenCL.</li>
+  <li><b>Messen, bevor man umbaut.</b> Ob die Fertigmeldung über den Speicher schneller ankommt als über den Zaun, misst das Werkzeug als
+  eigene Zeile: ein winziger zweiter Kern schreibt eine Nummer in sichtbaren Speicher, Java liest sie im Kreis
+  (<code>Warteschlange.abschicken</code>, <code>liesOhneWarten</code>), und verglichen wird mit dem Zaun und damit, ob die Daten in diesem
+  Moment schon vollständig sind.</li>
+</ul>
+
+<h2 id="opencl">Unter OpenCL</h2>
+<p>OpenCL hat keine aufgezeichneten Befehlspuffer im Sinne von Vulkan; jeder Start wird in eine Befehlswarteschlange eingereiht, die der
+Treiber in Reihenfolge abarbeitet. Ein blockierendes Lesen wartet auf alles davor. Das Paket entsteht so von selbst, solange niemand
+zwischendurch liest. Deshalb gilt dieselbe Regel – Norm und dt erst am Ende lesen – für beide Rückenden.</p>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

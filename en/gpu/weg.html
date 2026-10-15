@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The path to the graphics unit – FFM, driver library, device, buffer and kernel – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles</a>
+<a class="rubrik" href="index.html#weg">The path: FFM instead of a binding library</a>
+<a class="unterseite aktiv" href="weg.html">The path to the card</a>
+<a class="rubrik" href="index.html#bitgleich">Bit-identical to the CPU</a>
+<a class="unterseite" href="bitgleich.html">Bit-identical to the CPU</a>
+<a class="rubrik" href="index.html#uebersetzer">The compiler OpenCL C → SPIR-V</a>
+<a class="unterseite" href="uebersetzer.html">Compiler OpenCL C → SPIR-V</a>
+<a class="rubrik" href="index.html#cfd">The whole CFD step on the card</a>
+<a class="unterseite" href="cfdschritt.html">The CFD step on the card</a>
+<a class="rubrik" href="index.html#starten">Launching kernels and waiting</a>
+<a class="unterseite" href="starten.html">Launching and waiting</a>
+<a class="rubrik" href="index.html#neuerkern">Writing your own kernel</a>
+<a class="unterseite" href="anleitung.html">Writing a kernel</a>
+<a class="rubrik" href="index.html#module">The modules</a>
+</div>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-opencl/vulkan</a> › The path to the graphics unit – FFM, driver library, device, buffer and kernel</span><a class="sprachwahl" href="../../de/gpu/weg.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-opencl · envisionz-framework-vulkan · envisionz.opencl · envisionz.vulkan</div>
+  <h1>The path to the graphics unit – FFM, driver library, device, buffer and kernel</h1>
+  <p class="unter">How the framework calls a C interface of the graphics driver from pure Java: the three tools of the foreign
+  function and memory interface (FFM), structs byte by byte, and then step by step what OpenCL and what Vulkan need before a kernel
+  computes – with pseudocode following the source and the reasons for each choice.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p>A graphics unit is not addressed like a Java object but through the C interface of its driver. For OpenCL that is the library
+<code>OpenCL.dll</code> (on Linux <code>libOpenCL.so.1</code>), for Vulkan the loader <code>vulkan-1.dll</code> (<code>libvulkan.so.1</code>).
+Both are present on every machine with a current graphics driver.</p>
+<p>The usual way is to ship a binding library that wraps this interface in Java classes. The framework does not: every such library
+brings its own native code, its own versions and its own bugs, and it ages faster than the driver. Since Java 22 the JDK itself contains
+what is needed – the foreign function and memory interface (<code>java.lang.foreign</code>, FFM for short). The "binding" thus shrinks to two
+classes: <code>Cl</code> with about 25 and <code>Vk</code> with about 50 function handles.</p>
+
+<figure>
+<svg viewBox="0 0 640 250" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker></defs>
+  <rect x="10" y="20" width="180" height="200" rx="8" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="100" y="42" text-anchor="middle" fill="#1f5f8b" font-weight="bold">Java (JVM)</text>
+  <rect x="25" y="58" width="150" height="34" rx="5" fill="#ffffff" stroke="#5b6475"/><text x="100" y="80" text-anchor="middle" fill="#5b6475">Warteschlange, Kern</text>
+  <rect x="25" y="104" width="150" height="34" rx="5" fill="#ffffff" stroke="#5b6475"/><text x="100" y="126" text-anchor="middle" fill="#5b6475">Cl / Vk: MethodHandle</text>
+  <rect x="25" y="150" width="150" height="54" rx="5" fill="#ffffff" stroke="#5b6475"/><text x="100" y="172" text-anchor="middle" fill="#5b6475">MemorySegment</text><text x="100" y="190" text-anchor="middle" fill="#5b6475" font-size="11">structs, pointers</text>
+  <rect x="230" y="70" width="170" height="110" rx="8" fill="#fff7e6" stroke="#9a6400"/>
+  <text x="315" y="95" text-anchor="middle" fill="#9a6400" font-weight="bold">FFM</text>
+  <text x="315" y="118" text-anchor="middle" fill="#9a6400" font-size="11">SymbolLookup</text>
+  <text x="315" y="136" text-anchor="middle" fill="#9a6400" font-size="11">Linker.downcallHandle</text>
+  <text x="315" y="154" text-anchor="middle" fill="#9a6400" font-size="11">Arena (lifetime)</text>
+  <rect x="440" y="20" width="190" height="200" rx="8" fill="#ffffff" stroke="#5b6475"/>
+  <text x="535" y="42" text-anchor="middle" fill="#5b6475" font-weight="bold">driver (C)</text>
+  <rect x="455" y="64" width="160" height="40" rx="5" fill="#e8f0f6" stroke="#1f5f8b"/><text x="535" y="89" text-anchor="middle" fill="#1f5f8b">OpenCL.dll</text>
+  <rect x="455" y="116" width="160" height="40" rx="5" fill="#e8f0f6" stroke="#1f5f8b"/><text x="535" y="141" text-anchor="middle" fill="#1f5f8b">vulkan-1.dll</text>
+  <rect x="455" y="168" width="160" height="36" rx="5" fill="#1f5f8b"/><text x="535" y="191" text-anchor="middle" fill="#ffffff">graphics unit</text>
+  <g stroke="#5b6475" stroke-width="1.3" fill="none" marker-end="url(#pw)">
+    <line x1="175" y1="121" x2="228" y2="121"/><line x1="402" y1="105" x2="453" y2="86"/><line x1="402" y1="140" x2="453" y2="136"/>
+    <line x1="535" y1="157" x2="535" y2="166"/>
+  </g>
+</svg>
+<figcaption>No native code in the framework: the handles in <code>Cl</code> and <code>Vk</code> call the driver library directly; structs and pointers live in <code>MemorySegment</code>s whose lifetime an <code>Arena</code> determines.</figcaption>
+</figure>
+
+<h2 id="ffm">FFM in three moves</h2>
+<p>Each C function needs three things: its address in the library, a description of its signature, and memory for everything that
+goes in or comes out as a pointer.</p>
+<ol>
+  <li><b>Load the library:</b> <code>SymbolLookup.libraryLookup(name, arena)</code> loads the library and finds symbols by name. If the
+  library is missing an exception is thrown – the framework turns it into "kein OpenCL (OpenCL.dll)" and computes on the CPU.</li>
+  <li><b>Build the handle:</b> <code>Linker.nativeLinker().downcallHandle(address, FunctionDescriptor.of(...))</code> returns a
+  <code>MethodHandle</code>. The descriptor names return value and parameters in C terms: <code>JAVA_INT</code> for
+  <code>cl_int</code>/<code>VkResult</code>, <code>JAVA_LONG</code> for <code>size_t</code> and <code>VkDeviceSize</code>,
+  <code>ADDRESS</code> for every pointer and every handle.</li>
+  <li><b>Memory:</b> <code>arena.allocate(bytes, alignment)</code> gives a <code>MemorySegment</code> outside the Java heap; fields are
+  written and read with <code>set</code>/<code>get</code> at fixed byte offsets.</li>
+</ol>
+<h3>Pseudocode – one handle and one call (following <code>Cl</code> and <code>OpenCl.baue</code>)</h3>
+<pre class="pseudo">lib ← SymbolLookup.libraryLookup("OpenCL.dll")
+<b>if</b> lib missing:  <b>throw</b> "kein OpenCL (OpenCL.dll)"
+getPlatformIDs ← handle(lib.find("clGetPlatformIDs"),  int ← (int, pointer, pointer))
+<i>-- first ask how many, then fetch: the usual pattern of C interfaces</i>
+n ← new int memory
+rc ← getPlatformIDs(0, NULL, n)
+ids ← new memory for n pointers
+ok(getPlatformIDs(n, ids, NULL), "clGetPlatformIDs")      <i>rc ≠ 0 → exception with name and code</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-opencl/src/envisionz/opencl/Cl.java</code>, <code>OpenCl.java</code>; for Vulkan <code>Vk.java</code>, <code>Vulkan.java</code>.</p>
+<p>If a required function is missing in the library, building the handles stops with its name ("Vulkan ohne vkCmdDispatch"). Optional
+functions – such as <code>vkEnumerateInstanceVersion</code>, which a version 1.0 loader lacks, or the timestamps – are <code>null</code>,
+and the caller works around them.</p>
+
+<h2 id="strukturen">Structs by hand</h2>
+<p>Most calls take a struct. FFM could describe it through a <code>StructLayout</code>; the framework writes the fields directly at their
+offsets, with a comment naming the struct. That way the call shows what goes in, and no layout has to be reconciled with the C header. The
+rules on 64 bit are simple: pointers and 64-bit numbers sit at offsets divisible by 8, 32-bit numbers at offsets divisible by 4, and the
+total size is rounded up to the largest alignment.</p>
+<h3>Example – <code>VkBufferCreateInfo</code> (56 bytes)</h3>
+<table>
+  <tr><th>Offset</th><th>Field</th><th>Value</th></tr>
+  <tr><td>0</td><td><code>sType</code> (int)</td><td>12 = <code>VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO</code></td></tr>
+  <tr><td>8</td><td><code>pNext</code> (pointer)</td><td>0</td></tr>
+  <tr><td>16</td><td><code>flags</code> (int)</td><td>0</td></tr>
+  <tr><td>24</td><td><code>size</code> (64 bit)</td><td>size in bytes</td></tr>
+  <tr><td>32</td><td><code>usage</code> (int)</td><td>STORAGE_BUFFER | TRANSFER_SRC | TRANSFER_DST</td></tr>
+  <tr><td>36 … 48</td><td><code>sharingMode</code>, families</td><td>0 (exclusive)</td></tr>
+</table>
+<p>A wrong offset rarely shows as a crash, usually as a wrong value. That is why each of these spots hangs on a probe that compares the
+result with Java, and on counter-probes that deliberately shift an offset (for instance the push block without std430 alignment).</p>
+
+<h2 id="opencl">OpenCL: platform, device, context, program</h2>
+<p>OpenCL is the older and more convenient interface: the driver compiles the kernel source itself and manages memory and dependencies
+between launches. The way to the first kernel is short.</p>
+<h3>Pseudocode – opening the device (<code>OpenCl.oeffne</code>, once per JVM)</h3>
+<pre class="pseudo"><b>if</b> -Denvisionz.opencl=aus:  <b>return</b> null           <i>grund() says so</i>
+type ← GPU;  <b>if</b> -Denvisionz.opencl.alle=ja:  type ← all    <i>CPU devices too, for probes</i>
+<b>for each</b> platform p (clGetPlatformIDs):
+    <b>if</b> p has a device of type:  device ← the first;  <b>leave</b>
+<b>if</b> no device:  <b>throw</b> "kein OpenCL-Grafikgeraet"
+context ← clCreateContext(device)
+<b>return</b> Geraet(device, context, name)</pre>
+<h3>Pseudocode – a kernel computes</h3>
+<pre class="pseudo">prog ← clCreateProgramWithSource(context, source)
+rc ← clBuildProgram(prog, options)                     <i>e.g. -cl-opt-disable</i>
+<b>if</b> rc ≠ 0:  <b>throw</b> message with the compiler log (clGetProgramBuildInfo)
+q ← clCreateCommandQueue(context, device)               <i>one per thread</i>
+p ← clCreateBuffer(context, bytes)
+clEnqueueWriteBuffer(q, p, blocking, values)
+k ← clCreateKernel(prog, "axpy");  clSetKernelArg(k, i, value) for each argument
+clEnqueueNDRangeKernel(q, k, global = rounded_up(n, group), local = group)
+clEnqueueReadBuffer(q, p, blocking, target)             <i>waits for everything before</i></pre>
+<p>The driver knows the order within a queue and itself ensures that a kernel only reads what the previous one wrote. The framework sets
+the work-group size (64) because the driver's choice is often 1 for odd sizes; the global size is rounded up to a multiple, and every
+kernel checks <code>if (i &lt; n)</code> itself.</p>
+
+<h2 id="vulkan">Vulkan: instance, device, memory, pipeline</h2>
+<p>Vulkan is built for graphics and leaves almost everything to the program: which memory, when to wait, how buffers are bound to a
+kernel. In return a launch is cheap, and nothing happens behind your back. Computing here means <i>compute</i>: a compute shader in a
+compute pipeline, launched with <code>vkCmdDispatch</code>.</p>
+<h3>Pseudocode – opening the device (<code>Vulkan.oeffne</code>, once per JVM)</h3>
+<pre class="pseudo">instance ← vkCreateInstance(API 1.1)
+best ← none
+<b>for each</b> physical device d:
+    rank ← discrete 0, integrated 1, virtual 2, CPU 3 (only with .alle=ja), otherwise rejected
+    family ← first queue family with COMPUTE
+    <b>if</b> rejected <b>or</b> no family <b>or</b> version &lt; 1.1:  remember the reason;  <b>continue</b>
+    <b>if</b> rank better:  best ← d
+<b>if</b> none:  <b>throw</b> "kein passendes Vulkan-Geraet: " + reasons
+features ← switch on shaderFloat64 and shaderInt64 if present
+device ← vkCreateDevice(best, one queue of family, features)
+<i>-- memory: visible and coherent for the host is mandatory; device-local +2, cached +1</i>
+memoryType ← best type with HOST_VISIBLE | HOST_COHERENT</pre>
+<p>The choice of memory is the main difference from a graphics application. The framework puts every buffer into memory the host can
+also see and maps it permanently (<code>vkMapMemory</code> once on creation). Writing and reading are then plain copies into the mapped
+range, without transfer commands. On an integrated graphics unit this memory is also device-local – there is only one. On a discrete card a
+device-local buffer with transfers would be faster; this is a deliberate simplification.</p>
+<h3>Pseudocode – buffer and kernel (<code>Warteschlange.puffer</code>, <code>Warteschlange.kern</code>)</h3>
+<pre class="pseudo">buffer(bytes):
+    b ← vkCreateBuffer(bytes, STORAGE_BUFFER)
+    req ← vkGetBufferMemoryRequirements(b)            <i>size, allowed memory types</i>
+    <b>if</b> memoryType not allowed:  <b>throw</b>
+    m ← vkAllocateMemory(req.size, memoryType);  vkBindBufferMemory(b, m)
+    mapping ← vkMapMemory(m)  filled with zeros       <i>stays mapped</i>
+
+kernel(description):                                 <i>SPIR-V words, group, parameters</i>
+    module ← vkCreateShaderModule(words)
+    setLayout ← bindings 0 … p−1, each STORAGE_BUFFER, for COMPUTE
+    pipelineLayout ← setLayout + one push range of size description.push
+    pipeline ← vkCreateComputePipelines(module, entry = kernel name)
+    pool ← vkCreateDescriptorPool(256 sets)           <i>see "Launching kernels"</i></pre>
+<p class="quelle">Source: <code>envisionz-framework-vulkan/src/envisionz/vulkan/Vulkan.java</code>, <code>Warteschlange.java</code>, <code>Kern.java</code>.</p>
+<p>Buffers are not passed as pointers as in OpenCL but through <b>descriptor sets</b>: a set says which buffer hangs at which binding.
+Numbers – <code>n</code>, <code>a</code>, gamma – go along as <b>push constants</b>: a small block (at least 128 bytes) that is copied into
+the command buffer when recording. The order of the kernel parameters stays the same as in OpenCL C; <code>Kern.arg(i, …)</code> puts a buffer
+at its binding or a number at its offset in the push block.</p>
+
+<h2 id="begriffe">The same notions for both</h2>
+<table>
+  <tr><th>Notion in the framework</th><th>OpenCL</th><th>Vulkan</th></tr>
+  <tr><td><code>Geraet</code> (device)</td><td>device and context</td><td>instance, physical and logical device, compute queue, memory type</td></tr>
+  <tr><td><code>Warteschlange</code> (queue, per thread)</td><td>command queue</td><td>command pool, one command buffer, one fence</td></tr>
+  <tr><td><code>Puffer</code> (buffer)</td><td><code>cl_mem</code></td><td>buffer and memory, permanently mapped</td></tr>
+  <tr><td><code>Kern</code> (kernel)</td><td><code>cl_kernel</code> from a program</td><td>shader module, layouts, pipeline, set pool</td></tr>
+  <tr><td><code>arg(i, buffer)</code></td><td><code>clSetKernelArg</code></td><td>binding in the next descriptor set</td></tr>
+  <tr><td><code>arg(i, number)</code></td><td><code>clSetKernelArg</code></td><td>offset in the push block (std430)</td></tr>
+  <tr><td><code>starte(k, n)</code> (launch)</td><td><code>clEnqueueNDRangeKernel</code></td><td>record into the command buffer</td></tr>
+  <tr><td><code>fertig()</code> (finish)</td><td><code>clFinish</code></td><td>submit, wait for the fence</td></tr>
+  <tr><td><code>schreibe</code>, <code>lies</code> (write, read)</td><td>blocking transfer</td><td>first <code>fertig()</code>, then a copy in the mapping</td></tr>
+</table>
+<p>A queue belongs to one thread. Several threads share the device but not their buffers and kernels. In Vulkan the device's compute queue
+is a single one; <code>vkQueueSubmit</code> is therefore called under a device lock. The probes let four (Vulkan) or eight (OpenCL) threads
+compute at the same time.</p>
+
+<h2 id="abschalten">Switching off, fallback, native image</h2>
+<p>All paths to the card are optional. <code>-Denvisionz.opencl=aus</code> and <code>-Denvisionz.vulkan=aus</code> switch off;
+<code>….bibliothek=PATH</code> takes another driver library, <code>….alle=ja</code> admits CPU devices. The emulations on the CPU (for
+OpenCL a free driver, for Vulkan the software driver from Mesa) are the build environment of the probes: there bit-identical results are
+mandatory.</p>
+<p>The modules using FFM are not in the native image. The computing modules do not depend on them but only on an interface, and find an
+implementation through the <code>ServiceLoader</code> – or none, then the CPU computes. The JVM needs
+<code>--enable-native-access=ALL-UNNAMED</code>, otherwise it warns at the first handle.</p>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

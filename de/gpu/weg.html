@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Der Weg zur Grafikeinheit – FFM, Treiberbibliothek, Gerät, Puffer und Kern – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze</a>
+<a class="rubrik" href="index.html#weg">Der Weg: FFM statt Bindungsbibliothek</a>
+<a class="unterseite aktiv" href="weg.html">Der Weg zur Karte</a>
+<a class="rubrik" href="index.html#bitgleich">Bitgleich zur CPU</a>
+<a class="unterseite" href="bitgleich.html">Bitgleich zur CPU</a>
+<a class="rubrik" href="index.html#uebersetzer">Der Übersetzer OpenCL C → SPIR-V</a>
+<a class="unterseite" href="uebersetzer.html">Übersetzer OpenCL C → SPIR-V</a>
+<a class="rubrik" href="index.html#cfd">Der ganze CFD-Schritt auf der Karte</a>
+<a class="unterseite" href="cfdschritt.html">Der CFD-Schritt auf der Karte</a>
+<a class="rubrik" href="index.html#starten">Kerne starten und warten</a>
+<a class="unterseite" href="starten.html">Kerne starten und warten</a>
+<a class="rubrik" href="index.html#neuerkern">Einen eigenen Kern schreiben</a>
+<a class="unterseite" href="anleitung.html">Einen Kern schreiben</a>
+<a class="rubrik" href="index.html#module">Die Module</a>
+</div>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-opencl/vulkan</a> › Der Weg zur Grafikeinheit – FFM, Treiberbibliothek, Gerät, Puffer und Kern</span><a class="sprachwahl" href="../../en/gpu/weg.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-opencl · envisionz-framework-vulkan · envisionz.opencl · envisionz.vulkan</div>
+  <h1>Der Weg zur Grafikeinheit – FFM, Treiberbibliothek, Gerät, Puffer und Kern</h1>
+  <p class="unter">Wie das Framework eine C-Schnittstelle des Grafiktreibers aus reinem Java anspricht: die drei Werkzeuge der
+  Schnittstelle für Fremdfunktionen (FFM), Strukturen Byte für Byte, und dann Schritt für Schritt, was OpenCL und was Vulkan
+  braucht, bis ein Kern rechnet – mit Pseudocode nach dem Quelltext und den Gründen für jede Wahl.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Eine Grafikeinheit wird nicht wie ein Java-Objekt angesprochen, sondern über die C-Schnittstelle ihres Treibers. Für OpenCL ist
+das die Bibliothek <code>OpenCL.dll</code> (unter Linux <code>libOpenCL.so.1</code>), für Vulkan der Lader <code>vulkan-1.dll</code>
+(<code>libvulkan.so.1</code>). Beide liegen auf jedem Rechner mit aktuellem Grafiktreiber bereits vor.</p>
+<p>Üblich ist, eine Bindungsbibliothek mitzuliefern, die diese Schnittstelle in Java-Klassen kleidet. Das Framework tut das nicht:
+jede solche Bibliothek bringt eigenen nativen Code, eigene Fassungsstände und eigene Fehler mit, und sie altert schneller als der
+Treiber. Seit Java 22 enthält das JDK selbst, was dafür nötig ist – die Schnittstelle für Fremdfunktionen und Fremdspeicher
+(<code>java.lang.foreign</code>, kurz FFM). Damit schrumpft die „Bindung“ auf zwei Klassen: <code>Cl</code> mit rund 25 und
+<code>Vk</code> mit rund 50 Funktionsgriffen.</p>
+
+<figure>
+<svg viewBox="0 0 640 250" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker></defs>
+  <rect x="10" y="20" width="180" height="200" rx="8" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="100" y="42" text-anchor="middle" fill="#1f5f8b" font-weight="bold">Java (JVM)</text>
+  <rect x="25" y="58" width="150" height="34" rx="5" fill="#ffffff" stroke="#5b6475"/><text x="100" y="80" text-anchor="middle" fill="#5b6475">Warteschlange, Kern</text>
+  <rect x="25" y="104" width="150" height="34" rx="5" fill="#ffffff" stroke="#5b6475"/><text x="100" y="126" text-anchor="middle" fill="#5b6475">Cl / Vk: MethodHandle</text>
+  <rect x="25" y="150" width="150" height="54" rx="5" fill="#ffffff" stroke="#5b6475"/><text x="100" y="172" text-anchor="middle" fill="#5b6475">MemorySegment</text><text x="100" y="190" text-anchor="middle" fill="#5b6475" font-size="11">Strukturen, Zeiger</text>
+  <rect x="230" y="70" width="170" height="110" rx="8" fill="#fff7e6" stroke="#9a6400"/>
+  <text x="315" y="95" text-anchor="middle" fill="#9a6400" font-weight="bold">FFM</text>
+  <text x="315" y="118" text-anchor="middle" fill="#9a6400" font-size="11">SymbolLookup</text>
+  <text x="315" y="136" text-anchor="middle" fill="#9a6400" font-size="11">Linker.downcallHandle</text>
+  <text x="315" y="154" text-anchor="middle" fill="#9a6400" font-size="11">Arena (Lebensdauer)</text>
+  <rect x="440" y="20" width="190" height="200" rx="8" fill="#ffffff" stroke="#5b6475"/>
+  <text x="535" y="42" text-anchor="middle" fill="#5b6475" font-weight="bold">Treiber (C)</text>
+  <rect x="455" y="64" width="160" height="40" rx="5" fill="#e8f0f6" stroke="#1f5f8b"/><text x="535" y="89" text-anchor="middle" fill="#1f5f8b">OpenCL.dll</text>
+  <rect x="455" y="116" width="160" height="40" rx="5" fill="#e8f0f6" stroke="#1f5f8b"/><text x="535" y="141" text-anchor="middle" fill="#1f5f8b">vulkan-1.dll</text>
+  <rect x="455" y="168" width="160" height="36" rx="5" fill="#1f5f8b"/><text x="535" y="191" text-anchor="middle" fill="#ffffff">Grafikeinheit</text>
+  <g stroke="#5b6475" stroke-width="1.3" fill="none" marker-end="url(#pw)">
+    <line x1="175" y1="121" x2="228" y2="121"/><line x1="402" y1="105" x2="453" y2="86"/><line x1="402" y1="140" x2="453" y2="136"/>
+    <line x1="535" y1="157" x2="535" y2="166"/>
+  </g>
+</svg>
+<figcaption>Kein nativer Code im Framework: die Griffe in <code>Cl</code> und <code>Vk</code> rufen die Treiberbibliothek direkt; Strukturen und Zeiger liegen in <code>MemorySegment</code>s, deren Lebensdauer eine <code>Arena</code> bestimmt.</figcaption>
+</figure>
+
+<h2 id="ffm">FFM in drei Griffen</h2>
+<p>Für jede C-Funktion braucht es drei Dinge: die Adresse in der Bibliothek, eine Beschreibung der Signatur und Speicher für alles,
+was als Zeiger hinein- oder herauskommt.</p>
+<ol>
+  <li><b>Bibliothek laden:</b> <code>SymbolLookup.libraryLookup(name, arena)</code> lädt die Bibliothek und findet Symbole nach Namen.
+  Fehlt die Bibliothek, kommt eine Ausnahme – das Framework macht daraus „kein OpenCL (OpenCL.dll)“ und rechnet auf der CPU.</li>
+  <li><b>Griff bauen:</b> <code>Linker.nativeLinker().downcallHandle(adresse, FunctionDescriptor.of(...))</code> liefert einen
+  <code>MethodHandle</code>. Die Beschreibung nennt Rückgabe und Parameter in C-Begriffen: <code>JAVA_INT</code> für
+  <code>cl_int</code>/<code>VkResult</code>, <code>JAVA_LONG</code> für <code>size_t</code> und <code>VkDeviceSize</code>,
+  <code>ADDRESS</code> für jeden Zeiger und jeden Griff.</li>
+  <li><b>Speicher:</b> <code>arena.allocate(bytes, ausrichtung)</code> gibt ein <code>MemorySegment</code> außerhalb des Java-Haufens;
+  mit <code>set</code>/<code>get</code> werden Felder an festen Byte-Versätzen geschrieben und gelesen.</li>
+</ol>
+<h3>Pseudocode – ein Griff und ein Aufruf (nach <code>Cl</code> und <code>OpenCl.baue</code>)</h3>
+<pre class="pseudo">bib ← SymbolLookup.libraryLookup("OpenCL.dll")
+<b>wenn</b> bib fehlt:  <b>wirf</b> "kein OpenCL (OpenCL.dll)"
+getPlatformIDs ← Griff(bib.finde("clGetPlatformIDs"),  int ← (int, Zeiger, Zeiger))
+<i>-- erst fragen, wie viele, dann holen: das übliche Muster der C-Schnittstellen</i>
+n ← neuer int-Speicher
+rc ← getPlatformIDs(0, NULL, n)
+ids ← neuer Speicher für n Zeiger
+ok(getPlatformIDs(n, ids, NULL), "clGetPlatformIDs")      <i>rc ≠ 0 → Ausnahme mit Namen und Code</i></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-opencl/src/envisionz/opencl/Cl.java</code>, <code>OpenCl.java</code>; für Vulkan <code>Vk.java</code>, <code>Vulkan.java</code>.</p>
+<p>Fehlt eine benötigte Funktion in der Bibliothek, bricht der Bau der Griffe mit ihrem Namen ab („Vulkan ohne vkCmdDispatch“). Wahlfreie
+Funktionen – etwa <code>vkEnumerateInstanceVersion</code>, die ein Lader der Fassung 1.0 nicht hat, oder die Zeitstempel – sind
+<code>null</code>, und der Aufrufer weicht aus.</p>
+
+<h2 id="strukturen">Strukturen von Hand</h2>
+<p>Die meisten Aufrufe nehmen eine Struktur. FFM könnte sie über <code>StructLayout</code> beschreiben; das Framework schreibt die
+Felder direkt an ihre Versätze, mit einem Kommentar zur Struktur. So steht beim Aufruf, was hineingeht, und kein Bauplan muss mit dem
+Kopf der C-Schnittstelle abgeglichen werden. Die Regeln auf 64 Bit sind einfach: Zeiger und 64-Bit-Zahlen liegen auf durch 8 teilbaren
+Versätzen, 32-Bit-Zahlen auf durch 4 teilbaren, und die Gesamtgröße wird auf die größte Ausrichtung aufgerundet.</p>
+<h3>Beispiel – <code>VkBufferCreateInfo</code> (56 Byte)</h3>
+<table>
+  <tr><th>Versatz</th><th>Feld</th><th>Wert</th></tr>
+  <tr><td>0</td><td><code>sType</code> (int)</td><td>12 = <code>VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO</code></td></tr>
+  <tr><td>8</td><td><code>pNext</code> (Zeiger)</td><td>0</td></tr>
+  <tr><td>16</td><td><code>flags</code> (int)</td><td>0</td></tr>
+  <tr><td>24</td><td><code>size</code> (64 Bit)</td><td>Größe in Byte</td></tr>
+  <tr><td>32</td><td><code>usage</code> (int)</td><td>STORAGE_BUFFER | TRANSFER_SRC | TRANSFER_DST</td></tr>
+  <tr><td>36 … 48</td><td><code>sharingMode</code>, Familien</td><td>0 (exklusiv)</td></tr>
+</table>
+<p>Ein Fehler im Versatz äußert sich selten als Absturz, sondern meist als falscher Wert. Deshalb hängt jede dieser Stellen an einer
+Probe, die das Ergebnis gegen Java vergleicht, und an Gegenproben, die einen Versatz absichtlich verschieben (etwa den Push-Block
+ohne die Ausrichtung nach std430).</p>
+
+<h2 id="opencl">OpenCL: Plattform, Gerät, Kontext, Programm</h2>
+<p>OpenCL ist die ältere und bequemere Schnittstelle: der Treiber übersetzt den Kernquelltext selbst, verwaltet Speicher und
+Abhängigkeiten zwischen Starts. Der Weg bis zum ersten Kern ist kurz.</p>
+<h3>Pseudocode – Gerät öffnen (<code>OpenCl.oeffne</code>, einmal je JVM)</h3>
+<pre class="pseudo"><b>wenn</b> -Denvisionz.opencl=aus:  <b>gib zurück</b> null       <i>grund() sagt es</i>
+typ ← GPU;  <b>wenn</b> -Denvisionz.opencl.alle=ja:  typ ← alle    <i>auch CPU-Geräte, für Proben</i>
+<b>für jede</b> Plattform p (clGetPlatformIDs):
+    <b>wenn</b> p hat ein Gerät vom typ:  gerät ← das erste;  <b>verlasse</b>
+<b>wenn</b> kein gerät:  <b>wirf</b> "kein OpenCL-Grafikgeraet"
+kontext ← clCreateContext(gerät)
+<b>gib zurück</b> Geraet(gerät, kontext, Name)</pre>
+<h3>Pseudocode – ein Kern rechnet</h3>
+<pre class="pseudo">prog ← clCreateProgramWithSource(kontext, quelle)
+rc ← clBuildProgram(prog, optionen)                    <i>z. B. -cl-opt-disable</i>
+<b>wenn</b> rc ≠ 0:  <b>wirf</b> Meldung mit dem Protokoll des Übersetzers (clGetProgramBuildInfo)
+q ← clCreateCommandQueue(kontext, gerät)               <i>je Faden eine</i>
+p ← clCreateBuffer(kontext, bytes)
+clEnqueueWriteBuffer(q, p, blockierend, werte)
+k ← clCreateKernel(prog, "axpy");  clSetKernelArg(k, i, wert) für jedes Argument
+clEnqueueNDRangeKernel(q, k, global = aufgerundet(n, gruppe), lokal = gruppe)
+clEnqueueReadBuffer(q, p, blockierend, ziel)           <i>wartet auf alles davor</i></pre>
+<p>Der Treiber kennt die Reihenfolge in einer Warteschlange und sorgt selbst dafür, dass ein Kern erst liest, was der vorige schrieb.
+Die Gruppengröße gibt das Framework vor (64), weil die Wahl des Treibers bei krummen Zahlen oft 1 ist; die globale Größe wird auf
+ein Vielfaches aufgerundet, und jeder Kern prüft selbst <code>if (i &lt; n)</code>.</p>
+
+<h2 id="vulkan">Vulkan: Instanz, Gerät, Speicher, Pipeline</h2>
+<p>Vulkan ist für Grafik gebaut und überlässt fast alles dem Programm: welcher Speicher, wann gewartet wird, wie Puffer an einen Kern
+gebunden werden. Dafür ist ein Start billig, und nichts geschieht hinter dem Rücken. Rechnen heißt hier <i>Compute</i>: ein
+Rechen-Shader in einer Rechen-Pipeline, gestartet mit <code>vkCmdDispatch</code>.</p>
+<h3>Pseudocode – Gerät öffnen (<code>Vulkan.oeffne</code>, einmal je JVM)</h3>
+<pre class="pseudo">instanz ← vkCreateInstance(API 1.1)
+beste ← keines
+<b>für jedes</b> physische Gerät d:
+    rang ← diskret 0, integriert 1, virtuell 2, CPU 3 (nur mit .alle=ja), sonst abgelehnt
+    familie ← erste Warteschlangenfamilie mit COMPUTE
+    <b>wenn</b> abgelehnt <b>oder</b> keine familie <b>oder</b> Fassung &lt; 1.1:  Grund merken;  <b>weiter</b>
+    <b>wenn</b> rang besser:  beste ← d
+<b>wenn</b> keines:  <b>wirf</b> "kein passendes Vulkan-Geraet: " + Gründe
+merkmale ← shaderFloat64 und shaderInt64 einschalten, wenn vorhanden
+gerät ← vkCreateDevice(beste, eine Warteschlange der familie, merkmale)
+<i>-- Speicher: vom Rechner sichtbar und kohärent ist Pflicht; geräteeigen +2, zwischengespeichert +1</i>
+speichertyp ← bester Typ mit HOST_VISIBLE | HOST_COHERENT</pre>
+<p>Die Wahl des Speichers ist der wichtigste Unterschied zu einer Grafikanwendung. Das Framework legt jeden Puffer in Speicher, den
+auch der Rechner sieht, und blendet ihn dauerhaft ein (<code>vkMapMemory</code> einmal beim Anlegen). Schreiben und Lesen sind dann
+einfache Kopien in den eingeblendeten Bereich, ohne Übertragungsbefehle. Auf einer integrierten Grafikeinheit ist dieser Speicher
+zugleich geräteeigen – es gibt nur einen. Auf einer eigenständigen Karte wäre ein geräteeigener Puffer mit Übertragung schneller; das
+ist eine bewusste Vereinfachung.</p>
+<h3>Pseudocode – Puffer und Kern (<code>Warteschlange.puffer</code>, <code>Warteschlange.kern</code>)</h3>
+<pre class="pseudo">puffer(bytes):
+    b ← vkCreateBuffer(bytes, STORAGE_BUFFER)
+    anf ← vkGetBufferMemoryRequirements(b)            <i>Größe, erlaubte Speichertypen</i>
+    <b>wenn</b> speichertyp nicht erlaubt:  <b>wirf</b>
+    m ← vkAllocateMemory(anf.größe, speichertyp);  vkBindBufferMemory(b, m)
+    abbild ← vkMapMemory(m)  mit Nullen gefüllt       <i>bleibt eingeblendet</i>
+
+kern(beschreibung):                                  <i>SPIR-V-Wörter, Gruppe, Parameter</i>
+    modul ← vkCreateShaderModule(wörter)
+    satzLayout ← Bindungen 0 … p−1, je STORAGE_BUFFER, für COMPUTE
+    pipelineLayout ← satzLayout + ein Push-Bereich der Größe beschreibung.push
+    pipeline ← vkCreateComputePipelines(modul, Einstieg = Kernname)
+    vorrat ← vkCreateDescriptorPool(256 Sätze)       <i>siehe „Kerne starten“</i></pre>
+<p class="quelle">Quelle: <code>envisionz-framework-vulkan/src/envisionz/vulkan/Vulkan.java</code>, <code>Warteschlange.java</code>, <code>Kern.java</code>.</p>
+<p>Puffer werden nicht als Zeiger übergeben wie bei OpenCL, sondern über <b>Deskriptorsätze</b>: ein Satz sagt, welcher Puffer an
+welcher Bindung hängt. Zahlen – <code>n</code>, <code>a</code>, Gamma – gehen als <b>Push-Konstanten</b> mit: ein kleiner Block
+(mindestens 128 Byte), der beim Aufzeichnen in den Befehlspuffer kopiert wird. Die Reihenfolge der Kernparameter bleibt dieselbe wie
+in OpenCL C; <code>Kern.arg(i, …)</code> legt einen Puffer an seine Bindung oder eine Zahl an ihren Versatz im Push-Block.</p>
+
+<h2 id="begriffe">Dieselben Begriffe für beide</h2>
+<table>
+  <tr><th>Begriff im Framework</th><th>OpenCL</th><th>Vulkan</th></tr>
+  <tr><td><code>Geraet</code></td><td>Gerät und Kontext</td><td>Instanz, physisches und logisches Gerät, Rechenwarteschlange, Speichertyp</td></tr>
+  <tr><td><code>Warteschlange</code> (je Faden)</td><td>Befehlswarteschlange</td><td>Befehlsvorrat, ein Befehlspuffer, ein Zaun</td></tr>
+  <tr><td><code>Puffer</code></td><td><code>cl_mem</code></td><td>Puffer und Speicher, dauerhaft eingeblendet</td></tr>
+  <tr><td><code>Kern</code></td><td><code>cl_kernel</code> aus einem Programm</td><td>Shader-Modul, Layouts, Pipeline, Satzvorrat</td></tr>
+  <tr><td><code>arg(i, puffer)</code></td><td><code>clSetKernelArg</code></td><td>Bindung im nächsten Deskriptorsatz</td></tr>
+  <tr><td><code>arg(i, zahl)</code></td><td><code>clSetKernelArg</code></td><td>Versatz im Push-Block (std430)</td></tr>
+  <tr><td><code>starte(k, n)</code></td><td><code>clEnqueueNDRangeKernel</code></td><td>in den Befehlspuffer aufzeichnen</td></tr>
+  <tr><td><code>fertig()</code></td><td><code>clFinish</code></td><td>abschicken, auf den Zaun warten</td></tr>
+  <tr><td><code>schreibe</code>, <code>lies</code></td><td>blockierende Übertragung</td><td>erst <code>fertig()</code>, dann Kopie im Abbild</td></tr>
+</table>
+<p>Eine Warteschlange gehört einem Faden. Mehrere Fäden teilen sich das Gerät, aber nicht ihre Puffer und Kerne. Bei Vulkan ist die
+Rechenwarteschlange des Geräts eine einzige; <code>vkQueueSubmit</code> wird deshalb unter einer Sperre des Geräts gerufen. Die Proben
+lassen vier (Vulkan) bzw. acht (OpenCL) Fäden zugleich rechnen.</p>
+
+<h2 id="abschalten">Abschalten, Rückfall, native-image</h2>
+<p>Alle Wege zur Karte sind optional. <code>-Denvisionz.opencl=aus</code> und <code>-Denvisionz.vulkan=aus</code> schalten ab;
+<code>….bibliothek=PFAD</code> nimmt eine andere Treiberbibliothek, <code>….alle=ja</code> lässt CPU-Geräte zu. Die Nachbildungen auf
+der CPU (für OpenCL ein freier Treiber, für Vulkan der Software-Treiber aus Mesa) sind die Bauumgebung der Proben: dort ist
+Bitgleichheit zur CPU Pflicht.</p>
+<p>Die Module mit FFM stehen nicht im native-image. Die Rechenmodule hängen nicht an ihnen, sondern nur an einer Schnittstelle, und
+finden eine Umsetzung über den <code>ServiceLoader</code> – oder keine, dann rechnet die CPU. Die JVM braucht
+<code>--enable-native-access=ALL-UNNAMED</code>, sonst warnt sie beim ersten Griff.</p>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>
