@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
 <div class="rubriken">
@@ -239,7 +245,7 @@ residual: primitive variables, boundary values, gradients, limiters, fluxes over
 expensive part, the fluxes and the sum, on the graphics unit. It was <b>slower</b> than the CPU: gradients, limiters and boundaries stayed on
 the CPU, and every call sent the state up and the residual down.</p>
 <p>Since then the <b>whole step</b> runs on the device. The state goes up once per step and down once; in between everything stays on the
-card. Measured on an integrated notebook graphics unit, the step became 2.2 to 4.4 times as fast as eight CPU threads.</p>
+card. Measured on an integrated notebook graphics unit, the step became 2.2 to 3.7 times as fast as eight CPU threads.</p>
 
 <figure>
 <svg viewBox="0 0 640 300" width="640" font-family="sans-serif" font-size="12">
@@ -307,6 +313,10 @@ candidates ← all implementations on the class path
 <p><code>EulerLoeser.grafikeinheit()</code> shows the reason, and the command line writes it to the log: "Schritt: CPU (nur Euler (ohne
 Zaehigkeit))" or "Schritt: Grafikeinheit, ganzer Schritt (Vulkan: …)". A solver that silently computes on the CPU although you wanted the
 card would be a bad surprise.</p>
+<p>Since October 2026 <code>VulkanSchritt</code> talks to the device only through the common layer framework-gpu (see
+<a href="weg.html#begriffe">The same notions for both</a>). It is registered for Vulkan; with
+<code>-Denvisionz.cfd.vulkan.rueckende=opencl</code> the same sequence runs via OpenCL. This lets the lean step be compared on both back
+ends, and the probe demands a result bit-identical to the CPU via OpenCL as well.</p>
 
 <h2 id="kerne">The kernels of a stage</h2>
 <table>
@@ -390,17 +400,20 @@ computes the same step on the CPU. That produces the same error message with the
 <h2 id="messung">Measurement</h2>
 <table>
   <tr><th>Wedge Mach 2, Jameson</th><th>CPU (8 threads)</th><th>OpenCL</th><th>Vulkan</th></tr>
-  <tr><td>5,000 cells, 1st order</td><td>2.38 ms</td><td>0.98 ms (2.4×)</td><td>1.06 ms (2.2×)</td></tr>
-  <tr><td>20,000 cells, 1st order</td><td>5.83 ms</td><td>2.51 ms (2.3×)</td><td>1.98 ms (2.9×)</td></tr>
-  <tr><td>80,000 cells, 1st order</td><td>17.1 ms</td><td>9.36 ms (1.8×)</td><td>7.21 ms (2.4×)</td></tr>
-  <tr><td>320,000 cells, 1st order</td><td>72.9 ms</td><td>36.6 ms (2.0×)</td><td>29.3 ms (2.5×)</td></tr>
-  <tr><td>5,000 cells, 2nd order</td><td>6.90 ms</td><td>1.73 ms (4.0×)</td><td>1.58 ms (4.4×)</td></tr>
-  <tr><td>20,000 cells, 2nd order</td><td>15.7 ms</td><td>5.35 ms (2.9×)</td><td>4.20 ms (3.7×)</td></tr>
-  <tr><td>80,000 cells, 2nd order</td><td>50.6 ms</td><td>18.3 ms (2.8×)</td><td>15.0 ms (3.4×)</td></tr>
-  <tr><td>320,000 cells, 2nd order</td><td>202.4 ms</td><td>66.5 ms (3.0×)</td><td>62.0 ms (3.3×)</td></tr>
+  <tr><td>5,000 cells, 1st order</td><td>2.05 ms</td><td>0.83 ms (2.5×)</td><td>0.94 ms (2.2×)</td></tr>
+  <tr><td>20,000 cells, 1st order</td><td>4.33 ms</td><td>2.32 ms (1.9×)</td><td>1.71 ms (2.5×)</td></tr>
+  <tr><td>80,000 cells, 1st order</td><td>15.1 ms</td><td>8.43 ms (1.8×)</td><td>6.70 ms (2.2×)</td></tr>
+  <tr><td>320,000 cells, 1st order</td><td>66.6 ms</td><td>33.0 ms (2.0×)</td><td>26.9 ms (2.5×)</td></tr>
+  <tr><td>5,000 cells, 2nd order</td><td>4.92 ms</td><td>1.46 ms (3.4×)</td><td>1.42 ms (3.5×)</td></tr>
+  <tr><td>20,000 cells, 2nd order</td><td>13.9 ms</td><td>4.72 ms (2.9×)</td><td>3.90 ms (3.6×)</td></tr>
+  <tr><td>80,000 cells, 2nd order</td><td>44.4 ms</td><td>16.5 ms (2.7×)</td><td>14.3 ms (3.1×)</td></tr>
+  <tr><td>320,000 cells, 2nd order</td><td>202.4 ms</td><td>63.3 ms (3.2×)</td><td>55.4 ms (3.7×)</td></tr>
 </table>
-<p>Integrated notebook graphics unit with double in hardware, <code>tools\cfd-gpu-messen.cmd -schrittkern:opencl,vulkan</code>, before norm and
-dt were moved to the end. The deviation from the CPU was around 10<sup>−15</sup> relative for both.</p>
+<p>Integrated notebook graphics unit with double in hardware, <code>tools\cfd-gpu-messen.cmd -schrittkern:opencl,vulkan</code>, with one
+submission per step. Vulkan is faster than OpenCL in seven of eight cases, except on the smallest first-order mesh – there one submission under
+Vulkan weighs more than the whole computation. The deviation from the CPU was around 10<sup>−15</sup> relative for both. For comparison, the
+measurement before norm and dt were moved to the end (two submissions per step): Vulkan 15.0 instead of 14.3 ms at 80,000 cells second order
+and 62.0 instead of 55.4 ms at 320,000 – but the CPU also varied by a few percent between the two runs.</p>
 
 <h2 id="pruefung">How it is checked</h2>
 <p>Both back ends have a probe with the same cases: wedge Mach 2 first order with local time step, second order with global time step up to

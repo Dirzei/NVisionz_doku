@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Lernen und Suchen</div>
@@ -392,6 +398,15 @@ Werte ab stelle in das Ziel kopieren, höchstens bis Gesamtwerte</pre>
 <p>Beim Teilkanal B lag die Schätzung bei 11; die genaue Nachrechnung der Kandidaten fand das Minimum bei 13 (Bild auf der <a href="lpc.html#ordnung">LPC-Seite</a>). Der ganze Strom ist 14 399 Byte lang, das PCM-Material 32 768 Byte: 2,28 : 1. Mit dem Bereichskodierer sind es 14 390 Byte, mit abgeschaltetem LPC (<code>maxLpcOrdnung(0)</code>) 16 577 Byte.</p>
 <p>Die ersten Bytes des Rahmens 0 lauten <code>FF 5A 00 00 1B F6 00 00 00 00 10 00 02 71 E8 00</code>: Synchronwort, Rumpflänge 7158, Rahmennummer 0, Länge 4096 (<code>10 00</code>), Modus 2 (rechts/Seite). Dann beginnt Teilrahmen A bitweise: <code>71 E8 0…</code> = <code>011</code> (LPC) · <code>10001</code> (Ordnung − 1 = 17) · <code>1110</code> (Präzision − 1 = 14) · <code>10000</code> (Verschiebung 16).</p>
 
+<!-- NEU 2026-10-19 (TD22, A1) -->
+<h2 id="folgt">Was daraus folgt</h2>
+<ul>
+  <li><b>Annahme:</b> Die Bitzahl eines Kandidaten lässt sich vor dem Schreiben genau zählen. Das gilt hier, weil jeder Kopf feste Feldbreiten hat und <code>Restkodierung.plane</code> die Bits des Residuums exakt kennt; die Wahl ist damit kein Schätzen, sondern ein Vergleich von Zahlen, die so auch im Strom stehen.</li>
+  <li>Die Rohform ist eine Obergrenze: Kein Teilrahmen kostet mehr als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>+</mo><mi>N</mi><mi>b</mi></mrow><annotation encoding="application/x-tex">3 + N b</annotation></semantics></math> Bit. Ein Strom wird deshalb höchstens um den festen Aufwand je Rahmen größer als das PCM-Material.</li>
+  <li>Teilrahmen mit höchstens fünf Werten gehen roh, auch wenn ein Prädiktor billiger wäre – eine Rampe aus fünf Werten etwa kostete fest 49 statt 83 Bit. Das betrifft nur den letzten, kurzen Rahmen eines Signals und ist bei Blöcken von Tausenden Werten ohne Gewicht.</li>
+  <li>Weil die Schreibstelle aus der Rahmennummer folgt, ist jeder Rahmen für sich lesbar; ein Strom lässt sich ab jedem Synchronwort anfangen.</li>
+</ul>
+
 <h2 id="pruefung">Wie geprüft wird</h2>
 <p>Die <code>Umlaufprobe</code> (36 Prüfungen) kodiert und dekodiert und vergleicht jeden Wert, und zwar jeden Fall mit beiden Verfahren. Die Fälle sind die Stellen, an denen ein Codec scheitert:</p>
 <ul>
@@ -410,6 +425,13 @@ Werte ab stelle in das Ziel kopieren, höchstens bis Gesamtwerte</pre>
   <li><b>Die Stereowahl ist eine Schätzung</b>, keine Probekodierung (<a href="stereo.html#wahl">Stereoseite</a>); die Teilrahmenwahl dagegen zählt Bits.</li>
   <li><b>Vorlauf und Nachlauf</b> sind im Format vorhanden, der verlustfreie Kodierer schreibt sie als null.</li>
   <li><b>Rauschen lässt sich nicht verdichten.</b> Voll ausgesteuertes Rauschen kommt bei 1,00 : 1 an; die Rohform verhindert, dass der Strom merklich größer wird.</li>
+</ul>
+
+<!-- NEU 2026-10-19 (TD22, A1) -->
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>M. Hans, R. W. Schafer: Lossless Compression of Digital Audio. IEEE Signal Processing Magazine 18 (2001).</li>
+  <li>T. Robinson: SHORTEN: Simple lossless and near-lossless waveform compression. Technical Report CUED/F-INFENG/TR.156, Cambridge University Engineering Department (1994).</li>
 </ul>
 
 <footer>

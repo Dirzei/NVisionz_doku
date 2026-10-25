@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDF5, netCDF und HDF4 – Hintergrund – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="unterseite" href="erkennung.html">Formaterkennung</a>
+<a class="unterseite" href="grundlagen.html">Grundlagen der Leser</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="unterseite" href="sql.html">SQL-Auswertung</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="unterseite" href="datenbanken.html">Datenbanken</a>
+<a class="unterseite" href="spaltenformate.html">Spaltenformate</a>
+<a class="unterseite" href="tabellenformeln.html">Tabellenformeln</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="unterseite" href="fits.html">FITS</a>
+<a class="unterseite" href="messdaten.html">Messdaten: Rohwert und Messwert</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="unterseite aktiv" href="hdf5.html">HDF5, netCDF, HDF4</a>
+<a class="unterseite" href="langform.html">Langform</a>
+<a class="unterseite" href="wissenschaft.html">CGNS, Exodus, MATLAB, NumPy</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="unterseite" href="netze.html">Netze und Geometrie</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="unterseite" href="jpeg.html">JPEG</a>
+<a class="unterseite" href="kompression.html">Kompression</a>
+<a class="unterseite" href="rasterbilder.html">Rasterbilder</a>
+<a class="unterseite" href="tiff.html">TIFF</a>
+<a class="unterseite" href="webp.html">WebP</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="unterseite" href="behaelter.html">Behälterformate</a>
+<a class="unterseite" href="buero.html">Bürodateien: Folien und Farben</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="unterseite" href="kennfelder.html">Kennfelder und NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="unterseite" href="textbeschreibung.html">Formatbeschreibung und Abgleich</a>
+<a class="unterseite" href="textstruktur.html">Strukturerkennung</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › HDF5, netCDF und HDF4 – Hintergrund</span><a class="sprachwahl" href="../../en/fileformats/hdf5.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · envisionz.fileformats.hdf5, .hdf5.netcdf, .hdf5.hdf4</div>
+  <h1>HDF5, netCDF und HDF4 – Hintergrund</h1>
+  <p class="unter">Wie ein HDF5-Leser vom Superblock über Objektköpfe, B-Bäume und Chunks zu den Zahlen kommt, welche Regeln dabei tragen (Datentyp aus Bitfeldern, Prüfsummen, Filterkette) und wie netCDF und HDF4 sich davon unterscheiden.</p>
+</header>
+
+<h2 id="problem">Worum es geht: ein Dateisystem für Zahlenfelder</h2>
+<p>HDF5 ist kein Tabellenformat, sondern ein <b>Behälter</b>: Gruppen bilden einen Baum, die Blätter sind mehrdimensionale Datensätze mit Datentyp, Form und Attributen. Was ein Leser dabei richtig machen muss, steht nicht an einer Stelle, sondern ist über ein Geflecht aus Adressen verteilt: der Superblock zeigt auf die Wurzelgruppe, deren Objektkopf auf eine Verbindungstafel oder einen B-Baum, der auf weitere Objektköpfe, und erst der Objektkopf eines Datensatzes nennt Typ, Form, Ablage und Filter. netCDF-4 ist eine Konvention über HDF5, netCDF-3 ein eigenes, viel einfacheres Byteformat, HDF4 ein drittes Format, das mit HDF5 nur den Namen teilt.</p>
+<p>Alle drei werden hier <b>rein lesend</b> und ohne Fremdbibliothek gelesen; entpackt wird mit dem eigenen <a href="../compress/index.html">framework-compress</a>.</p>
+
+<h2 id="aufbau">Der Lesepfad durch eine HDF5-Datei</h2>
+<figure>
+<svg viewBox="0 0 640 250" width="640" font-family="sans-serif" font-size="12">
+  <rect x="10" y="20" width="110" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="20" y="38" fill="#1f5f8b">Superblock</text>
+  <text x="20" y="54" fill="#5b6475">bei 0, 512, 1024 …</text>
+  <rect x="150" y="20" width="120" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="160" y="38" fill="#1f5f8b">Objektkopf Wurzel</text>
+  <text x="160" y="54" fill="#5b6475">Nachrichten</text>
+  <rect x="300" y="20" width="140" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="310" y="38" fill="#1f5f8b">Gruppe: B-Baum v1/v2</text>
+  <text x="310" y="54" fill="#5b6475">oder Fractal Heap</text>
+  <rect x="470" y="20" width="160" height="44" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="480" y="38" fill="#1f5f8b">Objektkopf Datensatz</text>
+  <text x="480" y="54" fill="#5b6475">Typ · Form · Ablage · Filter</text>
+  <line x1="120" y1="42" x2="150" y2="42" stroke="#1f5f8b" stroke-width="2"/>
+  <line x1="270" y1="42" x2="300" y2="42" stroke="#1f5f8b" stroke-width="2"/>
+  <line x1="440" y1="42" x2="470" y2="42" stroke="#1f5f8b" stroke-width="2"/>
+  <rect x="470" y="110" width="160" height="44" fill="#e8f0f6" stroke="#9a6400"/>
+  <text x="480" y="128" fill="#9a6400">Chunk-Index</text>
+  <text x="480" y="144" fill="#5b6475">B-Baum, Fixed/Extensible Array</text>
+  <line x1="550" y1="64" x2="550" y2="110" stroke="#9a6400" stroke-width="2"/>
+  <rect x="270" y="110" width="170" height="44" fill="#e8f0f6" stroke="#9a6400"/>
+  <text x="280" y="128" fill="#9a6400">Chunk (gefiltert)</text>
+  <text x="280" y="144" fill="#5b6475">Bytes · Filtermaske</text>
+  <line x1="470" y1="132" x2="440" y2="132" stroke="#9a6400" stroke-width="2"/>
+  <rect x="40" y="110" width="200" height="44" fill="#e8f0f6" stroke="#9a6400"/>
+  <text x="50" y="128" fill="#9a6400">Filter rückwärts</text>
+  <text x="50" y="144" fill="#5b6475">fletcher32 → deflate → shuffle</text>
+  <line x1="270" y1="132" x2="240" y2="132" stroke="#9a6400" stroke-width="2"/>
+  <rect x="40" y="190" width="200" height="40" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="50" y="214" fill="#1f5f8b">Elemente nach dem Datentyp</text>
+  <line x1="140" y1="154" x2="140" y2="190" stroke="#1f5f8b" stroke-width="2"/>
+</svg>
+<figcaption>Vom Superblock zum Zahlenwert. Oben die Metadaten (Adressen von links nach rechts), unten der Weg der Daten: der Chunk-Index nennt Adresse und Filtermaske je Chunk, die Filter laufen in umgekehrter Schreibreihenfolge, zuletzt deutet der Datentyp die Bytes.</figcaption>
+</figure>
+
+<h2 id="superblock">Der Superblock und die Basisadresse</h2>
+<p>Die Signatur <code>89 48 44 46 0D 0A 1A 0A</code> steht nicht zwingend am Dateianfang: Vor einer HDF5-Datei darf ein <b>Userblock</b> liegen (eine MAT-Datei der Stufe 7.3 trägt dort ihren Beschreibungstext). Die Spezifikation legt die möglichen Orte fest: 0 und danach jede Zweierpotenz ab 512. Gesucht wird deshalb bei</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><msub><mrow><mi>a</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mn>512</mn><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msup><mspace width="1em"/><mo stretchy="false">(</mo><mi>k</mi><mo>≥</mo><mn>1</mn><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">a_0 = 0, \qquad a_{k} = 512 \cdot 2^{k-1} \quad (k \ge 1),</annotation></semantics></math>
+<p>also 0, 512, 1024, 2048, … bis zum Dateiende. Wo der Superblock gefunden wird, liegt die <b>Basisadresse</b>; alle Adressen in der Datei sind relativ dazu. Wer bei 1024 aufhört oder in Schritten von 512 sucht, findet manche Dateien nicht oder liest an einer falschen Stelle.</p>
+<p>Die Breite aller Adressen (<i>size of offsets</i>) und Längen (<i>size of lengths</i>) steht im Superblock, meist 8 Byte. Eine Adresse, deren Bits alle gesetzt sind, heißt „undefiniert“.</p>
+
+<h2 id="geteilt">Geteilte Nachrichten und das Zwischenspeicherabbild</h2>
+<p>Ab Superblock 2 trägt die <b>Superblock-Erweiterung</b> zwei Angaben, ohne die manche Dateien nicht zu lesen sind. Die <b>Tabelle geteilter Nachrichten</b> (SOHM) nennt je Index einen Fractal Heap, in dem Nachrichten liegen, die in vielen Objekten gleich lauten – derselbe Datenraum, derselbe Typ, oft auch Attribute. Eine Nachricht mit gesetztem Bit 1 ihrer Flags ist dann kein Inhalt, sondern eine Heap-Kennung von acht Byte. Deren oberste Bits sagen, wo das Objekt steht: verwaltet im Heap, groß im eigenen Baum oder <b>winzig in der Kennung selbst</b>; ein winziges Objekt gibt es im Heap gar nicht. Der Index der Ablage ist bis zur Listengrenze (Vorgabe 50) eine Liste <code>SMLI</code>, darüber ein B-Baum der Version 2.</p>
+<p>Das <b>Metadaten-Zwischenspeicherabbild</b> (Nachricht 0x18) legt beim Schließen den Zwischenspeicher der Bibliothek als einen Block <code>MDCI</code> ab; die Stellen, aus denen die Metadaten stammen, bleiben in der Datei leer. Ein Eintrag besteht aus 14 Byte Vorspann (Art, Flags, Ring, Alter, Zahl der Kinder, der geänderten Kinder und der Eltern, Rang in der Verdrängungsliste), Adresse und Länge, den Adressen der <i>p</i> Abhängigkeitseltern und den <i>n</i> Bytes selbst, zusammen</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">ℓ</mi><mo>=</mo><mn>14</mn><mo>+</mo><mi>O</mi><mo>+</mo><mi>L</mi><mo>+</mo><mi>p</mi><mspace width="0.1667em"/><mi>O</mi><mo>+</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">\ell = 14 + O + L + p\,O + n</annotation></semantics></math>
+<p>mit <i>O</i> und <i>L</i> den Breiten von Adressen und Längen. Wer die Eltern übergeht, liest ab dem ersten Eintrag mit Eltern alles verschoben – und findet an der Stelle des Wurzel-Objektkopfs nur Nullen. Ein Lesevorgang, der an einem Eintrag beginnt und über ihn hinausgreift, wird aus dem Eintrag bedient; sonst käme der veraltete Stand der Datei heraus.</p>
+<p>Bis 2026-10-25 war eine solche Datei unlesbar („Object-Header-Version 0“), geteilte Attribute fielen still weg, ebenso Attribute mit einem benannten (geteilten) Typ, und der Index meldete sich als Liste immer leer.</p>
+<p>Ein <b>kaputtes Attribut</b> – etwa ein Typ- oder Raumblock, dessen Länge über die Nachricht hinausreicht – kostet nur sich selbst: es wird übersprungen, die übrigen Attribute des Knotens bleiben, und die Datei nennt in ihren Befunden Knoten, Nummer des Attributs und Grund. Bis 2026-10-25 brach ein solches Attribut das Lesen aller Attribute des Knotens ab. Bei dicht im Fractal Heap abgelegten Attributen lässt sich hinter einem kaputten nicht sicher weiterlesen; dort bleibt es bei der leeren Liste, nun mit Befund.</p>
+
+<h2 id="datentyp">Datentypen aus Bitfeldern</h2>
+<p>Eine Datentypnachricht beginnt mit vier Byte: oben Version, unten Klasse, danach 24 Bit Klassenbits, danach vier Byte Elementgröße. Was die Klassenbits bedeuten, hängt an der Klasse. Für Gleitkommazahlen beschreibt HDF5 die Zahl <b>vollständig</b> durch ihre Felder: Lage und Breite von Exponent und Mantisse, Lage des Vorzeichens, Bias. Der Wert eines normalen Musters ist</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>=</mo><mo stretchy="false">(</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>s</mi></mrow></msup><mrow><mo fence="true" stretchy="true">(</mo><mn>1</mn><mo>+</mo><mfrac><mrow><mi>m</mi></mrow><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>M</mi></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><msup><mrow><mn>2</mn></mrow><mrow><mspace width="0.1667em"/><mi>e</mi><mo>−</mo><mi>b</mi></mrow></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">x = (-1)^{s}\left(1 + \frac{m}{2^{M}}\right) 2^{\,e - b},</annotation></semantics></math>
+<p>bei <i>e</i> = 0 (unnormal) <i>x</i> = (−1)<sup>s</sup> (<i>m</i>/2<sup>M</sup>) 2<sup>1−b</sup>, bei allen Exponentenbits gesetzt unendlich oder NaN. Damit liest derselbe Weg IEEE binary16 (5 Exponentenbits, 10 Mantissenbits, b = 15) und bfloat16 (8 und 7, b = 127): dasselbe Bitmuster bedeutet in beiden etwas anderes, 16,0 ist <code>0x4C00</code> beziehungsweise <code>0x4180</code>. Für 32 und 64 Bit mit IEEE-Aufteilung liest der Leser direkt.</p>
+<p>Für die Byte-Reihenfolge stehen <b>zwei</b> Bits zusammen: Bit 0 und Bit 6 der Klassenbits (00 klein, 01 groß, 11 VAX, 10 reserviert). Eine VAX-Ordnung als große Endung zu lesen ergäbe plausible, falsche Zahlen; der Leser meldet sie.</p>
+<p><b>Verbunde.</b> Jedes Mitglied steht mit Name, Versatz im Element und eigenem Typ da. In Typversion 1 und 2 ist der Name auf ein Vielfaches von acht aufgefüllt und der Versatz vier Byte breit. In Version 3 ist der Versatz so breit wie nötig, um die <b>Gesamtgröße</b> <i>S</i> des Verbunds zu fassen; die Bibliothek rechnet</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>w</mi><mo stretchy="false">(</mo><mi>S</mi><mo stretchy="false">)</mo><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mo stretchy="false">⌊</mo><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>S</mi><mo stretchy="false">⌋</mo></mrow><mrow><mn>8</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>+</mo><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">w(S) = \left\lfloor \frac{\lfloor \log_2 S \rfloor}{8} \right\rfloor + 1 ,</annotation></semantics></math>
+<p>also ein Byte bis <i>S</i> = 255, zwei bis 65 535, drei bis 2<sup>24</sup> − 1, sonst vier.</p>
+<p>Bis 2026-10-19 las der Leser hier fest ein Byte. Ein Verbund ab 256 Byte verschob damit alles Folgende, und am Ende hieß es „Kein Datensatz“ – geprüft wird jetzt an einem Verbund von 312 Byte aus der HDF5-Bibliothek.</p>
+<p>Als <b>Text</b> erscheint ein Verbund mit seinen Feldnamen, jedes Feld an seinem Versatz in seinem eigenen Typ gelesen: <code>{a=1.0, b=2}</code>, bei Attributen wie bei Datensätzen. Bis 2026-10-25 fiel er auf den Zahlweg durch und ergab <code>NaN</code>. 64-Bit-Ganzzahlen kommen als Text genau, vorzeichenlose auch über 2<sup>63</sup> (2<sup>64</sup> − 2 ist <code>18446744073709551614</code>); vorher liefen sie über <code>double</code> und wurden jenseits von 2<sup>53</sup> gerundet, oberhalb von 2<sup>63</sup> zu 9 223 372 036 854 775 807.</p>
+<p><b>Feldtypen</b> (<i>array</i>) tragen ihre Gestalt im Typ; die Elementzahl ist das Produkt der Abmessungen und eine Behauptung der Datei. Über 2<sup>31</sup> − 1 Elemente je Wert wird abgewiesen, statt die Zahl abzuschneiden (65 536 × 65 536 ergab vorher still null). <b>Aufzählungen</b> tragen Basistyp, Namen und Werte; in Version 1 und 2 ist jeder Name auf acht Byte aufgefüllt. <b>Zeit</b> und <b>Bitfeld</b> werden als vorzeichenlose Ganzzahl gelesen, <b>Opak</b> als Bytes.</p>
+
+<p><b>Zeitpunkte.</b> Objektköpfe der Version 2 tragen vier Zeitpunkte im Kopf, ältere eine Nachricht: die neue (0x12) mit Version, drei Byte Reserve und Sekunden seit 1970, die alte (0x0E) <b>ohne</b> Kopf als 14 Ziffern <code>JJJJMMTTHHMMSS</code> in UTC und zwei Byte Reserve. Bis 2026-10-25 überlas der Leser vor den Ziffern vier Byte und gab jeden alten Zeitpunkt als „keiner“ aus.</p>
+
+<h2 id="pruefsummen">Prüfsummen: lookup3 für Metadaten, Fletcher-32 für Chunks</h2>
+<p>Ab Superblock 2 tragen alle neueren Metadatenblöcke (Objektköpfe v2, B-Baum v2, Fractal Heap, Chunk-Indizes) eine 32-Bit-Prüfsumme nach Jenkins’ <b>lookup3</b> (<code>hashlittle</code>, Startwert 0): drei Register, je 12 Byte gemischt, der Rest aufgefüllt und abschließend verrührt. Die leere Eingabe ergibt <code>0xdeadbeef</code>, der Satz „Four score and seven years ago“ <code>0x17770551</code>.</p>
+<p>Die Daten selbst können zusätzlich den Filter <b>fletcher32</b> tragen. Er hängt an jeden Chunk vier Byte an, gerechnet nach Fletcher über 16-Bit-Wörter in <b>großer</b> Endung:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>←</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi>w</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>s</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>←</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>+</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mspace width="2em"/><mi>s</mi><mo>←</mo><mo stretchy="false">(</mo><mi>s</mi><mo>mod</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">⌊</mo><mi>s</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup><mo stretchy="false">⌋</mo><mo>,</mo><mspace width="2em"/><mi>F</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup><msub><mrow><mi>s</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>+</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">s_1 \leftarrow s_1 + w_i, \qquad s_2 \leftarrow s_2 + s_1, \qquad s \leftarrow (s \bmod 2^{16}) + \lfloor s / 2^{16}\rfloor , \qquad F = 2^{16} s_2 + s_1 .</annotation></semantics></math>
+<p>Gefaltet wird nach höchstens 360 Wörtern – so bleiben die Summen in 32 Bit; da die Faltung den Rest modulo 65 535 nicht ändert, ist der Zeitpunkt für das Ergebnis gleichgültig, solange nichts überläuft. Ein ungerades letztes Byte zählt als <b>oberes</b> Byte eines Wortes. Gespeichert ist <i>F</i> in kleiner Endung; ältere Bibliotheken legten die Bytes jeder Hälfte vertauscht ab, deshalb gilt beim Lesen auch diese Form.</p>
+<p>Bis 2026-10-19 wurde die Summe nur abgeschnitten, nie geprüft: ein beschädigter Chunk kam mit falschen Werten heraus, obwohl die Datei eigens eine Prüfsumme dafür trägt. Abschalten lässt sich die Prüfung wie alle anderen über <code>verifyChecksums(false)</code>.</p>
+
+<h2 id="filter">Chunks und die Filterkette</h2>
+<p>Ein Datensatz mit gestückelter Ablage zerfällt in Chunks gleicher Form; der Chunk-Index (B-Baum v1, B-Baum v2, Fixed Array, Extensible Array, Single Chunk, implizit) nennt je Chunk Adresse, gespeicherte Größe und eine <b>Filtermaske</b>: ein gesetztes Bit <i>i</i> heißt, Filter <i>i</i> wurde für diesen Chunk übersprungen. Die Filter laufen beim Lesen in umgekehrter Reihenfolge der Pipeline-Nachricht:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>d</mi><mo>=</mo><msubsup><mrow><mi>f</mi></mrow><mrow><mn>1</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msubsup><mo stretchy="false">(</mo><msubsup><mrow><mi>f</mi></mrow><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msubsup><mo stretchy="false">(</mo><mo>⋯</mo><msubsup><mrow><mi>f</mi></mrow><mrow><mi>n</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msubsup><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">d = f_1^{-1}\bigl(f_2^{-1}(\cdots f_n^{-1}(c))\bigr) ,</annotation></semantics></math>
+<p>mit <i>c</i> dem gespeicherten Chunk und <i>d</i> den Daten.</p>
+<p>Gelesen werden deflate (eigener Zlib mit Adler-32-Prüfung), shuffle, fletcher32, LZF, LZ4, szip, n-bit und scale-offset; ein unbekannter Filter wird mit Nummer und Namen gemeldet.</p>
+<p>Ein Chunk, der nie geschrieben wurde, steht nicht im Index; an seiner Stelle gilt der <b>Füllwert</b> der Füllwertnachricht – auch dann, wenn nur ein Ausschnitt gelesen wird. Bis 2026-10-25 lieferte der Ausschnitt dort Nullen, und die Langform (die HDF5 blockweise liest) gab sie als Messwerte weiter. Ein nie geschriebener zusammenhängender Datensatz belegt 0 Byte, wie bei <code>H5Dget_storage_size</code>.</p>
+<p>Der Steckbrief (<code>Hdf5Inspect</code>) fragt die Filterkette, was sie entpacken kann, statt eine eigene Liste zu führen; szip, n-bit, scale-offset, LZ4 und externe Rohdaten standen dort bis 2026-10-25 unter „nicht unterstützt“.</p>
+
+<h2 id="verweise">Externe Verweise und geteilte Dateien</h2>
+<p>Eine HDF5-Datei kann auf andere Dateien zeigen: externe Verknüpfungen, Quellen virtueller Datensätze und die Mitglieder des <b>Multi-/Split-Treibers</b>, bei dem Metadaten und Rohdaten in getrennten Dateien liegen (<code>%s-m.h5</code>, <code>%s-r.h5</code>). Alle drei Namen kommen aus der Datei. Sie werden deshalb nach derselben Regel geöffnet (<code>Hdf5Verweise</code>, Vorgabe: nur derselbe Ordner); ein Name mit <code>..</code> wird nicht angehängt.</p>
+<p>Dieselbe Regel gilt für <b>externe Rohdaten</b> (Nachricht 0x07, die Werte eines Datensatzes in fremden Dateien): ein Name wie <code>../draussen.bin</code> wird abgewiesen, statt eine Datei außerhalb des Ordners zu lesen. Was die Rohdatendatei nicht abdeckt, bleibt Füllwert.</p>
+<p><b>Weiche Verweise</b> dürfen im Kreis zeigen. Aufgelöst wird über höchstens 32 Stufen je Faden, gezählt über die Rekursion hinweg (ein Verweis auf einen Verweis löst das Ziel wieder über den Pfad auf); darüber heißt es „Verweiskette zu tief oder im Kreis“. Bis 2026-10-25 galt die Zählung nur innerhalb eines Aufrufs, und zwei Verweise aufeinander endeten in einem Stapelüberlauf.</p>
+
+<h2 id="netcdf3">netCDF-3: ein Kopf und verschränkte Sätze</h2>
+<p>netCDF-3 (CDF-1, CDF-2 mit 64-Bit-Versätzen, CDF-5 mit 64-Bit-Zahlen und vorzeichenlosen Typen) ist ein einfaches, groß-endiges Format: Kopf mit Achsen, Attributen und Variablen, dahinter die Daten. Feste Variablen liegen am Stück. Variablen auf der <b>unbegrenzten</b> Achse liegen <b>verschränkt</b>: Satz <i>r</i> von Variable <i>v</i> beginnt bei</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>b</mi></mrow><mrow><mi>v</mi></mrow></msub><mo>+</mo><mi>r</mi><mo>⋅</mo><mi>R</mi><mo>,</mo><mspace width="2em"/><mi>R</mi><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>u</mi></mrow></munder><msub><mrow><mi>z</mi></mrow><mrow><mi>u</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">b_v + r \cdot R, \qquad R = \sum_{u} z_u ,</annotation></semantics></math>
+<p>mit <i>b<sub>v</sub></i> = <code>begin</code> der Variablen und der Summe über alle Satzvariablen <i>u</i>; ihre Satzgröße <i>z<sub>u</sub></i> = <code>vsize</code> ist auf vier Byte aufgefüllt. Die Ausnahme: gibt es <b>genau eine</b> Satzvariable, wird ihr Satz nicht aufgefüllt, und <i>R</i> ist die wahre Satzgröße. Die Länge der unbegrenzten Achse steht als <code>numrecs</code> im Kopf; im Strombetrieb ist sie <code>0xFFFFFFFF</code> und folgt aus der Dateigröße.</p>
+
+<h2 id="cf">Lücken und Auspacken nach der CF-Vereinbarung</h2>
+<p>Für netCDF-3 und netCDF-4 gilt beim Lesen dieselbe Reihenfolge: erst die <b>gespeicherte</b> Zahl gegen <code>_FillValue</code>, <code>missing_value</code> und <code>valid_min/max</code> prüfen, dann auspacken</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>y</mi><mo>=</mo><mi>s</mi><mspace width="0.1667em"/><mi>x</mi><mo>+</mo><mi>o</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">y = s\,x + o ,</annotation></semantics></math>
+<p>mit <i>s</i> = <code>scale_factor</code> und <i>o</i> = <code>add_offset</code>, und zwar im Typ des Skalierungsfaktors: steht dort <code>float</code>, wird in einfacher Genauigkeit gerechnet (0,1 · 1 + 1000 ergibt 1000,0999755859375, nicht 1000,1). Fehlt <code>_FillValue</code>, gilt der Vorgabe-Füllwert des Typs: −127, −32 767, −2 147 483 647 und −9 223 372 036 854 775 806 für die vorzeichenbehafteten, 255, 65 535, 4 294 967 295 und 18 446 744 073 709 551 614 für die vorzeichenlosen Ganzzahlen, 9,969 209 968 386 869 · 10<sup>36</sup> für Gleitkomma. Die Sollwerte stammen von netCDF4-python selbst.</p>
+<p>Bei <b>64-Bit-Ganzzahlen</b> wird der Füllwert genau verglichen, als Ganzzahl und nicht als Gleitkommazahl. Zwischen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>63</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-2^{63}</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>63</mn></mrow></msup><mo>+</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">-2^{63} + 1024</annotation></semantics></math> gibt es keine andere <code>double</code>-Zahl; −9 223 372 036 854 775 806 und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>63</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-2^{63}</annotation></semantics></math> (<code>Long.MIN_VALUE</code>) sind als <code>double</code> dieselbe Zahl, ebenso <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>64</mn></mrow></msup><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">2^{64} - 2</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>64</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{64} - 1</annotation></semantics></math>. Bis 2026-10-25 galt deshalb ein echter Wert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>63</mn></mrow></msup></mrow><annotation encoding="application/x-tex">-2^{63}</annotation></semantics></math> als Lücke, und ein eigener <code>_FillValue</code> von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>63</mn></mrow></msup><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">-2^{63} + 1</annotation></semantics></math> traf ihn ebenso. Jetzt liest der Leser bei solchen Variablen die Werte und den <code>_FillValue</code> genau (netCDF-4 über HDF5 wie CDF-5) und vergleicht sie dort; gleich wie netCDF4-python wird genau der Füllwert zur Lücke.</p>
+
+<h2 id="hdf4">HDF4: Datendeskriptoren statt Adressbaum</h2>
+<p>HDF4 ist ein anderes Format. Die Datei ist eine Kette von <b>DD-Blöcken</b> (Datendeskriptoren): je Eintrag Tag (16 Bit), Referenz (16 Bit), Versatz und Länge (je 32 Bit, also höchstens 2 GB). Was zusammengehört, sagen <b>Vgroups</b> (Tag 1965) über Listen von Tag/Referenz-Paaren; wissenschaftliche Datensätze, Vdata-Tabellen und Rasterbilder sind solche Gruppen. Rasterbilder des alten Formats sind lauflängenkodiert: ein Steuerbyte mit gesetztem oberem Bit wiederholt das nächste Byte (<i>c</i> &amp; 0x7F)-mal, sonst folgen (<i>c</i> &amp; 0x7F) wörtliche Bytes – ohne die „+3“ anderer RLE-Verfahren.</p>
+<p>Der Zahlentyp (Tag 106) nennt neben Art und Breite eine <b>Klasse</b>, und die sagt die Byte-Reihenfolge: 1 ist die HDF-Grundform (höchstwertiges Byte zuerst), 4 bei Ganzzahlen Intel und bei Gleitkomma IEEE in derselben Reihenfolge (niederwertiges Byte zuerst), 2 bei Ganzzahlen VAX (ebenfalls niederwertig zuerst). Die HDF4-Bibliothek schreibt einen Datensatz vom Typ <code>DFNT_LITEND|DFNT_INT16</code> mit Klasse 4 und die Werte, wie sie im Speicher stehen. Bis 2026-10-25 las der Leser jeden Datensatz höchstwertig zuerst: aus 1, −2, 300 wurden still 256, −257, 11 265.</p>
+<p>In <b>Vdata</b>-Tabellen und Attributen ist <code>uchar8</code> wie <code>char8</code> Text mit einem Byte je Zeichen, und <code>uint64</code> wird ohne Vorzeichen gelesen: bis 2<sup>63</sup> − 1 genau als Ganzzahl, darüber als Gleitkommazahl wie bei den Datensätzen, als Attributtext genau. Bis 2026-10-25 hatte <code>uchar8</code> dort die Breite 0 (das Feld kam leer), und 2<sup>64</sup> − 2 kam als −2.</p>
+<p>Sonderelemente nennen ihre Größe im Kopf: ein verkettetes die Gesamtlänge, ein gepacktes die entpackte Länge, ein gestückeltes Achsen und Elementgröße. Angelegt wird höchstens die Entpackgrenze; ein ausgelagertes Element öffnet seine Datei nach der Regel für externe Verweise.</p>
+
+<h2 id="folgt">Was daraus folgt</h2>
+<ul>
+  <li><b>Annahmen:</b> Die Datei folgt der veröffentlichten Spezifikation; wo die Bibliothek abweicht oder mehr schreibt als beschrieben (die vertauschte Fletcher-Ablage, die Breite des Verbundversatzes), folgt der Leser der Bibliothek, weil sie die Dateien schreibt.</li>
+  <li>Jede Zahl aus der Datei ist eine Behauptung: Adressen, Elementzahlen und Chunkgrößen werden gegen die Datei geprüft, bevor Speicher angelegt wird.</li>
+  <li>Prüfsummen werden geprüft, nicht nur übersprungen. Ein Leser, der eine vorhandene Prüfsumme nicht prüft, ist für Messdaten schlechter als einer, der keine kennt – er sieht aus, als hätte er geprüft.</li>
+  <li>Gleitkommazahlen anderer Bauart (16 Bit, unnormale Werte) kommen über die Felder der Nachricht richtig heraus; eine feste Annahme über die Aufteilung würde eine der beiden 16-Bit-Arten still falsch lesen.</li>
+</ul>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<p>Gegen fremde Dateien: 36 Referenzdateien der HDF-Group-Bibliothek mit <code>h5dump</code>, netCDF-4-Dateien von Unidatas Bibliothek, eine HDF4-Datei der HDF4-Bibliothek, dazu in der <code>TheorieFAprobe</code> eine fletcher32-Datei, ein Verbund von 312 Byte, eine geteilte Datei des Split-Treibers (alle von h5py 3.16 über HDF5 2.0) und eine netCDF-3-Datei von netCDF4-python 1.7.5. Die gespeicherten Fletcher-Summen der Bibliothek stimmen mit der eigenen Rechnung überein. Die Nachrechnung steht in <code>docs/theorie/rechnung/fileformats_hdf5.py</code>.</p>
+<p>Die <code>TheorieG1probe</code> je Paket nimmt weitere Anker der Bibliotheken (h5py 3.16 über HDF5 2.0, netCDF4, die HDF4-Bibliothek): alte und neue Bauart, geteilte Nachrichten mit Zwischenspeicherabbild, virtuelle Datensätze, externe Rohdaten, Container und MATLAB 7.3. Was die Bibliotheken nicht schreiben – Layout-Nachrichten der Version 1, die alte Änderungszeit, die Dateiraum-Nachricht der Version 0 –, entsteht als gezielt umgeschriebene Kopie im Zeitordner, mit nachgezogener Prüfsumme. Erzeugt werden die Anker von <code>docs/theorie/rechnung/fileformats_g1_anker.py</code>.</p>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+  <li>Datentypen VAX und reservierte Byte-Reihenfolgen werden gemeldet, nicht gelesen; Ganzzahlen mit Bitversatz und Bitgenauigkeit kleiner als die Elementgröße werden als ganze Elemente gelesen.</li>
+  <li>Der Extensible Array mit geseiteten Datenblöcken wird gemeldet, nicht gelesen.</li>
+  <li>HDF4: gepackte Sonderelemente werden ungepackt, mit RLE und mit deflate gelesen; N-Bit, Huffman und szip werden benannt, nicht entpackt.</li>
+  <li>Ein virtueller Datensatz, der einen Datensatznamen mit einem früheren Eintrag teilt, ist an keiner Datei der Bibliothek geprüft; gelesen wird er nach der Spezifikation.</li>
+  <li>Die Fletcher-Prüfung unterscheidet die beiden Ablagen nicht; eine Summe, die zufällig in der vertauschten Form stimmt, gilt als richtig (Wahrscheinlichkeit 2<sup>−32</sup>).</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>The HDF Group: HDF5 File Format Specification, Version 3.0 (Abschnitte II Superblock, IV.A.2 Nachrichten, III.A B-Bäume, IV.A.2.d Datentyp).</li>
+  <li>B. Jenkins: lookup3.c, 2006 (öffentlicher Bereich).</li>
+  <li>J. G. Fletcher: An Arithmetic Checksum for Serial Transmissions. IEEE Transactions on Communications 30 (1982), S. 247–252.</li>
+  <li>Unidata: The NetCDF Classic Format Specification; CF Conventions 1.11, Abschnitt 8.1 (Packed Data).</li>
+  <li>The HDF Group: HDF4 Specification and Developer’s Guide, Version 4.2.</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

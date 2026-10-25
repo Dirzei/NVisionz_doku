@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
 <div class="rubriken">
@@ -395,15 +401,36 @@ at its binding or a number at its offset in the push block.</p>
 <p>A queue belongs to one thread. Several threads share the device but not their buffers and kernels. In Vulkan the device's compute queue
 is a single one; <code>vkQueueSubmit</code> is therefore called under a device lock. The probes let four (Vulkan) or eight (OpenCL) threads
 compute at the same time.</p>
+<p>Since October 2026 these notions also exist as an <b>interface</b> in a module of their own, framework-gpu – plain Java, without FFM.
+Each back end registers there via the <code>ServiceLoader</code>; the choice takes Vulkan before OpenCL and collects the reasons why one
+does not work. Code written against the interface computes on both without changing a line:</p>
+<pre><b>choice</b> ← Grafik.oeffne()                        <i>Vulkan, otherwise OpenCL; choice.reasons: "vulkan: …; opencl: …"</i>
+g ← choice.device                                 <i>null: compute on the CPU</i>
+p ← g.programm(source, name → 64)                 <i>OpenCL C; work-group size per kernel</i>
+<b>with</b> s ← g.sitzung():                             <i>one per thread</i>
+    x ← s.puffer(8·n);  s.schreibe(x, values)
+    k ← s.kern(p, "axpy").arg(0, n).arg(1, a).arg(2, x)…
+    s.starte(k, n)                                <i>rounded up to a multiple of 64</i>
+    s.lies(x, result)                             <i>waits for all launches before it</i></pre>
+<p>The interface is the intersection: a kernel argument is an <code>int</code>, a <code>double</code> or a buffer. What only one back end
+can do – breaking down the waiting time under Vulkan, for instance – stays in its own classes. A foreign buffer, a foreign kernel or a
+kernel the program does not have is rejected instead of silently computing wrongly. The same kernel from the same source yields the same
+bits on both back ends; the module's probe checks this on every run.</p>
 
 <h2 id="abschalten">Switching off, fallback, native image</h2>
 <p>All paths to the card are optional. <code>-Denvisionz.opencl=aus</code> and <code>-Denvisionz.vulkan=aus</code> switch off;
 <code>….bibliothek=PATH</code> takes another driver library, <code>….alle=ja</code> admits CPU devices. The emulations on the CPU (for
 OpenCL a free driver, for Vulkan the software driver from Mesa) are the build environment of the probes: there bit-identical results are
 mandatory.</p>
-<p>The modules using FFM are not in the native image. The computing modules do not depend on them but only on an interface, and find an
-implementation through the <code>ServiceLoader</code> – or none, then the CPU computes. The JVM needs
-<code>--enable-native-access=ALL-UNNAMED</code>, otherwise it warns at the first handle.</p>
+<p>The computing modules do not depend on the modules using FFM but only on an interface, and find an implementation through the
+<code>ServiceLoader</code> – or none, then the CPU computes. The JVM needs <code>--enable-native-access=ALL-UNNAMED</code>, otherwise it
+warns at the first handle.</p>
+<p>Since October 2026 the modules using FFM also belong in the standalone executable (native image). The driver is not part of it: it is
+loaded from the system at start-up as under the JVM, and if it is missing the program computes on the CPU. native-image only translates a
+call into a foreign library if its signature has been registered beforehand – return and parameters, such as
+<code>jint(void*, void*, void*)</code>. This list is in the build's metadata; the probes of both modules build all their handles on a dummy
+address and demand that every signature is listed there. Otherwise the build would succeed and only the call in the finished executable
+would fail.</p>
 
 </div>
 </main>

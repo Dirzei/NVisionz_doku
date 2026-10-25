@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conventions over containers and numeric arrays: CGNS, Exodus, MATLAB, NumPy – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="unterseite" href="erkennung.html">Format detection</a>
+<a class="unterseite" href="grundlagen.html">Reader foundations</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="unterseite" href="sql.html">SQL evaluation</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="unterseite" href="datenbanken.html">Databases</a>
+<a class="unterseite" href="spaltenformate.html">Columnar formats</a>
+<a class="unterseite" href="tabellenformeln.html">Spreadsheet formulas</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="unterseite" href="fits.html">FITS</a>
+<a class="unterseite" href="messdaten.html">Measurement data: raw and physical</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="unterseite" href="hdf5.html">HDF5, netCDF, HDF4</a>
+<a class="unterseite" href="langform.html">Long form</a>
+<a class="unterseite aktiv" href="wissenschaft.html">CGNS, Exodus, MATLAB, NumPy</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="unterseite" href="netze.html">Meshes and geometry</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="unterseite" href="jpeg.html">JPEG</a>
+<a class="unterseite" href="kompression.html">Compression</a>
+<a class="unterseite" href="rasterbilder.html">Raster images</a>
+<a class="unterseite" href="tiff.html">TIFF</a>
+<a class="unterseite" href="webp.html">WebP</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="unterseite" href="behaelter.html">Container formats</a>
+<a class="unterseite" href="buero.html">Office files: slides and colours</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="unterseite" href="kennfelder.html">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="unterseite" href="textbeschreibung.html">Format description and matching</a>
+<a class="unterseite" href="textstruktur.html">Structure detection</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › Conventions over containers and numeric arrays: CGNS, Exodus, MATLAB, NumPy – background</span><a class="sprachwahl" href="../../de/fileformats/wissenschaft.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · envisionz.fileformats.cgns, .exodus, .matlab, .npy</div>
+  <h1>Conventions over containers and numeric arrays: CGNS, Exodus, MATLAB, NumPy – background</h1>
+  <p class="unter">Why CGNS and Exodus are not byte formats of their own but rules over HDF5 and netCDF, how MATLAB and NumPy store a numeric array, and where a reader silently delivers a transposed matrix.</p>
+</header>
+
+<h2 id="problem">The problem: order in memory</h2>
+<p>A multidimensional array is stored in a file as a linear sequence. Which axis runs fastest is the one question all four formats depend on. In <b>C order</b> (row-major) the last axis runs fastest, in <b>Fortran order</b> (column-major) the first. For an array of shape (<i>n</i><sub>0</sub>, …, <i>n</i><sub>d−1</sub>) the element (<i>i</i><sub>0</sub>, …, <i>i</i><sub>d−1</sub>) lies at position</p>
+$$ p_C = \sum_{k=0}^{d-1} i_k \prod_{j>k} n_j , \qquad p_F = \sum_{k=0}^{d-1} i_k \prod_{j<k} n_j . $$
+<p>Both formulas give the same set of positions, only assigned differently. Whoever uses the wrong one gets the transposed matrix for a square array – it looks like a matrix, and no checksum notices.</p>
+
+<figure>
+<svg viewBox="0 0 620 210" width="620" font-family="sans-serif" font-size="12">
+  <text x="20" y="20" fill="#5b6475">Matrix 2 × 3</text>
+  <g fill="#e8f0f6" stroke="#1f5f8b">
+    <rect x="20" y="30" width="40" height="30"/><rect x="60" y="30" width="40" height="30"/><rect x="100" y="30" width="40" height="30"/>
+    <rect x="20" y="60" width="40" height="30"/><rect x="60" y="60" width="40" height="30"/><rect x="100" y="60" width="40" height="30"/>
+  </g>
+  <g fill="#1f5f8b"><text x="36" y="50">1</text><text x="76" y="50">2</text><text x="116" y="50">3</text><text x="36" y="80">4</text><text x="76" y="80">5</text><text x="116" y="80">6</text></g>
+  <text x="190" y="20" fill="#5b6475">C order (NumPy, HDF5, netCDF)</text>
+  <g fill="#e8f0f6" stroke="#1f5f8b">
+    <rect x="190" y="30" width="36" height="30"/><rect x="226" y="30" width="36" height="30"/><rect x="262" y="30" width="36" height="30"/>
+    <rect x="298" y="30" width="36" height="30"/><rect x="334" y="30" width="36" height="30"/><rect x="370" y="30" width="36" height="30"/>
+  </g>
+  <g fill="#1f5f8b"><text x="204" y="50">1</text><text x="240" y="50">2</text><text x="276" y="50">3</text><text x="312" y="50">4</text><text x="348" y="50">5</text><text x="384" y="50">6</text></g>
+  <text x="190" y="110" fill="#5b6475">Fortran order (MATLAB, CGNS, NumPy with fortran_order)</text>
+  <g fill="#e8f0f6" stroke="#9a6400">
+    <rect x="190" y="120" width="36" height="30"/><rect x="226" y="120" width="36" height="30"/><rect x="262" y="120" width="36" height="30"/>
+    <rect x="298" y="120" width="36" height="30"/><rect x="334" y="120" width="36" height="30"/><rect x="370" y="120" width="36" height="30"/>
+  </g>
+  <g fill="#9a6400"><text x="204" y="140">1</text><text x="240" y="140">4</text><text x="276" y="140">2</text><text x="312" y="140">5</text><text x="348" y="140">3</text><text x="384" y="140">6</text></g>
+  <text x="430" y="50" fill="#5b6475">shape in the file: (2, 3)</text>
+  <text x="430" y="140" fill="#5b6475">HDF5 shape: (3, 2) – reversed</text>
+  <text x="20" y="185" fill="#5b6475">The same six numbers, two orders; the shape in an HDF5 container always describes the C view.</text>
+</svg>
+<figcaption>The same matrix in both orders. When a Fortran writer (MATLAB 7.3, CGNS) stores it in HDF5, the shape appears reversed there; the reader turns the shape back and interprets the values column by column.</figcaption>
+</figure>
+
+<h2 id="cgns">CGNS: nodes with name, label and “ data”</h2>
+<p>CGNS from version 3 is HDF5 with a rule on top: every node is a group with the attributes <code>name</code>, <code>label</code> and <code>type</code>, its values are in the dataset <code>" data"</code> – with a leading space. The meaning is carried by the label (<code>CGNSBase_t</code>, <code>Zone_t</code>, <code>GridCoordinates_t</code>, <code>FlowSolution_t</code>, <code>Elements_t</code>). It is written in Fortran order, so the HDF5 shape is the reversed CGNS shape: a 3 × 2 grid appears as 2 × 3.</p>
+<p>The <b>zone size</b> is, in the CGNS view, an array (axes × 3): per axis vertices, cells, boundary vertices. In the file it is transposed; row 0 holds the vertex counts of <b>all</b> axes:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>z</mi><mo>,</mo><mi>a</mi></mrow></msub><mo>=</mo><msub><mrow><mi>C</mi></mrow><mrow><mi>a</mi><mo>,</mo><mi>z</mi></mrow></msub><mo>,</mo><mspace width="2em"/><msub><mrow><mi>K</mi></mrow><mrow><mi>a</mi></mrow></msub><mo>−</mo><mn>1</mn><mo>=</mo><msub><mrow><mi>Z</mi></mrow><mrow><mi>a</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">D_{z,a} = C_{a,z}, \qquad K_a - 1 = Z_a ,</annotation></semantics></math>
+<p>with <i>D</i> the array in the file, <i>C</i> the CGNS view, <i>K<sub>a</sub></i> and <i>Z<sub>a</sub></i> the vertex and cell counts of axis <i>a</i> (for structured zones).</p>
+<p>The second relation checks the transposition: if it is wrong, “vertices minus one” no longer holds either. Vertex and element numbers are one-based and stay so.</p>
+
+<h2 id="exodus">Exodus II: names over netCDF</h2>
+<p>Exodus is a convention over netCDF. The coordinates are stored <b>per dimension</b>: <code>coord</code> has the shape (<code>num_dim</code>, <code>num_nodes</code>), first all x, then all y, then all z; some writers create <code>coordx</code>, <code>coordy</code>, <code>coordz</code> instead. The x value of node <i>j</i> is therefore at <i>j</i>, the y value at <i>n</i> + <i>j</i>, not at 2<i>j</i> + 1. The connectivities <code>connect1</code>, <code>connect2</code> … count nodes one-based; the block ids in <code>eb_prop1</code> are not the running numbers. Variable names are stored as a character grid (count × 33) padded with zero bytes.</p>
+
+<h2 id="matlab5">MATLAB level 5: tags in two sizes</h2>
+<p>A MAT file of level 5 has a 128-byte header (116 bytes of text, 8 bytes subsystem offset, version 0x0100, byte-order mark “IM” or “MI”), followed by data elements. Each starts with a tag of type and byte count. It comes in two sizes, and the short one is recognisable <b>only</b> by the upper two bytes of the first word:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>w</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup><mi>b</mi><mo>+</mo><mi>t</mi><mspace width="1em"/><mo stretchy="false">(</mo><mn>1</mn><mo>≤</mo><mi>b</mi><mo>≤</mo><mn>4</mn><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mtext>otherwise</mtext><mspace width="1em"/><msub><mrow><mi>w</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mi>t</mi><mo>,</mo><mspace width="0.2778em"/><msub><mrow><mi>w</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mi>b</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">w_1 = 2^{16} b + t \quad (1 \le b \le 4), \qquad \text{otherwise} \quad w_1 = t,\; w_2 = b ,</annotation></semantics></math>
+<p>with <i>t</i> the element type and <i>b</i> the byte count.</p>
+<p>If the upper part of <i>w</i><sub>1</sub> is non-zero, it is the short form: content in the second word, the element is eight bytes long. Otherwise the byte count follows as the second word, and the element is padded to a multiple of eight – <b>except</b> <code>miCOMPRESSED</code>: a compressed element is not padded, the next one starts right behind it. Measured on a file with three compressed variables: elements at 128, 180 and 236, file length 281.</p>
+<p>Element types (<code>miINT8</code> … <code>miUTF32</code>) and matrix classes (<code>mxDOUBLE</code> …) both count from one; a 6 is <code>miUINT32</code> and <code>mxDOUBLE</code>. The values of a matrix are stored column by column.</p>
+
+<h2 id="matlab73">MATLAB 7.3: HDF5 behind a user block</h2>
+<p>Level 7.3 is HDF5 with a 512-byte user block carrying the same description text as the level-5 header; without it the file cannot be told apart from any HDF5 file. Each variable is a dataset, its attribute <code>MATLAB_class</code> names the class (<code>double</code>, <code>char</code>, <code>logical</code>, …). Because MATLAB writes column-major and the HDF5 shape describes the C view, the shape appears reversed:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>n</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>n</mi></mrow><mrow><mi>d</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>m</mi></mrow><mrow><mi>d</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>m</mi></mrow><mrow><mn>0</mn></mrow></msub><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">(n_0, \ldots, n_{d-1}) = (m_{d-1}, \ldots, m_0) ,</annotation></semantics></math>
+<p>with <i>n</i> the MATLAB shape and <i>m</i> the HDF5 shape.</p>
+<p>A MATLAB matrix 2 × 3 is stored as an HDF5 dataset 3 × 2; the characters of a <code>char</code> variable are 16-bit codes, a <code>logical</code> is one byte. If “MATLAB” is missing from the user block, the file is still read under the convention and that is reported.</p>
+<p>A <b>cell</b> is a dataset of object references into the group <code>#refs#</code>. Its elements are resolved and delivered as text of their content; until 2026-10-19 the cursor aborted at the first value.</p>
+
+<h2 id="npy">NumPy: a Python literal as header</h2>
+<p>An <code>.npy</code> starts with <code>\x93NUMPY</code>, two bytes of version and the header length: two bytes in version 1, four bytes (unsigned) in versions 2 and 3. The header is a Python dictionary with <code>descr</code>, <code>fortran_order</code> and <code>shape</code>, padded with spaces and a newline so that the data start at a multiple of 64. It is parsed, not executed. The size of the data follows as</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>N</mi><mo>=</mo><munder><mo largeop="true" movablelimits="true">∏</mo><mrow><mi>k</mi></mrow></munder><msub><mrow><mi>n</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mi>B</mi><mo>=</mo><mi>N</mi><mo>⋅</mo><mi>w</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">N = \prod_{k} n_k , \qquad B = N \cdot w ,</annotation></semantics></math>
+<p>with <i>w</i> the width of one value. All three numbers are claims of the file: a negative axis length, a product above 2<sup>63</sup> (65 536<sup>4</sup> = 2<sup>64</sup> would wrap to zero in 64 bits and make an empty file look valid) and a header length beyond the file size are rejected before anything is allocated.</p>
+<p>An array with more than two axes is delivered in long form: one row per value with the indices and the value. The rows run in C order; with <code>fortran_order: True</code> the reader first computes the indices from the running number and from them, with <i>p</i><sub>F</sub>, the position in the file.</p>
+
+<p>Text of type <code>U</code> takes four bytes per character, and every character is a number from the file. Anything that is not a valid Unicode code point (above U+10FFFF) is returned as the replacement character U+FFFD; until 2026-10-25 the cursor aborted there with an exception.</p>
+
+<h2 id="folgt">What follows</h2>
+<ul>
+  <li><b>Assumptions:</b> the convention holds for the whole file; a CGNS node without <code>" data"</code> or an Exodus file without <code>coord</code> is reported, not completed.</li>
+  <li>A shape is never just taken over: for a Fortran writer on top of HDF5 (CGNS, MATLAB 7.3) it is reversed, for NumPy <code>fortran_order</code> decides, for MATLAB 5 it is always column-major.</li>
+  <li>The sharpest test of an ordering is an array with different axis lengths and values that reveal their position (12 <i>i</i> + 4 <i>j</i> + <i>k</i>); a square array with smooth values tests nothing.</li>
+  <li>Header values are claims of the file: lengths, axes and counts are checked against the rest of the file.</li>
+</ul>
+
+<h2 id="pruefung">How it is tested</h2>
+<p>CGNS against three files from pyCGNS, Exodus against a file from meshio, MATLAB level 5 against ten files from scipy (plus own big-endian files), MATLAB 7.3 against a file from h5py 3.16 with user block, NumPy against files from NumPy itself and against hand-built headers for the edge cases. The recomputation is in <code>docs/theorie/rechnung/fileformats_wissenschaft.py</code>.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>CGNS in the old ADF version is named, not read.</li>
+  <li>MATLAB: objects (<code>mxOBJECT</code>) are read as structures; in level 7.3 structs appear as separate datasets with path, cells only one level deep (a cell inside a cell stays text without content).</li>
+  <li>NumPy: object arrays (<code>|O</code>) contain Python pickle and are rejected.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>CGNS Steering Committee: CGNS Standard Interface Data Structures (SIDS) and HDF5 File Mapping Manual.</li>
+  <li>L. A. Schoof, V. R. Yarberry: EXODUS II: A Finite Element Data Model. Sandia National Laboratories, SAND92-2137.</li>
+  <li>MAT-File Format, Version 7 (vendor format description, 2023).</li>
+  <li>NumPy Enhancement Proposal 1: A Simple File Format for NumPy Arrays.</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

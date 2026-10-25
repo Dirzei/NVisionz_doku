@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quasi-Monte-Carlo, Polynomchaos und Intervalle – Hintergrund – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag aktiv" href="index.html">framework-math</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#fourier">Fourier- und Kosinustransformation</a>
+<a class="unterseite" href="fourier.html">Hintergrund</a>
+<a class="rubrik" href="index.html#linear">Dichte lineare Algebra</a>
+<a class="unterseite" href="linear.html">Hintergrund</a>
+<a class="rubrik" href="index.html#gspar">Dünn besetzte LU</a>
+<a class="unterseite" href="gspar.html">Hintergrund</a>
+<a class="rubrik" href="index.html#krylov">Iterative Löser (Krylov)</a>
+<a class="unterseite" href="krylov.html">Hintergrund</a>
+<a class="rubrik" href="index.html#eigen">Eigenwerte und Singulärwertzerlegung</a>
+<a class="unterseite" href="eigen.html">QR und SVD</a>
+<a class="unterseite" href="lanczos.html">Lanczos und Arnoldi</a>
+<a class="rubrik" href="index.html#ode">Anfangswertprobleme und DAE</a>
+<a class="unterseite" href="ode.html">Hintergrund</a>
+<a class="rubrik" href="index.html#quadratur">Numerische Integration</a>
+<a class="unterseite" href="quadratur.html">Hintergrund</a>
+<a class="rubrik" href="index.html#optimierung">Optimierung und Nullstellen</a>
+<a class="unterseite" href="nullstellen.html">Brent, Nelder-Mead, LM</a>
+<a class="unterseite" href="optimierung.html">L-BFGS und SQP</a>
+<a class="rubrik" href="index.html#kurven">Kurven, Splines und Flächen</a>
+<a class="unterseite" href="kurven.html">Hintergrund</a>
+<a class="rubrik" href="index.html#matrizen">Verallgemeinerte Eigenwerte, dünne Zerlegungen, Ereignisse, Matrixexponential</a>
+<a class="unterseite" href="matrizen.html">Verallgemeinerte Eigenwerte, dünne Zerlegungen, Ereignisse und Matrixexponential – Hintergrund</a>
+<a class="rubrik" href="index.html#lp">Lineare, ganzzahlige und Mehrziel-Optimierung</a>
+<a class="unterseite" href="lp.html">Hintergrund</a>
+<a class="rubrik" href="index.html#geometrie">Streudaten und Geometrie</a>
+<a class="unterseite" href="geometrie.html">Hintergrund</a>
+<a class="rubrik" href="index.html#unsicherheit">Quasi-Monte-Carlo, Polynomchaos, Intervalle</a>
+<a class="unterseite aktiv" href="unsicherheit.html">Quasi-Monte-Carlo, Polynomchaos und Intervalle – Hintergrund</a>
+<a class="rubrik" href="index.html#signal">Wavelets und Hilbert-Transformation</a>
+<a class="unterseite" href="signal.html">Hintergrund</a>
+<a class="rubrik" href="index.html#graph">Wege, Flüsse, Netzwerke</a>
+<a class="unterseite" href="graph.html">Wege, Flüsse und Netzwerke – Hintergrund</a>
+<a class="rubrik" href="index.html#randgebiete">Sequenzen, Bilder, Schaltungen, Optik, Himmelsmechanik</a>
+<a class="unterseite" href="randgebiete.html">Hintergrund</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-math</a> › Quasi-Monte-Carlo, Polynomchaos und Intervalle – Hintergrund</span><a class="sprachwahl" href="../../en/math/unsicherheit.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-math · envisionz.math.unsicherheit · envisionz.math.intervall</div>
+  <h1>Quasi-Monte-Carlo, Polynomchaos und Intervalle – Hintergrund</h1>
+  <p class="unter">Die Rechnung hinter <code>Sobol</code>, <code>Halton</code>, <code>Normal</code>, <code>Polynomchaos</code>, <code>Intervall</code>, <code>IntervallNewton</code> und <code>Genau</code>: Folgen niedriger Diskrepanz, Polynomchaos mit Sobol-Indizes, nach außen gerundete Intervallarithmetik, Nullstellen mit Beweis und Zahlen beliebiger Genauigkeit.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Unsicherheiten pflanzen sich durch Modelle fort. Zufällige Stichproben (Monte-Carlo) konvergieren langsam wie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><msqrt><mi>N</mi></msqrt></mrow><annotation encoding="application/x-tex">1/\sqrt N</annotation></semantics></math>; gleichmäßiger verteilte Punkte (Quasi-Monte-Carlo) oder ein Ersatzmodell aus orthogonalen Polynomen (Polynomchaos) erreichen dieselbe Genauigkeit mit viel weniger Auswertungen. Intervallarithmetik geht den umgekehrten Weg: sie verfolgt nicht Wahrscheinlichkeiten, sondern garantierte Schranken – auch für die Rundungsfehler der Rechnung selbst.</p>
+
+<figure>
+<svg viewBox="0 0 560 200" width="560" font-family="sans-serif" font-size="12">
+  <rect x="30" y="20" width="160" height="160" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <g fill="#1f5f8b"><circle cx="110" cy="100" r="3"/><circle cx="70" cy="60" r="3"/><circle cx="150" cy="140" r="3"/><circle cx="130" cy="40" r="3"/><circle cx="50" cy="120" r="3"/><circle cx="90" cy="160" r="3"/><circle cx="170" cy="80" r="3"/><circle cx="80" cy="30" r="3"/><circle cx="160" cy="110" r="3"/><circle cx="40" cy="70" r="3"/><circle cx="120" cy="150" r="3"/><circle cx="100" cy="50" r="3"/></g>
+  <text x="40" y="196" fill="#1f5f8b">Sobol: gleichmäßig</text>
+  <line x1="260" y1="100" x2="530" y2="100" stroke="#5b6475"/>
+  <rect x="320" y="90" width="120" height="20" fill="#fff7e6" stroke="#9a6400"/><circle cx="378" cy="100" r="4" fill="#1f5f8b"/>
+  <text x="300" y="80" fill="#9a6400">[a, b] nach außen gerundet</text><text x="350" y="130" fill="#1f5f8b">wahrer Wert innen</text>
+</svg>
+<figcaption>Links eine Sobol-Punktmenge, rechts ein Intervall, das den wahren Wert sicher einschließt.</figcaption>
+</figure>
+
+<h2 id="qmc">Sobol und Halton</h2>
+<p><b>Sobol</b>-Punkte entstehen nach Bratley und Fox mit Gray-Code: der nächste Punkt unterscheidet sich vom vorigen durch ein XOR mit einer Richtungszahl; die Richtungszahlen stammen aus der Tafel von Joe und Kuo (2008) für die ersten 64 Dimensionen. Die ersten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>m</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^m</annotation></semantics></math> Punkte belegen in jeder Dimension jedes Intervall <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi>m</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-m}</annotation></semantics></math> genau einmal. <b>Halton</b>-Punkte sind die Radikalumkehr der Indizes zu den Primzahlbasen, wahlweise zufällig verschoben (Cranley-Patterson). Die Normalverteilung mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>erfc</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\operatorname{erfc}</annotation></semantics></math> ohne Auslöschung und das Quantil nach Acklam mit zwei Halley-Schritten liefern die Transformation auf normalverteilte Eingänge.</p>
+<p><b>Warum gleichmäßige Punkte schneller sind.</b> Die Ungleichung von Koksma und Hlawka (aus der Literatur, Niederreiter 1992) schätzt den Fehler eines Mittelwerts über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> Punkte durch das Produkt aus der Variation <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">V(f)</annotation></semantics></math> des Integranden und der Sterndiskrepanz der Punkte,</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo>|</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>N</mi></mrow></munderover><mi>f</mi><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi></mrow></msub><mo stretchy="false">)</mo><mo>−</mo><msub><mo largeop="true">∫</mo><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><msup><mrow><mo stretchy="false">]</mo></mrow><mrow><mi>d</mi></mrow></msup></mrow></msub><mi>f</mi><mspace width="0.1667em"/><mi>d</mi><mi>x</mi><mo>|</mo><mo>≤</mo><mi>V</mi><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><msubsup><mrow><mi>D</mi></mrow><mrow><mi>N</mi></mrow><mrow><mo>*</mo></mrow></msubsup><mo>,</mo><mspace width="2em"/><msubsup><mrow><mi>D</mi></mrow><mrow><mi>N</mi></mrow><mrow><mo>*</mo></mrow></msubsup><mo>=</mo><mi>O</mi><mo stretchy="false">(</mo><mfrac><mrow><mo stretchy="false">(</mo><mi>log</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>N</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>d</mi></mrow></msup></mrow><mrow><mi>N</mi></mrow></mfrac><mo stretchy="false">)</mo><mtext> für Sobol und Halton</mtext><mo>.</mo></mrow><annotation encoding="application/x-tex">\Big|\frac1N\sum_{n=1}^{N} f(x_n) - \int_{[0,1]^d} f\,dx\Big| \le V(f)\,D_N^*, \qquad D_N^* = O\Big(\frac{(\log N)^d}{N}\Big) \text{ für Sobol und Halton}.</annotation></semantics></math></p>
+<p>Gegen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><msqrt><mi>N</mi></msqrt></mrow><annotation encoding="application/x-tex">1/\sqrt N</annotation></semantics></math> bei Zufallspunkten ist das für mäßige <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> und glatte Integranden ein großer Gewinn; der Faktor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>log</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>N</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mi>d</mi></mrow></msup></mrow><annotation encoding="application/x-tex">(\log N)^d</annotation></semantics></math> zeigt zugleich, warum er in sehr hohen Dimensionen schwindet. Eine Fehlerschätzung liefert die Schranke nicht – <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">V(f)</annotation></semantics></math> kennt man selten.</p>
+<p><b>Sobol im Einzelnen.</b> Je Dimension gibt es 32 Richtungszahlen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>v</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">v_k</annotation></semantics></math> (als 32-Bit-Brüche). Die ersten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> stehen in der Tafel, die übrigen folgen aus dem primitiven Polynom vom Grad <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math> mit den Beiwerten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>a</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>s</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">a_1, \dots, a_{s-1}</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>v</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi>v</mi></mrow><mrow><mi>k</mi><mo>−</mo><mi>s</mi></mrow></msub><mo>⊕</mo><mfrac><mrow><msub><mrow><mi>v</mi></mrow><mrow><mi>k</mi><mo>−</mo><mi>s</mi></mrow></msub></mrow><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>s</mi></mrow></msup></mrow></mfrac><mo>⊕</mo><munderover><mo largeop="true" movablelimits="true">⨁</mo><mrow><mi>q</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>s</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mrow><mi>a</mi></mrow><mrow><mi>q</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>v</mi></mrow><mrow><mi>k</mi><mo>−</mo><mi>q</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">v_k = v_{k-s} \oplus \frac{v_{k-s}}{2^s} \oplus \bigoplus_{q=1}^{s-1} a_q\, v_{k-q} .</annotation></semantics></math></p>
+<p>Der <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math>-te Punkt entsteht aus dem vorigen mit einem einzigen XOR (Antonov und Saleev): <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>=</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>⊕</mo><msub><mrow><mi>v</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_n = x_{n-1} \oplus v_c</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> die Zahl der Nullen am Ende der Binärdarstellung von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math>. Das ist die Gray-Code-Reihenfolge – dieselben Punkte wie in der natürlichen Reihenfolge, nur umsortiert innerhalb jedes Blocks von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>m</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^m</annotation></semantics></math>; in der ersten Dimension sind die ersten 16 Punkte genau <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">{</mo><mi>i</mi><mo>/</mo><mn>16</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{i/16\}</annotation></semantics></math>, beginnend mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>,</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo>,</mo><mstyle displaystyle="false"><mfrac><mrow><mn>3</mn></mrow><mrow><mn>4</mn></mrow></mfrac></mstyle><mo>,</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">0, \tfrac12, \tfrac34, \tfrac14</annotation></semantics></math>.</p>
+<p><b>Halton</b> nimmt je Dimension eine Primzahl <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> und spiegelt die Ziffern des Index am Komma, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msub><mrow><mi>a</mi></mrow><mrow><mi>k</mi></mrow></msub><msup><mrow><mi>b</mi></mrow><mrow><mi>k</mi></mrow></msup><mo>↦</mo><msub><mrow><mi mathvariant="normal">φ</mi></mrow><mrow><mi>b</mi></mrow></msub><mo stretchy="false">(</mo><mi>n</mi><mo stretchy="false">)</mo><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msub><mrow><mi>a</mi></mrow><mrow><mi>k</mi></mrow></msub><msup><mrow><mi>b</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">n = \sum_k a_k b^k \mapsto \varphi_b(n) = \sum_k a_k b^{-k-1}</annotation></semantics></math>. Beispiel: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>6</mn><mo>=</mo><msub><mn>110</mn><mrow><mn>2</mn></mrow></msub><mo>↦</mo><msub><mn>0,011</mn><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>3</mn><mo>/</mo><mn>8</mn></mrow><annotation encoding="application/x-tex">6 = 110_2 \mapsto 0{,}011_2 = 3/8</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>5</mn><mo>=</mo><msub><mn>12</mn><mrow><mn>3</mn></mrow></msub><mo>↦</mo><msub><mn>0,21</mn><mrow><mn>3</mn></mrow></msub><mo>=</mo><mn>7</mn><mo>/</mo><mn>9</mn></mrow><annotation encoding="application/x-tex">5 = 12_3 \mapsto 0{,}21_3 = 7/9</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>11</mn><mo>=</mo><msub><mn>21</mn><mrow><mn>5</mn></mrow></msub><mo>↦</mo><msub><mn>0,12</mn><mrow><mn>5</mn></mrow></msub><mo>=</mo><mn>7</mn><mo>/</mo><mn>25</mn></mrow><annotation encoding="application/x-tex">11 = 21_5 \mapsto 0{,}12_5 = 7/25</annotation></semantics></math>. Bei großen Basen sind die ersten Punkte zweier Dimensionen stark korreliert; dagegen hilft die Verschiebung nur teilweise.</p>
+<p><b>Normalverteilung.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mspace width="0.1667em"/><mi>erfc</mi><mo>⁡</mo><mo stretchy="false">(</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi>x</mi><mo>/</mo><msqrt><mn>2</mn></msqrt><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\Phi(x) = \tfrac12\operatorname{erfc}(-x/\sqrt2)</annotation></semantics></math>. Für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>≤</mo><mn>2,5</mn></mrow><annotation encoding="application/x-tex">x \le 2{,}5</annotation></semantics></math> die Reihe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>erf</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>x</mi><mo>=</mo><mfrac><mrow><mn>2</mn></mrow><mrow><msqrt><mi mathvariant="normal">π</mi></msqrt></mrow></mfrac><msup><mrow><mi>e</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow></msup><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>n</mi><mo>≥</mo><mn>0</mn></mrow></munder><mfrac><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>n</mi></mrow></msup><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msup></mrow><mrow><mn>1</mn><mo>⋅</mo><mn>3</mn><mo>⋯</mo><mo stretchy="false">(</mo><mn>2</mn><mi>n</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex">\operatorname{erf} x = \frac{2}{\sqrt\pi}e^{-x^2}\sum_{n\ge0}\frac{2^n x^{2n+1}}{1\cdot3\cdots(2n+1)}</annotation></semantics></math> (nur positive Glieder, keine Auslöschung), darüber der Kettenbruch</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>erfc</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>x</mi><mo>=</mo><mfrac><mrow><msup><mrow><mi>e</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow></msup></mrow><mrow><msqrt><mi mathvariant="normal">π</mi></msqrt></mrow></mfrac><mo>⋅</mo><mstyle displaystyle="true"><mfrac><mrow><mn>1</mn></mrow><mrow><mi>x</mi><mo>+</mo><mstyle displaystyle="true"><mfrac><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow><mrow><mi>x</mi><mo>+</mo><mstyle displaystyle="true"><mfrac><mrow><mn>1</mn></mrow><mrow><mi>x</mi><mo>+</mo><mstyle displaystyle="true"><mfrac><mrow><mn>3</mn><mo>/</mo><mn>2</mn></mrow><mrow><mi>x</mi><mo>+</mo><mo>⋯</mo></mrow></mfrac></mstyle></mrow></mfrac></mstyle></mrow></mfrac></mstyle></mrow></mfrac></mstyle><mo>,</mo></mrow><annotation encoding="application/x-tex">\operatorname{erfc} x = \frac{e^{-x^2}}{\sqrt\pi}\cdot\cfrac{1}{x + \cfrac{1/2}{x + \cfrac{1}{x + \cfrac{3/2}{x + \cdots}}}},</annotation></semantics></math></p>
+<p>ausgewertet nach Lentz. So bleibt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>erfc</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\operatorname{erfc}</annotation></semantics></math> auch weit im Schwanz relativ genau, wo <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>−</mo><mspace width="0.1667em"/><mi>erf</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">1 - \operatorname{erf}</annotation></semantics></math> nur noch Rundungsfehler wäre.</p>
+<p>Das Quantil startet mit der rationalen Näherung von Acklam und wird mit zwei Halley-Schritten auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>−</mo><mi>p</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\Phi(x) - p = 0</annotation></semantics></math> verbessert; mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mo stretchy="false">(</mo><mi mathvariant="normal">Φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>−</mo><mi>p</mi><mo stretchy="false">)</mo><mo>/</mo><mi mathvariant="normal">φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">u = (\Phi(x) - p)/\varphi(x)</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">φ</mi><mo>'</mo><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi>x</mi><mi mathvariant="normal">φ</mi></mrow><annotation encoding="application/x-tex">\varphi' = -x\varphi</annotation></semantics></math> lautet der Schritt</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>←</mo><mi>x</mi><mo>−</mo><mfrac><mrow><mi>u</mi></mrow><mrow><mn>1</mn><mo>+</mo><mi>x</mi><mi>u</mi><mo>/</mo><mn>2</mn></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">x \leftarrow x - \frac{u}{1 + x u/2}.</annotation></semantics></math></p>
+<p>Für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&gt;</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">p &gt; \tfrac12</annotation></semantics></math> wird der Unterschied als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo stretchy="false">)</mo><mo>−</mo><mi>Q</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1 - p) - Q(x)</annotation></semantics></math> gebildet, damit er im oberen Schwanz nicht ausgelöscht wird.</p>
+
+<h2 id="pce">Polynomchaos und Sobol-Indizes</h2>
+<p>Ein Modell <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi><mo>=</mo><mi>f</mi><mo stretchy="false">(</mo><mi mathvariant="normal">ξ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Y = f(\xi)</annotation></semantics></math> mit unabhängigen Eingängen wird nach orthogonalen Polynomen entwickelt – Hermite für normalverteilte (Norm <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>!</mo></mrow><annotation encoding="application/x-tex">k!</annotation></semantics></math>), Legendre für gleichverteilte (Norm <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mo stretchy="false">(</mo><mn>2</mn><mi>k</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">1/(2k+1)</annotation></semantics></math>) – bis zum Gesamtgrad <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Y</mi><mo>≈</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi mathvariant="normal">α</mi></mrow></munder><msub><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">α</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">Ψ</mi></mrow><mrow><mi mathvariant="normal">α</mi></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">ξ</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>E</mi><mo stretchy="false">[</mo><mi>Y</mi><mo stretchy="false">]</mo><mo>=</mo><msub><mrow><mi>c</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><mspace width="2em"/><mspace width="0.1667em"/><mi>Var</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>Y</mi><mo>=</mo><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi mathvariant="normal">α</mi><mo>≠</mo><mn>0</mn></mrow></munder><msubsup><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>‖</mo><msub><mrow><mi mathvariant="normal">Ψ</mi></mrow><mrow><mi mathvariant="normal">α</mi></mrow></msub><msup><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>.</mo></mrow><annotation encoding="application/x-tex">Y \approx \sum_\alpha c_\alpha\,\Psi_\alpha(\xi), \qquad E[Y] = c_0, \qquad \operatorname{Var}Y = \sum_{\alpha\ne0}c_\alpha^2\|\Psi_\alpha\|^2.</annotation></semantics></math></p>
+<p>Die Polynome entstehen aus ihren Dreitermrekursionen,</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>H</mi><msub><mrow><mi>e</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>x</mi><mspace width="0.1667em"/><mi>H</mi><msub><mrow><mi>e</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>−</mo><mi>k</mi><mspace width="0.1667em"/><mi>H</mi><msub><mrow><mi>e</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mo stretchy="false">(</mo><mi>k</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>P</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mn>2</mn><mi>k</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>x</mi><mspace width="0.1667em"/><msub><mrow><mi>P</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>−</mo><mi>k</mi><mspace width="0.1667em"/><msub><mrow><mi>P</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">He_{k+1}(x) = x\,He_k(x) - k\,He_{k-1}(x), \qquad (k + 1)\,P_{k+1}(x) = (2k + 1)\,x\,P_k(x) - k\,P_{k-1}(x),</annotation></semantics></math></p>
+<p>mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo stretchy="false">[</mo><mi>H</mi><msubsup><mrow><mi>e</mi></mrow><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo stretchy="false">]</mo><mo>=</mo><mi>k</mi><mo>!</mo></mrow><annotation encoding="application/x-tex">E[He_k^2] = k!</annotation></semantics></math> unter der Standardnormalverteilung und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo stretchy="false">[</mo><msubsup><mrow><mi>P</mi></mrow><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo stretchy="false">]</mo><mo>=</mo><mn>1</mn><mo>/</mo><mo stretchy="false">(</mo><mn>2</mn><mi>k</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">E[P_k^2] = 1/(2k + 1)</annotation></semantics></math> unter der Gleichverteilung auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-1, 1]</annotation></semantics></math>. Die Basis aller Produkte bis zum Gesamtgrad <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math> in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> Variablen hat <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo fence="true" stretchy="true">(</mo><mfrac linethickness="0"><mrow><mi>d</mi><mo>+</mo><mi>p</mi></mrow><mrow><mi>p</mi></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">\binom{d + p}{p}</annotation></semantics></math> Glieder – für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">d = 3</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">p = 12</annotation></semantics></math> sind das 455.</p>
+<p>Die Beiwerte kommen aus einer Regression auf Stichproben (QR). Die <b>Sobol-Indizes</b> erster Ordnung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">S_i</annotation></semantics></math> summieren die Varianzanteile der Terme, die nur <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\xi_i</annotation></semantics></math> enthalten, die gesamten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mo>,</mo><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">S_{T,i}</annotation></semantics></math> alle Terme mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\xi_i</annotation></semantics></math> (Sudret 2008) – ohne weitere Auswertungen des Modells.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi mathvariant="normal">α</mi><mo>∈</mo><msub><mrow><mi>A</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></munder><msubsup><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>‖</mo><msub><mrow><mi mathvariant="normal">Ψ</mi></mrow><mrow><mi mathvariant="normal">α</mi></mrow></msub><msup><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mi>Var</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>Y</mi></mrow></mfrac><mo>,</mo><mspace width="1em"/><msub><mrow><mi>A</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mo stretchy="false">{</mo><mi mathvariant="normal">α</mi><mo>:</mo><mspace width="0.3333em"/><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>&gt;</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><mn>0</mn><mspace width="0.3333em"/><mo stretchy="false">(</mo><mi>j</mi><mo>≠</mo><mi>i</mi><mo stretchy="false">)</mo><mo stretchy="false">}</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>=</mo><mfrac><mrow><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><msub><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>&gt;</mo><mn>0</mn></mrow></munder><msubsup><mrow><mi>c</mi></mrow><mrow><mi mathvariant="normal">α</mi></mrow><mrow><mn>2</mn></mrow></msubsup><mo>‖</mo><msub><mrow><mi mathvariant="normal">Ψ</mi></mrow><mrow><mi mathvariant="normal">α</mi></mrow></msub><msup><mrow><mo>‖</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mi>Var</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>Y</mi></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">S_i = \frac{\sum_{\alpha \in A_i} c_\alpha^2\|\Psi_\alpha\|^2}{\operatorname{Var}Y}, \quad A_i = \{\alpha:\ \alpha_i &gt; 0,\ \alpha_j = 0\ (j \ne i)\}, \qquad S_{T,i} = \frac{\sum_{\alpha_i &gt; 0} c_\alpha^2\|\Psi_\alpha\|^2}{\operatorname{Var}Y}.</annotation></semantics></math></p>
+<p>Warum das stimmt: die Basis ist orthogonal, also zerfällt die Varianz in die Summe der Glieder, und jedes Glied gehört genau zu der Variablenmenge, deren Exponenten nicht null sind – das ist die Zerlegung nach Hoeffding und Sobol, nur ausgezählt statt integriert.</p>
+<p><b>Rechenbeispiel.</b> Die Ishigami-Funktion <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi><mo>=</mo><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><mi>a</mi><mspace width="0.1667em"/><msup><mi>sin</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>+</mo><mi>b</mi><mspace width="0.1667em"/><msubsup><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mn>3</mn></mrow><mrow><mn>4</mn></mrow></msubsup><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">Y = \sin\xi_1 + a\sin^2\xi_2 + b\,\xi_3^4\sin\xi_1</annotation></semantics></math> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\xi_i</annotation></semantics></math> gleichverteilt auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi mathvariant="normal">π</mi><mo>,</mo><mi mathvariant="normal">π</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-\pi, \pi]</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">a = 7</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mn>0,1</mn></mrow><annotation encoding="application/x-tex">b = 0{,}1</annotation></semantics></math> hat geschlossene Varianzanteile</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>V</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mfrac><mrow><mi>b</mi><msup><mrow><mi mathvariant="normal">π</mi></mrow><mrow><mn>4</mn></mrow></msup></mrow><mrow><mn>5</mn></mrow></mfrac><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>,</mo><mspace width="1em"/><msub><mrow><mi>V</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mfrac><mrow><msup><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mn>8</mn></mrow></mfrac><mo>,</mo><mspace width="1em"/><msub><mrow><mi>V</mi></mrow><mrow><mn>13</mn></mrow></msub><mo>=</mo><msup><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msup><msup><mrow><mi mathvariant="normal">π</mi></mrow><mrow><mn>8</mn></mrow></msup><mo stretchy="false">(</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>18</mn></mrow></mfrac><mo>−</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>50</mn></mrow></mfrac><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">V_1 = \tfrac12\Big(1 + \frac{b\pi^4}{5}\Big)^2, \quad V_2 = \frac{a^2}{8}, \quad V_{13} = b^2\pi^8\Big(\frac{1}{18} - \frac{1}{50}\Big),</annotation></semantics></math></p>
+<p>also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0,3139</mn></mrow><annotation encoding="application/x-tex">S_1 = 0{,}3139</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0,4424</mn></mrow><annotation encoding="application/x-tex">S_2 = 0{,}4424</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mn>3</mn></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">S_3 = 0</annotation></semantics></math>, aber <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi><mo>,</mo><mn>3</mn></mrow></msub><mo>=</mo><mn>0,2437</mn></mrow><annotation encoding="application/x-tex">S_{T,3} = 0{,}2437</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\xi_3</annotation></semantics></math> wirkt nur über die Wechselwirkung mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ξ</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\xi_1</annotation></semantics></math>. Genau diese Zahlen trifft die Entwicklung mit Legendre-Polynomen bis Grad 12 aus 3000 Sobol-Punkten auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-4}</annotation></semantics></math>.</p>
+
+<h2 id="intervall">Intervallarithmetik und Intervall-Newton</h2>
+<p>Jede Grundrechenart wird auf den Grenzen ausgeführt und das Ergebnis um ein ulp nach außen gerundet (<code>nextDown</code>/<code>nextUp</code>; zwei Schritte bei Bibliotheksfunktionen), so dass der wahre Wert sicher eingeschlossen bleibt; Division durch ein Intervall mit 0 ergibt die ganze Gerade, sin und cos berücksichtigen Extrema im Inneren.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo stretchy="false">[</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false">]</mo><mo>+</mo><mo stretchy="false">[</mo><mi>c</mi><mo>,</mo><mi>d</mi><mo stretchy="false">]</mo><mo>=</mo><mo stretchy="false">[</mo><mi>ab</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>a</mi><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>auf</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>b</mi><mo>+</mo><mi>d</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo><mo>,</mo><mspace width="2em"/><mo stretchy="false">[</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="false">]</mo><mo>⋅</mo><mo stretchy="false">[</mo><mi>c</mi><mo>,</mo><mi>d</mi><mo stretchy="false">]</mo><mo>=</mo><mo stretchy="false">[</mo><mi>ab</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>min</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>auf</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>max</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>P</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo><mo>,</mo><mspace width="1em"/><mi>P</mi><mo>=</mo><mo stretchy="false">{</mo><mi>a</mi><mi>c</mi><mo>,</mo><mi>a</mi><mi>d</mi><mo>,</mo><mi>b</mi><mi>c</mi><mo>,</mo><mi>b</mi><mi>d</mi><mo stretchy="false">}</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">[a, b] + [c, d] = [\operatorname{ab}(a + c),\ \operatorname{auf}(b + d)], \qquad [a, b]\cdot[c, d] = [\operatorname{ab}(\min P),\ \operatorname{auf}(\max P)], \quad P = \{ac, ad, bc, bd\},</annotation></semantics></math></p>
+<p>mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ab</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\operatorname{ab}</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>auf</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">\operatorname{auf}</annotation></semantics></math> als ein ulp nach unten bzw. oben (<code>nextDown</code>, <code>nextUp</code>). Das genügt, weil Java die Grundrechenarten korrekt rundet (Fehler höchstens ein halbes ulp); für <code>StrictMath</code>-Funktionen mit höchstens einem ulp Fehler werden es zwei Schritte. Damit gilt die <b>Einschlusseigenschaft</b>: aus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>∈</mo><mi>X</mi></mrow><annotation encoding="application/x-tex">x \in X</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>∈</mo><mi>Y</mi></mrow><annotation encoding="application/x-tex">y \in Y</annotation></semantics></math> folgt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>∘</mo><mi>y</mi><mo>∈</mo><mi>X</mi><mo>∘</mo><mi>Y</mi></mrow><annotation encoding="application/x-tex">x \circ y \in X \circ Y</annotation></semantics></math> – für jede Rechnung, die nur aus solchen Schritten besteht. Der Preis ist die Überschätzung bei Abhängigkeiten: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>−</mo><mi>X</mi></mrow><annotation encoding="application/x-tex">X - X</annotation></semantics></math> ist nicht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 0]</annotation></semantics></math>, sondern doppelt so breit wie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math>.</p>
+<p>Auch eine Eingabe wie <code>0.1</code> muss eingeschlossen werden: <code>von("0.1")</code> vergleicht die nächste <code>double</code> mit dem Dezimalwert und erweitert um ein ulp nach der richtigen Seite.</p>
+<p><b>Rumps Beispiel</b> zeigt, wofür das gut ist: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mn>333,75</mn><mspace width="0.1667em"/><msup><mrow><mi>b</mi></mrow><mrow><mn>6</mn></mrow></msup><mo>+</mo><msup><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">(</mo><mn>11</mn><msup><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msup><msup><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>−</mo><msup><mrow><mi>b</mi></mrow><mrow><mn>6</mn></mrow></msup><mo>−</mo><mn>121</mn><msup><mrow><mi>b</mi></mrow><mrow><mn>4</mn></mrow></msup><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo><mo>+</mo><mn>5,5</mn><mspace width="0.1667em"/><msup><mrow><mi>b</mi></mrow><mrow><mn>8</mn></mrow></msup><mo>+</mo><mi>a</mi><mo>/</mo><mo stretchy="false">(</mo><mn>2</mn><mi>b</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f = 333{,}75\,b^6 + a^2(11a^2b^2 - b^6 - 121b^4 - 2) + 5{,}5\,b^8 + a/(2b)</annotation></semantics></math> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>77617</mn></mrow><annotation encoding="application/x-tex">a = 77617</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mn>33096</mn></mrow><annotation encoding="application/x-tex">b = 33096</annotation></semantics></math>. Der Polynomteil ist genau <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">-2</annotation></semantics></math>, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>2</mn><mo>+</mo><mi>a</mi><mo>/</mo><mo stretchy="false">(</mo><mn>2</mn><mi>b</mi><mo stretchy="false">)</mo><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>0,8273960599</mn><mo>…</mo></mrow><annotation encoding="application/x-tex">f = -2 + a/(2b) = -0{,}8273960599\ldots</annotation></semantics></math>; in doppelter Genauigkeit löschen sich Summanden der Größe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>36</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{36}</annotation></semantics></math> aus, und das Ergebnis liegt um mehr als 1 daneben, ohne dass man es ihm ansieht. Das Intervall wird dabei riesig – und zeigt damit an, dass dem Ergebnis nicht zu trauen ist.</p>
+<p>Der <b>Intervall-Newton</b>-Operator</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>N</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo><mo>=</mo><mi>m</mi><mo>−</mo><mfrac><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>m</mi><mo stretchy="false">)</mo></mrow><mrow><mi>F</mi><mo>'</mo><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>m</mi><mo>=</mo><mspace width="0.1667em"/><mi>mitte</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">N(X) = m - \frac{f(m)}{F'(X)}, \qquad m = \operatorname{mitte}(X),</annotation></semantics></math></p>
+<p>beweist: liegt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">N(X)</annotation></semantics></math> im Inneren von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math>, hat <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> dort genau eine Nullstelle; ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo><mo>∩</mo><mi>X</mi></mrow><annotation encoding="application/x-tex">N(X)\cap X</annotation></semantics></math> leer, keine. Wo <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo>'</mo><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">F'(X)</annotation></semantics></math> die 0 enthält, wird halbiert. Herleitung aus dem Mittelwertsatz: ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>x</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">*</mo></mrow></msup><mo>∈</mo><mi>X</mi></mrow><annotation encoding="application/x-tex">x^* \in X</annotation></semantics></math> eine Nullstelle, so gilt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>=</mo><mi>f</mi><mo stretchy="false">(</mo><mi>m</mi><mo stretchy="false">)</mo><mo>+</mo><mi>f</mi><mo>'</mo><mo stretchy="false">(</mo><mi mathvariant="normal">ξ</mi><mo stretchy="false">)</mo><mo stretchy="false">(</mo><msup><mrow><mi>x</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">*</mo></mrow></msup><mo>−</mo><mi>m</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">0 = f(m) + f'(\xi)(x^* - m)</annotation></semantics></math> für ein <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ξ</mi><mo>∈</mo><mi>X</mi></mrow><annotation encoding="application/x-tex">\xi \in X</annotation></semantics></math>, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>x</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">*</mo></mrow></msup><mo>=</mo><mi>m</mi><mo>−</mo><mi>f</mi><mo stretchy="false">(</mo><mi>m</mi><mo stretchy="false">)</mo><mo>/</mo><mi>f</mi><mo>'</mo><mo stretchy="false">(</mo><mi mathvariant="normal">ξ</mi><mo stretchy="false">)</mo><mo>∈</mo><mi>N</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x^* = m - f(m)/f'(\xi) \in N(X)</annotation></semantics></math> – jede Nullstelle in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> liegt auch in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">N(X)</annotation></semantics></math>, und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>∩</mo><mi>N</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">X \cap N(X)</annotation></semantics></math> verliert keine. Liegt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">N(X)</annotation></semantics></math> sogar im Inneren von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math>, folgen Existenz und Eindeutigkeit (Moore et al.). Weil <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>m</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(m)</annotation></semantics></math> selbst als Intervall gerechnet wird, ist der Beweis auch gegen Rundung sicher. Schritt für Schritt schrumpft <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> quadratisch, solange <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo>'</mo><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">F'(X)</annotation></semantics></math> die 0 nicht enthält (ebenda).</p>
+<p> <code>Genau</code> rechnet mit BigDecimal und 15 Schutzstellen: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">\pi</annotation></semantics></math> nach Machin und nach Gauß-Legendre (AGM),</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mfrac><mrow><mi mathvariant="normal">π</mi></mrow><mrow><mn>4</mn></mrow></mfrac><mo>=</mo><mn>4</mn><mspace width="0.1667em"/><mi>arctan</mi><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><mn>1</mn></mrow><mrow><mn>5</mn></mrow></mfrac><mo>−</mo><mspace width="0.1667em"/><mi>arctan</mi><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><mn>1</mn></mrow><mrow><mn>239</mn></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">π</mi><mo>≈</mo><mfrac><mrow><mo stretchy="false">(</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>+</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>k</mi></mrow></msub><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mn>4</mn><mspace width="0.1667em"/><msub><mrow><mi>t</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">\frac\pi4 = 4\arctan\frac15 - \arctan\frac1{239}, \qquad \pi \approx \frac{(a_k + b_k)^2}{4\,t_k},</annotation></semantics></math></p>
+<p>die erste Formel mit der Reihe des Arcustangens (je Glied rund 1,4 Stellen bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">1/5</annotation></semantics></math>), die zweite mit quadratischer Konvergenz (die Zahl der richtigen Stellen verdoppelt sich je Schritt). Beide unabhängig zu rechnen und auf 300 Stellen zu vergleichen, ist die Probe. Der Logarithmus wird auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>∈</mo><mo stretchy="false">[</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">r \in [1, 2]</annotation></semantics></math> reduziert, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>x</mi><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><mi>artanh</mi><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><mi>r</mi><mo>−</mo><mn>1</mn></mrow><mrow><mi>r</mi><mo>+</mo><mn>1</mn></mrow></mfrac><mo>+</mo><mi>k</mi><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>2</mn></mrow><annotation encoding="application/x-tex">\ln x = 2\operatorname{artanh}\frac{r-1}{r+1} + k\ln 2</annotation></semantics></math>, mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>2</mn><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><mi>artanh</mi><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><mn>1</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mrow><annotation encoding="application/x-tex">\ln 2 = 2\operatorname{artanh}\frac13</annotation></semantics></math>; exp halbiert das Argument bis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><mi>r</mi><mo>|</mo><mo>≤</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle></mrow><annotation encoding="application/x-tex">|r| \le \tfrac12</annotation></semantics></math> und quadriert zurück; sin und cos reduzieren modulo <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">2\pi</annotation></semantics></math> mit zusätzlichen Stellen für die Stellen vor dem Komma.</p>
+
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li>Sobol: die ersten Punkte von Hand, in allen 64 Dimensionen jedes Intervall <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mn>4096</mn></mrow><annotation encoding="application/x-tex">1/4096</annotation></semantics></math> genau einmal; Integral in 8 Dimensionen mit Fehler unter 1/20 des Monte-Carlo-Fehlers.</li>
+  <li>Polynomchaos an der Ishigami-Funktion: Mittel, Varianz und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>=</mo><mo stretchy="false">(</mo><mn>0,3139</mn><mo>;</mo><mspace width="0.3333em"/><mn>0,4424</mn><mo>;</mo><mspace width="0.3333em"/><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">S = (0{,}3139;\ 0{,}4424;\ 0)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>S</mi></mrow><mrow><mi>T</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0,5576</mn><mo>;</mo><mspace width="0.3333em"/><mn>0,4424</mn><mo>;</mo><mspace width="0.3333em"/><mn>0,2437</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">S_T = (0{,}5576;\ 0{,}4424;\ 0{,}2437)</annotation></semantics></math> auf 1e-4; Lognormal mit Hermite-Beiwerten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msup><mo>/</mo><mi>k</mi><mo>!</mo></mrow><annotation encoding="application/x-tex">e^{1/2}/k!</annotation></semantics></math>.</li>
+  <li>Intervalle: 5000 Paare gegen exakte BigDecimal-Rechnung; Rumps Beispiel – double liegt um mehr als 1 daneben, das Intervall schließt den wahren Wert ein; √2 bewiesen, drei Nullstellen von cos auf [0, 10]; π nach Machin gleich AGM auf 300 Stellen.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<p>Sobol bis 64 Dimensionen, höchstens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{32}</annotation></semantics></math> Punkte; die Koksma-Hlawka-Schranke ist keine Fehlerschätzung; Polynomchaos für unabhängige Eingänge, die Zahl der Glieder wächst wie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo fence="true" stretchy="true">(</mo><mfrac linethickness="0"><mrow><mi>d</mi><mo>+</mo><mi>p</mi></mrow><mrow><mi>p</mi></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">\binom{d + p}{p}</annotation></semantics></math>; Intervalle überschätzen bei Abhängigkeiten (das „Abhängigkeitsproblem“), Intervall-Newton nur eindimensional.</p>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>S. Joe, F. Y. Kuo: Constructing Sobol sequences with better two-dimensional projections. SIAM J. Sci. Comput. 30 (2008) 2635–2654.</li>
+  <li>B. Sudret: Global sensitivity analysis using polynomial chaos expansions. Reliab. Eng. Syst. Saf. 93 (2008) 964–979.</li>
+  <li>H. Niederreiter: Random Number Generation and Quasi-Monte Carlo Methods. SIAM, 1992.</li>
+  <li>I. A. Antonov, V. M. Saleev: An economic method of computing LPτ-sequences. USSR Comput. Math. Math. Phys. 19 (1979) 252–256.</li>
+  <li>S. M. Rump: Algorithms for verified inclusions – theory and practice. In: R. E. Moore (Hrsg.), Reliability in Computing, Academic Press, 1988.</li>
+  <li>R. E. Moore, R. B. Kearfott, M. J. Cloud: Introduction to Interval Analysis. SIAM, 2009.</li>
+</ul>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Learning and search</div>
@@ -429,6 +435,14 @@ target ← zeros [channels][total];  reached ← 0;  pos ← 36
 </table>
 <p>Duration: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8192</mn><mo>/</mo><mn>48</mn><mspace width="0.1667em"/><mn>000</mn><mo>=</mo><mn>0.171</mn></mrow><annotation encoding="application/x-tex">8192 / 48\,000 = 0.171</annotation></semantics></math> s. Directly behind it frame 0 starts with <code>FF 5A 00 00 1B F6</code>: sync word and a body length of 7158 bytes. The second frame therefore starts at byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>36</mn><mo>+</mo><mn>6</mn><mo>+</mo><mn>7158</mn><mo>+</mo><mn>2</mn><mo>=</mo><mn>7202</mn></mrow><annotation encoding="application/x-tex">36 + 6 + 7158 + 2 = 7202</annotation></semantics></math>.</p>
 
+<h2 id="folgt">What follows</h2>
+<ul>
+  <li><b>Assumption:</b> errors on the transmission path hit single bits or short bursts. For those the CRC-16 is complete: every odd number of flipped bits (factor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">x+1</annotation></semantics></math> of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>) and every burst up to 16 bits is detected; only a random pattern passes with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-16}</annotation></semantics></math>.</li>
+  <li><b>Numbers from the header are claims of the header.</b> Before allocating any memory the decoder therefore checks that the channel count is 1 or 2 and that the total samples fit what the stream can carry at all: a frame has at least 16 bytes and at most 65,535 values. A body length from a frame is compared with the stream length in 64 bits; in 32 bits a length from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{31}</annotation></semantics></math> overflowed and ended in an out-of-bounds access instead of a further search.</li>
+  <li>CRC and FNV-1a complement each other: the CRC confines damage to one frame, the total sum proves that the encoder computed correctly. Neither protects against deliberate modification.</li>
+  <li>Because a frame depends only on the header, a lost frame costs exactly its own values and nothing else.</li>
+</ul>
+
 <h2 id="pruefung">How it is tested</h2>
 <ul>
   <li><code>Summenprobe</code> (30 checks): CRC-16/BUYPASS over “123456789” is <code>FEE8</code>; over nothing zero; a single zero byte stays zero (that would differ for a reflected variant); <code>A5</code> gives <code>03DE</code>. The table computation is compared against a bit-by-bit computation without a table, for lengths 0 to 40 and for sections in the middle of the data – a wrongly built table is self-consistent and only shows up this way. Every single flipped bit of an 8-byte block changes the sum, as do two swapped bytes.</li>
@@ -439,7 +453,7 @@ target ← zeros [channels][total];  reached ← 0;  pos ← 36
 <h2 id="grenzen">Limits</h2>
 <ul>
   <li><b>Field widths:</b> channel count and word length one byte each, nominal block size, lead-in and lead-out 16 bits each. The encoder allows block sizes from 16 to 65,535.</li>
-  <li><b>Total samples</b> are stored with 64 bits in the header, but the decoder computes with <code>int</code>; it does not read more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{31}-1</annotation></semantics></math> samples per channel.</li>
+  <li><b>Total samples</b> are stored with 64 bits in the header, but the decoder computes with <code>int</code>; it does not read more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{31}-1</annotation></semantics></math> samples per channel and rejects them with a reason.</li>
   <li><b>Channels of unequal length</b> (finding of the <code>Summenprobe</code>): <code>ueberWerte</code> takes the length from the first channel. A shorter second channel leads to an out-of-bounds access, a longer one is silently truncated. The encoder always delivers channels of equal length.</li>
   <li><b>In lenient mode</b> a non-matching overall checksum is not reported; only <code>uebersprungeneRahmen()</code> or a recomputation with <code>pruefsummePasst</code> tells.</li>
   <li>A CRC-16 does not detect every corruption: for a random error pattern it still matches with probability <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-16}</annotation></semantics></math>. In strict mode the overall checksum still catches such a case.</li>

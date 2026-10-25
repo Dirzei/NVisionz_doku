@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Learning and search</div>
@@ -445,7 +451,17 @@ error "no valid Huffman code"</pre>
 <p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/rle/Rle.java</code>.</p>
 <div class="hinweis"><b>Convention in the framework:</b> <code>Rle</code> is meant as a <b>pre-stage</b>, not as a replacement for Deflate: on masks, segmentation images and sparse fields it shortens the input so that the 32 KiB window of LZ77 afterwards covers a much larger area. On its own it is inferior.</div>
 
+<h2 id="folgt">What follows from it</h2>
+<p><b>Assumptions.</b> The frequencies are known and the symbols are taken as independent (zero-order source); any further structure is exploited by LZ77 or the range coder, not by the Huffman code.</p>
+<ul>
+  <li><b>Why a length limit is needed.</b> A Huffman tree over <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> symbols can become <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n - 1</annotation></semantics></math> deep; with Fibonacci frequencies it does. For depth 16 the first 17 Fibonacci numbers suffice, 4180 occurrences together – a block of the packer holds up to 16 384 symbols. Without a limit, codes longer than 15 bits would be possible.</li>
+  <li><b>What the limit costs.</b> In the table above 4 bits of 971 at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">L = 7</annotation></semantics></math> (0.4 %), but 156 bits at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">L = 4</annotation></semantics></math> (16 %). Below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌈</mo><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>n</mi><mo stretchy="false">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil \log_2 n \rceil</annotation></semantics></math> no prefix code exists: the Kraft sum of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> codes of length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi>L</mi></mrow></msup></mrow><annotation encoding="application/x-tex">n \cdot 2^{-L}</annotation></semantics></math> and must be at most 1.</li>
+  <li><b>Bitwise reading.</b> The decoder needs as many steps per symbol as its code is long; on average <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>l</mi></mrow></mrow><annotation encoding="application/x-tex">\bar{l}</annotation></semantics></math> steps, 2.24 in the textbook example.</li>
+  <li><b>PackBits is bounded both ways.</b> At most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mo stretchy="false">⌈</mo><mi>n</mi><mo>/</mo><mn>128</mn><mo stretchy="false">⌉</mo></mrow><annotation encoding="application/x-tex">n + \lceil n/128 \rceil</annotation></semantics></math>, at least two bytes per 128 equal bytes, hence 64 : 1.</li>
+</ul>
+
 <h2 id="pruefung">How it is checked</h2>
+<p><code>TheorieK1probe</code> checks the worked examples of this page: the canonical codes for (2, 1, 3, 3) and for the textbook example, the fixed codes of the standard, the Fibonacci table with all four limits and their total bits, completeness, 500 symbols through the decoder, the bytes <code>D5 BC 1A</code> and the PackBits examples.</p>
 <ul>
   <li><b><code>CompressSelfTest</code>:</b> bit stream there and back, reversed Huffman codes come back in tree order, reading past the end reports itself; Huffman: the most frequent symbol has the shortest code, Kraft sum complete, mean length 2.24 bits in the textbook example (tolerance 0.005), with Fibonacci frequencies no length above 15 or 7, a symbol sequence comes back unchanged through the decoder, a single symbol gets one bit; RLE there and back for five samples, worst case below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mi>n</mi><mo>/</mo><mn>128</mn><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n + n/128 + 1</annotation></semantics></math>, 3000 equal bytes give exactly 48.</li>
   <li><b><code>Msbleserprobe</code> (23 checks):</b> the MSB reader against slices of a <code>BigInteger</code> (400 cases), continuous reading with widths 1 to 32, <code>bitsLang(64)</code> against <code>ByteBuffer.getLong</code> (50 cases), limits and exceptions, a failed access consumes nothing.</li>

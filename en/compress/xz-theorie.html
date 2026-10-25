@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Learning and search</div>
@@ -394,7 +400,17 @@ compare 4 · (w + 1) with the length of the index as read</pre>
             b[i..i+2] ← lower 24 bits of z, least significant first</pre>
 <p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/lzma/Vorfilter.java</code>. The x86 filter with its mask follows <code>x86.c</code> from liblzma line by line.</p>
 
+<h2 id="folgt">What follows from it</h2>
+<p><b>Assumptions.</b> The file is entirely in memory, and the check value of a block covers the uncompressed data, not the compressed.</p>
+<ul>
+  <li><b>What the container costs.</b> A stream without a block is 32 bytes: 12 bytes header, 8 bytes index, 12 bytes footer. A block adds at least 12 bytes of header, padding, the check value (8 bytes for CRC64) and at least 2 bytes in the index.</li>
+  <li><b>Chunk sizes.</b> A compressed chunk carries at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>21</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{21}</annotation></semantics></math> bytes (2 MiB) of output and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{16}</annotation></semantics></math> bytes of input; an uncompressed chunk at most 64 KiB with a 3-byte header. Incompressible data thus grows by about 0.005 %.</li>
+  <li><b>Numbers up to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>63</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{63}</annotation></semantics></math>.</b> Nine bytes of seven bits are 63 bits; the format allows no more, and since a trailing zero byte is rejected, every number has exactly one representation.</li>
+  <li><b>Filters keep the length and are reversible.</b> Delta is a sum modulo 256 and is undone by the difference; BCJ only converts fields whose branch instruction is recognised, and the same recognition runs when packing and unpacking.</li>
+</ul>
+
 <h2 id="pruefung">How it is checked</h2>
+<p><code>TheorieK1probe</code> (in package <code>lzma</code>) checks the multi-byte numbers (<code>AC 02</code> = 300, nine bytes, trailing zero byte), the check lengths of all 16 types, delta with distance 1 and 4 including carry, and the worked examples for x86 and ARM.</p>
 <ul>
   <li><b><code>Xzprobe</code> (55 checks):</b> anchors from liblzma: text, all 256 byte values, empty, 70,000 equal bytes, a raw chunk of 4000 random bytes, eight symbols, unusual properties, 3 MB with reset level 0 across the chunk boundary; all four check types; two streams in a row (both halves come out); five blocks in one stream; CRC64 of “123456789” = <code>995DC9BBDF1939FA</code> and not the one of ISO 3309; damage (flipped byte, 104 single-bit flips, truncated, non-zero padding, wrong index with and without new CRC, wrong compressed size in the index and wrong index size in the stream footer, both with recomputed CRC); the multi-byte integers 127 and 128; a flipped SHA-256.</li>
   <li><b><code>Lzmabausteinprobe</code> (58 checks):</b> all LZMA2 control bytes and error paths, the four reset levels on hand-built streams (level 0 lets models and dictionary carry on, level 3 in mid-stream forgets the dictionary), raw chunks between compressed ones, and three liblzma streams whose end lies behind the end byte.</li>

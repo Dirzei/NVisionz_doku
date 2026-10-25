@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Lernen und Suchen</div>
@@ -394,7 +400,17 @@ vergleiche 4 · (w + 1) mit der gelesenen Länge des Verzeichnisses</pre>
             b[i..i+2] ← untere 24 Bit von z, niederwertiges zuerst</pre>
 <p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/lzma/Vorfilter.java</code>. Der x86-Filter mit seiner Maske folgt <code>x86.c</code> aus liblzma Zeile für Zeile.</p>
 
+<h2 id="folgt">Was daraus folgt</h2>
+<p><b>Annahmen.</b> Die Datei liegt vollständig im Speicher, und der Prüfwert eines Blocks gilt den entpackten Daten, nicht den gepackten.</p>
+<ul>
+  <li><b>Was der Behälter kostet.</b> Ein Strom ohne Block ist 32 Byte groß: 12 Byte Kopf, 8 Byte Verzeichnis, 12 Byte Fuß. Ein Block bringt mindestens 12 Byte Kopf, Auffüllung, den Prüfwert (bei CRC64 8 Byte) und mindestens 2 Byte im Verzeichnis dazu.</li>
+  <li><b>Stückgrößen.</b> Ein gepacktes Stück trägt höchstens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>21</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{21}</annotation></semantics></math> Byte (2 MiB) Ausgabe und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{16}</annotation></semantics></math> Byte Eingabe; ein rohes Stück höchstens 64 KiB mit 3 Byte Kopf. Unpackbare Daten wachsen also um rund 0,005 %.</li>
+  <li><b>Zahlen bis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>63</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{63}</annotation></semantics></math>.</b> Neun Bytes zu sieben Bit sind 63 Bit; mehr erlaubt das Format nicht, und weil ein Nullbyte am Ende abgewiesen wird, hat jede Zahl genau eine Darstellung.</li>
+  <li><b>Vorfilter ändern keine Länge und sind umkehrbar.</b> Delta ist eine Summe modulo 256 und wird durch die Differenz rückgängig gemacht; BCJ rechnet nur Felder um, deren Sprungbefehl erkannt wird, und dieselbe Erkennung läuft beim Packen und Entpacken.</li>
+</ul>
+
 <h2 id="pruefung">Wie geprüft wird</h2>
+<p><code>TheorieK1probe</code> (im Paket <code>lzma</code>) prüft die vielfach kodierten Zahlen (<code>AC 02</code> = 300, neun Bytes, Nullbyte am Ende), die Prüflängen aller 16 Arten, Delta mit Abstand 1 und 4 samt Übertrag sowie die Rechenbeispiele zu x86 und ARM.</p>
 <ul>
   <li><b><code>Xzprobe</code> (55 Prüfungen):</b> Anker aus liblzma: Text, alle 256 Bytewerte, leer, 70 000 gleiche Bytes, ein rohes Stück aus 4000 Zufallsbytes, acht Symbole, ungewöhnliche Eigenschaften, 3 MB mit Rücksetzstufe 0 über der Stückgrenze; alle vier Prüfarten; zwei Ströme hintereinander (beide Hälften kommen heraus); fünf Blöcke in einem Strom; CRC64 von „123456789“ = <code>995DC9BBDF1939FA</code> und nicht der von ISO 3309; Beschädigungen (verdrehtes Byte, 104 Einzelbitverdrehungen, abgeschnitten, Auffüllung ungleich null, falsches Verzeichnis mit und ohne neuen CRC, falsche gepackte Größe im Verzeichnis und falsche Verzeichnisgröße im Stromfuß, beide mit neu gerechnetem CRC); die vielfach kodierten Zahlen 127 und 128; ein gekippter SHA-256.</li>
   <li><b><code>Lzmabausteinprobe</code> (58 Prüfungen):</b> alle LZMA2-Steuerbytes und Fehlerwege, die vier Rücksetzstufen an von Hand gebauten Strömen (Stufe 0 lässt Modelle und Wörterbuch weiterlaufen, Stufe 3 mitten im Strom vergisst das Wörterbuch), rohe Stücke zwischen gepackten, und drei liblzma-Ströme, deren Ende hinter dem Endbyte liegt.</li>

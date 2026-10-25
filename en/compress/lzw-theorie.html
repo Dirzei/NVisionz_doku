@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Learning and search</div>
@@ -393,7 +399,17 @@ math[display="block"]{margin:10px 0}
 <figcaption>The PDF example: eight codes decode to -----A---B. The first code 258 is still unknown when it is read; its entry is the previous string plus that string’s first character.</figcaption>
 </figure>
 
+<h2 id="folgt">What follows from it</h2>
+<p><b>Assumptions.</b> Writer and reader start with the same dictionary of the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^b</annotation></semantics></math> single characters and the same rules for width and clear code; codes are at most 12 bits wide.</p>
+<ul>
+  <li><b>When the dictionary is full.</b> Every code except the first after a clear code creates an entry. With 8 bits per character <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4096</mn><mo>−</mo><mn>258</mn><mo>=</mo><mn>3838</mn></mrow><annotation encoding="application/x-tex">4096 - 258 = 3838</annotation></semantics></math> entries are free; after 3839 codes the dictionary is full, and the writer sends the clear code or goes on with the fixed dictionary.</li>
+  <li><b>Runs.</b> A run of equal characters is split into entries of lengths 1, 2, 3, …; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> codes cover <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo stretchy="false">(</mo><mi>c</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">c(c+1)/2</annotation></semantics></math> characters. 3000 equal bytes therefore need 77 codes – PackBits needs 48 bytes, LZW at 9 bits per code about 90.</li>
+  <li><b>The self-reference is a matter of timing, not of the data.</b> It occurs as soon as the writer uses the entry it created in the same step – in every run of at least three equal characters.</li>
+  <li><b>One bit of offset spoils the rest.</b> Since the width depends on the counter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> and is not in the stream, a reader with the wrong <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> reads only wrong codes from the first width change on.</li>
+</ul>
+
 <h2 id="pruefung">How it is checked</h2>
+<p><code>TheorieK1probe</code> recomputes the example of the standard and sends 12 000 bytes in five settings (PDF with <code>EarlyChange</code> 1 and 0, TIFF, GIF with 8 and with 2 bits) through its own probe encoder, which changes the width by <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mi>f</mi><mo>≥</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>w</mi></mrow></msup></mrow><annotation encoding="application/x-tex">n + f \ge 2^w</annotation></semantics></math>, up to 12 bits and back.</p>
 <p><code>Lzwprobe</code> (40 checks) sets the core against the <b>old wording of all three</b> replaced decoders (<code>PdfFilters.lzw</code>, <code>Giflzw</code>, <code>Tifflzw</code>), whose source is contained in the probe:</p>
 <ul>
   <li>the example from PDF 32000-1 as a foreign anchor;</li>

@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Lernen und Suchen</div>
@@ -445,7 +451,17 @@ Fehler "kein gültiger Huffman-Code"</pre>
 <p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/rle/Rle.java</code>.</p>
 <div class="hinweis"><b>Festlegung im Framework:</b> <code>Rle</code> ist als <b>Vorstufe</b> gedacht, nicht als Ersatz für Deflate: auf Masken, Segmentierungsbildern und dünn besetzten Feldern verkürzt sie den Eingang, sodass das 32-KiB-Fenster von LZ77 danach über ein vielfach größeres Gebiet blickt. Für sich allein ist sie unterlegen.</div>
 
+<h2 id="folgt">Was daraus folgt</h2>
+<p><b>Annahmen.</b> Die Häufigkeiten sind bekannt, und die Symbole gelten als voneinander unabhängig (Quelle nullter Ordnung); was darüber hinaus an Struktur da ist, nutzen LZ77 oder der Bereichskodierer, nicht der Huffman-Code.</p>
+<ul>
+  <li><b>Warum eine Längengrenze nötig ist.</b> Ein Huffman-Baum über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Symbole kann bis <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n - 1</annotation></semantics></math> tief werden; mit Fibonacci-Häufigkeiten wird er es. Für eine Tiefe von 16 genügen die ersten 17 Fibonacci-Zahlen, zusammen 4180 Vorkommen – ein Block des Packers hat bis zu 16 384 Symbole. Ohne Grenze wären also Codes über 15 Bit möglich.</li>
+  <li><b>Was die Grenze kostet.</b> In der Tafel oben 4 Bit von 971 bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">L = 7</annotation></semantics></math> (0,4 %), aber 156 Bit bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">L = 4</annotation></semantics></math> (16 %). Unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌈</mo><msub><mi>log</mi><mrow><mn>2</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mi>n</mi><mo stretchy="false">⌉</mo></mrow><annotation encoding="application/x-tex">\lceil \log_2 n \rceil</annotation></semantics></math> gibt es keinen Präfixcode mehr: die Kraft-Summe von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Codes der Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi>L</mi></mrow></msup></mrow><annotation encoding="application/x-tex">n \cdot 2^{-L}</annotation></semantics></math> und muss höchstens 1 sein.</li>
+  <li><b>Bitweises Lesen.</b> Der Dekoder braucht je Symbol so viele Schritte, wie sein Code lang ist; im Mittel also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>l</mi></mrow></mrow><annotation encoding="application/x-tex">\bar{l}</annotation></semantics></math> Schritte, im Lehrbuchbeispiel 2,24.</li>
+  <li><b>PackBits in beide Richtungen beschränkt.</b> Höchstens <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mo stretchy="false">⌈</mo><mi>n</mi><mo>/</mo><mn>128</mn><mo stretchy="false">⌉</mo></mrow><annotation encoding="application/x-tex">n + \lceil n/128 \rceil</annotation></semantics></math>, mindestens zwei Byte je 128 gleiche Byte, also 64 : 1.</li>
+</ul>
+
 <h2 id="pruefung">Wie geprüft wird</h2>
+<p><code>TheorieK1probe</code> prüft die Rechenbeispiele dieser Seite: die kanonischen Codes zu (2, 1, 3, 3) und zum Lehrbuchbeispiel, die festen Codes der Norm, die Fibonacci-Tafel mit allen vier Grenzen samt Gesamtbits, Vollständigkeit, 500 Symbole über den Dekoder, die Bytes <code>D5 BC 1A</code> und die PackBits-Beispiele.</p>
 <ul>
   <li><b><code>CompressSelfTest</code>:</b> Bitstrom hin und zurück, umgedrehte Huffman-Codes kommen in Baumreihenfolge zurück, Lesen über das Ende meldet sich; Huffman: das häufigste Symbol hat den kürzesten Code, Kraft-Summe vollständig, mittlere Länge 2,24 Bit im Lehrbuchbeispiel (Toleranz 0,005), bei Fibonacci-Häufigkeiten keine Länge über 15 bzw. 7, eine Symbolfolge kommt über den Dekoder unverändert zurück, ein einzelnes Symbol bekommt ein Bit; RLE hin und zurück für fünf Proben, schlechtester Fall unter <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mi>n</mi><mo>/</mo><mn>128</mn><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n + n/128 + 1</annotation></semantics></math>, 3000 gleiche Bytes ergeben genau 48.</li>
   <li><b><code>Msbleserprobe</code> (23 Prüfungen):</b> der MSB-Leser gegen die Ausschnitte einer <code>BigInteger</code> (400 Fälle), fortlaufendes Lesen mit Breiten 1 bis 32, <code>bitsLang(64)</code> gegen <code>ByteBuffer.getLong</code> (50 Fälle), Grenzen und Ausnahmen, ein gescheiterter Zugriff verbraucht nichts.</li>

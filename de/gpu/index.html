@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
 <div class="rubriken">
@@ -226,7 +232,7 @@ math[display="block"]{margin:10px 0}
 <div class="seite">
 
 <header class="titel">
-  <div class="modul">envisionz-framework-opencl · envisionz-framework-vulkan · envisionz-framework-cfd-opencl · envisionz-framework-cfd-vulkan</div>
+  <div class="modul">envisionz-framework-gpu · envisionz-framework-opencl · envisionz-framework-vulkan · envisionz-framework-cfd-opencl · envisionz-framework-cfd-vulkan</div>
   <h1>Die Grafikeinheit aus Java – OpenCL und Vulkan ohne Fremdbibliothek</h1>
   <p class="unter">Wie das Framework die Grafikeinheit anspricht: ohne JNI, ohne Bindungsbibliothek, ohne fremden Übersetzer, allein mit der
   Schnittstelle für Fremdfunktionen des JDK (FFM, <code>java.lang.foreign</code>) und dem Treiber, der ohnehin auf dem Rechner liegt.
@@ -274,7 +280,7 @@ math[display="block"]{margin:10px 0}
   <div class="zahl"><b>2</b><span>Rückenden, OpenCL und Vulkan Compute, mit denselben Begriffen Warteschlange, Puffer, Kern</span></div>
   <div class="zahl"><b>22</b><span>Kerne für den ganzen CFD-Schritt, ein Quelltext für beide Rückenden</span></div>
   <div class="zahl"><b>bitgleich</b><span>zur CPU auf den Nachbildungen (OpenCL und Vulkan auf der CPU) in allen Fällen der Proben</span></div>
-  <div class="zahl"><b>3,4×</b><span>ganzer CFD-Schritt über Vulkan auf einer integrierten Notebook-Grafikeinheit gegen acht CPU-Fäden (80 000 Zellen, 2. Ordnung: 15,0 gegen 50,6 ms)</span></div>
+  <div class="zahl"><b>3,7×</b><span>ganzer CFD-Schritt über Vulkan auf einer integrierten Notebook-Grafikeinheit gegen acht CPU-Fäden (320 000 Zellen, 2. Ordnung: 55,4 gegen 202,4 ms)</span></div>
   <div class="zahl"><b>111</b><span>Gegenproben über die fünf Module, alle rot</span></div>
 </div>
 
@@ -284,7 +290,7 @@ math[display="block"]{margin:10px 0}
   <div><b>Die CPU ist der Maßstab.</b> Jeder Kern rechnet dieselben Schritte in derselben Reihenfolge wie der Java-Code. Auf einer Nachbildung (OpenCL bzw. Vulkan auf der CPU) wird <b>Bitgleichheit</b> verlangt; auf einer Karte ist sie der Normalfall, eine Toleranz nur dort, wo die Hardware anders runden darf.</div>
   <div><b>Kein stilles Versagen, aber stiller Rückfall.</b> Fehlt der Treiber, fehlt double oder passt das Verfahren nicht (implizit, viskos, Turbulenz …), rechnet die CPU – und <code>grafikeinheit()</code> sagt, warum. Ein Schritt, der auf dem Gerät keinen physikalischen Zustand ergibt, wird auf der CPU wiederholt und dort gemeldet.</div>
   <div><b>Ein Quelltext.</b> Die Kerne stehen einmal, in OpenCL C. Vulkan bekommt sie über einen eigenen Übersetzer. Eine Berichtigung wirkt so auf beiden Wegen, und keine zweite Fassung kann still auseinanderlaufen.</div>
-  <div><b>Optional und austauschbar.</b> Der Löser kennt nur die Schnittstelle <code>Schrittkern</code>. Die Umsetzungen liegen in eigenen Modulen und werden über den <code>ServiceLoader</code> gefunden. Der Löser bleibt reines JDK und läuft auch als native-image – dort ohne Grafikeinheit.</div>
+  <div><b>Optional und austauschbar.</b> Der Löser kennt nur die Schnittstelle <code>Schrittkern</code>. Die Umsetzungen liegen in eigenen Modulen und werden über den <code>ServiceLoader</code> gefunden. Der Löser bleibt reines JDK; fehlt jede Umsetzung, rechnet er auf der CPU.</div>
   <div><b>Jede Probe hat eine rote Gegenprobe.</b> Für jede wichtige Stelle gibt es einen absichtlich verdorbenen Fall (fma zugelassen, Reihenfolge vertauscht, Puffer verwechselt …), und die zuständige Probe muss ihn fangen.</div>
 </div>
 
@@ -361,10 +367,10 @@ try (Warteschlange q = new Warteschlange(g)) {
 <p class="einl">Nur das Residuum auf der Karte war langsamer als die CPU: Gradienten, Begrenzer und Ränder blieben auf der CPU, und jeder Aufruf kopierte hin und her. Seither bleibt der Zustand während des ganzen Schritts auf dem Gerät; nur Ränder, die das Gerät nicht kennt, rechnet je Stufe die CPU mit ihrem eigenen Code. <a class="vertiefung" href="cfdschritt.html">Ablauf je Stufe, Austausch, Reduktionen und Pseudocode →</a></p>
 <table>
   <tr><th>Keil Mach 2, Jameson</th><th>CPU (8 Fäden)</th><th>OpenCL</th><th>Vulkan</th><th>Abweichung</th></tr>
-  <tr><td>5 000 Zellen, 1. Ordnung</td><td>2,38 ms</td><td>0,98 ms (2,4×)</td><td>1,06 ms (2,2×)</td><td>≈ 1·10<sup>−15</sup></td></tr>
-  <tr><td>320 000 Zellen, 1. Ordnung</td><td>72,9 ms</td><td>36,6 ms (2,0×)</td><td>29,3 ms (2,5×)</td><td>≈ 1·10<sup>−15</sup></td></tr>
-  <tr><td>80 000 Zellen, 2. Ordnung</td><td>50,6 ms</td><td>18,3 ms (2,8×)</td><td>15,0 ms (3,4×)</td><td>≈ 2·10<sup>−15</sup></td></tr>
-  <tr><td>320 000 Zellen, 2. Ordnung</td><td>202,4 ms</td><td>66,5 ms (3,0×)</td><td>62,0 ms (3,3×)</td><td>≈ 3·10<sup>−15</sup></td></tr>
+  <tr><td>5 000 Zellen, 1. Ordnung</td><td>2,05 ms</td><td>0,83 ms (2,5×)</td><td>0,94 ms (2,2×)</td><td>≈ 1·10<sup>−15</sup></td></tr>
+  <tr><td>320 000 Zellen, 1. Ordnung</td><td>66,6 ms</td><td>33,0 ms (2,0×)</td><td>26,9 ms (2,5×)</td><td>≈ 1·10<sup>−15</sup></td></tr>
+  <tr><td>80 000 Zellen, 2. Ordnung</td><td>44,4 ms</td><td>16,5 ms (2,7×)</td><td>14,3 ms (3,1×)</td><td>≈ 2·10<sup>−15</sup></td></tr>
+  <tr><td>320 000 Zellen, 2. Ordnung</td><td>202,4 ms</td><td>63,3 ms (3,2×)</td><td>55,4 ms (3,7×)</td><td>≈ 3·10<sup>−15</sup></td></tr>
 </table>
 <p>Gemessen auf einer integrierten Notebook-Grafikeinheit mit <code>tools\cfd-gpu-messen.cmd -schrittkern:opencl,vulkan</code>, ms je Schritt. Die Abweichung ist auf die Größe der Variable bezogen; auf der Karte sind beide Wege nicht bitgleich, weil der Treiber optimiert (siehe <a href="bitgleich.html">Bitgleich zur CPU</a>).</p>
 
@@ -384,16 +390,17 @@ try (Warteschlange q = new Warteschlange(g)) {
 <h2 id="module">Die Module</h2>
 <table>
   <tr><th>Modul</th><th>Inhalt</th><th>Proben</th><th>Gegenproben</th></tr>
-  <tr><td>framework-opencl</td><td>OpenCL über FFM: <code>OpenCl</code>, <code>Cl</code>, <code>Geraet</code>, <code>Warteschlange</code>, <code>Puffer</code>, <code>Kern</code></td><td><code>Openclprobe</code> (13 Prüfungen)</td><td>7</td></tr>
-  <tr><td>framework-vulkan</td><td>Vulkan Compute über FFM, SPIR-V-Baukasten <code>Kernbau</code>, Übersetzer <code>clc</code></td><td><code>Vulkanprobe</code>, <code>Kernbauprobe</code>, <code>Uebersetzerprobe</code> (34 Prüfungen)</td><td>20</td></tr>
+  <tr><td>framework-gpu</td><td>gemeinsame Schicht ohne FFM: <code>Rueckende</code>, <code>Geraet</code>, <code>Programm</code>, <code>Sitzung</code>, <code>Puffer</code>, <code>Kern</code>; Wahl <code>Grafik</code></td><td><code>Grafikprobe</code> (3 Prüfungen, mit beiden Rückenden 8)</td><td>4</td></tr>
+  <tr><td>framework-opencl</td><td>OpenCL über FFM: <code>OpenCl</code>, <code>Cl</code>, <code>Geraet</code>, <code>Warteschlange</code>, <code>Puffer</code>, <code>Kern</code>; Rückende <code>OpenClGpu</code></td><td><code>Openclprobe</code> (14 Prüfungen)</td><td>10</td></tr>
+  <tr><td>framework-vulkan</td><td>Vulkan Compute über FFM, SPIR-V-Baukasten <code>Kernbau</code>, Übersetzer <code>clc</code>, Matrix-Rechenwerke melden (<code>Matrixform</code>); Rückende <code>VulkanGpu</code></td><td><code>Vulkanprobe</code>, <code>Kernbauprobe</code>, <code>Uebersetzerprobe</code> (37 Prüfungen)</td><td>27</td></tr>
   <tr><td>framework-cfd-opencl</td><td>Residuum (<code>OpenClResiduum</code>) und ganzer Schritt (<code>OpenClSchritt</code>), Abweichungsmaß</td><td><code>CfdOpenClprobe</code>, <code>Schrittprobe</code> u. a.</td><td>40</td></tr>
-  <tr><td>framework-cfd-vulkan</td><td>ganzer Schritt über Vulkan (<code>VulkanSchritt</code>)</td><td><code>Vulkanschrittprobe</code> (13 Prüfungen)</td><td>11</td></tr>
+  <tr><td>framework-cfd-vulkan</td><td>ganzer Schritt über die gemeinsame Schicht, gemeldet für Vulkan (<code>VulkanSchritt</code>)</td><td><code>Vulkanschrittprobe</code> (16 Prüfungen)</td><td>12</td></tr>
   <tr><td>framework-autograd-opencl</td><td>Matrixkern und Trainingsschritt für Sprachmodelle auf der Grafikeinheit</td><td><code>GpuSchrittprobe</code></td><td>33</td></tr>
 </table>
-<div class="hinweis">Keines dieser Module steht im native-image: FFM auf eine Treiberbibliothek verlangt die JVM mit <code>--enable-native-access=ALL-UNNAMED</code>. Die Rechenmodule (framework-cfd, framework-autograd) hängen nicht an ihnen und bleiben native-image-fähig.</div>
+<div class="hinweis">Seit Oktober 2026 stehen diese Module auch in der eigenständigen Programmdatei; der Grafiktreiber wird beim Start aus dem System geladen, ohne ihn rechnet alles auf der CPU (siehe <a href="weg.html#abschalten">Abschalten, Rückfall, native-image</a>). Die Rechenmodule (framework-cfd, framework-autograd) hängen nicht an ihnen, sondern nur an Schnittstellen.</div>
 
 <footer>
-envisionz-framework-opencl · envisionz-framework-vulkan · envisionz-framework-cfd-opencl · envisionz-framework-cfd-vulkan · Messen: <code>tools\vulkan-messen.cmd</code>, <code>tools\cfd-gpu-messen.cmd</code> · Proben: <code>pruefen.cmd --nur framework-vulkan</code> usw.
+envisionz-framework-gpu · envisionz-framework-opencl · envisionz-framework-vulkan · envisionz-framework-cfd-opencl · envisionz-framework-cfd-vulkan · Messen: <code>tools\vulkan-messen.cmd</code>, <code>tools\cfd-gpu-messen.cmd</code> · Proben: <code>pruefen.cmd --nur framework-vulkan</code> usw.
 </footer>
 </div>
 </main>

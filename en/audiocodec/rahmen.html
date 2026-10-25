@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Learning and search</div>
@@ -392,6 +398,14 @@ copy values to the target from position, at most up to total samples</pre>
 <p>For sub-channel B the estimate was 11; computing the candidates exactly found the minimum at 13 (figure on the <a href="lpc.html#ordnung">LPC page</a>). The whole stream is 14,399 bytes, the PCM material 32,768 bytes: 2.28 : 1. With the range coder it is 14,390 bytes, with LPC switched off (<code>maxLpcOrdnung(0)</code>) 16,577 bytes.</p>
 <p>The first bytes of frame 0 are <code>FF 5A 00 00 1B F6 00 00 00 00 10 00 02 71 E8 00</code>: sync word, body length 7158, frame number 0, length 4096 (<code>10 00</code>), mode 2 (right/side). Then subframe A starts bit by bit: <code>71 E8 0…</code> = <code>011</code> (LPC) · <code>10001</code> (order − 1 = 17) · <code>1110</code> (precision − 1 = 14) · <code>10000</code> (shift 16).</p>
 
+<h2 id="folgt">What follows</h2>
+<ul>
+  <li><b>Assumption:</b> the bit count of a candidate can be counted exactly before writing. This holds here because every header has fixed field widths and <code>Restkodierung.plane</code> knows the bits of the residual exactly; the choice is therefore no estimate but a comparison of numbers that stand in the stream just like that.</li>
+  <li>The raw form is an upper bound: no sub-frame costs more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>+</mo><mi>N</mi><mi>b</mi></mrow><annotation encoding="application/x-tex">3 + N b</annotation></semantics></math> bits. A stream can therefore exceed the PCM material by at most the fixed overhead per frame.</li>
+  <li>Sub-frames with at most five values go raw, even when a predictor would be cheaper – a ramp of five values would cost 49 instead of 83 bits as fixed. This only concerns the last, short frame of a signal and carries no weight with blocks of thousands of values.</li>
+  <li>Because the write position follows from the frame number, every frame can be read on its own; a stream can be started at any sync word.</li>
+</ul>
+
 <h2 id="pruefung">How it is tested</h2>
 <p>The <code>Umlaufprobe</code> (36 checks) encodes, decodes and compares every value, each case with both methods. The cases are the places where a codec breaks:</p>
 <ul>
@@ -410,6 +424,12 @@ copy values to the target from position, at most up to total samples</pre>
   <li><b>The stereo choice is an estimate</b>, not a trial encoding (<a href="stereo.html#wahl">stereo page</a>); the subframe choice, in contrast, counts bits.</li>
   <li><b>Lead-in and lead-out</b> exist in the format; the lossless encoder writes them as zero.</li>
   <li><b>Noise cannot be compressed.</b> Full-scale noise arrives at 1.00 : 1; the raw form prevents the stream from growing noticeably.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>M. Hans, R. W. Schafer: Lossless Compression of Digital Audio. IEEE Signal Processing Magazine 18 (2001).</li>
+  <li>T. Robinson: SHORTEN: Simple lossless and near-lossless waveform compression. Technical Report CUED/F-INFENG/TR.156, Cambridge University Engineering Department (1994).</li>
 </ul>
 
 <footer>

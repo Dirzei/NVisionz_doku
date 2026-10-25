@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Lernen und Suchen</div>
@@ -393,7 +399,17 @@ math[display="block"]{margin:10px 0}
 <figcaption>Das PDF-Beispiel: acht Codes ergeben -----A---B. Der erste Code 258 ist beim Lesen noch unbekannt; sein Eintrag ist das vorige Wort plus dessen erstes Zeichen.</figcaption>
 </figure>
 
+<h2 id="folgt">Was daraus folgt</h2>
+<p><b>Annahmen.</b> Schreiber und Leser beginnen mit demselben Wörterbuch aus den <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>b</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^b</annotation></semantics></math> Einzelzeichen und denselben Regeln für Breite und Löschcode; Codes sind höchstens 12 Bit breit.</p>
+<ul>
+  <li><b>Wann das Wörterbuch voll ist.</b> Jeder Code außer dem ersten nach einem Löschcode legt einen Eintrag an. Bei 8 Bit je Zeichen sind <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4096</mn><mo>−</mo><mn>258</mn><mo>=</mo><mn>3838</mn></mrow><annotation encoding="application/x-tex">4096 - 258 = 3838</annotation></semantics></math> Einträge frei; nach 3839 Codes ist das Wörterbuch voll, und der Schreiber schickt den Löschcode oder arbeitet mit dem festen Wörterbuch weiter.</li>
+  <li><b>Läufe.</b> Ein Lauf gleicher Zeichen wird in Einträgen der Längen 1, 2, 3, … zerlegt; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> Codes decken <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo stretchy="false">(</mo><mi>c</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">c(c+1)/2</annotation></semantics></math> Zeichen. 3000 gleiche Byte brauchen deshalb 77 Codes – PackBits braucht 48 Byte, LZW mit 9 Bit je Code rund 90.</li>
+  <li><b>Der Selbstbezug ist kein Sonderfall der Daten, sondern der Zeitfolge.</b> Er tritt auf, sobald der Schreiber den Eintrag benutzt, den er im selben Schritt angelegt hat – in jedem Lauf von mindestens drei gleichen Zeichen.</li>
+  <li><b>Ein Bit Versatz verdirbt den Rest.</b> Weil die Breite vom Zähler <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> abhängt und nicht im Strom steht, liest ein Leser mit falschem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> ab dem ersten Breitenwechsel lauter falsche Codes.</li>
+</ul>
+
 <h2 id="pruefung">Wie geprüft wird</h2>
+<p><code>TheorieK1probe</code> rechnet das Beispiel der Norm nach und schickt 12 000 Byte in fünf Einstellungen (PDF mit <code>EarlyChange</code> 1 und 0, TIFF, GIF mit 8 und mit 2 Bit) durch einen eigenen Probenkodierer, der die Breite nach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mi>f</mi><mo>≥</mo><msup><mrow><mn>2</mn></mrow><mrow><mi>w</mi></mrow></msup></mrow><annotation encoding="application/x-tex">n + f \ge 2^w</annotation></semantics></math> wechselt, bis 12 Bit und zurück.</p>
 <p><code>Lzwprobe</code> (40 Prüfungen) stellt den Kern gegen den <b>alten Wortlaut aller drei</b> abgelösten Dekoder (<code>PdfFilters.lzw</code>, <code>Giflzw</code>, <code>Tifflzw</code>), deren Quelltext in der Probe steht:</p>
 <ul>
   <li>das Beispiel aus PDF 32000-1 als fremder Anker;</li>

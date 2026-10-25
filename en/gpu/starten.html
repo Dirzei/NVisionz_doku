@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
 <div class="rubriken">
@@ -344,6 +350,17 @@ sleeping therefore brings only about 10 %.</p>
   (<code>Warteschlange.abschicken</code>, <code>liesOhneWarten</code>), and it is compared with the fence and with whether the data are already
   complete at that moment.</li>
 </ul>
+<table>
+  <tr><th>Completion signal, µs after submission</th><th>signal in memory</th><th>fence</th><th>data complete at the signal</th></tr>
+  <tr><td>spin, group 64</td><td>55</td><td>69</td><td>1000 of 1000</td></tr>
+  <tr><td>spin, group 256</td><td>58</td><td>78</td><td>978 of 1000</td></tr>
+  <tr><td>sleep, group 64</td><td>58</td><td>62</td><td>1000 of 1000</td></tr>
+  <tr><td>sleep, group 256</td><td>52</td><td>87</td><td>107 of 1000</td></tr>
+</table>
+<p>The signal through memory arrives 5 to 35 µs earlier than the fence – but the results of the computing kernel are <b>not reliably</b>
+visible at that moment: in one variant only in 107 of 1000 cases. Without the barrier towards the host, which only the fence completes, Java
+sees the signal before it sees the data. Most of the waiting time (about 40 µs) also lies before the signal, in the start-up. The framework
+therefore stays with the fence; the gain comes from the number of waiting points, not from their kind.</p>
 
 <h2 id="opencl">Under OpenCL</h2>
 <p>OpenCL has no recorded command buffers in the Vulkan sense; every launch is enqueued into a command queue that the driver processes in

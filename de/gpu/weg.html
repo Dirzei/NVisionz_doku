@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag aktiv" href="index.html">framework-opencl/vulkan</a>
 <div class="rubriken">
@@ -398,15 +404,36 @@ in OpenCL C; <code>Kern.arg(i, …)</code> legt einen Puffer an seine Bindung od
 <p>Eine Warteschlange gehört einem Faden. Mehrere Fäden teilen sich das Gerät, aber nicht ihre Puffer und Kerne. Bei Vulkan ist die
 Rechenwarteschlange des Geräts eine einzige; <code>vkQueueSubmit</code> wird deshalb unter einer Sperre des Geräts gerufen. Die Proben
 lassen vier (Vulkan) bzw. acht (OpenCL) Fäden zugleich rechnen.</p>
+<p>Seit Oktober 2026 stehen diese Begriffe auch als <b>Schnittstelle</b> in einem eigenen Modul, framework-gpu – reines Java, ohne FFM.
+Jedes Rückende meldet sich dort über den <code>ServiceLoader</code>; die Wahl nimmt Vulkan vor OpenCL und sammelt die Gründe, warum eines
+nicht geht. Wer gegen die Schnittstelle schreibt, rechnet auf beiden, ohne eine Zeile zu ändern:</p>
+<pre><b>wahl</b> ← Grafik.oeffne()                         <i>Vulkan, sonst OpenCL; wahl.gruende: „vulkan: …; opencl: …“</i>
+g ← wahl.geraet                                   <i>null: auf der CPU rechnen</i>
+p ← g.programm(quelle, name → 64)                 <i>OpenCL C; Arbeitsgruppe je Kern</i>
+<b>mit</b> s ← g.sitzung():                              <i>eine je Faden</i>
+    x ← s.puffer(8·n);  s.schreibe(x, werte)
+    k ← s.kern(p, "axpy").arg(0, n).arg(1, a).arg(2, x)…
+    s.starte(k, n)                                <i>auf ein Vielfaches von 64 aufgerundet</i>
+    s.lies(x, ergebnis)                           <i>wartet auf alle Starts davor</i></pre>
+<p>Die Schnittstelle ist die Schnittmenge: ein Kernargument ist <code>int</code>, <code>double</code> oder ein Puffer. Was nur ein Rückende
+kann – die Aufschlüsselung der Wartezeit unter Vulkan etwa –, bleibt in dessen eigenen Klassen. Ein fremder Puffer, ein fremder Kern
+oder ein Kern, den das Programm nicht hat, wird abgewiesen statt still falsch gerechnet. Derselbe Kern aus demselben Quelltext liefert
+auf beiden Rückenden dieselben Bits; das prüft die Probe des Moduls bei jedem Lauf.</p>
 
 <h2 id="abschalten">Abschalten, Rückfall, native-image</h2>
 <p>Alle Wege zur Karte sind optional. <code>-Denvisionz.opencl=aus</code> und <code>-Denvisionz.vulkan=aus</code> schalten ab;
 <code>….bibliothek=PFAD</code> nimmt eine andere Treiberbibliothek, <code>….alle=ja</code> lässt CPU-Geräte zu. Die Nachbildungen auf
 der CPU (für OpenCL ein freier Treiber, für Vulkan der Software-Treiber aus Mesa) sind die Bauumgebung der Proben: dort ist
 Bitgleichheit zur CPU Pflicht.</p>
-<p>Die Module mit FFM stehen nicht im native-image. Die Rechenmodule hängen nicht an ihnen, sondern nur an einer Schnittstelle, und
-finden eine Umsetzung über den <code>ServiceLoader</code> – oder keine, dann rechnet die CPU. Die JVM braucht
-<code>--enable-native-access=ALL-UNNAMED</code>, sonst warnt sie beim ersten Griff.</p>
+<p>Die Rechenmodule hängen nicht an den Modulen mit FFM, sondern nur an einer Schnittstelle, und finden eine Umsetzung über den
+<code>ServiceLoader</code> – oder keine, dann rechnet die CPU. Die JVM braucht <code>--enable-native-access=ALL-UNNAMED</code>, sonst warnt
+sie beim ersten Griff.</p>
+<p>Seit Oktober 2026 gehören die Module mit FFM auch in die eigenständige Programmdatei (native-image). Der Treiber gehört nicht dazu:
+er wird beim Start aus dem System geladen wie unter der JVM, und fehlt er, rechnet das Programm auf der CPU. native-image übersetzt einen
+Aufruf in eine fremde Bibliothek nur, wenn seine Signatur vorher angemeldet ist – Rückgabe und Parameter, etwa
+<code>jint(void*, void*, void*)</code>. Diese Liste steht in den Metadaten des Baus; die Proben beider Module bauen alle ihre Griffe auf
+eine Scheinadresse und verlangen, dass jede Signatur dort steht. Sonst liefe der Bau durch, und erst der Aufruf in der fertigen
+Programmdatei scheiterte.</p>
 
 </div>
 </main>

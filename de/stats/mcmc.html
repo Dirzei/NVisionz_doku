@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markow-Ketten-Monte-Carlo – Hintergrund – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag aktiv" href="index.html">framework-stats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#grundlagen">Grundlagen und Verteilungen</a>
+<a class="unterseite" href="spezialfunktionen.html">Spezielle Funktionen</a>
+<a class="unterseite" href="verteilungen.html">Verteilungen und Quantile</a>
+<a class="rubrik" href="index.html#beschreibend">Beschreiben, erkunden, Ausreißer</a>
+<a class="unterseite" href="ausreisser.html">Ausreißer</a>
+<a class="unterseite" href="beschreibend.html">Kennzahlen und Quantile</a>
+<a class="rubrik" href="index.html#schaetzen">Konfidenz-, Prognose- und Toleranzintervalle</a>
+<a class="unterseite" href="intervalle.html">Hintergrund</a>
+<a class="rubrik" href="index.html#tests">Testfamilien</a>
+<a class="unterseite" href="anpassungstests.html">Anpassungstests</a>
+<a class="unterseite" href="kontingenz.html">Kontingenztafeln</a>
+<a class="unterseite" href="tests-parametrisch.html">Parametrische Tests</a>
+<a class="unterseite" href="tests-rang.html">Rangtests</a>
+<a class="rubrik" href="index.html#regression">Korrelation und Regression</a>
+<a class="unterseite" href="korrelation.html">Korrelation</a>
+<a class="unterseite" href="regression.html">Regression</a>
+<a class="rubrik" href="index.html#anova">Varianzanalyse und multiples Testen</a>
+<a class="unterseite" href="anova.html">Hintergrund</a>
+<a class="rubrik" href="index.html#multivariat">Multivariate Verfahren</a>
+<a class="unterseite" href="multivariat.html">Hintergrund</a>
+<a class="rubrik" href="index.html#zeitreihen">Zeitreihen</a>
+<a class="unterseite" href="zeitreihen.html">Hintergrund</a>
+<a class="rubrik" href="index.html#spc">Statistische Prozesslenkung</a>
+<a class="unterseite" href="spc.html">Hintergrund</a>
+<a class="rubrik" href="index.html#resample">Resampling und Datenvorbereitung</a>
+<a class="unterseite" href="resampling.html">Resampling, Güte und Datenvorbereitung – Hintergrund</a>
+<a class="rubrik" href="index.html#gp">Gaußprozess-Regression</a>
+<a class="unterseite" href="gauss.html">Hintergrund</a>
+<a class="rubrik" href="index.html#mcmc">Markow-Ketten-Monte-Carlo</a>
+<a class="unterseite aktiv" href="mcmc.html">Hintergrund</a>
+<a class="rubrik" href="index.html#zustandsraum">Zustandsraummodelle und ARIMA</a>
+<a class="unterseite" href="zustandsraum.html">Hintergrund</a>
+<a class="rubrik" href="index.html#cluster">Clusterverfahren</a>
+<a class="unterseite" href="cluster.html">DBSCAN und Gaußsche Mischungen – Hintergrund</a>
+<a class="rubrik" href="index.html#messunsicherheit">Messunsicherheit, Konfidenzbänder, Kalibrierung</a>
+<a class="unterseite" href="messunsicherheit.html">Messunsicherheit, Konfidenzbänder und Kalibrierung – Hintergrund</a>
+<a class="rubrik" href="index.html#versuchsplan">Versuchsplanung und Antwortflächen</a>
+<a class="unterseite" href="versuchsplan.html">Hintergrund</a>
+<a class="rubrik" href="index.html#ueberleben">Überlebenszeiten und Zuverlässigkeit</a>
+<a class="unterseite" href="ueberleben.html">Hintergrund</a>
+<a class="rubrik" href="index.html#kompartimente">Kompartimentmodelle: Epidemie und Pharmakokinetik</a>
+<a class="unterseite" href="kompartimente.html">Hintergrund</a>
+<a class="rubrik" href="index.html#katalog">Methodenkatalog für die Oberfläche</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-stats</a> › Markow-Ketten-Monte-Carlo – Hintergrund</span><a class="sprachwahl" href="../../en/stats/mcmc.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-stats · envisionz.stats.mcmc · envisionz.stats.statphysik</div>
+  <h1>Markow-Ketten-Monte-Carlo – Hintergrund</h1>
+  <p class="unter">Die Rechnung hinter <code>Metropolis</code> und <code>Ising</code>: Metropolis-Hastings mit Zufallsschritt, die adaptive Variante nach Haario, effektiver Stichprobenumfang nach Geyer und R-hat nach Gelman-Rubin; als Anwendung das zweidimensionale Ising-Modell mit exakter Zustandssumme und der Lösung von Onsager.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Viele Verteilungen sind nur bis auf eine Konstante bekannt – eine a-posteriori-Dichte, eine Boltzmann-Verteilung. Eine <b>Markow-Kette</b>, deren Gleichgewicht genau diese Verteilung ist, liefert trotzdem Stichproben: man zieht einen Vorschlag und nimmt ihn mit einer Wahrscheinlichkeit an, die nur Dichteverhältnisse braucht. Die Folgeglieder sind korreliert; wie viele unabhängige Stichproben sie wert sind, sagt der effektive Umfang.</p>
+
+<figure>
+<svg viewBox="0 0 560 170" width="560" font-family="sans-serif" font-size="12">
+  <defs><marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker></defs>
+  <rect x="20" y="50" width="120" height="44" rx="6" fill="#e8f0f6" stroke="#1f5f8b"/><text x="80" y="76" text-anchor="middle" fill="#1f5f8b">Zustand x</text>
+  <rect x="200" y="50" width="150" height="44" rx="6" fill="#ffffff" stroke="#5b6475"/><text x="275" y="70" text-anchor="middle" fill="#5b6475">Vorschlag</text><text x="275" y="86" text-anchor="middle" fill="#5b6475">x' = x + Schritt</text>
+  <rect x="410" y="50" width="130" height="44" rx="6" fill="#fff7e6" stroke="#9a6400"/><text x="475" y="70" text-anchor="middle" fill="#9a6400">annehmen mit</text><text x="475" y="86" text-anchor="middle" fill="#9a6400">min(1, π(x')/π(x))</text>
+  <g stroke="#5b6475" fill="none" marker-end="url(#pf)"><line x1="140" y1="72" x2="198" y2="72"/><line x1="350" y1="72" x2="408" y2="72"/><path d="M475,94 L475,140 L80,140 L80,96"/></g>
+  <text x="200" y="158" fill="#5b6475">angenommen: x ← x', sonst x bleibt (und zählt erneut)</text>
+</svg>
+<figcaption>Ein Schritt des Metropolis-Verfahrens.</figcaption>
+</figure>
+
+<h2 id="metropolis">Metropolis-Hastings, adaptiv</h2>
+<p>Vorschlag <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>'</mo><mo>=</mo><mi>x</mi><mo>+</mo><mi mathvariant="normal">δ</mi></mrow><annotation encoding="application/x-tex">x' = x + \delta</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">δ</mi><mo>∼</mo><mi>N</mi><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mi mathvariant="normal">Σ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\delta \sim N(0, \Sigma)</annotation></semantics></math> (symmetrisch), Annahme mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo><mo>/</mo><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\min(1, \pi(x')/\pi(x))</annotation></semantics></math>, gerechnet mit der logarithmischen Dichte. In der adaptiven Fassung nach Haario, Saksman und Tamminen wird <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Σ</mi></mrow><annotation encoding="application/x-tex">\Sigma</annotation></semantics></math> ab der halben Einlaufphase aus der bisherigen Kette geschätzt und mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2,38</mn><mrow><mn>2</mn></mrow></msup><mo>/</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">2{,}38^2/d</annotation></semantics></math> skaliert – dem Faktor, der für normalverteilte Ziele in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> Dimensionen nahezu optimal mischt.</p>
+<p><b>Herleitung.</b> Eine Kette mit Übergangskern <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo><mo>=</mo><mi>q</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo>∣</mo><mi>x</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi mathvariant="normal">α</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">P(x, x') = q(x' \mid x)\,\alpha(x, x')</annotation></semantics></math> für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>'</mo><mo>≠</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">x' \ne x</annotation></semantics></math> hat <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">\pi</annotation></semantics></math> als Gleichgewicht, wenn sie <b>detailliert ausgeglichen</b> ist: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mi>P</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo><mi>P</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo>,</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\pi(x)P(x, x') = \pi(x')P(x', x)</annotation></semantics></math>. Mit symmetrischem Vorschlag <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo>∣</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>q</mi><mo stretchy="false">(</mo><mi>x</mi><mo>∣</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q(x' \mid x) = q(x \mid x')</annotation></semantics></math> und</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">α</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><mfrac><mrow><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo></mrow><mrow><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mfrac><mo stretchy="false">)</mo><mspace width="1em"/><mo>⇒</mo><mspace width="1em"/><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi mathvariant="normal">α</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>,</mo><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo>=</mo><mi mathvariant="normal">π</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi mathvariant="normal">α</mi><mo stretchy="false">(</mo><mi>x</mi><mo>'</mo><mo>,</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\alpha(x, x') = \min\Bigl(1, \frac{\pi(x')}{\pi(x)}\Bigr) \quad\Rightarrow\quad \pi(x)\,\alpha(x, x') = \min\bigl(\pi(x), \pi(x')\bigr) = \pi(x')\,\alpha(x', x)</annotation></semantics></math></p>
+<p>gilt das, und die Normierungskonstante von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">\pi</annotation></semantics></math> kürzt sich heraus. Ein abgelehnter Vorschlag lässt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> stehen, und dieser Wert zählt erneut – sonst wäre das Gleichgewicht verschoben. Die adaptive Fassung ist streng genommen keine Markow-Kette mehr; Haario, Saksman und Tamminen zeigen, dass die Mittelwerte trotzdem gegen die richtigen Werte konvergieren, weil sich die Anpassung immer weniger ändert. Für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math>-dimensionale Normalziele maximiert die Schrittweite <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2,38</mn><mo>/</mo><msqrt><mi>d</mi></msqrt></mrow><annotation encoding="application/x-tex">2{,}38/\sqrt d</annotation></semantics></math> mal der Zielstreuung die Effizienz; die Annahmerate liegt dann für große <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> bei 0,234 (Roberts, Gelman und Gilks).</p>
+
+<h2 id="diagnose">Effektiver Umfang und R-hat</h2>
+<p>Der <b>effektive Stichprobenumfang</b> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mi mathvariant="normal">τ</mi></mrow><annotation encoding="application/x-tex">n/\tau</annotation></semantics></math> mit der integrierten Autokorrelationszeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>1</mn><mo>+</mo><mn>2</mn><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi></mrow></munder><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\tau = 1 + 2\sum_k \rho_k</annotation></semantics></math>. Die Summe bricht nach Geyer ab, sobald eine Paarsumme <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mn>2</mn><mi>m</mi></mrow></msub><mo>+</mo><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mn>2</mn><mi>m</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\rho_{2m} + \rho_{2m+1}</annotation></semantics></math> nicht mehr positiv ist (erste positive Folge). Für eine AR(1)-Folge mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ρ</mi></mrow><annotation encoding="application/x-tex">\rho</annotation></semantics></math> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>n</mi></mrow><mrow><mtext>eff</mtext></mrow></msub><mo>=</mo><mi>n</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">ρ</mi><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi mathvariant="normal">ρ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">n_{\text{eff}} = n\,(1-\rho)/(1+\rho)</annotation></semantics></math>.</p>
+<p><b>Herleitung.</b> Für eine stationäre Folge mit Varianz <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\sigma^2</annotation></semantics></math> ist</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Var</mi><mo>⁡</mo><mspace width="0.1667em"/><mrow style="border-top:0.065em solid currentColor;padding-top:0.08em"><mi>x</mi></mrow><mo>=</mo><mfrac><mrow><msup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mi>n</mi></mrow></mfrac><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mn>2</mn><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></munderover><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mstyle displaystyle="false"><mfrac><mrow><mi>k</mi></mrow><mrow><mi>n</mi></mrow></mfrac></mstyle><mo stretchy="false">)</mo><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo><mspace width="0.2778em"/><mo>→</mo><mspace width="0.2778em"/><mfrac><mrow><msup><mrow><mi mathvariant="normal">σ</mi></mrow><mrow><mn>2</mn></mrow></msup><mi mathvariant="normal">τ</mi></mrow><mrow><mi>n</mi></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">\operatorname{Var}\bar x = \frac{\sigma^2}{n}\Bigl(1 + 2\sum_{k=1}^{n-1}\bigl(1 - \tfrac kn\bigr)\rho_k\Bigr) \;\to\; \frac{\sigma^2\tau}{n},</annotation></semantics></math></p>
+<p>die Folge ist also so viel wert wie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mi mathvariant="normal">τ</mi></mrow><annotation encoding="application/x-tex">n/\tau</annotation></semantics></math> unabhängige Werte. Bei AR(1) ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msup><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>k</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\rho_k = \rho^k</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>1</mn><mo>+</mo><mn>2</mn><mi mathvariant="normal">ρ</mi><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">ρ</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi mathvariant="normal">ρ</mi><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">ρ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\tau = 1 + 2\rho/(1-\rho) = (1+\rho)/(1-\rho)</annotation></semantics></math>, bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ρ</mi><mo>=</mo><mn>0,6</mn></mrow><annotation encoding="application/x-tex">\rho = 0{,}6</annotation></semantics></math> also 4. Die geschätzten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\rho_k</annotation></semantics></math> werden bei großem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> zu Rauschen; Geyer zeigt, dass für reversible Ketten die Paarsummen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">Γ</mi></mrow><mrow><mi>m</mi></mrow></msub><mo>=</mo><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mn>2</mn><mi>m</mi></mrow></msub><mo>+</mo><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mn>2</mn><mi>m</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\Gamma_m = \rho_{2m} + \rho_{2m+1}</annotation></semantics></math> positiv sind, und bricht deshalb beim ersten nicht positiven <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">Γ</mi></mrow><mrow><mi>m</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\Gamma_m</annotation></semantics></math> ab – das schneidet das Rauschen ab, ohne einen Abbruchparameter.</p>
+<p><b>R-hat</b> nach Gelman und Rubin vergleicht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> Ketten der Länge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math>: mit der mittleren Varianz innerhalb <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi></mrow><annotation encoding="application/x-tex">W</annotation></semantics></math> und der Varianz zwischen den Mitteln <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>/</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">B/n</annotation></semantics></math> ist</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mover accent="true"><mrow><mi>R</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><msqrt><mfrac><mrow><mfrac><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><mi>W</mi><mo>+</mo><mfrac><mrow><mi>B</mi></mrow><mrow><mi>n</mi></mrow></mfrac></mrow><mrow><mi>W</mi></mrow></mfrac></msqrt><mo>;</mo></mrow><annotation encoding="application/x-tex">\hat R = \sqrt{\frac{\frac{n-1}{n}W + \frac{B}{n}}{W}};</annotation></semantics></math></p>
+<p>Werte nahe 1 (unter etwa 1,01) zeigen, dass die Ketten dieselbe Verteilung sehen.</p>
+<p><b>Herleitung.</b> Haben die Ketten ihr Gleichgewicht noch nicht erreicht, unterschätzt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi></mrow><annotation encoding="application/x-tex">W</annotation></semantics></math> die Varianz der Zielverteilung (jede Kette hat nur einen Teil gesehen), während <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>V</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><mfrac><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><mi>W</mi><mo>+</mo><mfrac><mrow><mi>B</mi></mrow><mrow><mi>n</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">\hat V = \frac{n-1}{n}W + \frac Bn</annotation></semantics></math> sie überschätzt, weil die Startpunkte gestreut sind. Beide streben gegen dieselbe Varianz; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>R</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><msqrt><mover accent="true"><mrow><mi>V</mi></mrow><mo stretchy="true">^</mo></mover><mo>/</mo><mi>W</mi></msqrt></mrow><annotation encoding="application/x-tex">\hat R = \sqrt{\hat V/W}</annotation></semantics></math> misst den Abstand. Für die Ketten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">1, \dots, 4</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>,</mo><mo>…</mo><mo>,</mo><mn>5</mn></mrow><annotation encoding="application/x-tex">2, \dots, 5</annotation></semantics></math> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo>=</mo><mn>5</mn><mo>/</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">W = 5/3</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mn>4</mn><mo>⋅</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">B = 4\cdot\frac12 = 2</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>R</mi></mrow><mo stretchy="true">^</mo></mover><mo>=</mo><msqrt><mo stretchy="false">(</mo><mfrac><mrow><mn>3</mn></mrow><mrow><mn>4</mn></mrow></mfrac><mo>⋅</mo><mfrac><mrow><mn>5</mn></mrow><mrow><mn>3</mn></mrow></mfrac><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo stretchy="false">)</mo><mo>/</mo><mfrac><mrow><mn>5</mn></mrow><mrow><mn>3</mn></mrow></mfrac></msqrt><mo>=</mo><msqrt><mn>1,05</mn></msqrt></mrow><annotation encoding="application/x-tex">\hat R = \sqrt{(\frac34\cdot\frac53 + \frac12)/\frac53} = \sqrt{1{,}05}</annotation></semantics></math>.</p>
+<p><b>Genauigkeit und Aufwand.</b> Der Monte-Carlo-Fehler eines Mittels ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">σ</mi><msqrt><mi mathvariant="normal">τ</mi><mo>/</mo><mi>n</mi></msqrt></mrow><annotation encoding="application/x-tex">\sigma\sqrt{\tau/n}</annotation></semantics></math>; eine Stelle mehr kostet hundertmal so viele Schritte. Jeder Schritt kostet eine Auswertung der Dichte. Die Schätzung von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi></mrow><annotation encoding="application/x-tex">\tau</annotation></semantics></math> selbst ist unsicher, solange die Kette kürzer als einige hundert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi></mrow><annotation encoding="application/x-tex">\tau</annotation></semantics></math> ist.</p>
+
+<h2 id="ising">Das Ising-Modell</h2>
+<p>Auf einem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>×</mo><mi>L</mi></mrow><annotation encoding="application/x-tex">L \times L</annotation></semantics></math>-Gitter mit periodischen Rändern tragen Spins <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mo form="prefix" lspace="0" rspace="0">±</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">s_i = \pm1</annotation></semantics></math> die Energie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi>J</mi><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mo stretchy="false">⟨</mo><mi>i</mi><mi>j</mi><mo stretchy="false">⟩</mo></mrow></munder><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><mi>h</mi><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">H = -J\sum_{\langle ij\rangle}s_i s_j - h\sum s_i</annotation></semantics></math>. <code>Ising.metropolis</code> dreht einzelne Spins mit der Annahmewahrscheinlichkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><msup><mrow><mi>e</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi>βΔ</mi><mi>E</mi></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\min(1, e^{-\beta\Delta E})</annotation></semantics></math> (Tafel für die fünf möglichen Nachbarsummen) und mittelt Energie, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><mi>M</mi><mo>|</mo></mrow><annotation encoding="application/x-tex">|M|</annotation></semantics></math>, spezifische Wärme <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msup><mspace width="0.1667em"/><mi>Var</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>E</mi><mo>/</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">\beta^2\operatorname{Var}E/N</annotation></semantics></math> und Suszeptibilität je Spin. Für kleine Gitter (bis 20 Spins) zählt <code>exakt</code> alle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>N</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^N</annotation></semantics></math> Zustände auf – der Vergleichswert für die Kette. Die spontane Magnetisierung des unendlichen Gitters ist nach Onsager und Yang</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>m</mi><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mspace width="0.1667em"/><msup><mi>sinh</mi><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>4</mn></mrow></msup><mo>⁡</mo><mo stretchy="false">(</mo><mn>2</mn><mi mathvariant="normal">β</mi><mi>J</mi><mo stretchy="false">)</mo><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>1</mn><mo>/</mo><mn>8</mn></mrow></msup><mspace width="1em"/><mo stretchy="false">(</mo><mi mathvariant="normal">β</mi><mo>&gt;</mo><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>c</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>c</mi></mrow></msub><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msqrt><mn>2</mn></msqrt><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">m = \big(1 - \sinh^{-4}(2\beta J)\big)^{1/8} \quad (\beta &gt; \beta_c), \qquad \beta_c = \tfrac12\ln(1 + \sqrt2).</annotation></semantics></math></p>
+<p><b>Herleitung der Tafel.</b> Dreht man Spin <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> um, ändern sich nur seine vier Bindungen und sein Feldterm:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>E</mi><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><msub><mrow><mi>s</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">(</mo><mi>J</mi><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>∼</mo><mi>i</mi></mrow></munder><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>+</mo><mi>h</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>j</mi><mo>∼</mo><mi>i</mi></mrow></munder><msub><mrow><mi>s</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>∈</mo><mo stretchy="false">{</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>4</mn><mo>,</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>4</mn><mo stretchy="false">}</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\Delta E = 2\,s_i\Bigl(J\sum_{j \sim i} s_j + h\Bigr), \qquad \sum_{j\sim i} s_j \in \{-4, -2, 0, 2, 4\}.</annotation></semantics></math></p>
+<p>Für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">h = 0</annotation></semantics></math> gibt es also nur fünf Werte von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>E</mi></mrow><annotation encoding="application/x-tex">\Delta E</annotation></semantics></math>, und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>e</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi>βΔ</mi><mi>E</mi></mrow></msup></mrow><annotation encoding="application/x-tex">e^{-\beta\Delta E}</annotation></semantics></math> lässt sich einmal tabellieren; jeder Schritt kostet dann eine Nachbarsumme und eine Zufallszahl. Die Annahme <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>,</mo><msup><mrow><mi>e</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi>βΔ</mi><mi>E</mi></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\min(1, e^{-\beta\Delta E})</annotation></semantics></math> ist die Metropolis-Regel mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">π</mi><mo>∝</mo><msup><mrow><mi>e</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi mathvariant="normal">β</mi><mi>H</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\pi \propto e^{-\beta H}</annotation></semantics></math>.</p>
+<p><b>Herleitung der Wärme.</b> Mit der Zustandssumme <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi><mo>=</mo><mo largeop="true" movablelimits="true">∑</mo><msup><mrow><mi>e</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi mathvariant="normal">β</mi><mi>H</mi></mrow></msup></mrow><annotation encoding="application/x-tex">Z = \sum e^{-\beta H}</annotation></semantics></math> ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⟨</mo><mi>E</mi><mo stretchy="false">⟩</mo><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><msub><mrow><mi>∂</mi></mrow><mrow><mi mathvariant="normal">β</mi></mrow></msub><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>Z</mi></mrow><annotation encoding="application/x-tex">\langle E\rangle = -\partial_\beta\ln Z</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>∂</mi></mrow><mrow><mi mathvariant="normal">β</mi></mrow></msub><mo stretchy="false">⟨</mo><mi>E</mi><mo stretchy="false">⟩</mo><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mo stretchy="false">(</mo><mo stretchy="false">⟨</mo><msup><mrow><mi>E</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">⟩</mo><mo>−</mo><mo stretchy="false">⟨</mo><mi>E</mi><msup><mrow><mo stretchy="false">⟩</mo></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\partial_\beta\langle E\rangle = -(\langle E^2\rangle - \langle E\rangle^2)</annotation></semantics></math>. Daher</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>C</mi><mo>=</mo><mfrac><mrow><msup><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mi>N</mi></mrow></mfrac><mspace width="0.1667em"/><mi>Var</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>E</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mfrac><mrow><msup><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mi>N</mi></mrow></mfrac><mspace width="0.1667em"/><mfrac><mrow><mi>d</mi><mo stretchy="false">⟨</mo><mi>E</mi><mo stretchy="false">⟩</mo></mrow><mrow><mi>d</mi><mi mathvariant="normal">β</mi></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">C = \frac{\beta^2}{N}\operatorname{Var}E = -\frac{\beta^2}{N}\,\frac{d\langle E\rangle}{d\beta},</annotation></semantics></math></p>
+<p>die Schwankung der Energie in der Kette ist dieselbe Größe wie die Ableitung der mittleren Energie – das prüft die exakte Aufzählung des 4×4-Gitters. Am 3×3-Gitter liegt diese Identität auch in der Nachrechnung.</p>
+<p><b>Was daraus folgt.</b> Unterhalb von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>c</mi></mrow></msub><mo>≈</mo><mn>0,4407</mn></mrow><annotation encoding="application/x-tex">\beta_c \approx 0{,}4407</annotation></semantics></math> ist das unendliche Gitter unmagnetisch, darüber wächst <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> steil an (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false">(</mo><mn>0,6</mn><mo stretchy="false">)</mo><mo>=</mo><mn>0,9736</mn></mrow><annotation encoding="application/x-tex">m(0{,}6) = 0{,}9736</annotation></semantics></math>). Ein endliches Gitter zeigt keinen echten Phasenübergang; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><mi>M</mi><mo>|</mo></mrow><annotation encoding="application/x-tex">|M|</annotation></semantics></math> ist bei kleinem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">β</mi></mrow><annotation encoding="application/x-tex">\beta</annotation></semantics></math> von der Ordnung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><msqrt><mi>N</mi></msqrt></mrow><annotation encoding="application/x-tex">1/\sqrt N</annotation></semantics></math>, nicht null. In der Nähe von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\beta_c</annotation></semantics></math> wächst die Autokorrelationszeit der Einzelspin-Kette etwa wie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>L</mi></mrow><mrow><mi>z</mi></mrow></msup></mrow><annotation encoding="application/x-tex">L^{z}</annotation></semantics></math> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>≈</mo><mn>2,17</mn></mrow><annotation encoding="application/x-tex">z \approx 2{,}17</annotation></semantics></math> (kritische Verlangsamung); dort sind lange Ketten oder Clusterverfahren nötig.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li>Effektiver Umfang einer AR(1)-Folge (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ρ</mi><mo>=</mo><mn>0,6</mn></mrow><annotation encoding="application/x-tex">\rho = 0{,}6</annotation></semantics></math>, 200 000 Werte) wie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi mathvariant="normal">ρ</mi><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi mathvariant="normal">ρ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">n(1-\rho)/(1+\rho)</annotation></semantics></math> auf 3 %; gleich der ausgeschriebenen Geyer-Folge auf 1e-12.</li>
+  <li>R-hat von Hand (zwei Ketten 1…4 und 2…5) auf 1e-15; gleich verteilte Ketten unter 1,01, verschobene über 1,5.</li>
+  <li>Adaptiver Metropolis auf einer korrelierten Normalverteilung; Beta(3, 5) über die Logit-Transformation: Mittel 3/8.</li>
+  <li>Ising 4×4 exakt: Wärme gleich <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msup><mspace width="0.1667em"/><mi>d</mi><mi>E</mi><mo>/</mo><mi>d</mi><mi mathvariant="normal">β</mi></mrow><annotation encoding="application/x-tex">-\beta^2\,dE/d\beta</annotation></semantics></math>, Grenzen für kleines und großes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">β</mi></mrow><annotation encoding="application/x-tex">\beta</annotation></semantics></math>; Metropolis gegen exakt auf 0,01; 32×32 bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">β</mi><mo>=</mo><mn>0,6</mn></mrow><annotation encoding="application/x-tex">\beta = 0{,}6</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><mi>m</mi><mo>|</mo><mo>=</mo><mn>0,9739</mn></mrow><annotation encoding="application/x-tex">|m| = 0{,}9739</annotation></semantics></math> gegen Onsager 0,9736.</li>
+</ul>
+
+<p>Die Nachrechnung mit sympy und numpy (detailliertes Gleichgewicht, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">τ</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">\tau = 4</annotation></semantics></math> für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ρ</mi><mo>=</mo><mn>0,6</mn></mrow><annotation encoding="application/x-tex">\rho = 0{,}6</annotation></semantics></math> über Geyers Paarsummen, R-hat der beiden Ketten, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\beta_c</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo stretchy="false">(</mo><mn>0,6</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">m(0{,}6)</annotation></semantics></math> nach Onsager, Wärme <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><msup><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msup><mspace width="0.1667em"/><mi>Var</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>E</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mn>2</mn></mrow></msup><mspace width="0.1667em"/><mi>d</mi><mi>E</mi><mo>/</mo><mi>d</mi><mi mathvariant="normal">β</mi></mrow><annotation encoding="application/x-tex">= \beta^2\operatorname{Var}E = -\beta^2\,dE/d\beta</annotation></semantics></math> am 3×3-Gitter) liegt im Quellstand unter <code>docs/theorie/rechnung/stats_mcmc.py</code>. Jede belegte Formel dieser Seite hat eine Gegenprobe (verfälschte Annahmewahrscheinlichkeit, zu früher Abbruch der Paarsummen, falscher Nenner in R-hat, Haario-Faktor, Tafel und Feldterm des Ising-Modells, Wärme, Onsager-Exponent); alle werden erkannt.</p>
+
+<h2 id="grenzen">Grenzen</h2>
+<p>Nur Zufallsschritt-Vorschläge (kein Hamilton-Monte-Carlo); Ising nur mit Einzelspin-Metropolis, das nahe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">β</mi></mrow><mrow><mi>c</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\beta_c</annotation></semantics></math> langsam mischt.</p>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>H. Haario, E. Saksman, J. Tamminen: An adaptive Metropolis algorithm. Bernoulli 7 (2001) 223–242.</li>
+  <li>C. J. Geyer: Practical Markov chain Monte Carlo. Statist. Sci. 7 (1992) 473–483.</li>
+  <li>A. Gelman, D. B. Rubin: Inference from iterative simulation using multiple sequences. Statist. Sci. 7 (1992) 457–472.</li>
+  <li>M. E. J. Newman, G. T. Barkema: Monte Carlo Methods in Statistical Physics. Oxford, 1999, Kap. 3.</li>
+  <li>N. Metropolis, A. W. Rosenbluth, M. N. Rosenbluth, A. H. Teller, E. Teller: Equation of State Calculations by Fast Computing Machines. J. Chem. Phys. 21 (1953) 1087–1092.</li>
+  <li>W. K. Hastings: Monte Carlo sampling methods using Markov chains and their applications. Biometrika 57 (1970) 97–109.</li>
+  <li>G. O. Roberts, A. Gelman, W. R. Gilks: Weak convergence and optimal scaling of random walk Metropolis algorithms. Ann. Appl. Probab. 7 (1997) 110–120.</li>
+  <li>L. Onsager: Crystal statistics. I. A two-dimensional model with an order-disorder transition. Phys. Rev. 65 (1944) 117–149.</li>
+  <li>C. N. Yang: The spontaneous magnetization of a two-dimensional Ising model. Phys. Rev. 85 (1952) 808–816.</li>
+</ul>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

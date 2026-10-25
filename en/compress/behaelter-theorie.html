@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Learning and search</div>
@@ -368,7 +374,7 @@ schluss ← the last suchweite bytes
     <b>return</b> aus</pre>
 <p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/zip/Zipdatei.java</code> (<code>bytes</code>, <code>liesVerzeichnis</code>, <code>zip64</code>, <code>zusatzfeld</code>).</p>
 <div class="hinweis"><b>Convention in the framework:</b> The central directory is authoritative, not the sequence of local headers. From the local header only the name and extra field lengths are taken to find the start of the data – both may differ from the directory. Sizes and checksum come from the directory. A reader that only walks the local headers can show a different file list for a manipulated container.</div>
-<div class="hinweis"><b>Convention in the framework:</b> If general-purpose bit 11 is set, the name is read as UTF-8, otherwise as <b>CP437</b> (the code page of the original PKZIP) – not as ISO-8859-1: there <code>0xFC</code> is ü, in CP437 it is ³. The <b>archive comment</b> at the end of the directory has no bit 11 of its own (APPNOTE 4.4.4 names it only for the name and comment of an entry); per APPNOTE appendix D the original code page applies without bit 11, so it is read as CP437 as well (since 2026-09-28; before, always UTF-8). Encrypted entries and the methods Deflate64 (9), bzip2 (12), LZMA (14), zstd (93), XZ (95) and PPMd (98) are named, reported as findings and not read.</div>
+<div class="hinweis"><b>Convention in the framework:</b> If general-purpose bit 11 is set, the name is read as UTF-8, otherwise as <b>CP437</b> (the code page of the original ZIP program) – not as ISO-8859-1: there <code>0xFC</code> is ü, in CP437 it is ³. The <b>archive comment</b> at the end of the directory has no bit 11 of its own (APPNOTE 4.4.4 names it only for the name and comment of an entry); per APPNOTE appendix D the original code page applies without bit 11, so it is read as CP437 as well (since 2026-09-28; before, always UTF-8). Encrypted entries and the methods Deflate64 (9), bzip2 (12), LZMA (14), zstd (93), XZ (95) and PPMd (98) are named, reported as findings and not read.</div>
 
 <h3>The MS-DOS time</h3>
 <p>Every entry carries date and time as two 16-bit words:</p>
@@ -376,7 +382,17 @@ schluss ← the last suchweite bytes
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>hour</mtext><mo>=</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>11</mn></mrow></msup><mo stretchy="false">⌋</mo><mo>,</mo><mspace width="1em"/><mtext>minute</mtext><mo>=</mo><mo stretchy="false">⌊</mo><mi>t</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>5</mn></mrow></msup><mo stretchy="false">⌋</mo><mspace width="0.1667em"/><mi>mod</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>64</mn><mo>,</mo><mspace width="1em"/><mtext>second</mtext><mo>=</mo><mn>2</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>t</mi><mspace width="0.1667em"/><mi>mod</mi><mo>⁡</mo><mspace width="0.1667em"/><mn>32</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{hour} = \lfloor t / 2^{11} \rfloor, \quad \text{minute} = \lfloor t / 2^5 \rfloor \operatorname{mod} 64, \quad \text{second} = 2\,(t \operatorname{mod} 32)</annotation></semantics></math></p>
 <p>The seconds thus have a resolution of two. Date 0 means “no time”; invalid values (month 0 or 13) are set to at least 1 or yield no timestamp. The probe reads <code>2000-12-01T00:00</code> from a generated container.</p>
 
+<h2 id="folgt">What follows from it</h2>
+<p><b>Assumptions.</b> The whole file is readable, and for ZIP the central directory is authoritative, not the sequence of local headers.</p>
+<ul>
+  <li><b>How far the search goes.</b> The end of the directory lies in the last <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>22</mn><mo>+</mo><mn>65</mn><mspace width="0.1667em"/><mn>535</mn><mo>=</mo><mn>65</mn><mspace width="0.1667em"/><mn>557</mn></mrow><annotation encoding="application/x-tex">22 + 65\,535 = 65\,557</annotation></semantics></math> bytes; no more ever has to be read, however large the archive.</li>
+  <li><b>What a gzip member costs.</b> Without extra fields 18 bytes: 10 bytes header and 8 bytes footer. Since the end of a member follows only from the Deflate stream, a multi-member gzip cannot be read from the back.</li>
+  <li><b>What CRC-32 catches.</b> Every error affecting at most 32 consecutive bits, and of all others all but a fraction of about <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-32}</annotation></semantics></math>. A checksum says that something is wrong, not where.</li>
+  <li><b>MS-DOS time.</b> Seven bits for the year range from 1980 to 2107, the seconds have a resolution of two seconds; there is no time zone.</li>
+</ul>
+
 <h2 id="pruefung">How it is checked</h2>
+<p><code>TheorieK1probe</code> checks two gzip members followed by zero bytes, a wrong length and a wrong CRC-32 at the member end, a ZIP with a false end signature in the comment, and the MS-DOS time 2001-02-03T04:05:06.</p>
 <ul>
   <li><b><code>Gzipprobe</code> (46 checks):</b> three foreign anchors from Python's <code>gzip</code> (including the two-member one with timestamps 1 and 2); three members give three parts; zero bytes at the end are not a member; <b>all sixteen</b> combinations of the four optional fields, because an error in skipping only shows up with certain combinations; an empty name is a zero byte and not a missing field; eleven sizes from 1 to 200,000 bytes; incompressible data; nine kinds of damage (signature, method 9, unassigned flag bit, header checksum, missing trailer, data checksum, length, too short) – and the message names the right member.</li>
   <li><b><code>Zipprobe</code> (41 checks):</b> generated containers (stored and Deflate, subfolder, 50 entries, MS-DOS time), a real container from Python's <code>zipfile</code> with umlauts in the name, a container with the end signature in the comment that Python's <code>zipfile</code> no longer opens, an archive comment with the byte <code>0x81</code> that must come out as “ü” (CP437), five broken containers (wrong checksum, lying size, truncated, not a ZIP, two bytes) and the proof that the reader does not modify the file (size, modification time, content).</li>
@@ -396,7 +412,7 @@ schluss ← the last suchweite bytes
 <h2 id="literatur">Literature</h2>
 <ul>
   <li>P. Deutsch: RFC 1952, GZIP file format specification version 4.3, 1996.</li>
-  <li>PKWARE: APPNOTE.TXT – .ZIP File Format Specification.</li>
+  <li>APPNOTE.TXT – .ZIP File Format Specification.</li>
 </ul>
 
 <footer>

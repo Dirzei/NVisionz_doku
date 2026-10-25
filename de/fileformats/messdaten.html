@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messdaten: Umrechnung, Byte-Reihenfolge, Zeitachsen – Hintergrund – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#abstraktion">Eine Sicht für alle tabellarischen Formate</a>
+<a class="unterseite" href="erkennung.html">Formaterkennung</a>
+<a class="unterseite" href="grundlagen.html">Grundlagen der Leser</a>
+<a class="rubrik" href="index.html#sql">SQL über jeder Datenquelle</a>
+<a class="unterseite" href="sql.html">SQL-Auswertung</a>
+<a class="rubrik" href="index.html#tabellen">Datenbanken und Tabellen</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – Abgleich</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – Abgleich</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – Abgleich</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – Abgleich</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – Abgleich</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – Abgleich</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – Abgleich</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – Abgleich</a>
+<a class="unterseite" href="datenbanken.html">Datenbanken</a>
+<a class="unterseite" href="spaltenformate.html">Spaltenformate</a>
+<a class="unterseite" href="tabellenformeln.html">Tabellenformeln</a>
+<a class="rubrik" href="index.html#messdaten">Messdaten und Zahlenfelder</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – Abgleich</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – Abgleich</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – Abgleich</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – Abgleich</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – Abgleich</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – Abgleich</a>
+<a class="unterseite" href="fits.html">FITS</a>
+<a class="unterseite aktiv" href="messdaten.html">Messdaten: Rohwert und Messwert</a>
+<a class="rubrik" href="index.html#behaelter">Wissenschaftliche Behälter</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – Abgleich</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – Abgleich</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – Abgleich</a>
+<a class="unterseite" href="hdf5.html">HDF5, netCDF, HDF4</a>
+<a class="unterseite" href="langform.html">Langform</a>
+<a class="unterseite" href="wissenschaft.html">CGNS, Exodus, MATLAB, NumPy</a>
+<a class="rubrik" href="index.html#netze">Netze und CFD-Ergebnisse</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – Abgleich</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – Abgleich</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – Abgleich</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – Abgleich</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – Abgleich</a>
+<a class="unterseite" href="abgleich-stl.html">STL – Abgleich</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – Abgleich</a>
+<a class="unterseite" href="netze.html">Netze und Geometrie</a>
+<a class="rubrik" href="index.html#bilder">Bilder</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – Abgleich</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – Abgleich</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – Abgleich</a>
+<a class="unterseite" href="abgleich-png.html">PNG – Abgleich</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – Abgleich</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – Abgleich</a>
+<a class="unterseite" href="jpeg.html">JPEG</a>
+<a class="unterseite" href="kompression.html">Kompression</a>
+<a class="unterseite" href="rasterbilder.html">Rasterbilder</a>
+<a class="unterseite" href="tiff.html">TIFF</a>
+<a class="unterseite" href="webp.html">WebP</a>
+<a class="rubrik" href="index.html#office">Office-Dateien und Behälter</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – Abgleich</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – Abgleich</a>
+<a class="unterseite" href="behaelter.html">Behälterformate</a>
+<a class="unterseite" href="buero.html">Bürodateien: Folien und Farben</a>
+<a class="rubrik" href="index.html#triebwerk">Kennfelder, NPSS-Ausgaben</a>
+<a class="unterseite" href="kennfelder.html">Kennfelder und NPSS-Ausgaben</a>
+<a class="rubrik" href="index.html#text">Unbekannte Textformate verstehen</a>
+<a class="unterseite" href="textbeschreibung.html">Formatbeschreibung und Abgleich</a>
+<a class="unterseite" href="textstruktur.html">Strukturerkennung</a>
+<a class="rubrik" href="index.html#werkzeuge">Kommandozeile</a>
+<a class="rubrik" href="index.html#abgleich">Abgleich gegen Spezifikation und Vergleichsprodukt</a>
+<a class="unterseite" href="abgleich.html">Alle Formate im Überblick</a>
+<a class="rubrik" href="index.html#einsatz">Einsatzmatrix im Framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-fileformats</a> › Messdaten: Umrechnung, Byte-Reihenfolge, Zeitachsen – Hintergrund</span><a class="sprachwahl" href="../../en/fileformats/messdaten.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · envisionz.fileformats.mdf, .tdms, .uff</div>
+  <h1>Messdaten: Umrechnung, Byte-Reihenfolge, Zeitachsen – Hintergrund</h1>
+  <p class="unter">Wie aus dem Rohwert eines Steuergeräts ein Messwert wird (MDF 3 und MDF 4), woran die Byte-Reihenfolge eines Kanals hängt, warum TDMS-Segmente nicht unabhängig sind und wie ein UFF-Datensatz seine Zahlenkolonne deutet.</p>
+</header>
+
+<h2 id="problem">Worum es geht</h2>
+<p>Messdatenformate legen selten die physikalische Größe ab. Im Satz steht der <b>Rohwert</b> – ein <code>uint16</code> eines Steuergeräts –, und eine <b>Umrechnungsregel</b> daneben macht daraus Grad Celsius oder bar. Die Regel ist Teil der Datei; ein Leser, der sie übergeht, liefert Rohwerte, die wie Messwerte aussehen. Ebenso stehen Zeitachse, Byte-Reihenfolge und Anzahl der Zahlen je Punkt nicht immer am Wert selbst, sondern an anderer Stelle der Datei. Diese Seite leitet die Regeln her, die der Leser anwendet; die Formatübersichten stehen in den Abgleichen <a href="abgleich-mdf3.html">MDF 3</a>, <a href="abgleich-mdf4.html">MDF 4</a>, <a href="abgleich-tdms.html">TDMS</a> und <a href="abgleich-uff.html">UFF</a>.</p>
+
+<figure>
+<svg viewBox="0 0 600 170" width="600" font-family="sans-serif" font-size="13">
+  <rect x="20" y="30" width="120" height="40" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="34" y="55" fill="#1f5f8b">Satz (Bytes)</text>
+  <rect x="190" y="30" width="120" height="40" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="206" y="55" fill="#1f5f8b">Rohwert x</text>
+  <rect x="360" y="30" width="220" height="40" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="372" y="55" fill="#1f5f8b">Messwert = f(x) oder Text</text>
+  <line x1="140" y1="50" x2="190" y2="50" stroke="#5b6475" marker-end="url(#pm)"/>
+  <line x1="310" y1="50" x2="360" y2="50" stroke="#5b6475" marker-end="url(#pm)"/>
+  <text x="140" y="100" fill="#9a6400">Byte-Reihenfolge, Bitlage</text>
+  <text x="140" y="118" fill="#9a6400">(am Kanal, nicht an der Datei)</text>
+  <text x="330" y="100" fill="#9a6400">Umrechnungsregel (CCBLOCK / ##CC):</text>
+  <text x="330" y="118" fill="#9a6400">linear, Bruch, Tabelle, Bereich, Text</text>
+  <text x="20" y="150" fill="#5b6475">Zeitachse: eigener Kanal, gerechnet aus Anfang und Schritt, oder Sekunden seit 1904.</text>
+  <defs><marker id="pm" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5b6475"/></marker></defs>
+</svg>
+<figcaption>Vom Satz zum Messwert. Beide Schritte hängen an Angaben, die nicht beim Wert stehen.</figcaption>
+</figure>
+
+<h2 id="linear">Lineare und gebrochene Umrechnungen</h2>
+<p>Die lineare Umrechnung ist in beiden Fassungen</p>
+<span class="gleichung" id="gl-linear"><span class="glformel"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>y</mi><mo>=</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>2</mn></mrow></msub><mspace width="0.1667em"/><mi>x</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">y = P_1 + P_2\,x ,</annotation></semantics></math></span><span class="glnr">(1)</span></span>
+<p>mit dem <b>Versatz</b> zuerst und dem Faktor danach. Verschieden ist nur die Nummer der Art: in MDF 3 ist es 0, in MDF 4 ist es 1 – und 1 heißt in MDF 3 „Tabelle mit Zwischenwerten“, 0 in MDF 4 „eins zu eins“. Wer die beiden Nummernkreise verwechselt, lässt eine lineare Umrechnung still aus. Wer die Kennzahlen vertauscht, bekommt bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>100</mn></mrow><annotation encoding="application/x-tex">P_1 = 100</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0,5</mn></mrow><annotation encoding="application/x-tex">P_2 = 0{,}5</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">x = 4</annotation></semantics></math> statt 102 den Wert 400,5.</p>
+<p>Die rationale Umrechnung (MDF 3 Art 9, MDF 4 Art 2) ist ein Quotient zweier Polynome zweiten Grades, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>2</mn></mrow></msub><mi>x</mi><mo>+</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>3</mn></mrow></msub><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>4</mn></mrow></msub><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>5</mn></mrow></msub><mi>x</mi><mo>+</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>6</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y = (P_1 x^2 + P_2 x + P_3)/(P_4 x^2 + P_5 x + P_6)</annotation></semantics></math>. Die MDF-3-Art 6 heißt „Polynom“, ist aber ebenfalls ein Bruch, und zwar eine gebrochen-lineare Funktion der verschobenen Größe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mi>x</mi><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>5</mn></mrow></msub><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>6</mn></mrow></msub></mrow><annotation encoding="application/x-tex">u = x - P_5 - P_6</annotation></semantics></math>:</p>
+<span class="gleichung" id="gl-polynom"><span class="glformel"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>y</mi><mo>=</mo><mfrac><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>4</mn></mrow></msub><mspace width="0.1667em"/><mi>u</mi></mrow><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>3</mn></mrow></msub><mspace width="0.1667em"/><mi>u</mi><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow></mfrac><mo>.</mo></mrow><annotation encoding="application/x-tex">y = \frac{P_2 - P_4\,u}{P_3\,u - P_1} .</annotation></semantics></math></span><span class="glnr">(2)</span></span>
+<p>Sie ist die Umkehrung der gebrochen-linearen Kennlinie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>+</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub><mi>y</mi><mo stretchy="false">)</mo><mo>/</mo><mo stretchy="false">(</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>4</mn></mrow></msub><mo>+</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>3</mn></mrow></msub><mi>y</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">u = (P_2 + P_1 y)/(P_4 + P_3 y)</annotation></semantics></math> eines Sensors: Auflösen nach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math> ergibt genau <a class="glverweis" href="#gl-polynom">(2)</a>. Ein Nenner null ergibt keinen Messwert (NaN), nicht unendlich – an dieser Stelle hat die Kennlinie keinen Urbildwert.</p>
+
+<h2 id="explog">Exponential und Logarithmus</h2>
+<p>MDF 3 kennt zwei weitere Arten mit sieben Kennzahlen und je zwei Zweigen. Für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>4</mn></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">P_4 = 0</annotation></semantics></math> gilt</p>
+<span class="gleichung" id="gl-explog"><span class="glformel"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>exp</mi><mo>⁡</mo></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow></mfrac><mspace width="0.1667em"/><mi>ln</mi><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>7</mn></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>P</mi></mrow><mrow><mn>6</mn></mrow></msub><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow></mfrac><mo>,</mo><mspace width="2em"/><msub><mrow><mi>y</mi></mrow><mrow><mi>log</mi><mo>⁡</mo></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow></mfrac><mspace width="0.1667em"/><mi>exp</mi><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>7</mn></mrow></msub><mo stretchy="false">)</mo><mspace width="0.1667em"/><msub><mrow><mi>P</mi></mrow><mrow><mn>6</mn></mrow></msub><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow></mfrac><mo>,</mo></mrow><annotation encoding="application/x-tex">y_{\exp} = \frac{1}{P_2} \ln\frac{(x - P_7)\,P_6 - P_3}{P_1}, \qquad y_{\log} = \frac{1}{P_2} \exp\frac{(x - P_7)\,P_6 - P_3}{P_1} ,</annotation></semantics></math></span><span class="glnr">(3)</span></span>
+<p>für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">P_1 = 0</annotation></semantics></math> steht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>3</mn></mrow></msub><mo>/</mo><mo stretchy="false">(</mo><mi>x</mi><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>7</mn></mrow></msub><mo stretchy="false">)</mo><mo>−</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>6</mn></mrow></msub></mrow><annotation encoding="application/x-tex">P_3/(x - P_7) - P_6</annotation></semantics></math> im Zähler und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>4</mn></mrow></msub><mo>,</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>5</mn></mrow></msub></mrow><annotation encoding="application/x-tex">P_4, P_5</annotation></semantics></math> an Stelle von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><msub><mrow><mi>P</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">P_1, P_2</annotation></semantics></math>. Gerechnet wird genau, was die Formatbeschreibung vorschreibt: Art 7 bildet den Logarithmus, Art 8 die Exponentialfunktion. Sind weder <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">P_1</annotation></semantics></math> noch <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>P</mi></mrow><mrow><mn>4</mn></mrow></msub></mrow><annotation encoding="application/x-tex">P_4</annotation></semantics></math> null, ist die Regel nicht definiert und der Leser gibt NaN.</p>
+
+<h2 id="tabellen">Tabellen und Bereiche</h2>
+<p>Eine Wertetabelle mit Zwischenwerten interpoliert linear zwischen den Stützpunkten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(x_i, y_i)</annotation></semantics></math> und hält außerhalb den Randwert fest. Ohne Zwischenwerte unterscheiden sich die Fassungen: MDF 3 nimmt den <b>unteren</b> Stützpunkt (auf einem Stützpunkt seinen eigenen Wert), MDF 4 den <b>nächsten</b>, wobei die Mitte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>+</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">(x_i + x_{i+1})/2</annotation></semantics></math> nach oben gehört. Bereiche sind in beiden Fassungen <b>halb offen</b>,</p>
+<span class="gleichung" id="gl-bereich"><span class="glformel">$$ x_{\min} \le x < x_{\max} ,  $$</span><span class="glnr">(4)</span></span>
+<p>damit ein Wert, der genau auf der Grenze zweier aneinanderstoßender Bereiche liegt, eindeutig dem oberen zufällt. Was in keinen Bereich fällt, bekommt den Vorgabewert am Ende der Liste, in MDF 4 auch eine eigene Umrechnung als Vorgabe.</p>
+<p>Gerechnet werden nicht: in MDF 3 die Formel als Text (Art 10), in MDF 4 die algebraische Umrechnung (Art 3) und die Bitfeldtabelle (Art 11). Der Rohwert bleibt, und die Regel steht in den Befunden.</p>
+
+<p>„Text auf Text“ (MDF 4, Art 10) trägt seine Verweise <b>paarweise</b>: Eingabe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> an Stelle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>i</mi></mrow><annotation encoding="application/x-tex">2i</annotation></semantics></math>, Ausgabe <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi></mrow><annotation encoding="application/x-tex">i</annotation></semantics></math> an Stelle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>i</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2i+1</annotation></semantics></math>, der Ersatztext zuletzt.</p>
+<p>Eine vorzeichenlose 64-Bit-Zahl ab <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>63</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{63}</annotation></semantics></math> passt in keine Ganzzahl mit Vorzeichen; sie kommt in beiden Fassungen als Kommazahl heraus, mit der Rundung, die 53 Bit Mantisse nun einmal haben – nie als negative Zahl.</p>
+
+<h2 id="reihenfolge">Byte-Reihenfolge am Kanal</h2>
+<p>In MDF 3 hängt die Byte-Reihenfolge eines Kanals am Datentyp <b>und</b> am Kopf der Datei: die Typen 0 bis 3 folgen dem Kopf, die Typen 9 bis 12 sind immer höchstwertig zuerst, die Typen 13 bis 16 immer kleinstwertig zuerst. Zwei Kanäle desselben Satzes können also verschieden herum liegen; wer die Reihenfolge einmal für die Datei festlegt, liest aus 258 den Wert 513.</p>
+
+<h2 id="tdms">TDMS: Segmente und der Nullpunkt 1904</h2>
+<p>Eine TDMS-Datei ist eine Folge von Segmenten. Was ein Segment nicht sagt, gilt vom Vorsegment weiter; der Rohdatenindex 0 eines Kanals heißt „wie zuletzt“ – Typ und Anzahl stehen dann gar nicht da. Der Leser führt deshalb einen Zustand je Kanal über alle Segmente mit.</p>
+<p>Zeitstempel bestehen aus ganzen Sekunden seit dem <b>1. Januar 1904</b> und einem Bruchteil in Einheiten von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>64</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-64}</annotation></semantics></math> s. Der Abstand zum Nullpunkt 1970 beträgt 2 082 844 800 s, also 24 107 Tage; wer die Nullpunkte verwechselt, liegt 66 Jahre daneben, und das Datum sieht trotzdem plausibel aus. Vom Bruchteil reichen die oberen 32 Bit, denn <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>32</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-32}</annotation></semantics></math> s sind weniger als eine Nanosekunde.</p>
+<span class="gleichung" id="gl-tdmszeit"><span class="glformel"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>t</mi><mo>=</mo><mn>1904</mn><mtext>-</mtext><mn>01</mn><mtext>-</mtext><mn>01</mn><mo>+</mo><mi>s</mi><mo>+</mo><mfrac><mrow><mo stretchy="false">⌊</mo><mi>f</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup><mo stretchy="false">⌋</mo></mrow><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex">t = 1904\text{-}01\text{-}01 + s + \frac{\lfloor f / 2^{32} \rfloor}{2^{32}}</annotation></semantics></math></span><span class="glnr">(5)</span></span>
+
+<h2 id="uff">UFF: wie viele Zahlen zu einem Punkt gehören</h2>
+<p>Ein UFF-Datensatz 58 trägt eine Zahlenkolonne, die sich aus sich selbst nicht deuten lässt. Wie viele Zahlen zu einem Punkt gehören, sagen zwei Felder, die nichts miteinander zu tun haben: die Abszissenteilung (gleichmäßig: die x-Werte stehen nicht in der Datei und werden aus Anfang und Schritt gerechnet) und der Ordinatentyp (komplex: zwei Zahlen je Wert).</p>
+<span class="gleichung" id="gl-uff"><span class="glformel"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>m</mi><mo>=</mo><mo stretchy="false">[</mo><mtext>ungleichmäßig</mtext><mo stretchy="false">]</mo><mo>+</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><mn>2</mn></mtd><mtd style="text-align:left"><mtext>komplex</mtext></mtd></mtr><mtr><mtd style="text-align:left"><mn>1</mn></mtd><mtd style="text-align:left"><mtext>reell</mtext></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">m = [\text{ungleichmäßig}] + \begin{cases} 2 &amp; \text{komplex} \\ 1 &amp; \text{reell} \end{cases}</annotation></semantics></math></span><span class="glnr">(6)</span></span>
+<p>Fünf Punkte mit zehn Zahlen sind deshalb entweder ungleichmäßig und reell oder gleichmäßig und komplex – zwei Dateien, die gleich aussehen und völlig verschieden zu lesen sind.</p>
+
+<h2 id="folgt">Was daraus folgt</h2>
+<ul>
+<li>Annahme: Die Regel in der Datei ist richtig. Der Leser rechnet sie aus; ob sie zum Sensor passt, kann er nicht wissen.</li>
+<li>Ein Messwert ist nur so gut wie seine Umrechnung: Wo eine Art nicht gerechnet wird, steht der Rohwert mit einem Befund da, nie ein geratener Messwert.</li>
+<li>Die halb offenen Bereiche und die Mitte „nach oben“ machen die Zuordnung eindeutig, auch wenn Bereichsgrenzen genau auf Messwerten liegen – bei ganzzahligen Rohwerten der Normalfall.</li>
+</ul>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+<li><code>mdf.TheorieFEprobe</code>: jede gerechnete Art beider Fassungen mit von Hand gerechneten Sollwerten (darunter beide Zweige von Exponential und Logarithmus, Nenner null, die Grenze eines halb offenen Bereichs, die Mitte zwischen zwei Stützpunkten).</li>
+<li><code>Mdfprobe</code>, <code>Mdf3probe</code>: echte Dateien eines Fremdschreibers, die Byte-Reihenfolge je Typ und Kopf, Umrechnungen im Zusammenhang einer Datei.</li>
+<li><code>Tdmsprobe</code>, <code>Uffprobe</code>: Segmentfortschreibung, Nullpunkt, Abszisse und Ordinatentyp an Fremdankern.</li>
+<li>Nachrechnung: <code>docs/theorie/rechnung/fileformats_messdaten.py</code>.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<ul>
+<li>Formeln als Text und Bitfeldtabellen werden nicht ausgewertet.</li>
+<li>In MDF 4 ist die Bereichsgrenze immer halb offen; ob ganzzahlige Kanäle nach der Formatbeschreibung eine geschlossene obere Grenze verlangen, ist mit den vorliegenden Fremdankern nicht entschieden.</li>
+<li>TDMS-Zeitpunkte werden auf Nanosekunden gerundet; feinere Bruchteile gehen verloren.</li>
+</ul>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>ASAM MDF 3.3 und 4.1 – CCBLOCK bzw. <code>##CC</code>, Umrechnungsarten und Kennzahlen.</li>
+  <li><i>TDMS File Format Internal Structure</i>, Formatbeschreibung des Herstellers – Segmente, Rohdatenindex, Zeitstempel.</li>
+  <li><i>Universal File Datasets Summary</i> – Datensatz 58.</li>
+</ul>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

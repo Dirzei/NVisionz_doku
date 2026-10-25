@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -158,6 +160,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Lernen und Suchen</div>
@@ -429,6 +435,15 @@ ziel ← Nullen [Kanäle][Gesamtwerte];  erreicht ← 0;  pos ← 36
 </table>
 <p>Dauer: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8192</mn><mo>/</mo><mn>48</mn><mspace width="0.1667em"/><mn>000</mn><mo>=</mo><mn>0,171</mn></mrow><annotation encoding="application/x-tex">8192 / 48\,000 = 0{,}171</annotation></semantics></math> s. Unmittelbar dahinter beginnt Rahmen 0 mit <code>FF 5A 00 00 1B F6</code>: Synchronwort und eine Rumpflänge von 7158 Byte. Der zweite Rahmen beginnt also bei Byte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>36</mn><mo>+</mo><mn>6</mn><mo>+</mo><mn>7158</mn><mo>+</mo><mn>2</mn><mo>=</mo><mn>7202</mn></mrow><annotation encoding="application/x-tex">36 + 6 + 7158 + 2 = 7202</annotation></semantics></math>.</p>
 
+<!-- NEU 2026-10-19 (TD22, A1) -->
+<h2 id="folgt">Was daraus folgt</h2>
+<ul>
+  <li><b>Annahme:</b> Fehler im Übertragungsweg treffen einzelne Bits oder kurze Bündel. Für sie ist die CRC-16 vollständig: Jede ungerade Zahl gekippter Bits (Faktor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">x+1</annotation></semantics></math> von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math>) und jedes Bündel bis 16 Bit wird erkannt; nur ein zufälliges Muster passt mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-16}</annotation></semantics></math>.</li>
+  <li><b>Zahlen aus dem Kopf sind Behauptungen des Kopfs.</b> Der Dekodierer prüft deshalb vor jedem Anlegen von Speicher, dass die Kanalzahl 1 oder 2 ist und dass die Gesamtwerte zu dem passen, was der Strom überhaupt tragen kann: Ein Rahmen hat mindestens 16 Byte und höchstens 65 535 Werte. Eine Rumpflänge aus einem Rahmen wird in 64 Bit gegen die Stromlänge verglichen; in 32 Bit lief eine Länge ab <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{31}</annotation></semantics></math> über und endete in einem Zugriff ins Leere statt im Weitersuchen. <!-- NEU 2026-10-19 (TD22, A1) --></li>
+  <li>CRC und FNV-1a ergänzen sich: Die CRC grenzt eine Beschädigung auf einen Rahmen ein, die Gesamtsumme belegt, dass der Kodierer richtig gerechnet hat. Keine der beiden schützt gegen absichtliche Veränderung.</li>
+  <li>Weil ein Rahmen nur vom Kopf abhängt, kostet ein verlorener Rahmen genau seine eigenen Werte und nichts sonst.</li>
+</ul>
+
 <h2 id="pruefung">Wie geprüft wird</h2>
 <ul>
   <li><code>Summenprobe</code> (30 Prüfungen): CRC-16/BUYPASS über „123456789“ ist <code>FEE8</code>; über nichts null; ein einzelnes Nullbyte bleibt null (das wäre bei einer gespiegelten Variante anders); <code>A5</code> gibt <code>03DE</code>. Die Tafelrechnung wird gegen eine Bit-für-Bit-Rechnung ohne Tafel verglichen, für die Längen 0 bis 40 und für Abschnitte mitten in den Daten – eine falsch aufgebaute Tafel ist in sich schlüssig und fällt nur so auf. Jedes einzelne gekippte Bit eines 8-Byte-Blocks ändert die Summe, zwei vertauschte Bytes ebenso.</li>
@@ -439,7 +454,7 @@ ziel ← Nullen [Kanäle][Gesamtwerte];  erreicht ← 0;  pos ← 36
 <h2 id="grenzen">Grenzen</h2>
 <ul>
   <li><b>Feldbreiten:</b> Kanalzahl und Wortbreite je ein Byte, Nennblockgröße, Vor- und Nachlauf je 16 Bit. Der Kodierer lässt Blockgrößen von 16 bis 65 535 zu.</li>
-  <li><b>Gesamtwerte</b> stehen mit 64 Bit im Kopf, der Dekodierer rechnet aber mit <code>int</code>; mehr als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{31}-1</annotation></semantics></math> Werte je Kanal liest er nicht.</li>
+  <li><b>Gesamtwerte</b> stehen mit 64 Bit im Kopf, der Dekodierer rechnet aber mit <code>int</code>; mehr als <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2^{31}-1</annotation></semantics></math> Werte je Kanal liest er nicht und weist sie mit Grund ab. <!-- GEAENDERT 2026-10-19 (TD22, A1) --></li>
   <li><b>Ungleich lange Kanäle</b> (Befund der <code>Summenprobe</code>): <code>ueberWerte</code> nimmt die Länge aus dem ersten Kanal. Ein kürzerer zweiter Kanal führt zu einem Zugriff ins Leere, ein längerer wird stillschweigend abgeschnitten. Aus dem Kodierer kommen immer gleich lange Kanäle.</li>
   <li><b>Im nachsichtigen Betrieb</b> wird eine nicht passende Gesamtprüfsumme nicht gemeldet; Auskunft gibt nur <code>uebersprungeneRahmen()</code> oder ein Nachrechnen mit <code>pruefsummePasst</code>.</li>
   <li>Eine CRC-16 erkennt nicht jede Verfälschung: Für ein zufälliges Fehlermuster passt sie mit der Wahrscheinlichkeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>16</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-16}</annotation></semantics></math> trotzdem. Die Gesamtprüfsumme fängt einen solchen Fall im strengen Betrieb noch ab.</li>

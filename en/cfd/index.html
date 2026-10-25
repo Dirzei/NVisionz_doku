@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow computation (CFD core) – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag aktiv" href="index.html">framework-cfd</a>
+<div class="rubriken">
+<a class="rubrik" href="#netz">Grid and geometry</a>
+<a class="unterseite" href="netz.html">Background</a>
+<a class="rubrik" href="#verfahren">Spatial discretisation</a>
+<a class="unterseite" href="fluss.html">Numerical fluxes – background</a>
+<a class="unterseite" href="rekonstruktion.html">Gradients and limiters – background</a>
+<a class="rubrik" href="#zeit">Time integration and solvers</a>
+<a class="unterseite" href="zeit.html">Background</a>
+<a class="rubrik" href="#raender">Boundary conditions</a>
+<a class="unterseite" href="raender.html">Background</a>
+<a class="rubrik" href="#physik">Physical models</a>
+<a class="unterseite" href="spezies.html">Species, mixtures and chemistry – background</a>
+<a class="unterseite" href="turbulenz.html">Turbulence models – background</a>
+<a class="unterseite" href="viskos.html">Viscous flow – background</a>
+<a class="rubrik" href="#pruefung">How it is checked</a>
+</div>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-cfd</span><a class="sprachwahl" href="../../de/cfd/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-cfd</div>
+  <h1>Flow computation (CFD core)</h1>
+  <p class="unter">Computational core without a user interface for compressible flows on unstructured grids: face-based finite-volume grid with checks and own generators, Riemann solvers and a central flux, second-order reconstruction with limiters, explicit and implicit time integration, characteristic boundaries up to the mixing plane, Navier-Stokes with turbulence and transition models, LES, mixtures, real gases and chemistry.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>13</b><span>packages, 82 classes</span></div>
+  <div class="zahl"><b>4</b><span>dependencies: fileformats, compress, math, thermo</span></div>
+  <div class="zahl"><b>4</b><span>cell types: tetrahedron, pyramid, prism, hexahedron</span></div>
+  <div class="zahl"><b>5</b><span>flux methods: roe, lmroe, hllc, ausm, zentral</span></div>
+  <div class="zahl"><b>47</b><span>probes, 376 counter-probes</span></div>
+</div>
+
+<!-- =============================================================== NETZ -->
+<h2 id="netz">Grid and geometry <span class="paket">envisionz.cfd.netz, geometrie, erzeugen, ein, aus</span></h2>
+<p class="einl">The grid lives in flat arrays: nodes, cells and faces as CSR lists, owner and neighbour per face, interior faces first, boundary faces per boundary behind them. Face vectors and volumes are computed so that the sums over closed hulls vanish. The grid check reports errors and key figures before computing. <a class="vertiefung" href="netz.html">Background, formulas and examples →</a></p>
+<div class="karte">
+  <h3><code>Netz</code>, <code>Netzbauer</code>, <code>Zellart</code>, <code>Rand</code></h3>
+  <p class="zweck"><code>Netzbauer</code>: <code>knoten(x, y, z)</code>, <code>zelle(art, nodes…)</code>, <code>randflaeche(name, ring…)</code>, <code>randart</code>, <code>baue()</code> → <code>Netz</code>, with face matching via sorted nodes and orientation away from the owner. <code>Netz</code>: arrays <code>eigner</code>, <code>nachbar</code>, <code>flaechenVektor</code>, <code>flaechenMitte</code>, <code>volumen</code>, <code>zellMitte</code>; <code>rand(name)</code>, <code>gesamtvolumen()</code>, <code>bandbreite()</code>, <code>umnummeriert(perm)</code>, <code>mitKnoten(x)</code>.</p>
+</div>
+<div class="karte">
+  <h3><code>Geometrie</code>, <code>Wandabstand</code></h3>
+  <p class="zweck">Face vector <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo largeop="true" movablelimits="true">∑</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>×</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\tfrac12\sum\mathbf x_i\times\mathbf x_{i+1}</annotation></semantics></math>, face centroid, volume and cell centre from pyramids around the node mean. Exact wall distance per cell via a search tree of the wall triangles (for the turbulence models).</p>
+</div>
+<div class="karte">
+  <h3><code>Netzpruefung</code>, <code>Umnummerierung</code></h3>
+  <p class="zweck"><code>Netzpruefung.pruefe(grid)</code> → errors (volume ≤ 0, open cell, open boundary, orientation, boundary integral), warnings (non-orthogonality above 70°, unnamed boundaries), key figures (volume, skewness, bandwidth); <code>text()</code>. <code>Umnummerierung.rcm(grid)</code>: reverse Cuthill-McKee.</p>
+</div>
+<div class="karte">
+  <h3><code>Netzgenerator</code>, <code>Dreiecksnetz</code>, <code>Netzverformung</code></h3>
+  <p class="zweck">Boxes in four cell types (optionally distorted), channel, wedge, plate, step, sector, plate cascade, cylinder, C-grid around airfoils (<code>Profilkontur</code>), Ringleb; <code>Schaufelpassage</code> (H-grid of a blade row), <code>Rotationskeil</code>. <code>Dreiecksnetz.vernetze</code>: Delaunay with boundary recovery and Ruppert refinement, boundary layer from layers, as a layer grid of prisms and hexahedra. Grid deformation with radial basis functions.</p>
+</div>
+<div class="karte">
+  <h3><code>Verfeinerung</code>, <code>Verfeinerungsstufen</code>, <code>Uebertragung</code></h3>
+  <p class="zweck">Conforming adaptive refinement of layer grids by jump or error estimator, coarsening over several levels, conservative transfer of fields; cell values onto another grid by local interpolation.</p>
+</div>
+<div class="karte">
+  <h3>Reading and writing: <code>Netzleser</code>, <code>VtkSchreiber</code>, <code>Bildschreiber</code>, <code>Schnitt</code></h3>
+  <p class="zweck">Gmsh (2.2, 4.1), PLOT3D, CGNS and multi-block grids, format recognised by content; VTK for ParaView (text or binary), colour images as PNG without a user interface, cutting planes through 3D grids.</p>
+  <div class="bsp"><h4>Example – build and check a grid</h4>
+<pre><code>Netz n = Netzgenerator.quader(8, 8, 8, 1, 1, 1, Zellart.TETRAEDER, 0.2, 7L);
+Netzpruefung p = Netzpruefung.pruefe(n);
+System.out.print(p.text());          // key figures, warnings, errors, "Netz in Ordnung"
+int[] perm = Umnummerierung.rcm(n);  // reduce the bandwidth
+Netz m = n.umnummeriert(perm);</code></pre></div>
+</div>
+
+<!-- =============================================================== VERFAHREN -->
+<h2 id="verfahren">Spatial discretisation <span class="paket">envisionz.cfd.fluss, rekonstruktion</span></h2>
+<p class="einl">Per face a numerical flux between the reconstructed states of both sides. Five methods behind one interface; second order by linear reconstruction of the primitive quantities with gradient and limiter. <a class="vertiefung" href="fluss.html">Numerical fluxes →</a> <a class="vertiefung" href="rekonstruktion.html">Gradients and limiters →</a></p>
+<div class="karte">
+  <h3><code>Flussverfahren</code>: <code>Roe</code>, <code>Hllc</code>, <code>AusmPlusUp</code>, <code>Zentral</code></h3>
+  <p class="zweck"><code>fluss(gas, wl, ol, wr, or, nx, ny, nz, f)</code>, <code>name()</code>, <code>kopie()</code>; <code>Flussverfahren.nach("roe" | "lmroe" | "hllc" | "ausm" | "zentral[:EPS]")</code>. Roe with Harten's entropy fix (fraction 0.1) and an optional low-Mach correction; HLLC with Einfeldt's wave speeds; AUSM+-up with a reference Mach number; central after Kennedy and Gruber with a pressure sensor for LES.</p>
+</div>
+<div class="karte">
+  <h3><code>Gradienten</code>, <code>Limiter</code></h3>
+  <p class="zweck"><code>new Gradienten(grid, Art.KLEINSTE_QUADRATE | GREEN_GAUSS)</code>, <code>berechne(w, rand, k, grad)</code>, <code>randOrte</code> for periodic boundaries. <code>new Limiter(grid, Art.KEINER | BARTH | VENKATAKRISHNAN, K)</code>, <code>bezug(scale)</code>, <code>vektor(true)</code>, <code>berechne(w, rand, k, grad, phi)</code>.</p>
+  <div class="bsp"><h4>Example – one flux</h4>
+<pre><code>Gas g = Gas.LUFT;
+double[] wl = {1.2, 100, 0, 0, 1e5}, wr = {1.1, 90, 5, 0, 0.95e5}, f = new double[5];
+Flussverfahren.nach("hllc").fluss(g, wl, 0, wr, 0, 1, 0, 0, f);   // mass, momentum, energy per face</code></pre></div>
+</div>
+
+<!-- =============================================================== ZEIT -->
+<h2 id="zeit">Time integration and solvers <span class="paket">envisionz.cfd.loeser</span></h2>
+<p class="einl">Explicit with SSP-RK3 (time-accurate) or Jameson's four-stage scheme with local time steps (steady); implicit with LU-SGS or Newton-Krylov; dual time stepping for time-accurate implicit computations. <a class="vertiefung" href="zeit.html">Background and formulas →</a></p>
+<div class="karte">
+  <h3><code>EulerLoeser</code></h3>
+  <p class="zweck">Residual over all faces in parallel, time step from the sum of the spectral radii <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo>|</mo><msub><mrow><mi>v</mi></mrow><mrow><mi>n</mi></mrow></msub><mo>|</mo><mo>+</mo><mi>c</mi><mo stretchy="false">)</mo><mo>|</mo><mi>S</mi><mo>|</mo></mrow><annotation encoding="application/x-tex">(|v_n| + c)|S|</annotation></semantics></math> per cell, CFL number, order 1 or 2, wall forces, boundary fluxes per boundary. If a reconstructed density or pressure drops to zero, the face uses the cell values.</p>
+</div>
+<div class="karte">
+  <h3><code>Implizit</code></h3>
+  <p class="zweck">Backward Euler with local time step, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>V</mi><mo>/</mo><mi mathvariant="normal">Δ</mi><mi>t</mi><mo>+</mo><mi>∂</mi><mi>R</mi><mo>/</mo><mi>∂</mi><mi>U</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi mathvariant="normal">Δ</mi><mi>U</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi>R</mi></mrow><annotation encoding="application/x-tex">(V/\Delta t + \partial R/\partial U)\,\Delta U = -R</annotation></semantics></math>; the CFL number grows with the drop of the residual. LU-SGS (optionally with the boundary derivative) or Newton-Krylov with GMRES and block ILU(0) or algebraic multigrid from framework-math.</p>
+</div>
+<div class="karte">
+  <h3><code>Residuumkern</code>, <code>Schrittkern</code>, <code>Sicherung</code>, <code>Schub</code></h3>
+  <p class="zweck">Residual or the whole explicit step on the graphics processor (via the ServiceLoader, checked bit-identical to the CPU); exact restart with the whole state of the solver; integral quantities on outlet boundaries from the boundary fluxes.</p>
+</div>
+
+<!-- =============================================================== RAENDER -->
+<h2 id="raender">Boundary conditions <span class="paket">envisionz.cfd.rand</span></h2>
+<p class="einl">Every boundary forms a ghost state from the interior state and the outward normal; the boundary flux is then the ordinary numerical flux. Subsonic boundaries prescribe as many quantities as characteristics enter. <a class="vertiefung" href="raender.html">Background and formulas →</a></p>
+<div class="karte">
+  <h3><code>Randbedingung</code>: <code>Fernfeld</code>, <code>Einlass</code>, <code>Zustrom</code>, <code>Auslass</code>, <code>NichtreflektierenderAuslass</code></h3>
+  <p class="zweck">Far field via the Riemann invariants normal to the boundary; inlet with total pressure, total temperature and direction; inflow with velocity or mass flow; outlet with static pressure; partially non-reflecting outlet after Rudy and Strikwerda.</p>
+</div>
+<div class="karte">
+  <h3><code>HaftendeWand</code>, <code>Periodisch</code>, <code>Mischungsebene</code>, <code>RadialesGleichgewicht</code></h3>
+  <p class="zweck">No-slip wall adiabatic, with fixed temperature or heat flux; inviscid wall and symmetry as a reflection; periodic boundaries translated or rotated; mixing plane with area-weighted means (also in radial bands); outlet with radial equilibrium behind a blade row. Catalogue of boundary types with inputs and defaults: <code>fall.Randarten</code>.</p>
+</div>
+
+<!-- =============================================================== PHYSIK -->
+<h2 id="physik">Physical models <span class="paket">envisionz.cfd.physik, loeser</span></h2>
+<p class="einl">Ideal gas as the base case; mixtures, real gases and properties from framework-thermo; laminar viscosity and heat conduction; turbulence models loosely or fully coupled; large-eddy simulation; species transport with reaction. <a class="vertiefung" href="viskos.html">Viscous fluxes →</a> <a class="vertiefung" href="turbulenz.html">Turbulence →</a> <a class="vertiefung" href="spezies.html">Species and mixtures →</a></p>
+<div class="karte">
+  <h3><code>Gas</code>, <code>Gemisch</code>, <code>Realgas</code>, <code>Zaehigkeit</code>, <code>GemischTransport</code></h3>
+  <p class="zweck">Primitive and conserved quantities, physical flux, speed of sound, total enthalpy. Thermally ideal mixture with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>p</mi></mrow></msub><mo stretchy="false">(</mo><mi>T</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">c_p(T)</annotation></semantics></math> from partition functions; real gases via an equation of state (Helmholtz, GERG-2008, cubic, AGA8); viscosity constant or after Sutherland, from properties after Chapman-Enskog and Wilke.</p>
+</div>
+<div class="karte">
+  <h3><code>Turbulenz</code>, <code>TurbulenzSst</code>, <code>TurbulenzKe</code>, <code>Transition</code>, <code>Grobstruktur</code></h3>
+  <p class="zweck">Spalart-Allmaras (also SA-neg), k-ω SST, k-ω after Wilcox, low-Reynolds k-ε after Chien, wall functions; transition γ-Re<sub>θ</sub> after Langtry and Menter; LES with Smagorinsky and WALE.</p>
+</div>
+<div class="karte">
+  <h3><code>Spezies</code>, <code>Mechanismus</code></h3>
+  <p class="zweck">Mass fractions with convection, diffusion (Fick, Lewis number or per species) and formation rates; combustion mechanisms from framework-thermo with stiff chemistry per cell and heat release.</p>
+</div>
+
+<!-- =============================================================== PRUEFUNG -->
+<h2 id="pruefung">How it is checked</h2>
+<p>The computation is checked against solutions known independently and against a second computation by hand. The reference solutions live in the module (<code>envisionz.cfd.loesung</code>): exact Riemann problem after Toro, manufactured solutions for the order, oblique shock from the θ-β-M relation, Ringleb flow, Blasius boundary layer.</p>
+<table>
+  <tr><th>Probe</th><th>Anchors</th></tr>
+  <tr><td><code>Netzprobe</code>, <code>Dreiecksnetzprobe</code>, <code>netz.TheorieC1probe</code></td><td>volumes against the formulas, closed sums, broken grids, RCM; Delaunay, smallest angle, boundary layer; face centroid, non-orthogonality and skewness by hand</td></tr>
+  <tr><td><code>Flussprobe</code>, <code>fluss.TheorieC1probe</code></td><td>consistency, mirror symmetry, supersonic flow, stationary contact; Roe, HLLC and AUSM+-up against a second computation after the literature, stationary shock</td></tr>
+  <tr><td><code>Eulerprobe</code>, <code>rekonstruktion.TheorieC1probe</code></td><td>Sod tube, oblique shock, second order on all cell types, Ringleb; gradients exact for linear fields and, on uniform grids, quadratic ones, limiters by hand</td></tr>
+  <tr><td><code>Navierprobe</code>, <code>Turbulenzprobe</code>, <code>Transitionsprobe</code>, <code>Grobstrukturprobe</code></td><td>Couette, Blasius; turbulent plate against Coles-Fernholz; Taylor-Green vortex</td></tr>
+  <tr><td><code>Implizitprobe</code>, <code>Periodenprobe</code>, <code>Niedrigmachprobe</code>, <code>Speziesprobe</code> and others</td><td>convergence of the implicit methods, periodic boundaries and sectors, low Mach number, species and chemistry</td></tr>
+</table>
+<div class="hinweis">Every probe has counter-probes: a deliberately spoiled copy of the source must turn it red. 376 cases are listed in <code>test/gegenproben.dat</code>.</div>
+
+<footer>
+envisionz-framework-cfd · 82 classes in 13 packages · depends on framework-fileformats, -compress, -math, -thermo · Probes: <code>pruefen.cmd --nur framework-cfd</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

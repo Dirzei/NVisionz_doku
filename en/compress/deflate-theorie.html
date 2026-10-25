@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Learning and search</div>
@@ -414,7 +420,17 @@ roh ← Inflate.entpacke(daten, anfang, length − anfang − 4, woerterbuch)
 <p class="quelle">Source: <code>envisionz-framework-compress/src/envisionz/compress/deflate/Zlib.java</code>. In <code>Inflate</code> the dictionary is placed in front of the output, at most its last 32 KiB; back-references may point into it, and only what is produced after it is returned.</p>
 <div class="hinweis"><b>Convention in the framework:</b> <code>Zlib.packe</code> always writes <code>CMF</code> = <code>0x78</code> (Deflate, 32 KiB window) and the smallest fitting <code>FLG</code>, i.e. <code>0x01</code>, without level information and without dictionary. If a stream being read carries no <code>FDICT</code>, a dictionary passed in stays unused, as in zlib.</div>
 
+<h2 id="folgt">What follows from it</h2>
+<p><b>Assumptions.</b> The stream is entirely in memory; Huffman codes are fixed per block, and their optimality holds for the frequencies of that block and for independent symbols. How the writer parses its input is not fixed by the format.</p>
+<ul>
+  <li><b>A short back-reference does not pay at every distance.</b> With the fixed codes a back-reference of length 3 costs seven bits for length code 257, five bits for the distance code and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z(c)</annotation></semantics></math> extra bits, together <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>12</mn><mo>+</mo><mi>z</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">12 + z(c)</annotation></semantics></math>; three literals below 144 cost 24 bits. From <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">z = 12</annotation></semantics></math>, i.e. from distance 8193, the three-byte reference is no longer cheaper. Dynamic codes shift the limit because they make frequent distance codes shorter.</li>
+  <li><b>At most 1032 : 1.</b> A back-reference yields at most 258 bytes. In a dynamic block the length and distance symbols together cost at least two bits, a one-bit code each; hence <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>258</mn><mo>⋅</mo><mn>8</mn><mo>/</mo><mn>2</mn><mo>=</mo><mn>1032</mn></mrow><annotation encoding="application/x-tex">258 \cdot 8 / 2 = 1032</annotation></semantics></math>. Our packer reaches 1028 on 4 MiB of zeros (4080 bytes).</li>
+  <li><b>What a frame costs.</b> zlib adds 6 bytes around the stream, a stored block 5 bytes per 65 535 bytes, about 0.008 %. Incompressible data hardly grows if the writer chooses stored blocks.</li>
+  <li><b>The lengths decide everything.</b> Since only code lengths are transmitted, writer and reader must apply the canonical rule bit for bit alike; a different order at equal length would give a valid but different code.</li>
+</ul>
+
 <h2 id="pruefung">How it is checked</h2>
+<p><code>TheorieK1probe</code> recomputes the tables from the closed form: a fixed block with all 30 distance codes and all 29 length codes, each with the smallest and largest extra value, the literals at the borders of the fixed lengths (0, 143, 144, 255), distance 1 with length 258; plus the error paths (wrong <code>NLEN</code>, back-reference before the start, block type 3), the zlib frame of <code>abc</code> byte for byte, the header check and the JDK's dynamic blocks with many repeat symbols.</p>
 <p><code>CompressSelfTest</code> (103 checks) does not check the format by round trip alone, since the module's own encoder and decoder could be wrong in the same way. Every stream takes both cross paths:</p>
 <ul>
   <li><b>Our stream through <code>java.util.zip.Inflater</code></b> for eight samples (empty, one byte, two bytes, a run of 5000 bytes, 20,000 random bytes, text, periodic, all 256 byte values).</li>
@@ -431,6 +447,7 @@ roh ← Inflate.entpacke(daten, anfang, length − anfang − 4, woerterbuch)
   <li>Deflate64 (ZIP method 9) is not read.</li>
   <li>The Huffman decoder reads bit by bit; for large amounts of data a table with several bits of look-ahead is faster. This has not been measured.</li>
   <li>zlib streams with a method other than 8 are rejected; the window field in <code>CMF</code> is not evaluated.</li>
+  <li>A repeat (symbol 16) beyond the end of the code lengths is rejected as in zlib (since 2026-10-19, before that it was silently cut off); so are the distance codes 30 and 31, which a dynamic block with <code>HDIST</code> up to 32 can name.</li>
 </ul>
 
 <h2 id="literatur">Literature</h2>

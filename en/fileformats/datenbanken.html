@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading database files – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="unterseite" href="erkennung.html">Format detection</a>
+<a class="unterseite" href="grundlagen.html">Reader foundations</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="unterseite" href="sql.html">SQL evaluation</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="unterseite aktiv" href="datenbanken.html">Databases</a>
+<a class="unterseite" href="spaltenformate.html">Columnar formats</a>
+<a class="unterseite" href="tabellenformeln.html">Spreadsheet formulas</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="unterseite" href="fits.html">FITS</a>
+<a class="unterseite" href="messdaten.html">Measurement data: raw and physical</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="unterseite" href="hdf5.html">HDF5, netCDF, HDF4</a>
+<a class="unterseite" href="langform.html">Long form</a>
+<a class="unterseite" href="wissenschaft.html">CGNS, Exodus, MATLAB, NumPy</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="unterseite" href="netze.html">Meshes and geometry</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="unterseite" href="jpeg.html">JPEG</a>
+<a class="unterseite" href="kompression.html">Compression</a>
+<a class="unterseite" href="rasterbilder.html">Raster images</a>
+<a class="unterseite" href="tiff.html">TIFF</a>
+<a class="unterseite" href="webp.html">WebP</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="unterseite" href="behaelter.html">Container formats</a>
+<a class="unterseite" href="buero.html">Office files: slides and colours</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="unterseite" href="kennfelder.html">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="unterseite" href="textbeschreibung.html">Format description and matching</a>
+<a class="unterseite" href="textstruktur.html">Structure detection</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › Reading database files – background</span><a class="sprachwahl" href="../../de/fileformats/datenbanken.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · envisionz.fileformats.sqlite, .lmdb, .dbase</div>
+  <h1>Reading database files – background</h1>
+  <p class="unter">How SQLite, LMDB and dBASE lay records out on pages and in fields, and the arithmetic rules at which a reader goes silently wrong: varint and serial type, the boundary between the local part and the overflow chain, pointer maps, the WAL checksum, the valid meta page, Julian day and currency.</p>
+</header>
+
+<h2 id="problem">What this is about: records in pages</h2>
+<p>All three formats store a table in blocks of fixed size – SQLite and LMDB in pages of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi></mrow><annotation encoding="application/x-tex">U</annotation></semantics></math> bytes (512 to 65536), dBASE in fixed-length records behind a header. From a few numbers in the header a reader has to work out where a record starts, how long it is and where its remainder lies. The rules are in the format descriptions; the files are written by programs that have computed them this way for decades. A reader that shifts a rule by one reads short records correctly and long ones as nonsense – and the long ones are rarely in a test. The limits below are therefore worked out and tested with records on both sides of every boundary. Reading only: no journal is created, no lock file touched.</p>
+
+<h2 id="varint">SQLite: varint and serial type</h2>
+<p>Integers without fixed width are stored as a <b>varint</b>: most significant group first, seven bits per byte, the top bit saying “another one follows”. After eight such bytes the <b>ninth contributes all eight bits</b> – exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>⋅</mo><mn>7</mn><mo>+</mo><mn>8</mn><mo>=</mo><mn>64</mn></mrow><annotation encoding="application/x-tex">8 \cdot 7 + 8 = 64</annotation></semantics></math> bits fit, and a varint is at most nine bytes long:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>v</mi><mo>=</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></munderover><mo stretchy="false">(</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>mod</mo><mn>128</mn><mo stretchy="false">)</mo><mspace width="0.1667em"/><msup><mrow><mn>2</mn></mrow><mrow><mn>7</mn><mo stretchy="false">(</mo><mi>k</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msup><mspace width="1em"/><mo stretchy="false">(</mo><mi>k</mi><mo>≤</mo><mn>8</mn><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi>v</mi></mrow><mrow><mn>9</mn></mrow></msub><mo>=</mo><msub><mrow><mi>v</mi></mrow><mrow><mn>8</mn></mrow></msub><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>8</mn></mrow></msup><mo>+</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>8</mn></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">v = \sum_{i=0}^{k-1} (b_i \bmod 128)\, 2^{7(k-1-i)} \quad (k \le 8), \qquad v_9 = v_8 \cdot 2^8 + b_8 .</annotation></semantics></math>
+<p>A reader that also takes seven bits from the ninth byte loses the lowest bit of numbers from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>56</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{56}</annotation></semantics></math> on; nine times <code>FF</code> then gives a large positive number instead of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math>.</p>
+<p>A record begins with a header: its length as a varint, then one <b>serial type</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> per column, then the values without separators. The length of a value depends on <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math> alone:</p>
+<table>
+<tr><th><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></th><th>meaning</th><th>bytes</th></tr>
+<tr><td>0</td><td>NULL</td><td>0</td></tr>
+<tr><td>1, 2, 3, 4</td><td>signed integer</td><td>1, 2, 3, 4</td></tr>
+<tr><td>5</td><td>integer, 48 bits</td><td><b>6</b></td></tr>
+<tr><td>6 / 7</td><td>64-bit integer / IEEE double</td><td>8</td></tr>
+<tr><td>8 / 9</td><td>the number 0 / the number 1</td><td>0</td></tr>
+<tr><td>10, 11</td><td>reserved</td><td>0</td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>≥</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">N \ge 12</annotation></semantics></math>, even</td><td>blob</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>12</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">(N-12)/2</annotation></semantics></math></td></tr>
+<tr><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>≥</mo><mn>13</mn></mrow><annotation encoding="application/x-tex">N \ge 13</annotation></semantics></math>, odd</td><td>text</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>13</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">(N-13)/2</annotation></semantics></math></td></tr>
+</table>
+<p>The last two rows merge into one computation: with integer division <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">⌊</mo><mo stretchy="false">(</mo><mi>N</mi><mo>−</mo><mn>12</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">\lfloor (N-12)/2 \rfloor</annotation></semantics></math> holds for both, because halving the odd number <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>−</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">N-12</annotation></semantics></math> gives the same as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>−</mo><mn>13</mn></mrow><annotation encoding="application/x-tex">N-13</annotation></semantics></math>. The jump at 5 is where a reader using the rule of thumb “type = byte count” slips by one byte and reads every following column wrongly.</p>
+
+<h2 id="ueberlauf">SQLite: local part and overflow chain</h2>
+<p>A record that does not fit on its page keeps a beginning there; the rest lies in a chain of overflow pages, each with four bytes of next pointer and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>−</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">U-4</annotation></semantics></math> bytes of payload (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi></mrow><annotation encoding="application/x-tex">U</annotation></semantics></math> is the usable page size, the page size minus the reserved space). How much stays local is not “as much as fits” but exactly defined:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><mi>U</mi><mo>−</mo><mn>35</mn></mtd><mtd style="text-align:left"><mtext>table leaf</mtext></mtd></mtr><mtr><mtd style="text-align:left"><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mn>64</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>U</mi><mo>−</mo><mn>12</mn><mo stretchy="false">)</mo></mrow><mrow><mn>255</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>−</mo><mn>23</mn></mtd><mtd style="text-align:left"><mtext>index page</mtext></mtd></mtr></mtable></mrow><mspace width="2em"/><mi>M</mi><mo>=</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mn>32</mn><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>U</mi><mo>−</mo><mn>12</mn><mo stretchy="false">)</mo></mrow><mrow><mn>255</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>−</mo><mn>23</mn></mrow><annotation encoding="application/x-tex">X = \begin{cases} U - 35 &amp; \text{table leaf} \\ \left\lfloor \frac{64\,(U-12)}{255} \right\rfloor - 23 &amp; \text{index page} \end{cases} \qquad M = \left\lfloor \frac{32\,(U-12)}{255} \right\rfloor - 23</annotation></semantics></math>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mo>≤</mo><mi>X</mi><mo>:</mo><mspace width="0.3333em"/><mtext>all local</mtext><mo>;</mo><mspace width="2em"/><mtext>else </mtext><mi>K</mi><mo>=</mo><mi>M</mi><mo>+</mo><mo stretchy="false">(</mo><mi>P</mi><mo>−</mo><mi>M</mi><mo stretchy="false">)</mo><mo>mod</mo><mo stretchy="false">(</mo><mi>U</mi><mo>−</mo><mn>4</mn><mo stretchy="false">)</mo><mo>,</mo><mspace width="1em"/><mtext>local</mtext><mo>=</mo><mrow><mo fence="true" stretchy="true">{</mo><mtable><mtr><mtd style="text-align:left"><mi>K</mi></mtd><mtd style="text-align:left"><mi>K</mi><mo>≤</mo><mi>X</mi></mtd></mtr><mtr><mtd style="text-align:left"><mi>M</mi></mtd><mtd style="text-align:left"><mtext>otherwise.</mtext></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">P \le X:\ \text{all local}; \qquad \text{else } K = M + (P - M) \bmod (U-4), \quad \text{local} = \begin{cases} K &amp; K \le X \\ M &amp; \text{otherwise.} \end{cases}</annotation></semantics></math>
+<p><b>Why this form.</b> If <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> bytes stay local, the rest <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>−</mo><mi>K</mi></mrow><annotation encoding="application/x-tex">P-K</annotation></semantics></math> is a whole multiple of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>−</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">U-4</annotation></semantics></math>: then all overflow pages are full, the last one too. If that is impossible because <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> would exceed <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math>, the minimum <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> stays – then the last overflow page is only partly filled. The two limits ensure that a table page holds at least four records and an index page at least four keys.</p>
+<p><b>Worked out.</b> For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mn>512</mn></mrow><annotation encoding="application/x-tex">U = 512</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mn>477</mn></mrow><annotation encoding="application/x-tex">X = 477</annotation></semantics></math> (table), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mn>102</mn></mrow><annotation encoding="application/x-tex">X = 102</annotation></semantics></math> (index), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mo>=</mo><mn>39</mn></mrow><annotation encoding="application/x-tex">M = 39</annotation></semantics></math>. For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">U = 1024</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>989</mn></mrow><annotation encoding="application/x-tex">989</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>230</mn></mrow><annotation encoding="application/x-tex">230</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>103</mn></mrow><annotation encoding="application/x-tex">103</annotation></semantics></math>. For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mn>4096</mn></mrow><annotation encoding="application/x-tex">U = 4096</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4061</mn></mrow><annotation encoding="application/x-tex">4061</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1002</mn></mrow><annotation encoding="application/x-tex">1002</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>489</mn></mrow><annotation encoding="application/x-tex">489</annotation></semantics></math>. A 300-byte record is therefore entirely local in a table with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mn>512</mn></mrow><annotation encoding="application/x-tex">U = 512</annotation></semantics></math>, but already in an overflow chain in an index of the same file – a reader that uses the table limit for the index reads the pointer there as text.</p>
+
+<figure>
+<svg viewBox="0 0 600 190" width="600" font-family="sans-serif" font-size="12">
+  <rect x="10" y="20" width="200" height="60" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="20" y="40" fill="#1f5f8b">leaf page</text>
+  <rect x="20" y="48" width="120" height="22" fill="#ffffff" stroke="#5b6475"/>
+  <text x="26" y="63" fill="#5b6475">local: K or M bytes</text>
+  <rect x="140" y="48" width="40" height="22" fill="#fff4e0" stroke="#9a6400"/>
+  <text x="143" y="63" fill="#9a6400">pointer</text>
+  <rect x="250" y="20" width="160" height="60" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="250" y="20" width="30" height="60" fill="#fff4e0" stroke="#9a6400"/>
+  <text x="255" y="54" fill="#9a6400">4</text>
+  <text x="290" y="54" fill="#5b6475">U − 4 bytes (full)</text>
+  <rect x="440" y="20" width="150" height="60" fill="#ffffff" stroke="#c9d1dc"/>
+  <rect x="440" y="20" width="30" height="60" fill="#fff4e0" stroke="#9a6400"/>
+  <text x="445" y="54" fill="#9a6400">0</text>
+  <text x="478" y="54" fill="#5b6475">rest</text>
+  <line x1="180" y1="59" x2="248" y2="50" stroke="#9a6400" marker-end="url(#pf)"/>
+  <line x1="280" y1="35" x2="438" y2="35" stroke="#9a6400" marker-end="url(#pf)"/>
+  <defs><marker id="pf" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9a6400"/></marker></defs>
+  <text x="10" y="115" fill="#1f5f8b">P ≤ X: all local · P &gt; X: K = M + (P − M) mod (U − 4)</text>
+  <text x="10" y="135" fill="#5b6475">K ≤ X → K local, all overflow pages full · otherwise M local, the last one partly</text>
+  <text x="10" y="160" fill="#5b6475">X = U − 35 (table) · X = ⌊64 (U − 12)/255⌋ − 23 (index) · M = ⌊32 (U − 12)/255⌋ − 23</text>
+</svg>
+<figcaption>A record with overflow: local beginning, pointer, chain of full pages; next page 0 ends the chain.</figcaption>
+</figure>
+
+<h2 id="zeigerkarte">SQLite: pointer maps</h2>
+<p>With <code>auto_vacuum</code>, SQLite keeps a five-byte entry for every page from 3 on: type (root, free, first or further overflow page, b-tree page) and parent page. A map page holds <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi><mo>=</mo><mo stretchy="false">⌊</mo><mi>U</mi><mo>/</mo><mn>5</mn><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">J = \lfloor U/5 \rfloor</annotation></semantics></math> entries. Page 2 is the first map, and each map describes the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi></mrow><annotation encoding="application/x-tex">J</annotation></semantics></math> pages that follow it; then comes the next map. The maps therefore lie at</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>s</mi><mtext> is a map</mtext><mo>⟺</mo><mi>s</mi><mo>≥</mo><mn>2</mn><mspace width="0.3333em"/><mo>∧</mo><mspace width="0.3333em"/><mo stretchy="false">(</mo><mi>s</mi><mo>−</mo><mn>2</mn><mo stretchy="false">)</mo><mo>mod</mo><mo stretchy="false">(</mo><mi>J</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><mtext>map</mtext><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>=</mo><mn>2</mn><mo>+</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>s</mi><mo>−</mo><mn>3</mn></mrow><mrow><mi>J</mi><mo>+</mo><mn>1</mn></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo stretchy="false">(</mo><mi>J</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">s \text{ is a map} \iff s \ge 2 \ \wedge\ (s-2) \bmod (J+1) = 0, \qquad \text{map}(s) = 2 + \left\lfloor \frac{s-3}{J+1} \right\rfloor (J+1) .</annotation></semantics></math>
+<p>For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mn>1024</mn></mrow><annotation encoding="application/x-tex">U = 1024</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi><mo>=</mo><mn>204</mn></mrow><annotation encoding="application/x-tex">J = 204</annotation></semantics></math>; maps lie at 2, 207, 412, 617, … The spacing is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">J + 1</annotation></semantics></math>, not <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi></mrow><annotation encoding="application/x-tex">J</annotation></semantics></math>: the map itself counts. A reader that misses this is off from the second map on and reports data pages as maps.</p>
+
+<h2 id="wal">SQLite: the write-ahead log checksum</h2>
+<p>A WAL is a sequence of frames, each with one page and a running checksum of two 32-bit numbers <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(s_0, s_1)</annotation></semantics></math> carried over all previous frames. For each pair of words <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>,</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">x_0, x_1</annotation></semantics></math> (byte order after the header magic):</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>←</mo><mo stretchy="false">(</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>mod</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup><mo>,</mo><mspace width="2em"/><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>←</mo><mo stretchy="false">(</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi>x</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>+</mo><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub><mo stretchy="false">)</mo><mo>mod</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>32</mn></mrow></msup><mo>.</mo></mrow><annotation encoding="application/x-tex">s_0 \leftarrow (s_0 + x_0 + s_1) \bmod 2^{32}, \qquad s_1 \leftarrow (s_1 + x_1 + s_0) \bmod 2^{32} .</annotation></semantics></math>
+<p>The new <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mn>0</mn></mrow></msub></mrow><annotation encoding="application/x-tex">s_0</annotation></semantics></math> enters <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>s</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">s_1</annotation></semantics></math> immediately – that interlocks the two halves. A frame is valid only if its sum matches <i>and</i> its salt equals the header’s; the first invalid frame ends the log, even if a later one looks correct on its own. The sum is meant to find half-written frames, not deliberate changes.</p>
+
+<h2 id="lmdb">LMDB: which meta page holds</h2>
+<p>LMDB never writes into used pages. Each transaction allocates new pages and finally rewrites one of the two meta pages (page 0 and 1) alternately. The valid one is therefore the meta page with the <b>higher transaction number</b>, compared unsigned; the other holds the previous state. A reader that always takes page 0 reads the second-to-last state by chance – and never notices, because that one is consistent too.</p>
+<p>The page size has no field of its own; it sits in a padding field of the free list. Byte order and word width are recognised from the magic <code>0xBEEFC0DE</code>, which differs in both directions and sits at different offsets for 4- and 8-byte words.</p>
+
+<h2 id="dbase">dBASE: header, record and binary fields</h2>
+<p>A dBASE header has 32 bytes, then a 32-byte descriptor per field and a terminator byte <code>0D</code>; every record starts with a deletion byte (<code>*</code> = deleted) followed by the sum of the field lengths. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> fields of lengths <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">ℓ</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\ell_i</annotation></semantics></math>:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>header length</mtext><mo>=</mo><mn>32</mn><mo>+</mo><mn>32</mn><mspace width="0.1667em"/><mi>n</mi><mo>+</mo><mn>1</mn><mo>,</mo><mspace width="2em"/><mtext>record length</mtext><mo>=</mo><mn>1</mn><mo>+</mo><munderover><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></munderover><msub><mrow><mi mathvariant="normal">ℓ</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\text{header length} = 32 + 32\,n + 1, \qquad \text{record length} = 1 + \sum_{i=1}^{n} \ell_i .</annotation></semantics></math>
+<p>Records are read according to the file length, not the record count in the header – many tools append records without updating the counter.</p>
+<p>Numbers in <code>N</code> and <code>F</code> fields are text. Binary are <code>I</code> (four bytes, least significant first, <b>signed</b>), <code>B</code> (IEEE double), <code>Y</code> (currency: an eight-byte integer with four fixed decimals, value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mi>z</mi><mo>/</mo><msup><mn>10</mn><mrow><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">= z / 10^4</annotation></semantics></math>) and <code>T</code> (timestamp: four bytes Julian day, four bytes milliseconds since midnight). The Julian day counts from 1 January 4713 BC; day 2440588 is 1 January 1970, so</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>date</mtext><mo>=</mo><mn>1970</mn><mtext>-</mtext><mn>01</mn><mtext>-</mtext><mn>01</mn><mo>+</mo><mo stretchy="false">(</mo><mtext>JD</mtext><mo>−</mo><mn>2440588</mn><mo stretchy="false">)</mo><mspace width="0.3333em"/><mtext>days</mtext><mo>.</mo></mrow><annotation encoding="application/x-tex">\text{date} = 1970\text{-}01\text{-}01 + (\text{JD} - 2440588)\ \text{days}.</annotation></semantics></math>
+<p>Example: JD 2440588 with 43,200,500 ms is 1970-01-01 12:00:00.5; JD 2460602 is 18 October 2024. The currency <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>12</mn><mspace width="0.1667em"/><mn>345</mn><mspace width="0.1667em"/><mn>678</mn></mrow><annotation encoding="application/x-tex">-12\,345\,678</annotation></semantics></math> is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1234.5678</mn></mrow><annotation encoding="application/x-tex">-1234.5678</annotation></semantics></math>.</p>
+<p>Which character set applies to text is given by a byte in the header, the <b>language driver</b>. The mapping follows the Visual FoxPro table: 0x01 code page 437, 0x02 850, 0x03 Windows-1252, 0x64 852 (Eastern Europe), 0x65 866, 0x66 865, 0x67 861, 0x7B 932, 0xC8 to 0xCC the Windows pages 1250, 1251, 1254, 1253, 1257. Between 0x08 and 0x1B the national OEM pages alternate row by row with their “starred” variant, which means 850: 0x0F German 437, 0x10 German* 850, 0x13 Japanese Shift-JIS, 0x17 Norwegian 865. For 0x68 (Kamenický) and 0x69 (Mazovia) the JDK has no character table; there a lossless substitute applies instead of a wrong table.</p>
+
+<h2 id="folgt">What follows</h2>
+<ul>
+<li><b>Assumptions.</b> The files follow the format description; the usable page size is stated correctly in the header; for LMDB no transaction is half written (the lock file is not read).</li>
+<li>The overflow limit <b>differs</b> for tables and indexes; a <code>WITHOUT ROWID</code> record of a quarter to half a page is already in the chain in the index.</li>
+<li>The WAL checksum makes truncated frames visible, not deliberate changes – a reader that follows a valid-looking frame behind an invalid one shows a state SQLite would never have shown.</li>
+<li>Two meta pages mean two states in one file; the previous one is reported as such, not discarded.</li>
+<li>dBASE binary fields are least significant first, block numbers in FoxPro memo files most significant first – the same file knows both orders.</li>
+</ul>
+
+<h2 id="pruefung">How it is tested</h2>
+<ul>
+<li><code>sqlite.TheorieFDprobe</code> writes tables and <code>WITHOUT ROWID</code> indexes at 512, 1024 and 4096 bytes page size with the independently built <code>Sqliteschreiber</code>, with records on both sides of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math>, around <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mi>X</mi></mrow><annotation encoding="application/x-tex">K = X</annotation></semantics></math> and far beyond, and reads them back byte for byte; plus the serial types and the position of the pointer maps.</li>
+<li><code>Varintprobe</code>, <code>Walprobe</code>, <code>Sqlitekopfprobe</code>, <code>Sqliteprobe</code>, <code>OhneRowidprobe</code>, <code>Lmdbprobe</code>, <code>Lmdbkopfprobe</code>, <code>Dbasekernprobe</code>, <code>Memoprobe</code> test the existing code; <code>TheorieFDprobe</code> adds timestamps, currency and language drivers.</li>
+<li>Each load-bearing formula has a counter-probe that shifts it by one; all turn red.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+<li>LMDB with multiple values per key (<code>F_DUPDATA</code>) is reported raw, not resolved.</li>
+<li>A WAL is evaluated, not applied: the file itself stays as it is.</li>
+<li>dBASE index files are read in index order; they are not used for searching.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>SQLite: <i>Database File Format</i>, sections 1.5–1.6 (pages, overflow), 2.1 (serial types), 1.7 (pointer maps), 4 (WAL). sqlite.org/fileformat.html.</li>
+  <li>H. Chu: <i>LMDB</i>, source <code>mdb.c</code> (meta pages, <code>MDB_meta</code>).</li>
+  <li>dBASE and Visual FoxPro file format: table header, field types, language driver table (code page identifiers).</li>
+  <li>J. Meeus: <i>Astronomical Algorithms</i>, 2nd ed., Willmann-Bell 1998 – Julian day.</li>
+</ul>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

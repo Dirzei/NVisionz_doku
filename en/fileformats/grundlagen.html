@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The common abstraction: read limits, neighbour files, values – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag aktiv" href="index.html">framework-fileformats</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="index.html#abstraktion">One view for all tabular formats</a>
+<a class="unterseite" href="erkennung.html">Format detection</a>
+<a class="unterseite aktiv" href="grundlagen.html">Reader foundations</a>
+<a class="rubrik" href="index.html#sql">SQL over every data source</a>
+<a class="unterseite" href="sql.html">SQL evaluation</a>
+<a class="rubrik" href="index.html#tabellen">Databases and tables</a>
+<a class="unterseite" href="abgleich-arrow.html">Arrow IPC – comparison</a>
+<a class="unterseite" href="abgleich-avro.html">Avro – comparison</a>
+<a class="unterseite" href="abgleich-dbase.html">dBASE – comparison</a>
+<a class="unterseite" href="abgleich-lmdb.html">LMDB – comparison</a>
+<a class="unterseite" href="abgleich-parquet.html">Parquet – comparison</a>
+<a class="unterseite" href="abgleich-shape.html">Shapefile – comparison</a>
+<a class="unterseite" href="abgleich-sqlite.html">SQLite – comparison</a>
+<a class="unterseite" href="abgleich-xlsx.html">XLSX – comparison</a>
+<a class="unterseite" href="datenbanken.html">Databases</a>
+<a class="unterseite" href="spaltenformate.html">Columnar formats</a>
+<a class="unterseite" href="tabellenformeln.html">Spreadsheet formulas</a>
+<a class="rubrik" href="index.html#messdaten">Measurement data and numeric arrays</a>
+<a class="unterseite" href="abgleich-fits.html">FITS – comparison</a>
+<a class="unterseite" href="abgleich-matlab.html">MATLAB – comparison</a>
+<a class="unterseite" href="abgleich-mdf3.html">MDF 3 – comparison</a>
+<a class="unterseite" href="abgleich-mdf4.html">MDF 4 – comparison</a>
+<a class="unterseite" href="abgleich-npy.html">NPY/NPZ – comparison</a>
+<a class="unterseite" href="abgleich-tdms.html">TDMS – comparison</a>
+<a class="unterseite" href="abgleich-uff.html">UFF – comparison</a>
+<a class="unterseite" href="fits.html">FITS</a>
+<a class="unterseite" href="messdaten.html">Measurement data: raw and physical</a>
+<a class="rubrik" href="index.html#behaelter">Scientific containers</a>
+<a class="unterseite" href="abgleich-hdf4.html">HDF4 – comparison</a>
+<a class="unterseite" href="abgleich-hdf5.html">HDF5 – comparison</a>
+<a class="unterseite" href="abgleich-netcdf.html">netCDF – comparison</a>
+<a class="unterseite" href="hdf5.html">HDF5, netCDF, HDF4</a>
+<a class="unterseite" href="langform.html">Long form</a>
+<a class="unterseite" href="wissenschaft.html">CGNS, Exodus, MATLAB, NumPy</a>
+<a class="rubrik" href="index.html#netze">Meshes and CFD results</a>
+<a class="unterseite" href="abgleich-cgns.html">CGNS – comparison</a>
+<a class="unterseite" href="abgleich-ensight.html">EnSight Gold – comparison</a>
+<a class="unterseite" href="abgleich-exodus.html">Exodus II – comparison</a>
+<a class="unterseite" href="abgleich-gmsh.html">Gmsh – comparison</a>
+<a class="unterseite" href="abgleich-plot3d.html">PLOT3D – comparison</a>
+<a class="unterseite" href="abgleich-stl.html">STL – comparison</a>
+<a class="unterseite" href="abgleich-vtk.html">VTK – comparison</a>
+<a class="unterseite" href="netze.html">Meshes and geometry</a>
+<a class="rubrik" href="index.html#bilder">Images</a>
+<a class="unterseite" href="abgleich-bmp.html">BMP – comparison</a>
+<a class="unterseite" href="abgleich-gif.html">GIF – comparison</a>
+<a class="unterseite" href="abgleich-jpeg.html">JPEG – comparison</a>
+<a class="unterseite" href="abgleich-png.html">PNG – comparison</a>
+<a class="unterseite" href="abgleich-tiff.html">TIFF – comparison</a>
+<a class="unterseite" href="abgleich-webp.html">WebP – comparison</a>
+<a class="unterseite" href="jpeg.html">JPEG</a>
+<a class="unterseite" href="kompression.html">Compression</a>
+<a class="unterseite" href="rasterbilder.html">Raster images</a>
+<a class="unterseite" href="tiff.html">TIFF</a>
+<a class="unterseite" href="webp.html">WebP</a>
+<a class="rubrik" href="index.html#office">Office files and containers</a>
+<a class="unterseite" href="abgleich-cfb.html">Compound File – comparison</a>
+<a class="unterseite" href="abgleich-pptx.html">PPTX – comparison</a>
+<a class="unterseite" href="behaelter.html">Container formats</a>
+<a class="unterseite" href="buero.html">Office files: slides and colours</a>
+<a class="rubrik" href="index.html#triebwerk">Maps and NPSS output</a>
+<a class="unterseite" href="kennfelder.html">Maps and NPSS output</a>
+<a class="rubrik" href="index.html#text">Understanding unknown text formats</a>
+<a class="unterseite" href="textbeschreibung.html">Format description and matching</a>
+<a class="unterseite" href="textstruktur.html">Structure detection</a>
+<a class="rubrik" href="index.html#werkzeuge">Command line</a>
+<a class="rubrik" href="index.html#abgleich">Comparison against specification and reference implementation</a>
+<a class="unterseite" href="abgleich.html">All formats at a glance</a>
+<a class="rubrik" href="index.html#einsatz">Usage matrix in the framework</a>
+</div>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-fileformats</a> › The common abstraction: read limits, neighbour files, values – background</span><a class="sprachwahl" href="../../de/fileformats/grundlagen.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-fileformats · envisionz.fileformats</div>
+  <h1>The common abstraction: read limits, neighbour files, values – background</h1>
+  <p class="unter">Why a number from the file is a claim of the file, how to check it without overflowing yourself, and which rules apply to files a file refers to.</p>
+</header>
+
+<h2 id="problem">What it is about</h2>
+<p>All readers of the module stand on the same few building blocks: a <code>Datenquelle</code> (data source) with tables, a <code>Satzkursor</code> (record cursor) that holds one record at a time, a <code>Wert</code> (value) that keeps the raw bytes next to their interpretation, and a <code>Knoten</code> (node) tree for metadata. Two building blocks protect the reader from the file: <code>Lesegrenzen</code> (read limits) checks every count and every image size before an array is allocated from it, and <code>Nachbardatei</code> (neighbour file) decides which further files a file may name. Format detection is on the page <a href="erkennung.html">Detection</a>, containers on the page <a href="behaelter.html">Containers</a>.</p>
+
+<figure>
+<svg viewBox="0 0 600 190" width="600" font-family="sans-serif" font-size="13">
+  <rect x="20" y="20" width="150" height="40" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="34" y="45" fill="#1f5f8b">File (bytes)</text>
+  <rect x="225" y="20" width="150" height="40" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="240" y="45" fill="#1f5f8b">Format reader</text>
+  <rect x="430" y="20" width="150" height="40" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="446" y="45" fill="#1f5f8b">Data source</text>
+  <line x1="170" y1="40" x2="225" y2="40" stroke="#5b6475" marker-end="url(#pfe)"/>
+  <line x1="375" y1="40" x2="430" y2="40" stroke="#5b6475" marker-end="url(#pfe)"/>
+  <rect x="160" y="100" width="130" height="36" fill="#fff" stroke="#9a6400"/>
+  <text x="172" y="123" fill="#9a6400">Read limits</text>
+  <rect x="310" y="100" width="130" height="36" fill="#fff" stroke="#9a6400"/>
+  <text x="322" y="123" fill="#9a6400">Neighbour file</text>
+  <line x1="260" y1="60" x2="230" y2="100" stroke="#9a6400"/>
+  <line x1="340" y1="60" x2="370" y2="100" stroke="#9a6400"/>
+  <text x="430" y="95" fill="#5b6475">Cursor: one record</text>
+  <text x="430" y="115" fill="#5b6475">Value: meaning + raw</text>
+  <text x="430" y="135" fill="#5b6475">Node: metadata tree</text>
+  <text x="120" y="170" fill="#5b6475">Every number that becomes an array and every name of a second file passes one of the two checks.</text>
+  <defs><marker id="pfe" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5b6475"/></marker></defs>
+</svg>
+<figcaption>The layers of a reader. The two checks sit between the bytes and everything the reader builds from them.</figcaption>
+</figure>
+
+<h2 id="anzahl">A count against the rest of the file</h2>
+<p>A header names a count <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> of entries of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> bytes each. Before an array for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> entries is allocated, it must be certain that that many bytes still follow: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mspace width="0.1667em"/><mi>k</mi><mo>≤</mo><mi>r</mi></mrow><annotation encoding="application/x-tex">n\,k \le r</annotation></semantics></math>, with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math> the rest of the file. The product <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mspace width="0.1667em"/><mi>k</mi></mrow><annotation encoding="application/x-tex">n\,k</annotation></semantics></math> must not be formed for this. Both numbers come from the file; with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>30</mn></mrow></msup></mrow><annotation encoding="application/x-tex">n = 2^{30}</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>40</mn></mrow></msup></mrow><annotation encoding="application/x-tex">k = 2^{40}</annotation></semantics></math> the product is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>70</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{70}</annotation></semantics></math> and overflows 64 bits – the result can be a small number, and the check would pass. Equivalent and without the product is</p>
+<span class="gleichung" id="gl-anzahl"><span class="glformel"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>n</mi><mo>≤</mo><mrow><mo fence="true" stretchy="true">⌊</mo><mfrac><mrow><mi>r</mi></mrow><mrow><mi>k</mi></mrow></mfrac><mo fence="true" stretchy="true">⌋</mo></mrow><mo>,</mo></mrow><annotation encoding="application/x-tex">n \le \left\lfloor \frac{r}{k} \right\rfloor ,</annotation></semantics></math></span><span class="glnr">(1)</span></span>
+<p>because for integers <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mspace width="0.1667em"/><mi>k</mi><mo>≤</mo><mi>r</mi><mo>⟺</mo><mi>n</mi><mo>≤</mo><mi>r</mi><mo>/</mo><mi>k</mi><mo>⟺</mo><mi>n</mi><mo>≤</mo><mo stretchy="false">⌊</mo><mi>r</mi><mo>/</mo><mi>k</mi><mo stretchy="false">⌋</mo></mrow><annotation encoding="application/x-tex">n\,k \le r \iff n \le r/k \iff n \le \lfloor r/k \rfloor</annotation></semantics></math>. On the boundary <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mspace width="0.1667em"/><mi>k</mi><mo>=</mo><mi>r</mi></mrow><annotation encoding="application/x-tex">n\,k = r</annotation></semantics></math> exactly <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> entries pass, at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r - 1</annotation></semantics></math> no longer. Three edge rules come on top: a negative count is always wrong, an entry size of 0 counts as 1 byte (otherwise one would divide by zero and every count would fit), and more than <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup><mo>−</mo><mn>9</mn></mrow><annotation encoding="application/x-tex">2^{31} - 9</annotation></semantics></math> entries fit no Java array.</p>
+
+<h2 id="bild">Image sizes</h2>
+<p>Images have a fixed upper limit of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>25</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{25}</annotation></semantics></math> pixels (about 33.5 million, an image of 8192 × 4096). Here, too, the trap is in the product: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>⋅</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">b \cdot h</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mi>h</mi><mo>=</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>40</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b = h = 2^{40}</annotation></semantics></math> gives exactly 0 in 64 bits. The sides are therefore checked <b>individually first</b>; after <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>,</mo><mi>h</mi><mo>≤</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>25</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b, h \le 2^{25}</annotation></semantics></math> we have <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mspace width="0.1667em"/><mi>h</mi><mo>≤</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>50</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b\,h \le 2^{50}</annotation></semantics></math>, which can no longer overflow.</p>
+<span class="gleichung" id="gl-bild"><span class="glformel"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>b</mi><mo>≤</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>25</mn></mrow></msup><mspace width="1em"/><mi>h</mi><mo>≤</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>25</mn></mrow></msup><mspace width="1em"/><mi>b</mi><mspace width="0.1667em"/><mi>h</mi><mo>≤</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>25</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b \le 2^{25} \quad h \le 2^{25} \quad b\,h \le 2^{25}</annotation></semantics></math></span><span class="glnr">(2)</span></span>
+
+<h2 id="nachbar">Neighbour files: only a name in the same folder</h2>
+<p>Some formats consist of several files: a shapefile of <code>.shp</code>, <code>.dbf</code>, <code>.prj</code>, an EnSight set of a case file and the files it names. The case file is text, and whoever writes it also decides what it points to. Without a rule, a tool that "only reads" would open any file on the machine. The rule: a single name, no path separator (not that of the other operating system either), no colon (drive or data stream), neither <code>.</code> nor <code>..</code>, no null byte, not absolute – and the <b>resolved</b> file must be a regular file in the same folder. The check is made on the resolved path, not on the name, because a harmless name can point elsewhere through a symbolic link.</p>
+<p>External links in HDF5 have their own, configurable rule with four levels; its default is exactly this one.</p>
+
+<h2 id="werte">Values, byte order mark, metadata tree</h2>
+<p>A text file may start with a byte order mark. It arrives in two ways: read correctly as the character U+FEFF, or – if the file was read as Latin-1 – as the three characters <code>ï»¿</code> (the bytes EF BB BF). Both forms are recognised and removed.</p>
+<p>The metadata tree is walked depth-first with a node before its children, so that a search for all tables reproduces the order of the file. Two findings are equal if key and values are equal – also when a value is itself an array; the comparison is deep for that. A column is found by name regardless of case; a missing one is reported together with the names that exist.</p>
+
+<h2 id="folgt">What follows</h2>
+<ul>
+<li>Assumption: the file size is known before reading. For streams without a length the limits do not apply; only the fixed decompression limit of the compression module remains.</li>
+<li>A broken or malicious file cannot make the reader allocate more memory than the file itself is large (up to a fixed factor per entry) – whatever the header says.</li>
+<li>The neighbour-file rule is deliberately stricter than necessary: a set that names files in subfolders is rejected rather than half read. About one in nine random eight-byte names already contains one of the four forbidden characters.</li>
+</ul>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+<li><code>TheorieFEprobe</code>: the boundary <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mspace width="0.1667em"/><mi>k</mi><mo>=</mo><mi>r</mi></mrow><annotation encoding="application/x-tex">n\,k = r</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">r - 1</annotation></semantics></math>, the overflow <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>30</mn></mrow></msup><mo>⋅</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>40</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{30} \cdot 2^{40}</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>40</mn></mrow></msup><mo>×</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>40</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{40} \times 2^{40}</annotation></semantics></math> pixels, all rejections of the neighbour-file rule on real files in a temporary folder (among them a symbolic link to the outside), the two forms of the byte order mark, depth-first search and deep comparison.</li>
+<li><code>Boeswilligprobe</code> and <code>Sauberabweisungsprobe</code>: corrupted files of all formats; none may cause a crash or a foreign exception.</li>
+<li>Recalculation: <code>docs/theorie/rechnung/fileformats_grundlagen.py</code> (equivalence of <a class="glverweis" href="#gl-anzahl">(1)</a> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mspace width="0.1667em"/><mi>k</mi><mo>≤</mo><mi>r</mi></mrow><annotation encoding="application/x-tex">n\,k \le r</annotation></semantics></math> on 200,000 random cases, the two overflows).</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+<li>The limits bound memory, not computing time: a file naming many small, valid entries is read completely.</li>
+<li>A link can be changed between check and opening; the rule does not protect against an attacker writing at the same time.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>J. Bloch: <i>Effective Java</i>, 3rd ed. – integer overflow in products and sums.</li>
+  <li>MITRE CWE-190 (<i>Integer Overflow or Wraparound</i>) and CWE-22 (<i>Path Traversal</i>).</li>
+  <li>The Unicode Standard, section 23.8 – the byte order mark U+FEFF.</li>
+</ul>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

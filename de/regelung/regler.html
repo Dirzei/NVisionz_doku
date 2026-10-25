@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PID und optimale Regelung – Hintergrund – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Suchen …" aria-label="Suche" data-index="../../suche_de.js" data-wurzel="../../" data-leer="Nichts gefunden."><div class="treffer"></div></div>
+<div class="gruppe">Rahmen der Anwendungen</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Daten und Dateien</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Darstellung</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Rechnen und Modellieren</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag aktiv" href="index.html">framework-regelung</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Grundsätze des Moduls</a>
+<a class="rubrik" href="index.html#lti">Übertragungsfunktionen</a>
+<a class="unterseite" href="lti.html">Lineare zeitinvariante Systeme – Hintergrund</a>
+<a class="rubrik" href="index.html#wok">Wurzelortskurve</a>
+<a class="rubrik" href="index.html#zustandsraum">Zustandsraum</a>
+<a class="rubrik" href="index.html#pid">PID-Regler</a>
+<a class="unterseite aktiv" href="regler.html">PID und optimale Regelung – Hintergrund</a>
+<a class="rubrik" href="index.html#optimal">Optimale Regelung</a>
+<a class="rubrik" href="index.html#ident">Systemidentifikation</a>
+<a class="unterseite" href="ident.html">Hintergrund</a>
+<a class="rubrik" href="index.html#filter">Filterentwurf</a>
+<a class="unterseite" href="filter.html">Filterentwurf und Spektralanalyse – Hintergrund</a>
+<a class="rubrik" href="index.html#spektrum">Spektralanalyse</a>
+<a class="rubrik" href="index.html#pruefung">Wie geprüft wird</a>
+<a class="rubrik" href="index.html#grenzen">Grenzen</a>
+</div>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Lernen und Suchen</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Ton, Bild, Video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<div class="gruppe">Weiteres</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<div class="gruppe">Anwendungen</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Kommandozeile und Starter</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Übersicht</a> › <a href="index.html">framework-regelung</a> › PID und optimale Regelung – Hintergrund</span><a class="sprachwahl" href="../../en/regelung/regler.html">English</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-regelung · envisionz.regelung.regler</div>
+  <h1>PID und optimale Regelung – Hintergrund</h1>
+  <p class="unter">Die Rechnung hinter <code>Pid</code> und <code>Optimal</code>: der diskrete PID mit gefiltertem D-Anteil auf der Messgröße, Stellgrößenbegrenzung mit Rückrechnung, Einstellregeln; die algebraischen Riccati-Gleichungen über die Matrix-Signumfunktion und das Verdopplungsverfahren, LQR und stationärer Kalman-Filter.</p>
+</header>
+
+<h2 id="worum">Worum es geht</h2>
+<p>Der PID-Regler ist der Standard der Praxis: Proportional-, Integral- und Differentialanteil auf die Regelabweichung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo>=</mo><mi>w</mi><mo>−</mo><mi>y</mi></mrow><annotation encoding="application/x-tex">e = w - y</annotation></semantics></math>. Für Mehrgrößensysteme mit Zustandsmodell liefert die <b>optimale Regelung</b> eine Rückführung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi>K</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">u = -K x</annotation></semantics></math>, die ein quadratisches Gütemaß minimiert; ihr Gegenstück ist der Kalman-Filter, der den Zustand aus verrauschten Messungen schätzt.</p>
+
+<figure>
+<svg viewBox="0 0 560 150" width="560" font-family="sans-serif" font-size="12">
+  <defs><marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker></defs>
+  <circle cx="70" cy="60" r="12" fill="#ffffff" stroke="#5b6475"/><text x="66" y="64" fill="#5b6475">Σ</text>
+  <rect x="120" y="40" width="170" height="40" rx="6" fill="#e8f0f6" stroke="#1f5f8b"/><text x="205" y="58" text-anchor="middle" fill="#1f5f8b">P + I (auf e)</text><text x="205" y="73" text-anchor="middle" fill="#1f5f8b" font-size="11">D gefiltert (auf −y)</text>
+  <rect x="320" y="40" width="60" height="40" rx="6" fill="#fff7e6" stroke="#9a6400"/><text x="350" y="64" text-anchor="middle" fill="#9a6400">sat</text>
+  <rect x="420" y="40" width="100" height="40" rx="6" fill="#1f5f8b"/><text x="470" y="64" text-anchor="middle" fill="#ffffff">Strecke</text>
+  <g stroke="#5b6475" fill="none" marker-end="url(#pf)">
+    <line x1="20" y1="60" x2="56" y2="60"/><line x1="82" y1="60" x2="118" y2="60"/><line x1="290" y1="60" x2="318" y2="60"/><line x1="380" y1="60" x2="418" y2="60"/>
+    <path d="M520,60 L545,60 L545,125 L70,125 L70,74"/>
+    <path d="M350,80 L350,105 L240,105 L240,82"/>
+  </g>
+  <text x="24" y="52" fill="#5b6475">w</text><text x="96" y="52" fill="#5b6475">e</text><text x="396" y="52" fill="#5b6475">u</text><text x="548" y="52" fill="#5b6475">y</text>
+  <text x="260" y="100" fill="#9a6400">(u − v)/T_t</text>
+</svg>
+<figcaption>PID mit Begrenzung: der Unterschied zwischen begrenzter und unbegrenzter Stellgröße wird mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">1/T_t</annotation></semantics></math> in den Integrator zurückgeführt (Rückrechnung gegen Windup).</figcaption>
+</figure>
+
+<h2 id="pid">Der diskrete PID</h2>
+<p>Stetig lautet der Regler mit gefiltertem D-Anteil auf der Messung</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>U</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub><mi>s</mi></mrow></mfrac><mo stretchy="false">)</mo><mi>E</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>−</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mspace width="0.1667em"/><mfrac><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mspace width="0.1667em"/><mi>s</mi></mrow><mrow><mn>1</mn><mo>+</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mi>s</mi></mrow></mfrac><mspace width="0.1667em"/><mi>Y</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>=</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>/</mo><mi>N</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">U(s) = K_p\Big(1 + \frac{1}{T_i s}\Big)E(s) - K_p\,\frac{T_d\,s}{1 + T_f s}\,Y(s), \qquad T_f = T_d/N .</annotation></semantics></math></p>
+<p>Der Filter begrenzt die Verstärkung des D-Anteils bei hohen Frequenzen auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mi>N</mi></mrow><annotation encoding="application/x-tex">K_p N</annotation></semantics></math> – ohne ihn verstärkte er Messrauschen beliebig. Je Abtastschritt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_s</annotation></semantics></math> rechnet <code>schritt(w, y)</code>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>v</mi><mo>=</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mi>e</mi><mo>+</mo><mi>I</mi><mo>+</mo><mi>D</mi><mo>,</mo><mspace width="2em"/><mi>u</mi><mo>=</mo><mspace width="0.1667em"/><mi>sat</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>v</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>I</mi><mo>←</mo><mi>I</mi><mo>+</mo><mfrac><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow></mfrac><mspace width="0.1667em"/><mi>e</mi><mo>+</mo><mfrac><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>t</mi></mrow></msub></mrow></mfrac><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>u</mi><mo>−</mo><mi>v</mi><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">v = K_p e + I + D, \qquad u = \operatorname{sat}(v), \qquad I \leftarrow I + \frac{K_p T_s}{T_i}\,e + \frac{T_s}{T_t}\,(u - v).</annotation></semantics></math></p>
+<p>Das ist die <b>Rückrechnung</b> (back-calculation, Åström und Hägglund): der Integrator folgt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>I</mi></mrow><mo stretchy="true">˙</mo></mover><mo>=</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mi>e</mi><mo>/</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>+</mo><mo stretchy="false">(</mo><mi>u</mi><mo>−</mo><mi>v</mi><mo stretchy="false">)</mo><mo>/</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\dot I = K_p e/T_i + (u - v)/T_t</annotation></semantics></math>. Solange die Stellgröße nicht begrenzt ist, gilt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mi>v</mi></mrow><annotation encoding="application/x-tex">u = v</annotation></semantics></math> und der zweite Term verschwindet; läuft sie in die Grenze, zieht er den Integrator mit der Zeitkonstante <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_t</annotation></semantics></math> so weit zurück, dass <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>v</mi></mrow><annotation encoding="application/x-tex">v</annotation></semantics></math> an der Grenze bleibt. Ohne ihn wächst <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>I</mi></mrow><annotation encoding="application/x-tex">I</annotation></semantics></math> während der Begrenzung weiter (Windup), und der Regler überschwingt, bis sich der Speicher wieder geleert hat. Übliche Wahl: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_t</annotation></semantics></math> zwischen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_d</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_i</annotation></semantics></math>.</p>
+<p>Der D-Anteil wirkt auf die <b>Messgröße</b>, nicht auf die Abweichung – ein Sollwertsprung erzeugt so keinen Stellgrößensprung – und ist mit der Zeitkonstante <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>=</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>/</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">T_f = T_d/N</annotation></semantics></math> gefiltert (implizites Euler-Verfahren):</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>D</mi><mo>←</mo><mfrac><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>+</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow></mfrac><mspace width="0.1667em"/><mi>D</mi><mo>−</mo><mfrac><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>+</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow></mfrac><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">D \leftarrow \frac{T_f}{T_f + T_s}\,D - \frac{K_p T_d}{T_f + T_s}\,(y_k - y_{k-1}).</annotation></semantics></math></p>
+<p><b>Herleitung.</b> Aus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mi>s</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>D</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mspace width="0.1667em"/><mi>s</mi><mspace width="0.1667em"/><mi>Y</mi></mrow><annotation encoding="application/x-tex">(1 + T_f s)\,D = -K_p T_d\,s\,Y</annotation></semantics></math> mit dem impliziten Euler-Verfahren <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>≈</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msup><mrow><mi>z</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><mo stretchy="false">)</mo><mo>/</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">s \approx (1 - z^{-1})/T_s</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>/</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo><mo>−</mo><mo stretchy="false">(</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>/</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mo stretchy="false">(</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>/</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo><mo stretchy="false">(</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>−</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">D_k(1 + T_f/T_s) - (T_f/T_s)D_{k-1} = -(K_p T_d/T_s)(y_k - y_{k-1})</annotation></semantics></math>, nach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">D_k</annotation></semantics></math> aufgelöst die Formel oben. Das implizite Verfahren ist für jedes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_s</annotation></semantics></math> stabil (der Faktor <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>/</mo><mo stretchy="false">(</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>+</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">T_f/(T_f + T_s)</annotation></semantics></math> liegt in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0, 1)</annotation></semantics></math>); auf einer Messrampe der Steigung 1 strebt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi></mrow><annotation encoding="application/x-tex">D</annotation></semantics></math> gegen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">-K_p T_d</annotation></semantics></math>, genauer <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msup><mrow><mi>a</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">D_k = -K_p T_d\big(1 - a^{k-1}\big)</annotation></semantics></math> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>/</mo><mo stretchy="false">(</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>+</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">a = T_f/(T_f + T_s)</annotation></semantics></math>.</p>
+<p>Ohne I-Anteil (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">T_i = \infty</annotation></semantics></math>) bleibt eine Abweichung: am PT1 mit Verstärkung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> ist sie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi>K</mi><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">1/(1 + K K_p)</annotation></semantics></math> des Sollwerts – nach dem Endwertsatz <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi><mo stretchy="false">(</mo><mi>∞</mi><mo stretchy="false">)</mo><mo>=</mo><mspace width="0.1667em"/><msub><mi>lim</mi><mrow><mi>s</mi><mo>→</mo><mn>0</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mn>1</mn><mo>/</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi>L</mi><mo stretchy="false">(</mo><mi>s</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">e(\infty) = \lim_{s \to 0} 1/(1 + L(s))</annotation></semantics></math> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo><mo>=</mo><mi>K</mi><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub></mrow><annotation encoding="application/x-tex">L(0) = K K_p</annotation></semantics></math>. Mit I-Anteil ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo><mo>=</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">L(0) = \infty</annotation></semantics></math>, die Abweichung verschwindet.</p>
+<p><b>Einstellregeln.</b> Nach dem Schwingversuch von Ziegler und Nichols (kritische Verstärkung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>u</mi></mrow></msub></mrow><annotation encoding="application/x-tex">K_u</annotation></semantics></math>, Periode <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_u</annotation></semantics></math>): <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mo>=</mo><mn>0,6</mn><msub><mrow><mi>K</mi></mrow><mrow><mi>u</mi></mrow></msub></mrow><annotation encoding="application/x-tex">K_p = 0{,}6 K_u</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">T_i = T_u/2</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>=</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub><mo>/</mo><mn>8</mn></mrow><annotation encoding="application/x-tex">T_d = T_u/8</annotation></semantics></math>. Aus der Sprungantwort (Verstärkung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math>, Verzugszeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_u</annotation></semantics></math>, Ausgleichszeit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>g</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_g</annotation></semantics></math>): Ziegler-Nichols <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mo>=</mo><mn>1,2</mn><mspace width="0.1667em"/><msub><mrow><mi>T</mi></mrow><mrow><mi>g</mi></mrow></msub><mo>/</mo><mo stretchy="false">(</mo><mi>K</mi><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">K_p = 1{,}2\,T_g/(K T_u)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><mn>2</mn><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_i = 2T_u</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>=</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">T_d = T_u/2</annotation></semantics></math>; Chien-Hrones-Reswick (aperiodisch, Führung) <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mo>=</mo><mn>0,6</mn><mspace width="0.1667em"/><msub><mrow><mi>T</mi></mrow><mrow><mi>g</mi></mrow></msub><mo>/</mo><mo stretchy="false">(</mo><mi>K</mi><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">K_p = 0{,}6\,T_g/(K T_u)</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>=</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>g</mi></mrow></msub></mrow><annotation encoding="application/x-tex">T_i = T_g</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>=</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>u</mi></mrow></msub><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">T_d = T_u/2</annotation></semantics></math>.</p>
+<p>Die Regeln sind <b>Erfahrungswerte</b>, keine Herleitungen: Ziegler und Nichols (1942) zielten auf ein Abklingen auf ein Viertel je Schwingung, was oft zu wenig gedämpft ist; Chien, Hrones und Reswick (1952) gaben Sätze für aperiodisches Führungsverhalten. Sie liefern Startwerte, die man an der Strecke nachstellt.</p>
+
+<h2 id="optimal">Riccati-Gleichungen, LQR und Kalman</h2>
+<p>Der <b>LQR</b> minimiert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true">∫</mo><mo stretchy="false">(</mo><msup><mrow><mi>x</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>Q</mi><mi>x</mi><mo>+</mo><msup><mrow><mi>u</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>R</mi><mi>u</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>d</mi><mi>t</mi></mrow><annotation encoding="application/x-tex">\int (x^T Q x + u^T R u)\,dt</annotation></semantics></math> für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">˙</mo></mover><mo>=</mo><mi>A</mi><mi>x</mi><mo>+</mo><mi>B</mi><mi>u</mi></mrow><annotation encoding="application/x-tex">\dot x = A x + B u</annotation></semantics></math>. Die Lösung ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi>K</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">u = -K x</annotation></semantics></math> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><msup><mrow><mi>R</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi></mrow><annotation encoding="application/x-tex">K = R^{-1} B^T X</annotation></semantics></math>, wobei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> die stabilisierende Lösung der <b>stetigen algebraischen Riccati-Gleichung</b> ist:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mo>+</mo><mi>X</mi><mi>A</mi><mo>−</mo><mi>X</mi><mi>B</mi><msup><mrow><mi>R</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mo>+</mo><mi>Q</mi><mo>=</mo><mn>0</mn><mo>.</mo></mrow><annotation encoding="application/x-tex">A^T X + X A - X B R^{-1} B^T X + Q = 0.</annotation></semantics></math></p>
+<p><b>Herleitung.</b> Für eine quadratische Wertfunktion <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mrow><mi>x</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">V(x) = x^T X x</annotation></semantics></math> verlangt die Bedingung der Optimalität (Hamilton-Jacobi-Bellman) <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>=</mo><mspace width="0.1667em"/><msub><mi>min</mi><mrow><mi>u</mi></mrow></msub><mo>⁡</mo><mo stretchy="false">[</mo><msup><mrow><mi>x</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>Q</mi><mi>x</mi><mo>+</mo><msup><mrow><mi>u</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>R</mi><mi>u</mi><mo>+</mo><mn>2</mn><msup><mrow><mi>x</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mo stretchy="false">(</mo><mi>A</mi><mi>x</mi><mo>+</mo><mi>B</mi><mi>u</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">0 = \min_u \big[x^T Q x + u^T R u + 2x^T X (A x + B u)\big]</annotation></semantics></math>. Das Minimum über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math> liegt bei <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mi>R</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">u = -R^{-1}B^T X x</annotation></semantics></math>; eingesetzt bleibt eine quadratische Form in <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math>, die für alle <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math> verschwindet – genau die Riccati-Gleichung. Von ihren Lösungen ist die gesuchte die, für die <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>−</mo><mi>B</mi><mi>K</mi></mrow><annotation encoding="application/x-tex">A - BK</annotation></semantics></math> stabil ist; sie existiert, wenn <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>A</mi><mo>,</mo><mi>B</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(A, B)</annotation></semantics></math> stabilisierbar und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>A</mi><mo>,</mo><msup><mrow><mi>Q</mi></mrow><mrow><mn>1</mn><mo>/</mo><mn>2</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(A, Q^{1/2})</annotation></semantics></math> entdeckbar ist. Skalar (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math>): <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mo stretchy="false">(</mo><mi>a</mi><mo>+</mo><msqrt><msup><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msup><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msup><mi>q</mi><mo>/</mo><mi>r</mi></msqrt><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>r</mi><mo>/</mo><msup><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">x = \big(a + \sqrt{a^2 + b^2 q/r}\big)\,r/b^2</annotation></semantics></math>, die positive Wurzel.</p>
+<p>Gelöst wird über die Hamilton-Matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo>=</mo><mo stretchy="false">[</mo><mo stretchy="false">[</mo><mi>A</mi><mo>,</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi>G</mi><mo stretchy="false">]</mo><mo>,</mo><mo stretchy="false">[</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mi>Q</mi><mo>,</mo><mo form="prefix" lspace="0" rspace="0">−</mo><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mo stretchy="false">]</mo><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">H = [[A, -G], [-Q, -A^T]]</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><mo>=</mo><mi>B</mi><msup><mrow><mi>R</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">G = B R^{-1} B^T</annotation></semantics></math>, und ihre <b>Matrix-Signumfunktion</b> mit dem Newton-Verfahren mit Determinantenskalierung:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Z</mi><mo>←</mo><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><mo stretchy="false">(</mo><mi>c</mi><mspace width="0.1667em"/><mi>Z</mi><mo>+</mo><msup><mrow><mi>Z</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><mo>/</mo><mi>c</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><mi>c</mi><mo>=</mo><mo>|</mo><mspace width="0.1667em"/><mi>det</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>Z</mi><msup><mrow><mo>|</mo></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn><mo>/</mo><mo stretchy="false">(</mo><mn>2</mn><mi>n</mi><mo stretchy="false">)</mo></mrow></msup><mo>.</mo></mrow><annotation encoding="application/x-tex">Z \leftarrow \tfrac12\big(c\,Z + Z^{-1}/c\big), \qquad c = |\det Z|^{-1/(2n)}.</annotation></semantics></math></p>
+<p>Aus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo>=</mo><mspace width="0.1667em"/><mi>sign</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>H</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">W = \operatorname{sign}(H)</annotation></semantics></math> folgt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> als Lösung des überbestimmten Systems <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><msub><mrow><mi>W</mi></mrow><mrow><mn>12</mn></mrow></msub><mo>;</mo><mspace width="0.3333em"/><msub><mrow><mi>W</mi></mrow><mrow><mn>22</mn></mrow></msub><mo>+</mo><mi>I</mi><mo stretchy="false">]</mo><mspace width="0.1667em"/><mi>X</mi><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mo stretchy="false">[</mo><msub><mrow><mi>W</mi></mrow><mrow><mn>11</mn></mrow></msub><mo>+</mo><mi>I</mi><mo>;</mo><mspace width="0.3333em"/><msub><mrow><mi>W</mi></mrow><mrow><mn>21</mn></mrow></msub><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[W_{12};\ W_{22} + I]\,X = -[W_{11} + I;\ W_{21}]</annotation></semantics></math> (kleinste Quadrate über QR). Eigenwerte auf der imaginären Achse machen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math> singulär und werden gemeldet.</p>
+<p><b>Warum das System für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> stimmt.</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math> ist hamiltonsch: mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> ist auch <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">-\lambda</annotation></semantics></math> Eigenwert, also hat <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math> je <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Eigenwerte links und rechts (keiner auf der Achse). Die stabilisierende Lösung spannt mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi>I</mi><mo>;</mo><mspace width="0.3333em"/><mi>X</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[I;\ X]</annotation></semantics></math> den stabilen invarianten Unterraum auf, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo stretchy="false">[</mo><mi>I</mi><mo>;</mo><mspace width="0.3333em"/><mi>X</mi><mo stretchy="false">]</mo><mo>=</mo><mo stretchy="false">[</mo><mi>I</mi><mo>;</mo><mspace width="0.3333em"/><mi>X</mi><mo stretchy="false">]</mo><mspace width="0.1667em"/><mi mathvariant="normal">Λ</mi></mrow><annotation encoding="application/x-tex">H[I;\ X] = [I;\ X]\,\Lambda</annotation></semantics></math> mit stabilem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Λ</mi></mrow><annotation encoding="application/x-tex">\Lambda</annotation></semantics></math>. Die Signumfunktion bildet stabile Eigenwerte auf <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">-1</annotation></semantics></math> ab, also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo stretchy="false">[</mo><mi>I</mi><mo>;</mo><mspace width="0.3333em"/><mi>X</mi><mo stretchy="false">]</mo><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mo stretchy="false">[</mo><mi>I</mi><mo>;</mo><mspace width="0.3333em"/><mi>X</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">W[I;\ X] = -[I;\ X]</annotation></semantics></math>, umgestellt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>W</mi><mo>+</mo><mi>I</mi><mo stretchy="false">)</mo><mo stretchy="false">[</mo><mi>I</mi><mo>;</mo><mspace width="0.3333em"/><mi>X</mi><mo stretchy="false">]</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">(W + I)[I;\ X] = 0</annotation></semantics></math> – die beiden Blockzeilen sind das überbestimmte System. Das Newton-Verfahren <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi><mo>←</mo><mo stretchy="false">(</mo><mi>Z</mi><mo>+</mo><msup><mrow><mi>Z</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">Z \leftarrow (Z + Z^{-1})/2</annotation></semantics></math> konvergiert quadratisch gegen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>sign</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>H</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\operatorname{sign}(H)</annotation></semantics></math>; die Determinantenskalierung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> beschleunigt die ersten Schritte, in denen Eigenwerte weit von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo form="prefix" lspace="0" rspace="0">±</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\pm 1</annotation></semantics></math> liegen (Byers).</p>
+<p>Zeitdiskret (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mi>A</mi><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>+</mo><mi>B</mi><msub><mrow><mi>u</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">x_{k+1} = A x_k + B u_k</annotation></semantics></math>) gilt die <b>diskrete Riccati-Gleichung</b>; sie löst das <b>Verdopplungsverfahren</b> (structure-preserving doubling, SDA) mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>A</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mi>A</mi></mrow><annotation encoding="application/x-tex">A_0 = A</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>G</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mi>B</mi><msup><mrow><mi>R</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">G_0 = B R^{-1} B^T</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>H</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>=</mo><mi>Q</mi></mrow><annotation encoding="application/x-tex">H_0 = Q</annotation></semantics></math>:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>W</mi><mo>=</mo><mi>I</mi><mo>+</mo><msub><mrow><mi>G</mi></mrow><mrow><mi>k</mi></mrow></msub><msub><mrow><mi>H</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="1em"/><msub><mrow><mi>A</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>A</mi></mrow><mrow><mi>k</mi></mrow></msub><msup><mrow><mi>W</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msub><mrow><mi>A</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo><mspace width="1em"/><msub><mrow><mi>G</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>G</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>+</mo><msub><mrow><mi>A</mi></mrow><mrow><mi>k</mi></mrow></msub><msup><mrow><mi>W</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msub><mrow><mi>G</mi></mrow><mrow><mi>k</mi></mrow></msub><msubsup><mrow><mi>A</mi></mrow><mrow><mi>k</mi></mrow><mrow><mi>T</mi></mrow></msubsup><mo>,</mo><mspace width="1em"/><msub><mrow><mi>H</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>H</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>+</mo><msubsup><mrow><mi>A</mi></mrow><mrow><mi>k</mi></mrow><mrow><mi>T</mi></mrow></msubsup><msub><mrow><mi>H</mi></mrow><mrow><mi>k</mi></mrow></msub><msup><mrow><mi>W</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msub><mrow><mi>A</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">W = I + G_k H_k, \quad A_{k+1} = A_k W^{-1} A_k, \quad G_{k+1} = G_k + A_k W^{-1} G_k A_k^T, \quad H_{k+1} = H_k + A_k^T H_k W^{-1} A_k,</annotation></semantics></math></p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>H</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>→</mo><mi>X</mi></mrow><annotation encoding="application/x-tex">H_k \to X</annotation></semantics></math> quadratisch. Die diskrete Gleichung und die Rückführung lauten</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>=</mo><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mi>A</mi><mo>−</mo><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mi>B</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><mi>R</mi><mo>+</mo><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mi>B</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mi>A</mi><mo>+</mo><mi>Q</mi><mo>,</mo><mspace width="2em"/><mi>K</mi><mo>=</mo><mo stretchy="false">(</mo><mi>R</mi><mo>+</mo><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mi>B</mi><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>X</mi><mi>A</mi><mo>,</mo></mrow><annotation encoding="application/x-tex">X = A^T X A - A^T X B\,(R + B^T X B)^{-1} B^T X A + Q, \qquad K = (R + B^T X B)^{-1} B^T X A,</annotation></semantics></math></p>
+<p>hergeleitet wie stetig, nur mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">V(x_{k+1})</annotation></semantics></math> statt der Ableitung. SDA verdoppelt den Zeithorizont je Schritt; nach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> Schritten entspricht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>H</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">H_k</annotation></semantics></math> der Riccati-Differenzengleichung über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mi>k</mi></mrow></msup></mrow><annotation encoding="application/x-tex">2^k</annotation></semantics></math> Schritte.</p>
+<p> Der <b>stationäre Kalman-Filter</b> ist die duale Aufgabe: Fehlerkovarianz <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi></mrow><annotation encoding="application/x-tex">P</annotation></semantics></math> aus der CARE mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">A^T</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>C</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">C^T</annotation></semantics></math> und Rauschkovarianzen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi></mrow><annotation encoding="application/x-tex">Q</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi></mrow><annotation encoding="application/x-tex">R</annotation></semantics></math>; Verstärkung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mi>P</mi><msup><mrow><mi>C</mi></mrow><mrow><mi>T</mi></mrow></msup><msup><mrow><mi>R</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">L = P C^T R^{-1}</annotation></semantics></math>. Dual heißt: der Schätzfehler <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">˜</mo></mover></mrow><annotation encoding="application/x-tex">\tilde x</annotation></semantics></math> gehorcht <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">˜</mo></mover></mrow><mo stretchy="true">˙</mo></mover><mo>=</mo><mo stretchy="false">(</mo><mi>A</mi><mo>−</mo><mi>L</mi><mi>C</mi><mo stretchy="false">)</mo><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">˜</mo></mover><mo>+</mo><mo>…</mo></mrow><annotation encoding="application/x-tex">\dot{\tilde x} = (A - LC)\tilde x + \dots</annotation></semantics></math>, und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>−</mo><mi>L</mi><mi>C</mi></mrow><annotation encoding="application/x-tex">A - LC</annotation></semantics></math> hat dieselben Eigenwerte wie <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mo>−</mo><msup><mrow><mi>C</mi></mrow><mrow><mi>T</mi></mrow></msup><msup><mrow><mi>L</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">A^T - C^T L^T</annotation></semantics></math> – eine Zustandsrückführung des dualen Systems <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mo>,</mo><msup><mrow><mi>C</mi></mrow><mrow><mi>T</mi></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(A^T, C^T)</annotation></semantics></math>.</p>
+
+<h2 id="pruefung">Wie geprüft wird</h2>
+<ul>
+  <li>PT1 (K 2, T 1) mit P-Regler <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><mo>=</mo><mn>3</mn></mrow><annotation encoding="application/x-tex">K_p = 3</annotation></semantics></math>: bleibende Abweichung 1/7 auf 1e-9; mit PI keine; kein D-Sprung beim Sollwertsprung (auch bei Messung 0,5), dann ein I-Schritt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><msub><mrow><mi>T</mi></mrow><mrow><mi>s</mi></mrow></msub><mi>e</mi><mo>/</mo><msub><mrow><mi>T</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">K_p T_s e/T_i</annotation></semantics></math> von Hand.</li>
+  <li>Begrenzte Stellgröße (±1): mit Rückrechnung weniger Überschwingen als ohne; beide erreichen den Sollwert.</li>
+  <li>Einstellregeln nach den Formeln.</li>
+  <li>D-Anteil auf einer Messrampe gegen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><msub><mrow><mi>K</mi></mrow><mrow><mi>p</mi></mrow></msub><msub><mrow><mi>T</mi></mrow><mrow><mi>d</mi></mrow></msub><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msup><mrow><mi>a</mi></mrow><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">D_k = -K_p T_d(1 - a^{k-1})</annotation></semantics></math> (1e-12); diskretes LQR mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">R = 4</annotation></semantics></math> gegen die bis zum Stillstand iterierte Riccati-Differenzengleichung (1e-10).</li>
+  <li>Skalar: CARE <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mo stretchy="false">(</mo><mi>a</mi><mo>+</mo><msqrt><msup><mrow><mi>a</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msup><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msup><mi>q</mi><mo>/</mo><mi>r</mi></msqrt><mo stretchy="false">)</mo><mspace width="0.1667em"/><mi>r</mi><mo>/</mo><msup><mrow><mi>b</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">x = (a + \sqrt{a^2 + b^2 q/r})\,r/b^2</annotation></semantics></math> auf 1e-12, DARE positiv mit Rest 1e-12, Kalman wie die duale CARE.</li>
+  <li>Doppelintegrator mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo>=</mo><mi>I</mi></mrow><annotation encoding="application/x-tex">Q = I</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">R = 1</annotation></semantics></math>: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mo stretchy="false">[</mo><mn>1</mn><mo>,</mo><msqrt><mn>3</mn></msqrt><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">K = [1, \sqrt3]</annotation></semantics></math> auf 1e-12; Viergrößensystem mit zwei Eingängen und nicht diagonalem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi></mrow><annotation encoding="application/x-tex">R</annotation></semantics></math>: Rest 1e-10, Kreise stabil.</li>
+</ul>
+
+<h2 id="grenzen">Grenzen</h2>
+<p>Ein PID je Regelkreis, keine Vorsteuerung und keine Sollwertgewichtung des P-Anteils. Riccati-Löser für dichte Matrizen mittlerer Größe; keine zeitvarianten Probleme.</p>
+
+<h2 id="literatur">Literatur</h2>
+<ul>
+  <li>K. J. Åström, T. Hägglund: Advanced PID Control. ISA, 2006.</li>
+  <li>J. G. Ziegler, N. B. Nichols: Optimum settings for automatic controllers. Trans. ASME 64 (1942) 759–768.</li>
+  <li>J. D. Gardiner, A. J. Laub: A generalization of the matrix-sign-function solution for algebraic Riccati equations. Int. J. Control 44 (1986) 823–832.</li>
+  <li>R. Byers: Solving the algebraic Riccati equation with the matrix sign function. Linear Algebra Appl. 85 (1987) 267–279.</li>
+  <li>E. K.-W. Chu, H.-Y. Fan, W.-W. Lin: A structure-preserving doubling algorithm for continuous-time algebraic Riccati equations. Linear Algebra Appl. 396 (2005) 55–80.</li>
+</ul>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

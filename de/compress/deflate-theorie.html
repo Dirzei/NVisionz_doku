@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Lernen und Suchen</div>
@@ -414,7 +420,17 @@ roh ← Inflate.entpacke(daten, anfang, Länge − anfang − 4, woerterbuch)
 <p class="quelle">Quelle: <code>envisionz-framework-compress/src/envisionz/compress/deflate/Zlib.java</code>. Das Wörterbuch wird in <code>Inflate</code> vor die Ausgabe gelegt, höchstens die letzten 32 KiB davon; Rückbezüge dürfen hineinzeigen, zurückgegeben wird nur, was dahinter entsteht.</p>
 <div class="hinweis"><b>Festlegung im Framework:</b> <code>Zlib.packe</code> schreibt immer <code>CMF</code> = <code>0x78</code> (Deflate, 32-KiB-Fenster) und das kleinste passende <code>FLG</code>, also <code>0x01</code>, ohne Stufenangabe und ohne Wörterbuch. Trägt ein gelesener Strom kein <code>FDICT</code>, bleibt ein mitgegebenes Wörterbuch unbenutzt, wie bei zlib.</div>
 
+<h2 id="folgt">Was daraus folgt</h2>
+<p><b>Annahmen.</b> Der Strom liegt vollständig im Speicher; Huffman-Codes sind je Block fest, ihre Optimalität gilt für die Häufigkeiten dieses Blocks und für voneinander unabhängige Symbole. Wie der Schreiber zerlegt, legt das Format nicht fest.</p>
+<ul>
+  <li><b>Ein kurzer Rückbezug lohnt sich nicht in jedem Abstand.</b> Mit den festen Codes kostet ein Rückbezug der Länge 3 sieben Bit für den Längencode 257, fünf Bit für den Abstandscode und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z(c)</annotation></semantics></math> Zusatzbits, zusammen <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>12</mn><mo>+</mo><mi>z</mi><mo stretchy="false">(</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">12 + z(c)</annotation></semantics></math>; drei Literale unter 144 kosten 24 Bit. Ab <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">z = 12</annotation></semantics></math>, also ab Abstand 8193, ist der Dreierbezug nicht mehr billiger. Dynamische Codes verschieben die Grenze, weil sie häufige Abstandscodes kürzer machen.</li>
+  <li><b>Höchstens 1032 : 1.</b> Ein Rückbezug liefert höchstens 258 Byte. In einem dynamischen Block kosten Längen- und Abstandssymbol zusammen mindestens zwei Bit, je ein Ein-Bit-Code; also <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>258</mn><mo>⋅</mo><mn>8</mn><mo>/</mo><mn>2</mn><mo>=</mo><mn>1032</mn></mrow><annotation encoding="application/x-tex">258 \cdot 8 / 2 = 1032</annotation></semantics></math>. Der eigene Packer kommt bei 4 MiB Nullen auf 1028 (4080 Byte).</li>
+  <li><b>Was ein Rahmen kostet.</b> zlib legt 6 Byte um den Strom, ein gespeicherter Block 5 Byte je 65 535 Byte, rund 0,008 %. Unpackbare Daten wachsen also kaum, wenn der Schreiber gespeicherte Blöcke wählt.</li>
+  <li><b>Die Längen bestimmen alles.</b> Weil nur Codelängen übertragen werden, müssen Schreiber und Leser die kanonische Regel bitgenau gleich anwenden; eine andere Reihenfolge bei gleicher Länge ergäbe einen gültigen, aber anderen Code.</li>
+</ul>
+
 <h2 id="pruefung">Wie geprüft wird</h2>
+<p><code>TheorieK1probe</code> rechnet die Tabellen aus der geschlossenen Form nach: ein fester Block mit allen 30 Abstandscodes und allen 29 Längencodes, je mit kleinstem und größtem Zusatzwert, die Literale an den Grenzen der festen Längen (0, 143, 144, 255), Abstand 1 mit Länge 258; dazu die Fehlerwege (falsches <code>NLEN</code>, Rückbezug vor den Anfang, Blockart 3), den zlib-Rahmen von <code>abc</code> Byte für Byte, die Kopfprüfung und die dynamischen Blöcke des JDK mit vielen Wiederholsymbolen.</p>
 <p><code>CompressSelfTest</code> (103 Prüfungen) prüft das Format nicht über Hin-und-zurück allein, denn eigener Packer und eigener Entpacker könnten sich gleich irren. Jeder Strom geht beide Kreuzwege:</p>
 <ul>
   <li><b>Unser Strom durch <code>java.util.zip.Inflater</code></b> für acht Proben (leer, ein Byte, zwei Byte, ein Lauf von 5000 Byte, 20 000 Zufallsbytes, Text, periodisch, alle 256 Bytewerte).</li>
@@ -431,6 +447,7 @@ roh ← Inflate.entpacke(daten, anfang, Länge − anfang − 4, woerterbuch)
   <li>Deflate64 (ZIP-Verfahren 9) wird nicht gelesen.</li>
   <li>Der Huffman-Dekoder liest bitweise; bei großen Datenmengen ist eine Tabelle mit mehreren Bit Vorschau schneller. Gemessen wurde das nicht.</li>
   <li>zlib-Ströme mit anderem Verfahren als 8 werden abgewiesen; das Fensterfeld im <code>CMF</code> wird nicht ausgewertet.</li>
+  <li>Eine Wiederholung (Symbol 16) über das Ende der Codelängen wird abgewiesen wie bei zlib (seit 2026-10-19, vorher still abgeschnitten); ebenso die Abstandscodes 30 und 31, die ein dynamischer Block mit <code>HDIST</code> bis 32 nennen kann.</li>
 </ul>
 
 <h2 id="literatur">Literatur</h2>

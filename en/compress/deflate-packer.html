@@ -46,6 +46,8 @@ pre code{background:none;padding:0}
 .chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
 .chip.frei{color:var(--wa);border-color:var(--wa)}
 .hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
 th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
 th{background:var(--ak2)}
@@ -199,6 +201,10 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../math/index.html">framework-math</a>
 <a class="eintrag" href="../stats/index.html">framework-stats</a>
 <a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
 <a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
 <a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
 <div class="gruppe">Learning and search</div>
@@ -389,7 +395,17 @@ i ← 0
 </table>
 <p>Consistently within a few per cent of the JDK, slightly below it on the WAV file. Speed: 5 MB in 0.7 s at level <code>NORMAL</code>. Recomputed: 4 MiB of zeros give 4080 bytes (ratio ≈ 1028; the format allows at most 1032).</p>
 
+<h2 id="folgt">What follows from it</h2>
+<p><b>Assumptions.</b> The window is 32 KiB, the search is bounded by the chain depth, and the statistics of a block of 16 384 symbols are taken as constant.</p>
+<ul>
+  <li><b>Effort.</b> Per position the search compares at most chain-depth many candidates with at most 258 bytes; in the worst case <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>n</mi><mo>⋅</mo><mi>T</mi><mo>⋅</mo><mn>258</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(n \cdot T \cdot 258)</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi></mrow><annotation encoding="application/x-tex">T</annotation></semantics></math> = 16, 128 or 2048, twice when lazy. In practice comparisons stop after a few bytes.</li>
+  <li><b>Collisions only cost time.</b> Three bytes are 24 bits, the hash has 15; every <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^9</annotation></semantics></math> triples share a chain head. Since each candidate is compared byte for byte, a collision makes the search slower, never wrong. That is why no counter-probe can test the hash sharply: another hash only changes which matches fall within the chain depth.</li>
+  <li><b>Incompressible data grows by bytes, not by percent.</b> The cost comparison takes the stored block as soon as it is cheaper. 10 000 random bytes give 10 005 bytes: 3 header bits, 5 padding bits and 32 bits of <code>LEN</code>/<code>NLEN</code>.</li>
+  <li><b>Lazy is not always better.</b> The example above shows it: the longer match has the larger distance, which costs more extra bits than the literal saved.</li>
+</ul>
+
 <h2 id="pruefung">How it is checked</h2>
+<p><code>TheorieK1probe</code> measures the worked examples of this page: <code>abrakadabra…</code> 29 bytes, the compressor sentence greedy 38 and lazy 39 bytes, 4 MiB of zeros 4080 bytes, 10 000 random bytes exactly at the length from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>K</mi></mrow><mrow><mtext>gesp</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">K_{\text{gesp}}</annotation></semantics></math>.</p>
 <ul>
   <li><b>Round trip</b> at all three levels over eight samples (<code>CompressSelfTest</code>).</li>
   <li><b>Cross check:</b> every stream of our own is read by the JDK <code>Inflater</code> – this proves format conformance independently of our own decoder.</li>
