@@ -299,7 +299,7 @@ q = q.festlegen(Quellenart.VHS, "Besitzerin sagt: VHS-Kassette");</code></pre></
 
 <div class="karte">
   <h3><code>Bildguete</code> – noise, sharpness and blockiness before and after</h3>
-  <p class="zweck">None of the three numbers says anything on its own. A filter is only good if it lowers noise and leaves sharpness intact; if both fall, picture content is lost. So they are measured in pairs, before and after treatment.</p>
+  <p class="zweck">None of the three numbers says anything on its own. A filter is only good if it lowers noise and leaves sharpness intact; if both fall, picture content is lost. So they are measured in pairs, before and after treatment: barely effective below 3 % noise reduction, too strong when sharpness drops by more than 0.6 times the noise reduction, visibly suffering above 8 % loss of sharpness.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>Bildguete.messen(y, breite, hoehe)</code>, <code>rauschen()</code>, <code>schaerfe()</code>, <code>blockmass()</code></li>
@@ -364,7 +364,7 @@ p.schreiben(Path.of("protokoll.txt"));</code></pre></div>
 
 <div class="karte">
   <h3><code>Entschraenkung</code> and <code>Pulldown</code></h3>
-  <p class="zweck"><code>Entschraenkung</code>: weave (right when static, comb artefacts otherwise), line doubling (always right, half the spatial resolution) or motion-compensated – the missing lines from the neighbouring field, shifted by the motion; the fallback is line doubling. <code>Pulldown</code> recognises the 3:2 cadence by one pair of same-parity fields out of every five not differing, and removes the repeats – they are not new observations.</p>
+  <p class="zweck"><code>Entschraenkung</code>: weave (right when static, comb artefacts otherwise), line doubling (always right, half the spatial resolution) or motion-compensated – the missing lines from the neighbouring field, shifted by the motion; the fallback is line doubling. <code>Pulldown</code> recognises the 3:2 cadence by one pair of same-parity fields out of every five not differing, and removes the repeats – they are not new observations. Deinterlacing computes its lines on several cores, bit-identical to one; two cores: 140 → 49 ms per picture (720 × 576, luma only).</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>Entschraenkung.weben(oben, unten, breite, feldHoehe)</code>, <code>verdoppeln(feld, breite, feldHoehe, oben)</code></li>
@@ -446,7 +446,7 @@ System.out.printf("holes %.1f %%%n", 100 * dz.loecher());</code></pre></div>
 
 <div class="karte">
   <h3><code>Entfaltung</code> and <code>Kachelentstoerung</code></h3>
-  <p class="zweck"><code>Entfaltung</code> after Richardson and Lucy: preserves total brightness, never yields negative values, but amplifies noise – hence only after fusion and with few iterations, otherwise rings appear. <code>Kachelentstoerung</code> smooths only at the 8×8 grid boundaries and only where the step stands alone like a compression artefact; real edges remain. <a class="vertiefung" href="filter.html">Background, formulas and pseudocode →</a></p>
+  <p class="zweck"><code>Entfaltung</code> after Richardson and Lucy: preserves total brightness, never yields negative values, but amplifies noise – hence only after fusion and with few iterations, otherwise rings appear; it convolves row by row on several cores, bit-identical to one (two cores: 307 → 181 ms per picture, 720 × 576, luma only). <code>Kachelentstoerung</code> smooths only at the 8×8 grid boundaries and only where the step stands alone like a compression artefact; real edges remain. <a class="vertiefung" href="filter.html">Background, formulas and pseudocode →</a></p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>Entfaltung.gauss(sigma)</code>, <code>Entfaltung(kern, kernBreite, kernHoehe)</code>, <code>anwenden(bild, breite, hoehe, schritte)</code></li>
@@ -476,7 +476,7 @@ double[] schaerfer = Entfaltung.gauss(1.2).anwenden(ohneKacheln, 720, 576, 8);</
 
 <div class="karte">
   <h3><code>Bildfilter</code>, <code>Zeitmittel</code>, <code>Bewegungsmittel</code>, <code>Filteradapter</code></h3>
-  <p class="zweck">A filter gets the picture and the following (optionally also the previous) pictures and says how far it looks ahead. <code>Zeitmittel</code> costs 0.54 ms per picture and is most effective against tape noise, but leaves moving pixels above a threshold unchanged. <code>Bewegungsmittel</code> first searches where a patch has moved and averages along the motion over a symmetric window; the threshold checks every pixel after the shift. <code>Filteradapter</code> turns deconvolution, deblocking and deinterlacing into filters and chains filters.</p>
+  <p class="zweck">A filter gets the picture and the following (optionally also the previous) pictures and says how far it looks ahead. <code>Zeitmittel</code> costs 0.54 ms per picture and is most effective against tape noise, but leaves moving pixels above a threshold unchanged. <code>Bewegungsmittel</code> first searches where a patch has moved and averages along the motion over a symmetric window; the threshold checks every pixel after the shift. <code>Filteradapter</code> turns deconvolution, deblocking and deinterlacing into filters and chains filters. Since 2026-10-26 both means round (before they truncated, on average half a level too dark).</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>Bildfilter.anwenden(bild, zukunft, breite, hoehe)</code>, <code>name()</code>, <code>vorausblick()</code>, <code>rueckblick()</code></li>

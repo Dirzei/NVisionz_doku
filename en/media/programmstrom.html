@@ -325,11 +325,12 @@ math[display="block"]{margin:10px 0}
     move window[consumed .. fill] to the start;  fill ← fill − consumed
 
 <b>section</b>: like <b>split</b>, but
+    <b>if</b> a pack header (with stuffing) reaches beyond the window end <b>and</b> not last:  <b>return</b> p
     <b>if</b> the packet reaches beyond the window end <b>and</b> not last:  <b>return</b> p
     BB, BE: skip;  BF: count navigation packet, skip
     <b>if</b> video and requested: write payload from header end to out</pre>
 <p class="quelle">Source: <code>envisionz-framework-media/src/envisionz/media/ps/Elementarstrom.java</code>. The header skipping is word for word the same as in <code>Zeitmarken.nachDemKopf</code>.</p>
-<div class="hinweis"><b>Convention in the framework:</b> The packet length is a 16-bit value; a packet over 1 MiB is not foreseen in the stream. A damaged stream can claim it; without the doubling the scanner would stand still. A packet cut off in the last window is taken as it is and belongs in the finding.</div>
+<div class="hinweis"><b>Convention in the framework:</b> The packet length is a 16-bit value; a packet over 1 MiB is not foreseen in the stream. The doubling is a safeguard that cannot occur under this contract: a full window of 1 MiB always contains a complete packet or a complete pack header (<i>caveat</i>, kept as an open question). A pack header that reaches across the window border waits for the next window like a packet; until 2026-10-26 it was skipped, and a system stream whose packets are not aligned to 2048 bytes aborted there with an index exception. A packet cut off in the last window is taken as it is and belongs in the finding.</div>
 
 <h2 id="pruefung">How it is checked</h2>
 <p><code>Medienprobe</code> lays out packets byte by byte itself; <code>ps.Videokopfprobe</code> checks the video header against ISO/IEC 11172-1 and 13818-1 and -2.</p>
@@ -337,6 +338,7 @@ math[display="block"]{margin:10px 0}
   <li><b>Elementarstrom:</b> the extract is byte for byte the same stream as the source stream, exactly one navigation packet is skipped, and the extracts from <code>byte[]</code> and from the data stream agree.</li>
   <li><b>Programmstrom:</b> width 720, height 576 and frame rate 25 from the sequence header; variable bit rate and navigation packets are reported.</li>
   <li><b>Window:</b> the same method, cutting only at packet borders, is checked by <code>ps.Tonauszugprobe</code> with a stream of 3.1 MiB and with an MPEG-1 pack header that begins 8 bytes before the 1 MiB border; <code>byte[]</code> and data stream must deliver the same.</li>
+  <li><b>Branches (2026-10-26):</b> <code>ps.Stromzweigprobe</code> builds an MPEG-2 program stream with stuffing bytes, time stamps, a jump of ten seconds and all substream kinds, an MPEG-1 system stream with presentation and decoding stamps, and for <code>Elementarstrom</code> and <code>Tonauszug</code> streams in which a pack header (MPEG-1, MPEG-2 with stuffing, only the start code) or a packet header reaches exactly across the 1 MiB border.</li>
 </ul>
 
 <h2 id="grenzen">Limits</h2>

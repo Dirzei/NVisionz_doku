@@ -351,7 +351,8 @@ aktuell ← leer
 <p>Bewegungsvektoren werden <b>nicht</b> geraten: Das wäre der nächste Schritt und braucht die Vektoren der Nachbarn; ohne Beleg, dass es besser wird, wäre es nur teurer.</p>
 
 <h3>Pseudocode – <code>Dekoder.verdecken()</code></h3>
-<pre class="pseudo"><b>wenn</b> nicht fehlerverdeckung <b>oder</b> nicht verdeckbar <b>oder</b> kein offenes Bild: <b>zurück</b>
+<pre class="pseudo"><b>wenn</b> nicht fehlerverdeckung <b>oder</b> nicht verdeckbar <b>oder</b> kein offenes Bild
+        <b>oder</b> das Bild begann unter einer anderen Bildgröße: <b>zurück</b>
 quelle ← <b>wenn</b> rueckwaerts ≠ leer <b>dann</b> rueckwaerts <b>sonst</b> vorwaerts
 wieviele ← 0
 <b>für jede</b> Makroblocklage (zeile, spalte) <b>mit</b> geschrieben[lage] = falsch:
@@ -367,14 +368,15 @@ wieviele ← 0
 <div class="hinweis"><b>Festlegung im Framework:</b> Verdeckt wird nur auf Wunsch, und alles Verdeckte wird gezählt. Ein verdecktes Bild ist damit nie stillschweigend ein „gutes“ Bild; wer restauriert, weiß, welche Teile Beobachtung und welche Ersatz sind.</div>
 
 <h2 id="pruefung">Wie geprüft wird</h2>
-<p>Die <code>Dekoderprobe</code> (605 Prüfungen laut Modulbeschreibung) sichert die Bausteine mit geschlossen berechenbaren Ankern; die <code>Sequenzkopfgrenzprobe</code> prüft das Überspringen übergroßer Sequenzköpfe, mit einer Gegenprobe ohne die Grenze, die rot wird. Ungeprüft bleibt laut Modulbeschreibung alles oberhalb der Bausteine gegen einen zweiten Dekoder: der Zusammenbau ganzer Bilder, die Umsortierung, die Bezugsbildhaltung über eine Bildgruppe, Halbbild- und Zweifachvorhersage, Skalierbarkeit, Datenaufteilung und die Fehlerverdeckung. Gegen ffmpeg liegen die Bilder bei 69,7 bis 76,4 dB (I 76,0–76,4, P 69,7–75,0, B 72,9–74,6); ein Bildvergleich gegen die normative Referenzsoftware steht aus.</p>
+<p>Die <code>Dekoderprobe</code> (605 Prüfungen laut Modulbeschreibung) sichert die Bausteine mit geschlossen berechenbaren Ankern; die <code>Sequenzkopfgrenzprobe</code> prüft das Überspringen übergroßer Sequenzköpfe, mit einer Gegenprobe ohne die Grenze, die rot wird. Seit 2026-10-26 dekodiert die <code>Dekoderzweigprobe</code> ganze Ströme eines kleinen Kodierers der Probe und vergleicht mit von Hand gerechneten Werten: Ausgabe in Anzeigereihenfolge, das Fenster mit Wachstum, das Warten auf den Sequenzkopf, beide Arten der Verdeckung samt Abschalten, Datenaufteilung (zwei Teilströme ergeben dieselben Bilder wie der ungeteilte Strom) und die Erweiterungen. Gegen einen zweiten Dekoder ungeprüft bleibt weiter der Vergleich an echtem Material. Gegen ffmpeg liegen die Bilder bei 69,7 bis 76,4 dB (I 76,0–76,4, P 69,7–75,0, B 72,9–74,6); ein Bildvergleich gegen die normative Referenzsoftware steht aus.</p>
 
 <h2 id="grenzen">Grenzen</h2>
 <ul>
   <li>Die Ausgabe hängt an richtig erkannten Bildarten und Startcodes; ein Strom ohne Sequenzkopf lässt sich erst ab dem nächsten dekodieren (<code>abSequenzkopf</code>).</li>
   <li>Ein B-Bild ohne beide Bezugsbilder und ein P-Bild ohne vorwärtiges lassen sich nicht dekodieren.</li>
   <li>Die Verdeckung ist ein Ersatz, keine Rekonstruktion: Sie ist gut bei ruhiger Kamera und schlecht bei Bewegung.</li>
-  <li>Skalierbare Ströme werden erkannt, nicht dekodiert.</li>
+  <li>Skalierbare Ströme werden erkannt, nicht dekodiert; bei Datenaufteilung wird der zweite Teilstrom gelesen, wenn er übergeben wird. Wie dessen Slice-Köpfe gebaut sind (Prioritätspunkt, Stufe, Zusatzbyte), folgt dem Quelltext; gegen einen fremden geteilten Strom ist das nicht geprüft (<i>Vorbehalt</i>).</li>
+  <li>Halbbildbilder werden nicht verdeckt, ebenso wenig ein Bild, das vor einem Sequenzkopf begann, der die Bildgröße änderte.</li>
 </ul>
 
 <footer>

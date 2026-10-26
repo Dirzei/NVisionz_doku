@@ -180,6 +180,8 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="starten.html">Kerne starten und warten</a>
 <a class="rubrik" href="index.html#neuerkern">Einen eigenen Kern schreiben</a>
 <a class="unterseite" href="anleitung.html">Einen Kern schreiben</a>
+<a class="rubrik" href="index.html#abstimmung">Abstimmung je Grafikeinheit</a>
+<a class="unterseite" href="abstimmung.html">Abstimmung je Grafikeinheit</a>
 <a class="rubrik" href="index.html#module">Die Module</a>
 </div>
 <div class="gruppe">Lernen und Suchen</div>
@@ -327,9 +329,12 @@ Abhängigkeiten zwischen Starts. Der Weg bis zum ersten Kern ist kurz.</p>
 <h3>Pseudocode – Gerät öffnen (<code>OpenCl.oeffne</code>, einmal je JVM)</h3>
 <pre class="pseudo"><b>wenn</b> -Denvisionz.opencl=aus:  <b>gib zurück</b> null       <i>grund() sagt es</i>
 typ ← GPU;  <b>wenn</b> -Denvisionz.opencl.alle=ja:  typ ← alle    <i>auch CPU-Geräte, für Proben</i>
-<b>für jede</b> Plattform p (clGetPlatformIDs):
-    <b>wenn</b> p hat ein Gerät vom typ:  gerät ← das erste;  <b>verlasse</b>
-<b>wenn</b> kein gerät:  <b>wirf</b> "kein OpenCL-Grafikgeraet"
+liste ← alle Geräte vom typ aus allen Plattformen (clGetPlatformIDs, clGetDeviceIDs)
+<b>wenn</b> liste leer:  <b>wirf</b> "kein OpenCL-Grafikgeraet"
+<b>wenn</b> -Denvisionz.opencl.geraet=V:  gerät ← das erste, dessen Name V enthält (V Zahl: Stelle in der liste)
+                                     <i>passt keines: Fehler mit der liste</i>
+<b>sonst</b>:  gerät ← das erste ohne gemeinsamen Speicher mit der CPU    <i>eigene Karte vor Prozessorgrafik</i>
+       (CL_DEVICE_HOST_UNIFIED_MEMORY), sonst das erste
 kontext ← clCreateContext(gerät)
 <b>gib zurück</b> Geraet(gerät, kontext, Name)</pre>
 <h3>Pseudocode – ein Kern rechnet</h3>
@@ -354,7 +359,8 @@ Rechen-Shader in einer Rechen-Pipeline, gestartet mit <code>vkCmdDispatch</code>
 <pre class="pseudo">instanz ← vkCreateInstance(API 1.1)
 beste ← keines
 <b>für jedes</b> physische Gerät d:
-    rang ← diskret 0, integriert 1, virtuell 2, CPU 3 (nur mit .alle=ja), sonst abgelehnt
+    <b>wenn</b> -Denvisionz.vulkan.geraet=V <b>und</b> d passt nicht (Name enthält V, oder Stelle V):  <b>weiter</b>
+    rang ← diskret 0, integriert 1, virtuell 2, CPU 3 (mit .alle=ja oder ausdrücklich gewählt), sonst abgelehnt
     familie ← erste Warteschlangenfamilie mit COMPUTE
     <b>wenn</b> abgelehnt <b>oder</b> keine familie <b>oder</b> Fassung &lt; 1.1:  Grund merken;  <b>weiter</b>
     <b>wenn</b> rang besser:  beste ← d
