@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measuring and training – against a ground truth – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<a class="eintrag" href="../usb/index.html">framework-usb</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag aktiv" href="index.html">app-pdfdigitizer</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#zweck">What the app is for</a>
+<a class="rubrik" href="index.html#funktionen">What it can do</a>
+<a class="unterseite" href="bedienung.html">How to use</a>
+<a class="rubrik" href="index.html#daten">Data and formats</a>
+<a class="rubrik" href="index.html#aufbau">What it is built on</a>
+<a class="rubrik" href="index.html#hintergrund">How the app computes</a>
+<a class="unterseite" href="bildvorbereitung.html">Preparing the page image</a>
+<a class="unterseite" href="gitter.html">Table grid</a>
+<a class="unterseite aktiv" href="messen.html">Measuring and training</a>
+<a class="unterseite" href="pruefungen.html">Checking read cells</a>
+<a class="rubrik" href="index.html#stand">Status and limits</a>
+</div>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">app-pdfdigitizer</a> › Measuring and training – against a ground truth</span><a class="sprachwahl" href="../../de/app-pdfdigitizer/messen.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-app-pdfdigitizer · cmd.pdfdigitizer · envisionz-framework-ocr</div>
+  <h1>Measuring and training – against a ground truth</h1>
+  <p class="unter">The computation behind <code>Tabellenmessung</code>, <code>Vergleich</code>, <code>Tafelernte</code> and <code>Tabellentraining</code>: how generated tables with known content are made, how a read table of a different shape is aligned with its ground truth, which numbers count – above all “confidently wrong” – and how training characters are harvested from the same tables – with pseudocode after the source, a worked example, verification and limits.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>An improvement to the reading path is only one if it is measured. Measuring is only possible against a <b>ground truth</b>: a table whose content is known cell by cell. Real scans have none; typing them in would be expensive and error-prone itself. So <code>framework-ocr</code> generates tables: numbers in the manner of technical tables, set in free fonts, rasterised at a chosen resolution and aged like a scan. Each PDF comes with a ground-truth file. The measurement run reads the PDF on <b>the same path</b> as the read card and compares.</p>
+<table>
+  <tr><th>Step</th><th>Class</th><th>what</th></tr>
+  <tr><td>generate tables</td><td><code>Tafelgenerator</code>, <code>Alterung</code></td><td>content, style (font, size, resolution, rules), ageing: skew, blur, noise, specks, fax, JPEG; same seed, same image</td></tr>
+  <tr><td>read</td><td><code>Tabellenlesen</code></td><td>the reading path of a scanned page in one call, as in the app</td></tr>
+  <tr><td>compare</td><td><code>Vergleich</code></td><td>align rows and cells, count</td></tr>
+  <tr><td>report</td><td><code>Messbericht</code></td><td>totals by feature, confusions – <b>without</b> cell text</td></tr>
+  <tr><td>train</td><td><code>Tafelernte</code>, <code>Tabellentraining</code></td><td>labelled characters from tables with the right shape, model</td></tr>
+</table>
+<p>The report contains no cell text, so a measurement on someone else's data can be passed on without passing on the data.</p>
+
+<figure>
+<svg viewBox="0 0 640 210" width="640" height="210" role="img" aria-label="Aligning rows and cells of different shape">
+  <g font-size="12">
+    <text x="20" y="22" fill="#1f5f8b">ground truth</text><text x="360" y="22" fill="#9a6400">read</text>
+    <g fill="#e8f0f6" stroke="#1f5f8b">
+      <rect x="20" y="35" width="70" height="26"/><rect x="90" y="35" width="70" height="26"/><rect x="160" y="35" width="70" height="26"/>
+      <rect x="20" y="95" width="70" height="26"/><rect x="90" y="95" width="70" height="26"/><rect x="160" y="95" width="70" height="26"/>
+    </g>
+    <g fill="#5b6475"><text x="30" y="53">16500</text><text x="100" y="53">86.8</text><text x="170" y="53">1166</text><text x="30" y="113">17000</text><text x="100" y="113">87.9</text><text x="170" y="113">1180</text></g>
+    <g fill="#ffffff" stroke="#9a6400">
+      <rect x="360" y="35" width="60" height="26"/><rect x="420" y="35" width="50" height="26"/><rect x="470" y="35" width="40" height="26"/><rect x="510" y="35" width="60" height="26"/>
+      <rect x="360" y="65" width="210" height="26" stroke-dasharray="4 3"/>
+      <rect x="360" y="95" width="60" height="26"/><rect x="420" y="95" width="90" height="26"/><rect x="510" y="95" width="60" height="26"/>
+    </g>
+    <g fill="#5b6475"><text x="368" y="53">16500</text><text x="428" y="53">86</text><text x="478" y="53">.8</text><text x="518" y="53">1166</text><text x="420" y="83">speck row</text><text x="368" y="113">17000</text><text x="428" y="113">87.9</text><text x="518" y="113">1180</text></g>
+    <g stroke="#5b6475" stroke-width="1"><path d="M230 48 C290 48 300 48 360 48"/><path d="M230 108 C290 108 300 108 360 108"/></g>
+    <text x="20" y="160" fill="#5b6475">Rows are aligned (Needleman–Wunsch), the speck row stays without a partner (extra);</text>
+    <text x="20" y="178" fill="#5b6475">within each row pair the cells likewise: 86.8 ↔ 86 (wrong), “.8” extra.</text>
+  </g>
+</svg>
+<figcaption>A read table often has a different shape than its ground truth. So cells are not compared at the same position (r, c) but after an alignment.</figcaption>
+</figure>
+
+<h2 id="vergleich">Aligning: Needleman–Wunsch twice</h2>
+<p>One row too many, a cell broken in two, two columns in one – after such a fault every comparison at fixed positions is off, and a single shape error would count as hundreds of wrong cells. So the <b>rows</b> of the ground truth are first aligned with those of the reading, then the <b>cells</b> within each row pair, both with the recursion of Needleman and Wunsch:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></msub><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><mi>k</mi><mo stretchy="false">(</mo><msub><mrow><mi>a</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>,</mo><msub><mrow><mi>b</mi></mrow><mrow><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>j</mi></mrow></msub><mo>+</mo><mi mathvariant="normal">λ</mi><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo><mi mathvariant="normal">λ</mi><mo stretchy="false">)</mo><mo>,</mo><mspace width="2em"/><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mn>0</mn></mrow></msub><mo>=</mo><mi>i</mi><mi mathvariant="normal">λ</mi><mo>,</mo><mspace width="0.3333em"/><msub><mrow><mi>D</mi></mrow><mrow><mn>0</mn><mo>,</mo><mi>j</mi></mrow></msub><mo>=</mo><mi>j</mi><mi mathvariant="normal">λ</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">D_{i,j} = \min\big(D_{i-1,j-1} + k(a_i, b_j),\ D_{i-1,j} + \lambda,\ D_{i,j-1} + \lambda\big), \qquad D_{i,0} = i\lambda,\ D_{0,j} = j\lambda.</annotation></semantics></math></p>
+<p>The gap cost is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">λ</mi><mo>=</mo><mn>0.55</mn></mrow><annotation encoding="application/x-tex">\lambda = 0.55</annotation></semantics></math> (0 for empty cells). The cost of matching two cells is the edit distance relative to the longer one,</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>k</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mi>lev</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false">)</mo></mrow><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mo>|</mo><mi>x</mi><mo>|</mo><mo>,</mo><mo>|</mo><mi>y</mi><mo>|</mo><mo stretchy="false">)</mo></mrow></mfrac><mo>∈</mo><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false">]</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">k(x, y) = \frac{\operatorname{lev}(x, y)}{\max(|x|, |y|)} \in [0, 1],</annotation></semantics></math></p>
+<p>that of two rows the result of the cell alignment divided by the larger number of non-empty cells. Because any match costs at most 1 and two gaps 1.1, a wrong match is preferred to a double omission: a misread cell stays one wrong cell and does not break into a missing and an extra one.</p>
+<p>The traceback compares floating-point sums for equality. So the border values are accumulated (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>,</mo><mn>0</mn></mrow></msub><mo>=</mo><msub><mrow><mi>D</mi></mrow><mrow><mi>i</mi><mo>−</mo><mn>1</mn><mo>,</mo><mn>0</mn></mrow></msub><mo>+</mo><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">D_{i,0} = D_{i-1,0} + \lambda</annotation></semantics></math>) rather than computed as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>i</mi><mi mathvariant="normal">λ</mi></mrow><annotation encoding="application/x-tex">i\lambda</annotation></semantics></math> – in floating point that is not always the same, and the traceback then found no step.</p>
+
+<h2 id="zahlen">What is counted</h2>
+<table>
+  <tr><th>Number</th><th>Meaning</th></tr>
+  <tr><td>shape right</td><td>row and column counts match</td></tr>
+  <tr><td>numbers exact</td><td>share of the ground-truth numbers read correctly character by character</td></tr>
+  <tr><td><b>confidently wrong</b></td><td>read, wrong, <b>not</b> marked – goes into the data unseen</td></tr>
+  <tr><td>uncertain wrong</td><td>wrong and marked – a hit of the checks</td></tr>
+  <tr><td>false alarm</td><td>right and marked anyway – costs review time</td></tr>
+  <tr><td>missing, extra</td><td>cells without a partner</td></tr>
+  <tr><td>CER</td><td>edit distance of all cells over the characters of the ground truth; missing and extra cells in full</td></tr>
+  <tr><td>confusions</td><td>per character pair <code>truth→read</code>, only in cells differing by at most half their length</td></tr>
+</table>
+<p>The most important number is <b>confidently wrong</b>. An empty or marked cell is seen by the user; a confidently wrong one is not. Cells are compared after trimming spaces at the edges; one inside remains an error (31 .5 against 31.5).</p>
+<p>A merged cell carries its value in the top row of the ground truth; in print it stands centred. If the cell is as tall as the others, the reader cannot see the merge and delivers the value in a middle row. With equal row counts it is moved up and counted separately – after all it was read correctly.</p>
+
+<h2 id="ernte">Harvesting training characters</h2>
+<p>A model reads best the typeface it was trained on; a network trained on system fonts reached 100 % on its training data and was no better than template matching on a scan. The generated tables supply characters that have passed exactly through the reading path – skew, specks, grid, crop, the model's splitter – together with their labels from the ground truth. Harvesting is careful:</p>
+<ul>
+  <li>only from pages whose shape matches the ground truth – otherwise the cells belong to wrong values;</li>
+  <li>only cells whose number of split characters equals the character count of the ground truth without spaces – otherwise the character-to-character assignment is unknown, and the cell is discarded;</li>
+  <li>no merged cells.</li>
+</ul>
+<p>For each character a sample of at most <code>-hoechstens:</code> patterns is kept (default 3000), evenly over all pages: the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math>-th pattern of a character replaces a random one of the <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math> kept with probability <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo>/</mo><mi>n</mi></mrow><annotation encoding="application/x-tex">H/n</annotation></semantics></math> (reservoir sampling, fixed seed). Rare characters are repeated at most eight times; more and the network memorised instead of generalising. Single characters drawn from the free training fonts and stroke digits are added.</p>
+<h3>Pseudocode – measurement run</h3>
+<pre class="pseudo"><b>for</b> each page with ground truth:
+    image ← page image;  <b>if</b> none (typeset page):  report, continue
+    table, types ← read(image, model, settings as on the read card)
+    m ← compare(ground truth, table.text, table.uncertain)
+    one line per page: shape, numbers exact, confidently wrong, missing, CER
+totals, confusions; report without cell text</pre>
+
+<h2 id="beispiel">Worked example</h2>
+<ul>
+  <li><b>Cell cost:</b> 86.8 against 88.8 – one character of four, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>0.25</mn></mrow><annotation encoding="application/x-tex">k = 0.25</annotation></semantics></math>. 103.75 against 10175 – two edits (3→1, point missing) of six, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>0.333</mn></mrow><annotation encoding="application/x-tex">k = 0.333</annotation></semantics></math>; counted as confusions 3→1 and .→∅.</li>
+  <li><b>Broken cell:</b> ground truth 16500 | 86.8 | 1166, read 16500 | 86 | .8 | 1166. Best alignment: 86.8 to 86 (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>2</mn><mo>/</mo><mn>4</mn><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">k = 2/4 = 0.5</annotation></semantics></math>), “.8” as a gap (0.55); row cost <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0.5</mn><mo>+</mo><mn>0.55</mn><mo stretchy="false">)</mo><mo>/</mo><mn>4</mn><mo>=</mo><mn>0.263</mn></mrow><annotation encoding="application/x-tex">(0.5 + 0.55)/4 = 0.263</annotation></semantics></math>. Counted: one wrong, one extra, two right cells.</li>
+  <li><b>CER:</b> three character errors with 47 ground-truth characters – 6.4 %.</li>
+</ul>
+<p class="quelle">Recomputed in <code>docs/theorie/rechnung/pdfdigitizer_messen.py</code> (standard library only).</p>
+
+<h2 id="pruefung">Verification</h2>
+<p>The comparison is tested on small tables with known results: equal, misread, marked, one row too many, one row and one column too few, edges, merged cells, nothing recognised, 40 rows against one. The measurement run reads three generated pages at 100 %, a wrong value in the ground truth arrives as exactly one more confidently wrong cell, and the report contains no cell text. Harvesting takes exactly the characters of the ground truth, nothing when the shape is wrong, and discards a cell with the wrong character count.</p>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Generated tables are as close to real scans as the ageing goes; they do not reproduce a foreign typeface. A model that does well on the tables is therefore not automatically good on a scan in another face.</li>
+  <li>The alignment minimises cost; with two equally good alignments, the order of the traceback decides.</li>
+  <li>Confusions in heavily changed cells are not counted – there it is a shape error.</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>
