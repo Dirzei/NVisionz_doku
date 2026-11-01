@@ -262,7 +262,7 @@ instead of being half compiled. About 1,900 lines of Java, without dependencies.
   <rect x="510" y="30" width="120" height="56" rx="6" fill="#e8f0f6" stroke="#1f5f8b"/><text x="570" y="54" text-anchor="middle" fill="#1f5f8b">generator</text><text x="570" y="72" text-anchor="middle" fill="#1f5f8b" font-size="11">one module per kernel</text>
   <rect x="510" y="130" width="120" height="56" rx="6" fill="#1f5f8b"/><text x="570" y="154" text-anchor="middle" fill="#ffffff">SPIR-V words</text><text x="570" y="172" text-anchor="middle" fill="#ffffff" font-size="11">+ parameters</text>
   <rect x="135" y="130" width="350" height="56" rx="6" fill="#ffffff" stroke="#c9d1dc"/>
-  <text x="310" y="152" text-anchor="middle" fill="#5b6475">errors with line: recursion, float, structs, #if,</text>
+  <text x="310" y="152" text-anchor="middle" fill="#5b6475">errors with line: recursion, half, structs, #if,</text>
   <text x="310" y="170" text-anchor="middle" fill="#5b6475">unknown function, pointer to pointer …</text>
   <g stroke="#5b6475" stroke-width="1.3" fill="none" marker-end="url(#pu)">
     <line x1="110" y1="58" x2="133" y2="58"/><line x1="235" y1="58" x2="258" y2="58"/><line x1="360" y1="58" x2="383" y2="58"/><line x1="485" y1="58" x2="508" y2="58"/>
@@ -276,12 +276,12 @@ instead of being half compiled. About 1,900 lines of Java, without dependencies.
 <h2 id="umfang">Language subset</h2>
 <table>
   <tr><th>Area</th><th>compiled</th><th>rejected</th></tr>
-  <tr><td>preprocessor</td><td><code>#define</code> with and without parameters, <code>#undef</code>, <code>#pragma</code> (skipped)</td><td><code>#if</code>, <code>#include</code></td></tr>
-  <tr><td>types</td><td><code>int</code>, <code>double</code>, <code>bool</code>, <code>void</code>; fixed-size arrays (private or <code>__local</code>)</td><td><code>float</code>, structs, pointer to pointer, multi-dimensional arrays</td></tr>
-  <tr><td>kernel parameters</td><td><code>__global [const] double*</code>/<code>int*</code> (buffers), <code>[const] int</code>/<code>double</code> (numbers)</td><td>images, samplers</td></tr>
+  <tr><td>preprocessor</td><td><code>#define</code> with and without parameters, <code>#undef</code>, <code>#ifdef</code>/<code>#ifndef</code>/<code>#else</code>/<code>#endif</code> (since VU4), <code>#pragma</code> (skipped)</td><td><code>#if</code>, <code>#elif</code>, <code>#include</code></td></tr>
+  <tr><td>types</td><td><code>int</code>, <code>double</code>, <code>bool</code>, <code>void</code>; since VU4 also <code>float</code> (with <code>1.5f</code>) and <code>size_t</code> (as 32-bit int); fixed-size arrays in one or two dimensions (private or <code>__local</code>, two-dimensional stored flat), single <code>__local</code> values; pointers into a buffer as local variables (<code>__global float* p = P + o;</code>, also <code>A += o</code> on a buffer parameter)</td><td><code>half</code>, vector types, structs, pointer to pointer, arrays with three or more dimensions</td></tr>
+  <tr><td>kernel parameters</td><td><code>__global [const] double*</code>/<code>float*</code>/<code>int*</code> (buffers), <code>[const] int</code>/<code>float</code>/<code>double</code> (numbers)</td><td>images, samplers</td></tr>
   <tr><td>statements</td><td>if/else, for, while, do, break, continue, return, blocks</td><td>switch, goto, comma operator</td></tr>
   <tr><td>expressions</td><td>arithmetic, comparisons, bit operations, <code>&amp;&amp;</code>, <code>||</code>, <code>?:</code>, compound assignments, ++/--, casts</td><td>strings</td></tr>
-  <tr><td>built-ins</td><td><code>get_global_id</code>, <code>get_local_id</code>, <code>get_group_id</code>, <code>get_local_size</code>, <code>barrier</code>, <code>sqrt</code>, <code>fabs</code>, <code>fmin</code>, <code>fmax</code>, <code>isnan</code>, <code>isinf</code>, <code>signbit</code>, <code>min</code>/<code>max</code> (int), <code>atomic_min/max/add</code>, <code>DBL_MAX</code>, <code>INT_MAX</code>, <code>M_PI</code></td><td>everything else (such as <code>cbrt</code>, <code>exp</code>)</td></tr>
+  <tr><td>built-ins</td><td><code>get_global_id</code>, <code>get_local_id</code>, <code>get_group_id</code>, <code>get_local_size</code>, <code>barrier</code>, <code>sqrt</code>, <code>fabs</code>, <code>fmin</code>, <code>fmax</code>, <code>isnan</code>, <code>isinf</code>, <code>signbit</code>, <code>min</code>/<code>max</code> (int), <code>atomic_min/max/add</code>, <code>DBL_MAX</code>, <code>INT_MAX</code>, <code>M_PI</code>; since VU4 <code>exp</code>, <code>log</code> (float only), <code>get_global_size</code>, <code>get_num_groups</code>, <code>INFINITY</code>, <code>NAN</code>, <code>FLT_MAX</code>; <code>sqrt</code>, <code>fabs</code>, <code>fmin</code>, <code>fmax</code>, <code>isnan</code>, <code>isinf</code>, <code>signbit</code> with a float argument in float. Work-groups in up to three axes (<code>uebersetzeAchsen</code>)</td><td>everything else (such as <code>cbrt</code>, <code>exp</code> on double – VU5)</td></tr>
   <tr><td>functions</td><td>helper functions with value and pointer parameters</td><td>recursion, forward declarations</td></tr>
 </table>
 
@@ -405,9 +405,11 @@ loop. A counter-probe guards this order.</p>
   <tr><td>CL-02</td><td>a kernel with all language features over 5,000 values, result bit-identical to the same computation in Java</td></tr>
   <tr><td>CL-03</td><td>local sum with barrier and <code>atomic_min</code></td></tr>
   <tr><td>CL-04</td><td>division and square root in double: bit-identical on the CPU emulation, reported in ULP on a card</td></tr>
-  <tr><td>CL-05</td><td>eight error cases with the right line: recursion, float number, struct, unknown function, buffer in the wrong memory space, <code>min</code> on double, pointer to pointer, <code>#if</code></td></tr>
+  <tr><td>CL-05</td><td>eight error cases with the right line: recursion, <code>half</code> (a float number before VU4), struct, unknown function, buffer in the wrong memory space, <code>min</code> on double, pointer to pointer, <code>#if</code></td></tr>
+  <tr><td>VF-01 to VF-05</td><td>since VU4 (<code>Floatprobe</code>): float kernels without the Float64 capability, work-groups per axis; float against Java – <code>+ − *</code>, conversions, bit assignments bit-identical, division, square root, <code>exp</code>, <code>log</code> in ULP within the bounds of the Vulkan specification (on the Arc 140V 1, 1, 18 and 43 ULP); 8 × 8 tile with a two-dimensional <code>__local</code> array; pointers with offset; three axes; nine error cases</td></tr>
+  <tr><td>SA-01 to SA-04</td><td>since VU4 (<code>Spirvabdruckprobe</code> in framework-cfd-vulkan): the SPIR-V of all 24 CFD kernels byte for byte as recorded – the language extension did not change them</td></tr>
   <tr><td>counter-probes</td><td>nine: <code>&amp;&amp;</code> swapped, without <code>NoContraction</code>, remainder as <code>OpSMod</code>, <code>OpPhi</code> swapped, <code>signbit</code> from the lower word, int to double unsigned, loop swapped, silent recursion, macro argument not substituted</td></tr>
-  <tr><td>application</td><td>all 22 kernels of the CFD step and the 2 of the residual give valid SPIR-V; the whole step via Vulkan is bit-identical to the CPU on the CPU emulation</td></tr>
+  <tr><td>application</td><td>all 22 kernels of the CFD step and the 2 of the residual give valid SPIR-V; the whole step via Vulkan is bit-identical to the CPU on the CPU emulation. Since VU4 all 35 kernels of the training step compile as well (without the two Intel XMX kernels); on the Arc 140V <code>gemm_r</code> (all four transpose cases), <code>rms_vor_g</code>, <code>ce</code>, <code>att_softmax</code>, <code>flash_vor</code> and <code>adam</code> compute via Vulkan as via OpenCL within at most 1.7e-7 relative</td></tr>
 </table>
 
 </div>

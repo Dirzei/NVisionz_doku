@@ -265,6 +265,22 @@ hängt an der Zahl der Register, der Größe des lokalen Speichers, der Breite d
 in derselben Reihenfolge wie im bisherigen Kern (k aufsteigend); mit 16, 16, 4, 4, 16 ist es genau der bisherige Registerkern.</p>
 <pre class="pseudo">global(M, N) = ( ⌈N / (tx·rn)⌉ · tx ,  ⌈M / (ty·rm)⌉ · ty )      lokal = (tx, ty)
 lokaler Speicher = 4 · rk · ((ty·rm + 4) + (tx·rn + 4)) Byte          <i>+4 Spalten gegen Bankkonflikte</i></pre>
+<h3>Zusätze</h3>
+<p>Drei Zusätze werden als Endung in fester Reihenfolge angehängt, etwa <code>t16x16r8x8k16vds4</code>:</p>
+<table>
+  <tr><th>Zusatz</th><th>Wirkung</th><th>Bedingung</th></tr>
+  <tr><td><code>v</code></td><td>Kacheln mit <code>vload4</code> laden: vier benachbarte Werte je Zugriff, in der Richtung, in der die
+  Matrix im Speicher zusammenhängt; am Rand einzeln</td><td><code>rk</code>, <code>ty·rm</code>, <code>tx·rn</code> durch 4 teilbar</td></tr>
+  <tr><td><code>d</code></td><td>doppelt gepufferter lokaler Speicher: die nächste Kachel wird geladen, während die laufende rechnet;
+  eine Schranke je Kachel statt zwei</td><td>doppelter lokaler Speicher</td></tr>
+  <tr><td><code>s<i>n</i></code></td><td>Teilen in k in höchstens <i>n</i> Stücke (2 bis 16); jedes Stück rechnet in einen
+  Zwischenpuffer, ein zweiter Kern addiert die Stücke der Reihe nach und nimmt <code>β·C</code> dazu</td><td>nur bei langem k, siehe unten</td></tr>
+</table>
+<p><code>v</code> und <code>d</code> ändern die Reihenfolge der Summe nicht – das Ergebnis ist bitgleich zur Form ohne Zusatz.
+Das Teilen lohnt sich bei den schmalen Produkten des Trainings (<code>d × d</code> über alle Token): wenige Blöcke, langes k, die
+Karte bliebe sonst halb leer. Geteilt wird nur dort:</p>
+<pre class="pseudo">teile(M, N, K) = 1                                   <b>wenn</b> K &lt; 2 · max(M, N)
+               = min(n, ⌊K / (4·rk)⌋)               sonst     <i>jedes Stück mindestens vier Kacheln</i></pre>
 <p>Dazu kommen die festen Kerne des Hauptprogramms – <code>register</code> (der Bezug), <code>r84</code>, <code>r48</code>,
 <code>r88</code> – und, wenn der Treiber die herstellereigene Erweiterung für Matrix-Rechenwerke meldet, deren Kerne <code>xmx</code>,
 <code>xmx22</code>, <code>xmx44</code>. Diese rechnen in bf16; mit <code>-Denvisionz.opencl.matrix.bf16=nein</code> bleiben sie draußen.</p>
@@ -300,6 +316,7 @@ lokaler Speicher = 4 · rk · ((ty·rm + 4) + (tx·rn + 4)) Byte          <i>+4 
         <b>wenn</b> f nicht auf das Gerät passt (Fäden, lokaler Speicher): überspringen
         übersetzen, gegen die CPU prüfen, an den drei größten Produkten je einmal messen
     fein ← die sechs schnellsten Formen, je mit rk = 8, 16, 32
+           und mit rk = 16 und den Zusätzen v, d, vd, s4, vds4 (was die Form kann)
            + register, r84, r48, r88 (+ xmx, xmx22, xmx44 mit Matrix-Rechenwerken)
     <b>für jeden</b> Kandidaten in fein:                                         <i>fein</i>
         prüfen; an allen Produkten je drei Runden zu drei Starts, Median

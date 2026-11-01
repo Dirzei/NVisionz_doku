@@ -265,6 +265,22 @@ local memory, the width of subgroups and the driver. So it is measured.</p>
 (k ascending); with 16, 16, 4, 4, 16 it is exactly the previous register kernel.</p>
 <pre class="pseudo">global(M, N) = ( ⌈N / (tx·rn)⌉ · tx ,  ⌈M / (ty·rm)⌉ · ty )      local = (tx, ty)
 local memory = 4 · rk · ((ty·rm + 4) + (tx·rn + 4)) bytes             <i>+4 columns against bank conflicts</i></pre>
+<h3>Options</h3>
+<p>Three options are appended as a suffix in fixed order, e.g. <code>t16x16r8x8k16vds4</code>:</p>
+<table>
+  <tr><th>Option</th><th>Effect</th><th>Condition</th></tr>
+  <tr><td><code>v</code></td><td>load tiles with <code>vload4</code>: four neighbouring values per access, in the direction in which
+  the matrix is contiguous in memory; one by one at the edge</td><td><code>rk</code>, <code>ty·rm</code>, <code>tx·rn</code> divisible by 4</td></tr>
+  <tr><td><code>d</code></td><td>double-buffered local memory: the next tile is loaded while the current one computes; one barrier
+  per tile instead of two</td><td>twice the local memory</td></tr>
+  <tr><td><code>s<i>n</i></code></td><td>split k into at most <i>n</i> pieces (2 to 16); each piece computes into a scratch buffer,
+  a second kernel adds the pieces in order and adds <code>β·C</code></td><td>only for long k, see below</td></tr>
+</table>
+<p><code>v</code> and <code>d</code> do not change the order of the sum – the result is bit-identical to the form without options.
+Splitting pays off for the narrow products of training (<code>d × d</code> over all tokens): few blocks, long k, the device would
+otherwise stay half empty. It splits only there:</p>
+<pre class="pseudo">pieces(M, N, K) = 1                                  <b>if</b> K &lt; 2 · max(M, N)
+                = min(n, ⌊K / (4·rk)⌋)              otherwise  <i>each piece at least four tiles</i></pre>
 <p>In addition come the fixed kernels of the main program – <code>register</code> (the reference), <code>r84</code>, <code>r48</code>,
 <code>r88</code> – and, if the driver reports the vendor's extension for matrix engines, their kernels <code>xmx</code>,
 <code>xmx22</code>, <code>xmx44</code>. They compute in bf16; <code>-Denvisionz.opencl.matrix.bf16=nein</code> leaves them out.</p>
@@ -300,6 +316,7 @@ local memory = 4 · rk · ((ty·rm + 4) + (tx·rn + 4)) bytes             <i>+4 
         <b>if</b> f does not fit the device (threads, local memory): skip
         compile, check against the CPU, measure once on the three largest products
     fine ← the six fastest forms, each with rk = 8, 16, 32
+           and with rk = 16 and the options v, d, vd, s4, vds4 (where the form allows)
            + register, r84, r48, r88 (+ xmx, xmx22, xmx44 with matrix engines)
     <b>for each</b> candidate in fine:                                           <i>fine</i>
         check; on all products three rounds of three launches, median
