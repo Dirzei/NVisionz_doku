@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computing a flow – operation – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<a class="eintrag" href="../usb/index.html">framework-usb</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag aktiv" href="index.html">app-cfd</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#zweck">What the app is for</a>
+<a class="rubrik" href="index.html#funktionen">What it can do</a>
+<a class="unterseite aktiv" href="bedienung.html">Operation</a>
+<a class="rubrik" href="index.html#hintergrund">How the app computes</a>
+<a class="unterseite" href="hintergrund.html">Convergence, comparison, preview</a>
+<a class="rubrik" href="index.html#aufbau">What it builds on</a>
+<a class="rubrik" href="index.html#pruefung">How it is checked</a>
+<a class="rubrik" href="index.html#stand">Status and limits</a>
+</div>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-cfd/index.html">commandline-cfd</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">app-cfd</a> › Computing a flow – operation</span><a class="sprachwahl" href="../../de/app-cfd/bedienung.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-app-cfd · Operation</div>
+  <h1>Computing a flow – operation</h1>
+  <p class="unter">Operating guide, as of 4 November 2026. How to pick a case from the collection, inspect it, set it up and compute it, how to read the history and how to start from a solution. The pictures are screenshots of the app with the supplied case “Keil 15 Grad, Mach 2” (15° wedge at Mach 2).</p>
+</header>
+
+<h2 id="fenster">The window</h2>
+<p class="einl">Open the app from the <i>Applications</i> menu with <i>Compute a flow (CFD)</i> or with <code>Alt</code>+<code>F</code>. It has no pop-up windows; settings sit as cards on the left, feedback in the panel. Only opening and saving files brings up the file chooser.</p>
+<figure><img src="../../bilder/app-cfd/fenster_en.png" alt="The window of the flow app: on the left the vertical bar and the case collection card with the tree of cases, on the right the Case tab with the wedge mesh, its coloured boundaries and the mesh check."><figcaption>Case tab after selecting a case: (1) vertical bar with cards and actions, (2) tree of cases, (3) details of the selected case with its case file, (4) run values of this case, (5) comparison with the reference values, (6) tabs Case and Run, (7) sub-tabs Mesh, Boundary conditions and settings, Result, (8) mesh on the cut with every boundary as a coloured line, (9) mesh check, (10) Load and Load and run.</figcaption></figure>
+<p>The centre has two tabs. <b>Case</b> shows the selected case before anything is computed: the mesh, the boundaries with their meaning, the settings and a stored result. <b>Run</b> shows the current or last run: residuals, field picture and log. Running and “Check mesh” switch to Run by themselves, selecting a case switches to Case.</p>
+<p>The basis is always a <b>case file</b>: a list of switches <code>-name:value</code>, one per line. Each card only sets individual switches. Whatever the app computes, the tool <a href="../cmd-cfd/index.html">cmd.cfd.Stroemung</a> computes the same with the same file.</p>
+
+<h2 id="leiste">The bar</h2>
+<p class="einl">The buttons carry symbols only; what they do is shown in the tooltip. The upper eight select a card, the lower ones trigger an action. While a run is going on, every action except Stop and Save field picture is disabled.</p>
+<table>
+<tr><th>Symbol</th><th>Tooltip</th><th>What happens</th></tr>
+<tr><td><img src="../../bilder/app-cfd/application-sidebar-collapse.png" alt="Bar"></td><td>Show or hide the toolbar</td><td>Hide and show the card; the centre gets the full width.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/document-tree.png" alt="Tree"></td><td>Case collection</td><td>Working directory, tree of cases, run values, comparison.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/weather-wind.png" alt="Wind"></td><td>Case and mesh</td><td>Generate or read a mesh, check it; the case file as text.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/flask.png" alt="Flask"></td><td>Physics</td><td>Free stream, viscosity, turbulence, gas.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/layer-shape-line.png" alt="Line"></td><td>Boundary conditions</td><td>Kind and parameters per boundary.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/gear.png" alt="Gear"></td><td>Numerics</td><td>Solver, spatial discretisation, time-accurate runs.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/arrow-curve.png" alt="Curved arrow"></td><td>Start and restart</td><td>Initial state, starting from a solution.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/chart.png" alt="Bars"></td><td>Run and display</td><td>Steps, convergence target, field picture, iso lines.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/table.png" alt="Table"></td><td>Advanced (all switches)</td><td>Every switch of the solver with explanation and check.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/control.png" alt="Play"></td><td>Run (or continue)</td><td>Computes the case; if it is unchanged, the same solver continues.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/control-stop.png" alt="Stop"></td><td>Stop</td><td>Stops before the next step; continuing is possible.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/arrow-circle-double-135.png" alt="Circular arrows"></td><td>Rebuild (discard the run)</td><td>Discards the solver; the next run starts from scratch.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/folder-open.png" alt="Folder"></td><td>Open case file</td><td>Load a case file from outside the collection.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/disk--arrow.png" alt="Disk with arrow"></td><td>Save case file</td><td>Write the case with all changes as a text file.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/disk.png" alt="Disk"></td><td>Save state (for continuing)</td><td>Write the whole state of the solver.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/disk-return.png" alt="Disk with return arrow"></td><td>Continue from saved state</td><td>Continue bit-identically, as if never interrupted.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/script-export.png" alt="Export"></td><td>Write result as VTK</td><td>The field for ParaView or a later restart.</td></tr>
+<tr><td><img src="../../bilder/app-cfd/picture.png" alt="Picture"></td><td>Save field picture (PNG or SVG)</td><td>The field picture as shown.</td></tr>
+</table>
+
+<h2 id="sammlung">Picking a case from the collection</h2>
+<ol>
+  <li>Open the <b>Case collection</b> card. The working directory is shown at the top; the folder button selects another one, the button next to it searches it again. The default is the supplied collection with the own example cases and the converted cases from m-ACHIEVE.</li>
+  <li>Click a case in the tree. Below appear title, description, tips (highlighted), further details and the case file. The <b>Case</b> tab opens in the centre with the mesh.</li>
+  <li>Under <i>Run of the selected case</i> the maximum number of steps, the residual drop in orders of magnitude and, for time-accurate cases, the end time can be changed. This applies to this case only and only in the app; the case file stays unchanged. The return arrow restores the values of the file.</li>
+  <li><b>Load</b> takes the case into the cards, <b>Load and run</b> computes it immediately; a double click in the tree loads.</li>
+</ol>
+<p>A case is a folder with a case file <code>fall.txt</code> or with an m-ACHIEVE case (<code>achieve.inp</code>). Next to the case file there may be <code>testfall.properties</code>: title, description, tips and the reference values for the comparison. Relative paths in the case file are taken from the case folder.</p>
+<p>After each run of a loaded case the table <i>Comparison with the reference values</i> fills: computed, reference, deviation – for the oblique shock, for example, pressure ratio and Mach number behind the shock against the shock relations. “Compare again” repeats this by hand. Each case in the tree then carries a mark for its last run (converged, not converged, stopped).</p>
+
+<h2 id="vorschau">Looking at the case before computing</h2>
+<p class="einl">The Case tab builds the mesh of the selected case in the background, by itself up to an estimate of 200 000 cells, above that only on the button “Build mesh”.</p>
+<ul>
+  <li><b>Mesh</b> shows the mesh on the cut, coloured by cell volume, with mesh lines. Every boundary meeting the cut is a coloured line with a legend. Below is the mesh check: cells, boundaries, volume, non-orthogonality, skewness, closure, bandwidth.</li>
+  <li><b>Boundary conditions and settings</b> lists the boundaries with their kind and meaning – including what a boundary without a specification becomes (a wall without viscosity a slip wall, with viscosity no-slip) and where a specification is missing. Next to it are the settings by group: mesh, physics, numerics, run, others.</li>
+  <li><b>Result</b> shows a stored result of the case (see <a href="#ablage">storing</a>) with a selectable quantity. If the case has changed since, the header says so in orange. <i>Start from it</i> loads the case and sets the restart to this result.</li>
+</ul>
+
+<h2 id="karten">The cards</h2>
+
+<h3 id="k-fall">Case and mesh</h3>
+<p>Choice of the mesh shape of a built-in generator (wedge, channel, box, cylinder, aerofoil, plate, blade passage and others) with cell counts and dimensions, or a mesh file (Gmsh, PLOT3D, CGNS, an m-ACHIEVE case folder). “Check mesh” builds the mesh, shows it in the field picture and fills the list of boundaries. Below stands the whole case file as text: freely editable, “Apply text” sets it as the case.</p>
+
+<h3 id="k-physik">Physics</h3>
+<div class="gitter">
+<figure><img src="../../bilder/app-cfd/physik_en.png" alt="Physics card with fields for Mach number, angle of attack, pressure, temperature, Reynolds number, turbulence, species, mechanism and real gas."><figcaption>Physics card. Each field names its switch; empty fields show the default in grey.</figcaption></figure>
+<div>
+<p>Mach number and angle of attack of the free stream. Without pressure and temperature the solver computes non-dimensionally, with them in SI units. Without a Reynolds number it solves the Euler equations; with one the Navier-Stokes equations, laminar or with a turbulence model (Spalart-Allmaras, SST, k-ε, Wilcox), optionally with wall functions and transition.</p>
+<p>Species with initial fractions, a combustion mechanism and an equation of state for real gas extend the ideal gas. What they compute is explained on the pages <a href="../cfd/spezies.html">species</a> and <a href="../cfd/raender.html#realgas">real gas</a>.</p>
+<p>The tooltip of each field explains the switch and gives its default.</p>
+</div>
+</div>
+
+<h3 id="k-raender">Boundary conditions</h3>
+<div class="gitter">
+<figure><img src="../../bilder/app-cfd/raender_en.png" alt="Boundary conditions card: at the top the table of boundary and kind, below the boundary editor for the boundary unten with the kind slip wall and its explanation."><figcaption>Boundary conditions card with the boundary <code>unten</code> selected in the boundary editor.</figcaption></figure>
+<div>
+<p>The table lists every boundary of the mesh and its kind. “Boundaries from the mesh” reads the names from the mesh without computing first.</p>
+<p>Below the table is the <b>boundary editor</b>: select a boundary in the list, choose a kind from the catalogue. Below appears the explanation of the kind with its conditions (such as “only with viscosity”) and its notation, then a field per parameter with unit and default. The resulting specification is shown underneath; if it does not fit, it is red with a reason and “Apply” is disabled.</p>
+<p>A specification can also be typed straight into the table; the editor follows. Anything the catalogue does not know stays unchanged as a custom specification. The kinds themselves are described on the page <a href="../cfd/raender.html">boundaries</a>.</p>
+</div>
+</div>
+
+<h3 id="k-verfahren">Numerics</h3>
+<div class="gitter">
+<figure><img src="../../bilder/app-cfd/verfahren_en.png" alt="Numerics card in three sections: solver with time scheme newton and its settings, spatial discretisation, time-accurate runs."><figcaption>Numerics card for the Newton-Krylov method.</figcaption></figure>
+<div>
+<p><b>Solver:</b> the time scheme (explicit, implicit, Newton-Krylov) and the CFL number. Below only what belongs to the chosen solver is shown: explicit the graphics unit; implicit and Newton the highest CFL, the fallback on stagnation and the boundary derivative; Newton in addition the number of GMRES steps, tolerance and preconditioner.</p>
+<p><b>Spatial discretisation:</b> flux function, order, gradients, limiter and its constant.</p>
+<p><b>Time-accurate:</b> with a time step dual time stepping, without it explicit with a global time step up to the end time. Empty means steady.</p>
+<p>The methods are explained on the pages <a href="../cfd/fluss.html">flux</a>, <a href="../cfd/rekonstruktion.html">reconstruction</a> and <a href="../cfd/zeit.html">time</a>.</p>
+</div>
+</div>
+
+<h3 id="k-anfang">Start and restart</h3>
+<div class="gitter">
+<figure><img src="../../bilder/app-cfd/anfang_en.png" alt="Start and restart card: at the top initial state and disturbance, below restart from VTK with the buttons choose VTK file, result of the case, current solution, remove restart."><figcaption>Start and restart card.</figcaption></figure>
+<div>
+<p>The initial state is the free stream or rest, optionally with a disturbance.</p>
+<p>A <b>restart</b> begins the computation on an earlier solution, also on another mesh: density, velocity and pressure are transferred, turbulence starts afresh. The solution comes from a VTK file, from the stored result of the case or from the current run (“Current solution”). A typical use is a first-order start-up, then second order on that solution.</p>
+<p>Continuing exactly is only possible with “Save state” and “Continue from saved state” in the bar: the same case, bit-identical, including turbulence.</p>
+</div>
+</div>
+
+<h3 id="k-lauf">Run and display</h3>
+<p>Maximum number of steps and the convergence target in orders of magnitude; how often the field picture is refreshed; the quantity shown, colour scale, iso bands (default 16 levels) or cell colours, iso lines at the band limits, mesh lines; for 3D meshes the cut plane. Under <i>Iso lines of further quantities</i> lines of other quantities can be laid over the colour field, each with levels, colour and optionally values on the lines.</p>
+
+<h3 id="k-erweitert">Advanced</h3>
+<p>The table of all switches set in the case. Below, every switch of the solver can be chosen, with group, explanation, default and allowed values; the value is checked while typing. Switches evaluated only by the command line (such as picture sequences or force histories) are marked as such instead of pretending an effect.</p>
+
+<h2 id="rechnen">Computing and reading the history</h2>
+<figure><img src="../../bilder/app-cfd/rechnung_en.png" alt="Run tab after a converged run: green header, on the left the residual history with a red target line, on the right the Mach number field with the oblique shock, at the bottom the log and the status line; on the left the Run and display card."><figcaption>Run tab after the run: (1) header with the outcome of the run, (2) residual history with the target line, (3) bar next to each chart, (4) quantity in the field picture, (5) field picture, (6) log, (7) Run and display card, (8) iso lines of further quantities, (9) status line.</figcaption></figure>
+<p><b>Run</b> in the bar starts the computation in a thread of its own; the interface stays usable. The residual history grows with every step, the field picture is refreshed at the chosen interval. The dashed red line is the target: the reference residual times ten to the minus number of orders of magnitude.</p>
+<p>The header above the charts tells how the run ended:</p>
+<table>
+<tr><th>Colour</th><th>Outcome</th></tr>
+<tr><td>green</td><td>converged, with residual, number of steps and target; time-accurate: end time reached</td></tr>
+<tr><td>red</td><td>not converged (step limit reached), aborted (no physical state, with reason) or error</td></tr>
+<tr><td>orange</td><td>stopped</td></tr>
+</table>
+<p>After a failed run the symbol of the Run tab is red as well, the log carries a note, and a comparison with the reference values is marked as valid only with reservations.</p>
+<p>If the case is unchanged since the last run, “Run” continues with the same solver and the residual reference is kept. A change on any card rebuilds the case at the next run.</p>
+<p>The bar next to each chart resets the view, zooms in and out, switches the pan mode and pans in four directions. Its last button opens the <i>Axes and titles</i> card on the right: titles, legend, ranges, logarithmic axes.</p>
+
+<h2 id="ablage">Storing and passing on results</h2>
+<ul>
+  <li><b>Storing:</b> when a case of the collection converges or reaches its end time, the app puts <code>ergebnis.vtk</code> and <code>ergebnis.properties</code> (outcome, steps, residual, date, checksum of the switches) into the case folder. The Result sub-tab shows it the next time the case is selected.</li>
+  <li><b>Write VTK</b> puts the result in a freely chosen place, <b>Save field picture</b> the picture as PNG or SVG.</li>
+  <li><b>Save case file</b> writes the case with all changes. With this file <code>cmd.cfd.Stroemung -op:rechne -fall:FILE</code> recomputes the same without a user interface.</li>
+  <li><b>Save state</b> and <b>continue</b> are meant for long runs: interrupt, continue bit-identically later.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>For 3D meshes the app shows a plane cut, not a spatial view.</li>
+  <li>Convergence is relative to the largest residual of the first ten steps. A restart on an already converged solution has a very small reference and usually does not reach further orders of magnitude; the run then ends as “not converged” although it sits on the solution.</li>
+  <li>The log lines written by the solver are in German, as are a few labels taken over from the solver (such as the colour bar of the mesh preview).</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>
