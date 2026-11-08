@@ -196,6 +196,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../media/index.html">framework-media</a>
 <a class="eintrag" href="../video/index.html">framework-video</a>
 <a class="eintrag" href="../restore/index.html">framework-restore</a>
+<a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
 <a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
 <div class="gruppe">Weiteres</div>
 <a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
@@ -231,6 +232,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../cmd-cfd/index.html">commandline-cfd</a>
 <a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
 <a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../cmd-vision/index.html">commandline-vision</a>
 <a class="eintrag" href="../starter/index.html">launcher</a>
 </nav>
 <main class="haupt">
@@ -410,6 +412,17 @@ Grafikeinheit („Zelle 10 bei (0.35, 0.038, 0.05) nach Schritt 0: … CFL senke
 <p>Ein laufend gezeigtes Feld müsste sonst je Bild den ganzen Zustand zur CPU holen. Stattdessen rechnet die CPU einmal einen <code>Bildplan</code>: je Bildpunkt die Zelle des Schnitts, dazu die Zellen, über die die Farbskala läuft. Der Kern <code>bildFarbe</code> schlägt je Bildpunkt die Zelle nach, rechnet die gewählte Größe, bildet die Spanne und färbt nach derselben Formel wie die CPU; zur CPU geht nur noch das fertige Bild. Eine Zelle ohne endlichen Wert wird magenta und zählt nicht zur Skala.</p>
 <p>Damit das etwas nützt, muss der Zustand auf der Karte bleiben. <code>EulerLoeser.halteAufGeraet()</code> legt ihn einmal hinauf; je Schritt läuft nur noch die Norm zurück. Wer die Werte liest, bekommt den Stand des letzten Schritts, danach geht der Zustand wieder hinauf. Geht die Karte verloren, rechnet die CPU ab dem letzten Stand weiter, den sie hatte. Gehalten und ungehalten ergeben dieselbe Rechnung; das Bild zwischen zwei Schritten ändert sie nicht.</p>
 
+<h2 id="farben">LU-SGS nach Farben</h2>
+<p>Der implizite Schritt mit LU-SGS läuft mit <code>-lusgsgrafik:ja</code> ebenfalls auf der Karte, auch als Vorkonditionierer von Newton (<code>-vorkond:lusgs</code>). Die Zellen sind so gefärbt, dass zwei Nachbarn nie dieselbe Farbe tragen. Innerhalb einer Farbe lässt sich dann gleichzeitig rechnen, und die Farben folgen nacheinander. Die Karte rechnet dabei dieselben Schritte in derselben Reihenfolge (Farbe, Zelle) wie der Durchlauf nach Farben auf der CPU. Sie übernimmt nur die lineare Algebra. Ausgangszustand, Spektralradien und Diagonale rechnet die CPU, deshalb passt der Weg zu jeder Physik.</p>
+
+<h2 id="chemie">Chemie je Zelle</h2>
+<p>Mit <code>-chemiegrafik:ja</code> integriert die Karte die steife Chemie jeder Zelle über den Zeitschritt mit RODAS4. Fällt eine Zelle aus dem Rahmen (Temperatur nicht positiv, Schrittgrenze, keine Konvergenz), rechnet sie die CPU, mit derselben Meldung wie ohne Grafikeinheit. Am Ende des Laufs nennt die Zeile <code>Chemie:</code>, wo gerechnet wurde.</p>
+<ul>
+  <li><b>Nicht bitgleich:</b> <code>exp</code>, <code>log</code> und <code>pow</code> rechnet der Kern selbst aus Grundrechenarten, weil Vulkan sie für <code>double</code> nicht kennt. Die Ergebnisse sind deshalb nicht dieselben Bits wie auf der CPU.</li>
+  <li><b>Lohnt erst ab rund tausend Zellen:</b> darunter überwiegt der Aufwand für Start und Übertragung.</li>
+  <li><b>Kalter Start:</b> der erste Übersetzungslauf des Kerns dauert ein bis drei Minuten.</li>
+</ul>
+
 <h2 id="messung">Messung</h2>
 <table>
   <tr><th>Keil Mach 2, Jameson</th><th>CPU (8 Fäden)</th><th>OpenCL</th><th>Vulkan</th></tr>
@@ -427,6 +440,30 @@ Abschicken je Schritt. Vulkan ist in sieben von acht Fällen schneller als OpenC
 ein Abschicken unter Vulkan schwerer als die ganze Rechnung. Die Abweichung zur CPU lag bei beiden um 10<sup>−15</sup> bezogen. Zum Vergleich
 die Messung vor dem Verlegen von Norm und dt ans Ende (zwei Abschicken je Schritt): Vulkan 15,0 statt 14,3 ms bei 80 000 Zellen zweiter
 Ordnung und 62,0 statt 55,4 ms bei 320 000 – die CPU schwankte zwischen den beiden Läufen aber ebenfalls um einige Prozent.</p>
+
+<h3 id="messung-sn30">Feldbild, LU-SGS und Chemie</h3>
+<p>Gemessen auf einer integrierten Arc 140V gegen acht CPU-Fäden (Vulkan), Median aus fünf Runden.</p>
+<table>
+  <tr><th>Keil Mach 2, 2. Ordnung, je Schritt ein Bild 800 × 400</th><th>alles CPU</th><th>Schritt Karte, Bild CPU</th><th>alles Karte</th></tr>
+  <tr><td>5 000 Zellen</td><td>7,65 ms</td><td>4,84 ms</td><td>2,81 ms</td></tr>
+  <tr><td>20 000 Zellen</td><td>25,4 ms</td><td>48,8 ms</td><td>7,53 ms</td></tr>
+  <tr><td>80 000 Zellen</td><td>112 ms</td><td>79,8 ms</td><td>16,5 ms</td></tr>
+  <tr><td>320 000 Zellen</td><td>444 ms</td><td>258 ms</td><td>57,8 ms</td></tr>
+</table>
+<table>
+  <tr><th>LU-SGS nach Farben, implizit, 2. Ordnung</th><th>CPU</th><th>Karte</th><th>Faktor</th></tr>
+  <tr><td>5 000 Zellen</td><td>2,42 ms</td><td>2,98 ms</td><td>0,81×</td></tr>
+  <tr><td>20 000 Zellen</td><td>8,26 ms</td><td>9,28 ms</td><td>0,89×</td></tr>
+  <tr><td>80 000 Zellen</td><td>30,6 ms</td><td>32,4 ms</td><td>0,95×</td></tr>
+  <tr><td>320 000 Zellen</td><td>104 ms</td><td>167 ms</td><td>0,62×</td></tr>
+</table>
+<p><b>Auf dieser Karte ist LU-SGS nach Farben langsamer als die CPU</b> (auch in erster Ordnung, 0,39× bis 0,91×), der Schalter bleibt deshalb von sich aus aus. Eine Karte mit eigenem Speicher ist nicht gemessen.</p>
+<table>
+  <tr><th>Chemie je Zelle, H<sub>2</sub>/O<sub>2</sub>, ruhendes Gemisch 1500 K</th><th>CPU</th><th>Karte</th><th>Faktor</th></tr>
+  <tr><td>512 Zellen</td><td>265 ms</td><td>146 ms</td><td>1,8×</td></tr>
+  <tr><td>2 048 Zellen</td><td>291 ms</td><td>74,0 ms</td><td>3,9×</td></tr>
+  <tr><td>8 192 Zellen</td><td>701 ms</td><td>117 ms</td><td>6,0×</td></tr>
+</table>
 
 <h2 id="pruefung">Wie es geprüft wird</h2>
 <p>Beide Rückenden haben eine Probe mit denselben Fällen: Keil Mach 2 erster Ordnung mit lokalem Zeitschritt, zweiter Ordnung mit
