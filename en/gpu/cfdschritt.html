@@ -334,8 +334,8 @@ ends, and the probe demands a result bit-identical to the CPU via OpenCL as well
   <tr><td><code>gradienten</code></td><td>cell</td><td>least squares or Green-Gauss</td></tr>
   <tr><td><code>bezugTeil</code>, <code>bezugEnde</code></td><td>1024 parts, 1 group</td><td>reference values of the limiter: largest density, velocity plus sound speed, pressure</td></tr>
   <tr><td><code>begrenzer</code></td><td>cell</td><td>Barth-Jespersen or Venkatakrishnan, optionally the velocity as a vector</td></tr>
-  <tr><td><code>flaechen</code> (versions <code>standard</code>, <code>acht</code>, <code>skalar</code>)</td><td>face</td><td>1st/2nd order reconstruction with positivity fallback, Roe with entropy fix, optionally for low Mach number</td></tr>
-  <tr><td><code>zellen</code></td><td>cell</td><td>sum of the fluxes, spectral radius, Coriolis and centrifugal force</td></tr>
+  <tr><td><code>flaechen</code> (versions <code>standard</code>, <code>acht</code>, <code>skalar</code>)</td><td>face</td><td>1st/2nd order reconstruction with positivity fallback, Roe with entropy fix, optionally for low Mach number; laminar viscous adds the viscous flux (Stokes stress, heat flux, face gradient with correction along the cell connection)</td></tr>
+  <tr><td><code>zellen</code></td><td>cell</td><td>sum of the fluxes, spectral radius (viscous with the viscous part), Coriolis and centrifugal force</td></tr>
   <tr><td><code>normquadrate</code>, <code>zeitschritt</code></td><td>cell</td><td>(first residual only) squares for the norm, dt per cell</td></tr>
   <tr><td><code>minTeil</code>, <code>minEnde</code>, <code>fuelle</code></td><td>1024 parts, 1 group, cell</td><td>(global only) smallest dt, to all cells</td></tr>
   <tr><td><code>stufe</code>, <code>stufeSsp</code></td><td>cell</td><td>the stage per Jameson or SSP-RK3</td></tr>
@@ -343,7 +343,8 @@ ends, and the probe demands a result bit-identical to the CPU via OpenCL as well
 </table>
 <p>Every kernel performs the same operations as the Java code in <code>EulerLoeser</code>, <code>Gradienten</code>, <code>Limiter</code>,
 <code>Roe</code> and <code>Gas</code>, in the same order. The face kernels compute the flux for inner faces and device boundaries alike; faces
-computed by the CPU they leave out.</p>
+computed by the CPU they leave out. With viscosity (constant or Sutherland, since 2026-11) the gradients run also at first order, and
+no-slip walls are CPU boundaries: the CPU fetches the gradients of its boundary cells for them.</p>
 
 <h2 id="ablauf">Sequence of a step</h2>
 <h3>Pseudocode – <code>Sitzung.schritt(u, zeit, grenze)</code> (following <code>VulkanSchritt</code>, OpenCL alike)</h3>
@@ -402,6 +403,10 @@ for boundary conditions, and the probe can still check them bit-identically agai
 the session reads <code>schlecht</code>. If a cell is there, <code>schritt</code> returns nothing, the state stays unchanged, and the solver
 computes the same step on the CPU. That produces the same error message with the same cell as without the graphics unit ("Zelle 10 bei
 (0.35, 0.038, 0.05) nach Schritt 0: … CFL senken oder erste Ordnung"); the probe checks exactly that.</p>
+
+<h2 id="bild">The colour image on the card</h2>
+<p>A field shown continuously would otherwise have to bring the whole state to the CPU for every image. Instead the CPU computes an <code>image plan</code> once: for each pixel the cell of the cut, plus the cells the colour scale runs over. The kernel <code>bildFarbe</code> looks up the cell for each pixel, computes the chosen quantity, forms the range and colours by the same formula as the CPU; only the finished image goes to the CPU. A cell without a finite value turns magenta and does not count for the scale.</p>
+<p>For this to pay off, the state has to stay on the card. <code>EulerLoeser.halteAufGeraet()</code> uploads it once; per step only the norm comes back. Whoever reads the values gets the state of the last step, after which the state goes up again. If the card is lost, the CPU continues from the last state it had. Held and not held give the same computation; an image between two steps does not change it.</p>
 
 <h2 id="messung">Measurement</h2>
 <table>

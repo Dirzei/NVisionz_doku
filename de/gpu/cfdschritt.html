@@ -335,8 +335,8 @@ Rückenden vergleichen, und die Probe verlangt auch über OpenCL ein Ergebnis bi
   <tr><td><code>gradienten</code></td><td>Zelle</td><td>kleinste Quadrate oder Green-Gauß</td></tr>
   <tr><td><code>bezugTeil</code>, <code>bezugEnde</code></td><td>1024 Teile, 1 Gruppe</td><td>Bezugsgrößen des Begrenzers: größte Dichte, Geschwindigkeit plus Schall, Druck</td></tr>
   <tr><td><code>begrenzer</code></td><td>Zelle</td><td>Barth-Jespersen oder Venkatakrishnan, wahlweise die Geschwindigkeit als Vektor</td></tr>
-  <tr><td><code>flaechen</code> (Fassungen <code>standard</code>, <code>acht</code>, <code>skalar</code>)</td><td>Fläche</td><td>Rekonstruktion 1./2. Ordnung mit Positivitätsrückfall, Roe mit Entropiekorrektur, wahlweise für kleine Machzahl</td></tr>
-  <tr><td><code>zellen</code></td><td>Zelle</td><td>Summe der Flüsse, Spektralradius, Coriolis und Zentrifugalkraft</td></tr>
+  <tr><td><code>flaechen</code> (Fassungen <code>standard</code>, <code>acht</code>, <code>skalar</code>)</td><td>Fläche</td><td>Rekonstruktion 1./2. Ordnung mit Positivitätsrückfall, Roe mit Entropiekorrektur, wahlweise für kleine Machzahl; laminar zäh dazu der zähe Fluss (Spannung nach Stokes, Wärmestrom, Gradient an der Fläche mit Korrektur entlang der Zellverbindung)</td></tr>
+  <tr><td><code>zellen</code></td><td>Zelle</td><td>Summe der Flüsse, Spektralradius (zäh mit dem zähen Anteil), Coriolis und Zentrifugalkraft</td></tr>
   <tr><td><code>normquadrate</code>, <code>zeitschritt</code></td><td>Zelle</td><td>(nur im ersten Residuum) Quadrate für die Norm, dt je Zelle</td></tr>
   <tr><td><code>minTeil</code>, <code>minEnde</code>, <code>fuelle</code></td><td>1024 Teile, 1 Gruppe, Zelle</td><td>(nur global) kleinstes dt, an alle Zellen</td></tr>
   <tr><td><code>stufe</code>, <code>stufeSsp</code></td><td>Zelle</td><td>die Stufe nach Jameson bzw. SSP-RK3</td></tr>
@@ -344,7 +344,8 @@ Rückenden vergleichen, und die Probe verlangt auch über OpenCL ein Ergebnis bi
 </table>
 <p>Jeder Kern rechnet dieselben Schritte wie die Java-Stellen in <code>EulerLoeser</code>, <code>Gradienten</code>, <code>Limiter</code>,
 <code>Roe</code> und <code>Gas</code>, in derselben Reihenfolge. Die Flächenkerne berechnen für Innen- und Geräteränder zugleich den
-Fluss; Flächen, die die CPU rechnet, lassen sie aus.</p>
+Fluss; Flächen, die die CPU rechnet, lassen sie aus. Mit Zähigkeit (konstant oder nach Sutherland, seit 2026-11) laufen die Gradienten
+auch erster Ordnung, und haftende Wände sind CPU-Ränder: die CPU holt dafür die Gradienten ihrer Randzellen.</p>
 
 <h2 id="ablauf">Ablauf eines Schritts</h2>
 <h3>Pseudocode – <code>Sitzung.schritt(u, zeit, grenze)</code> (nach <code>VulkanSchritt</code>, OpenCL gleich)</h3>
@@ -404,6 +405,10 @@ zweiter Code für Randbedingungen, und die Probe kann sie trotzdem bitgleich geg
 anfangen könnte – liest die Sitzung <code>schlecht</code>. Steht dort eine Zelle, gibt <code>schritt</code> nichts zurück, der Zustand
 bleibt unverändert, und der Löser rechnet denselben Schritt auf der CPU. So entsteht dieselbe Fehlermeldung mit derselben Zelle wie ohne
 Grafikeinheit („Zelle 10 bei (0.35, 0.038, 0.05) nach Schritt 0: … CFL senken oder erste Ordnung“); die Probe prüft genau das.</p>
+
+<h2 id="bild">Das Farbbild auf der Karte</h2>
+<p>Ein laufend gezeigtes Feld müsste sonst je Bild den ganzen Zustand zur CPU holen. Stattdessen rechnet die CPU einmal einen <code>Bildplan</code>: je Bildpunkt die Zelle des Schnitts, dazu die Zellen, über die die Farbskala läuft. Der Kern <code>bildFarbe</code> schlägt je Bildpunkt die Zelle nach, rechnet die gewählte Größe, bildet die Spanne und färbt nach derselben Formel wie die CPU; zur CPU geht nur noch das fertige Bild. Eine Zelle ohne endlichen Wert wird magenta und zählt nicht zur Skala.</p>
+<p>Damit das etwas nützt, muss der Zustand auf der Karte bleiben. <code>EulerLoeser.halteAufGeraet()</code> legt ihn einmal hinauf; je Schritt läuft nur noch die Norm zurück. Wer die Werte liest, bekommt den Stand des letzten Schritts, danach geht der Zustand wieder hinauf. Geht die Karte verloren, rechnet die CPU ab dem letzten Stand weiter, den sie hatte. Gehalten und ungehalten ergeben dieselbe Rechnung; das Bild zwischen zwei Schritten ändert sie nicht.</p>
 
 <h2 id="messung">Messung</h2>
 <table>
