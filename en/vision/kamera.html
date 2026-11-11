@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The camera – projection, distortion, calibration – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
+<a class="eintrag aktiv" href="index.html">framework-vision</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#grundsaetze">Principles</a>
+<a class="rubrik" href="index.html#pakete">Packages</a>
+<a class="rubrik" href="index.html#hintergrund">How the module computes</a>
+<a class="unterseite aktiv" href="kamera.html">The camera</a>
+<a class="unterseite" href="rekonstruktion.html">From two views to the surface</a>
+<a class="rubrik" href="index.html#nutzer">Who uses it</a>
+<a class="rubrik" href="index.html#stand">Status</a>
+<a class="rubrik" href="index.html#grenzen">Limits</a>
+</div>
+<a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<a class="eintrag" href="../usb/index.html">framework-usb</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-cfd/index.html">app-cfd</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-doku/index.html">app-doku</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-cfd/index.html">commandline-cfd</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../cmd-vision/index.html">commandline-vision</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">framework-vision</a> › The camera – projection, distortion, calibration</span><a class="sprachwahl" href="../../de/vision/kamera.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-vision · envisionz.vision.kamera</div>
+  <h1>The camera – projection, distortion, calibration</h1>
+  <p class="unter">Every measurement from images begins with the question which line of sight belongs to a pixel. The camera
+  model answers it in both directions: from the point in space to the pixel and from the pixel back to the ray. Calibration
+  determines its parameters from images of a known pattern, vanishing points from edges of an object.</p>
+</header>
+
+<h2 id="worum">What it is about</h2>
+<p>The model has ten parameters: focal lengths <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>,</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>y</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_x, f_y</annotation></semantics></math> in pixels, principal point <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>,</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>y</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_x, c_y</annotation></semantics></math>, skew <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math>, three
+radial coefficients <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>,</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">k_1, k_2, k_3</annotation></semantics></math> and two tangential ones <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">p_1, p_2</annotation></semantics></math>. The position of the camera is a pose: rotation
+and translation, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">X</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mi>R</mi><mspace width="0.1667em"/><mi mathvariant="normal">X</mi><mo>+</mo><mi mathvariant="normal">t</mi></mrow><annotation encoding="application/x-tex">\mathbf X_k = R\,\mathbf X + \mathbf t</annotation></semantics></math>. Integer image coordinates <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(u, v)</annotation></semantics></math> denote the centre of a
+pixel.</p>
+
+<figure>
+<svg viewBox="0 0 640 220" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6475"/></marker></defs>
+  <rect x="10" y="40" width="110" height="44" rx="5" fill="#ffffff" stroke="#c9d1dc"/>
+  <text x="65" y="60" text-anchor="middle" fill="#5b6475">point X</text>
+  <text x="65" y="75" text-anchor="middle" fill="#5b6475">world</text>
+  <rect x="140" y="40" width="110" height="44" rx="5" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="195" y="60" text-anchor="middle" fill="#1f5f8b">R X + t</text>
+  <text x="195" y="75" text-anchor="middle" fill="#1f5f8b">camera frame</text>
+  <rect x="270" y="40" width="110" height="44" rx="5" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="325" y="60" text-anchor="middle" fill="#1f5f8b">x = X/Z, y = Y/Z</text>
+  <text x="325" y="75" text-anchor="middle" fill="#1f5f8b">normalised</text>
+  <rect x="400" y="40" width="110" height="44" rx="5" fill="#fff7e6" stroke="#9a6400"/>
+  <text x="455" y="60" text-anchor="middle" fill="#9a6400">distort</text>
+  <text x="455" y="75" text-anchor="middle" fill="#9a6400">k1 k2 k3 p1 p2</text>
+  <rect x="530" y="40" width="100" height="44" rx="5" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="580" y="60" text-anchor="middle" fill="#1f5f8b">K: (u, v)</text>
+  <text x="580" y="75" text-anchor="middle" fill="#1f5f8b">pixel</text>
+  <g stroke="#5b6475" stroke-width="1.3" fill="none" marker-end="url(#pc)">
+    <line x1="120" y1="62" x2="138" y2="62"/><line x1="250" y1="62" x2="268" y2="62"/><line x1="380" y1="62" x2="398" y2="62"/><line x1="510" y1="62" x2="528" y2="62"/>
+  </g>
+  <g stroke="#9a6400" stroke-width="1.3" fill="none" marker-end="url(#pc)" stroke-dasharray="5 3">
+    <path d="M580,84 C580,150 460,150 455,92"/><path d="M455,92 C450,160 330,160 325,92"/>
+  </g>
+  <text x="520" y="160" text-anchor="middle" fill="#9a6400">K⁻¹</text>
+  <text x="390" y="170" text-anchor="middle" fill="#9a6400">undistort (Newton)</text>
+  <text x="320" y="205" text-anchor="middle" fill="#5b6475">way back: pixel → normalised position → line of sight (x, y, 1)</text>
+</svg>
+<figcaption>Forward way (solid) and way back (dashed). The forward way is a closed formula; the way back needs an iterative
+method for the distortion and only succeeds within the invertible range.</figcaption>
+</figure>
+
+<h2 id="projektion">Projection and distortion</h2>
+<p>A point in the camera frame <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>X</mi><mo>,</mo><mi>Y</mi><mo>,</mo><mi>Z</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(X, Y, Z)</annotation></semantics></math> with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">Z &gt; 0</annotation></semantics></math> is first normalised, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mi>X</mi><mo>/</mo><mi>Z</mi></mrow><annotation encoding="application/x-tex">x = X/Z</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mi>Y</mi><mo>/</mo><mi>Z</mi></mrow><annotation encoding="application/x-tex">y = Y/Z</annotation></semantics></math>, then
+distorted. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msup><mrow><mi>y</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">r^2 = x^2 + y^2</annotation></semantics></math>, Brown's model gives</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>x</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>=</mo><mi>x</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msub><msup><mrow><mi>r</mi></mrow><mrow><mn>4</mn></mrow></msup><mo>+</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>3</mn></mrow></msub><msup><mrow><mi>r</mi></mrow><mrow><mn>6</mn></mrow></msup><mo stretchy="false">)</mo><mo>+</mo><mn>2</mn><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mi>x</mi><mi>y</mi><mo>+</mo><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub><mo stretchy="false">(</mo><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mn>2</mn><msup><mrow><mi>x</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">x_d = x\,(1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + 2 p_1 x y + p_2 (r^2 + 2x^2),</annotation></semantics></math>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>=</mo><mi>y</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msub><msup><mrow><mi>r</mi></mrow><mrow><mn>4</mn></mrow></msup><mo>+</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>3</mn></mrow></msub><msup><mrow><mi>r</mi></mrow><mrow><mn>6</mn></mrow></msup><mo stretchy="false">)</mo><mo>+</mo><msub><mrow><mi>p</mi></mrow><mrow><mn>1</mn></mrow></msub><mo stretchy="false">(</mo><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mn>2</mn><msup><mrow><mi>y</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo><mo>+</mo><mn>2</mn><msub><mrow><mi>p</mi></mrow><mrow><mn>2</mn></mrow></msub><mi>x</mi><mi>y</mi><mo>.</mo></mrow><annotation encoding="application/x-tex">y_d = y\,(1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + p_1 (r^2 + 2y^2) + 2 p_2 x y .</annotation></semantics></math>
+<p>The calibration matrix maps the distorted position to pixels:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>u</mi><mo>=</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>x</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>+</mo><mi>s</mi><mspace width="0.1667em"/><msub><mrow><mi>y</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>+</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>,</mo><mspace width="2em"/><mi>v</mi><mo>=</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>y</mi></mrow></msub><mspace width="0.1667em"/><msub><mrow><mi>y</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>+</mo><msub><mrow><mi>c</mi></mrow><mrow><mi>y</mi></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">u = f_x\,x_d + s\,y_d + c_x, \qquad v = f_y\,y_d + c_y .</annotation></semantics></math>
+
+<h2 id="rueckprojektion">Back-projection and its range</h2>
+<p>For the way back <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>K</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">K^{-1}</annotation></semantics></math> is applied and the distortion inverted. There is no closed formula for this; the module
+solves <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo stretchy="false">)</mo><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>,</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>d</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">F(x, y) = (x_d, y_d)</annotation></semantics></math> with Newton and the analytic Jacobian, starting at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>x</mi></mrow><mrow><mi>d</mi></mrow></msub><mo>,</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>d</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(x_d, y_d)</annotation></semantics></math>, at most 50 steps,
+stopping at a residual below <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-15}</annotation></semantics></math>. If the method does not converge, the result is NaN.</p>
+<p>The radial mapping is only invertible up to its maximum for negative coefficients. With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>3</mn></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">k_2 = k_3 = 0</annotation></semantics></math> it reads
+<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>↦</mo><mi>r</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">r \mapsto r\,(1 + k_1 r^2)</annotation></semantics></math>; for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>&lt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">k_1 &lt; 0</annotation></semantics></math> the derivative <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mn>3</mn><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1 + 3 k_1 r^2</annotation></semantics></math> vanishes at</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mi>max</mi><mo>⁡</mo></mrow></msub><mo>=</mo><mfrac><mrow><mn>1</mn></mrow><mrow><msqrt><mo form="prefix" lspace="0" rspace="0">−</mo><mn>3</mn><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub></msqrt></mrow></mfrac><mo>,</mo><mspace width="2em"/><msub><mrow><mi>r</mi></mrow><mrow><mi>d</mi><mo>,</mo><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo></mrow></msub><mo>=</mo><mstyle displaystyle="false"><mfrac><mrow><mn>2</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mstyle><mspace width="0.1667em"/><msub><mrow><mi>r</mi></mrow><mrow><mi>max</mi><mo>⁡</mo></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">r_{\max} = \frac{1}{\sqrt{-3 k_1}}, \qquad r_{d,\max} = \tfrac{2}{3}\, r_{\max} .</annotation></semantics></math>
+<p>Pixels with a larger distorted radius have no line of sight. For <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">k_1 = k_2 = -0.5</annotation></semantics></math> the limit lies so close to the
+image centre that the image corners are outside; the ray tracer renders no ray there and marks the pixel with depth NaN and
+label −1. A test image with such distortion therefore has corners without content, not corners with wrong content.</p>
+
+<h2 id="drehung">Rotation vector</h2>
+<p>A rotation is kept as a vector <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ω</mi><mo>=</mo><mi mathvariant="normal">θ</mi><mspace width="0.1667em"/><mi mathvariant="normal">n</mi></mrow><annotation encoding="application/x-tex">\omega = \theta\,\mathbf n</annotation></semantics></math>: axis times angle, three parameters without constraint.
+The matrix follows from Rodrigues,</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>R</mi><mo>=</mo><mi>I</mi><mo>+</mo><mspace width="0.1667em"/><mi>sin</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">θ</mi><mspace width="0.1667em"/><mo stretchy="false">[</mo><mi mathvariant="normal">n</mi><msub><mrow><mo stretchy="false">]</mo></mrow><mrow><mo>×</mo></mrow></msub><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mspace width="0.1667em"/><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">θ</mi><mo stretchy="false">)</mo><mspace width="0.1667em"/><mo stretchy="false">[</mo><mi mathvariant="normal">n</mi><msubsup><mrow><mo stretchy="false">]</mo></mrow><mrow><mo>×</mo></mrow><mrow><mn>2</mn></mrow></msubsup><mo>,</mo></mrow><annotation encoding="application/x-tex">R = I + \sin\theta\,[\mathbf n]_\times + (1 - \cos\theta)\,[\mathbf n]_\times^2 ,</annotation></semantics></math>
+<p>and back from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>cos</mi><mo>⁡</mo><mspace width="0.1667em"/><mi mathvariant="normal">θ</mi><mo>=</mo><mo stretchy="false">(</mo><mi>tr</mi><mo>⁡</mo><mspace width="0.1667em"/><mi>R</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>/</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\cos\theta = (\operatorname{tr} R - 1)/2</annotation></semantics></math> and the skew-symmetric part. At <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\theta = 0</annotation></semantics></math> and
+<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">θ</mi><mo>=</mo><mi mathvariant="normal">π</mi></mrow><annotation encoding="application/x-tex">\theta = \pi</annotation></semantics></math> the simple inversion fails; both cases are handled separately.</p>
+
+<h2 id="kalibrierung">Calibration after Zhang</h2>
+<p>A planar pattern (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">Z = 0</annotation></semantics></math>) is mapped by a homography <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo>=</mo><mo stretchy="false">[</mo><msub><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>1</mn></mrow></msub><mspace width="0.3333em"/><msub><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>2</mn></mrow></msub><mspace width="0.3333em"/><msub><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>3</mn></mrow></msub><mo stretchy="false">]</mo><mo>∼</mo><mi>K</mi><mspace width="0.1667em"/><mo stretchy="false">[</mo><msub><mrow><mi mathvariant="normal">r</mi></mrow><mrow><mn>1</mn></mrow></msub><mspace width="0.3333em"/><msub><mrow><mi mathvariant="normal">r</mi></mrow><mrow><mn>2</mn></mrow></msub><mspace width="0.3333em"/><mi mathvariant="normal">t</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">H = [\mathbf h_1\ \mathbf h_2\ \mathbf h_3] \sim K\,[\mathbf
+r_1\ \mathbf r_2\ \mathbf t]</annotation></semantics></math>. Since <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">r</mi></mrow><mrow><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\mathbf r_1</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">r</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\mathbf r_2</annotation></semantics></math> are orthonormal, every view yields two linear
+equations for the symmetric matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><msup><mrow><mi>K</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mi mathvariant="normal">T</mi></mrow></msup><msup><mrow><mi>K</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">B = K^{-\mathsf T} K^{-1}</annotation></semantics></math>:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msubsup><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>1</mn></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msubsup><mi>B</mi><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><msubsup><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>1</mn></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msubsup><mi>B</mi><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><msubsup><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>2</mn></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msubsup><mi>B</mi><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>.</mo></mrow><annotation encoding="application/x-tex">\mathbf h_1^{\mathsf T} B\, \mathbf h_2 = 0, \qquad \mathbf h_1^{\mathsf T} B\, \mathbf h_1 = \mathbf h_2^{\mathsf T} B\, \mathbf h_2 .</annotation></semantics></math>
+<p>With <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">b</mi><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>B</mi></mrow><mrow><mn>11</mn></mrow></msub><mo>,</mo><msub><mrow><mi>B</mi></mrow><mrow><mn>12</mn></mrow></msub><mo>,</mo><msub><mrow><mi>B</mi></mrow><mrow><mn>22</mn></mrow></msub><mo>,</mo><msub><mrow><mi>B</mi></mrow><mrow><mn>13</mn></mrow></msub><mo>,</mo><msub><mrow><mi>B</mi></mrow><mrow><mn>23</mn></mrow></msub><mo>,</mo><msub><mrow><mi>B</mi></mrow><mrow><mn>33</mn></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf b = (B_{11}, B_{12}, B_{22}, B_{13}, B_{23}, B_{33})</annotation></semantics></math> one writes <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mi>i</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msubsup><mi>B</mi><mspace width="0.1667em"/><msub><mrow><mi mathvariant="normal">h</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msubsup><mrow><mi mathvariant="normal">v</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msubsup><mi mathvariant="normal">b</mi></mrow><annotation encoding="application/x-tex">\mathbf h_i^{\mathsf T} B\,\mathbf
+h_j = \mathbf v_{ij}^{\mathsf T}\mathbf b</annotation></semantics></math>, where</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">v</mi></mrow><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mrow><mi>h</mi></mrow><mrow><mn>1</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>1</mn><mi>j</mi></mrow></msub><mo>,</mo><mspace width="0.2778em"/><msub><mrow><mi>h</mi></mrow><mrow><mn>1</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>2</mn><mi>j</mi></mrow></msub><mo>+</mo><msub><mrow><mi>h</mi></mrow><mrow><mn>2</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>1</mn><mi>j</mi></mrow></msub><mo>,</mo><mspace width="0.2778em"/><msub><mrow><mi>h</mi></mrow><mrow><mn>2</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>2</mn><mi>j</mi></mrow></msub><mo>,</mo><mspace width="0.2778em"/><msub><mrow><mi>h</mi></mrow><mrow><mn>3</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>1</mn><mi>j</mi></mrow></msub><mo>+</mo><msub><mrow><mi>h</mi></mrow><mrow><mn>1</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>3</mn><mi>j</mi></mrow></msub><mo>,</mo><mspace width="0.2778em"/><msub><mrow><mi>h</mi></mrow><mrow><mn>3</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>2</mn><mi>j</mi></mrow></msub><mo>+</mo><msub><mrow><mi>h</mi></mrow><mrow><mn>2</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>3</mn><mi>j</mi></mrow></msub><mo>,</mo><mspace width="0.2778em"/><msub><mrow><mi>h</mi></mrow><mrow><mn>3</mn><mi>i</mi></mrow></msub><msub><mrow><mi>h</mi></mrow><mrow><mn>3</mn><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">\mathbf v_{ij} = \bigl(h_{1i}h_{1j},\; h_{1i}h_{2j} + h_{2i}h_{1j},\; h_{2i}h_{2j},\; h_{3i}h_{1j} + h_{1i}h_{3j},\; h_{3i}h_{2j} + h_{2i}h_{3j},\; h_{3i}h_{3j}\bigr).</annotation></semantics></math>
+<p>From three views on (two with zero skew), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">b</mi></mrow><annotation encoding="application/x-tex">\mathbf b</annotation></semantics></math> is determined up to a factor; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi></mrow><annotation encoding="application/x-tex">K</annotation></semantics></math> follows from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi></mrow><annotation encoding="application/x-tex">B</annotation></semantics></math> in closed
+form. That is only the starting value: afterwards inner parameters, distortion and all poses are adjusted jointly with
+Levenberg-Marquardt, the objective being the sum of squared reprojection errors.</p>
+<p>The chessboard corners are searched as saddle points and placed to fractions of a pixel by the gradient method: at the
+true corner <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">q</mi></mrow><annotation encoding="application/x-tex">\mathbf q</annotation></semantics></math> every gradient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">g</mi></mrow><annotation encoding="application/x-tex">\mathbf g</annotation></semantics></math> in the window is perpendicular to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">p</mi><mo>−</mo><mi mathvariant="normal">q</mi></mrow><annotation encoding="application/x-tex">\mathbf p - \mathbf q</annotation></semantics></math>, so
+<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">q</mi></mrow><annotation encoding="application/x-tex">\mathbf q</annotation></semantics></math> solves <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo largeop="true" movablelimits="true">∑</mo><msup><mi>gg</mi><mrow><mi mathvariant="normal">T</mi></mrow></msup><mo stretchy="false">(</mo><mi mathvariant="normal">p</mi><mo>−</mo><mi mathvariant="normal">q</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\sum \mathbf g \mathbf g^{\mathsf T} (\mathbf p - \mathbf q) = 0</annotation></semantics></math> in the least-squares sense.</p>
+
+<h2 id="fluchtpunkte">Vanishing points</h2>
+<p>Parallel edges meet in the image at the vanishing point of their direction. For two mutually perpendicular directions with
+vanishing points <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">v</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>,</mo><msub><mrow><mi mathvariant="normal">v</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\mathbf v_1, \mathbf v_2</annotation></semantics></math>, square pixels and principal point <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">c</mi></mrow><annotation encoding="application/x-tex">\mathbf c</annotation></semantics></math>,</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mrow><mi>f</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">v</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>−</mo><mi mathvariant="normal">c</mi><mo stretchy="false">)</mo><mo>⋅</mo><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">v</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>−</mo><mi mathvariant="normal">c</mi><mo stretchy="false">)</mo><mo>.</mo></mrow><annotation encoding="application/x-tex">f^2 = -(\mathbf v_1 - \mathbf c)\cdot(\mathbf v_2 - \mathbf c) .</annotation></semantics></math>
+<p>With three pairwise perpendicular directions the principal point is the orthocentre of the triangle of the three
+vanishing points; principal point and focal length are thus determined from a single image. If a vanishing point lies at
+infinity (edges parallel to the image plane), the result is NaN.</p>
+
+<h2 id="pruefung">How it is checked</h2>
+<ul>
+  <li><b><code>Kameraprobe</code></b> (39 checks): projection against an independently written formula, round trips pixel
+  – ray – pixel, rotation vector at 0 and 180 degrees, homography, Levenberg-Marquardt with covariance against Monte Carlo,
+  Zhang and adjustment on exact points to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>13</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-13}</annotation></semantics></math>, calibration from rendered images clean and disturbed, vanishing
+  points.</li>
+  <li><b><code>Randfallprobe</code></b> [ZD-VI-15]: a camera with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>=</mo><msub><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">k_1 = k_2 = -0.5</annotation></semantics></math>; the image centre hits the wall,
+  the corner has no ray.</li>
+</ul>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Individual distortion coefficients are poorly determined: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msub></mrow><annotation encoding="application/x-tex">k_2</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>k</mi></mrow><mrow><mn>3</mn></mrow></msub></mrow><annotation encoding="application/x-tex">k_3</annotation></semantics></math> compensate each other, and outside the
+  area covered by corners the distortion is not fixed. What is compared is therefore the mapping ray – pixel in the covered
+  area.</li>
+  <li>The views must cover the image into the corners; otherwise the calibration is poorly conditioned.</li>
+  <li>With very strong distortion the radial mapping is invertible only up to a limit radius; beyond it the mapping falls
+  again, and Newton could converge there on the falling branch. <code>entzerre</code> therefore checks after convergence
+  whether the derivative <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><mn>3</mn><msub><mrow><mi>k</mi></mrow><mrow><mn>1</mn></mrow></msub><mi>q</mi><mo>+</mo><mn>5</mn><msub><mrow><mi>k</mi></mrow><mrow><mn>2</mn></mrow></msub><msup><mrow><mi>q</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>+</mo><mn>7</mn><msub><mrow><mi>k</mi></mrow><mrow><mn>3</mn></mrow></msub><msup><mrow><mi>q</mi></mrow><mrow><mn>3</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1 + 3k_1 q + 5k_2 q^2 + 7k_3 q^3</annotation></semantics></math> is positive on the whole range <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo>,</mo><msup><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msup><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, r^2]</annotation></semantics></math> and the
+  Jacobian determinant at the point is positive as well, and returns NaN otherwise. Pixels beyond the limit radius thus
+  have no ray instead of a wrong one.</li>
+</ul>
+
+<h2 id="literatur">Literature</h2>
+<ul>
+  <li>Z. Zhang: A flexible new technique for camera calibration. IEEE TPAMI 22 (2000).</li>
+  <li>D. C. Brown: Decentering distortion of lenses. Photogrammetric Engineering 32 (1966).</li>
+  <li>R. Hartley, A. Zisserman: Multiple View Geometry in Computer Vision, 2nd ed., chapters 6–8.</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

@@ -179,6 +179,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../video/index.html">framework-video</a>
 <a class="eintrag" href="../restore/index.html">framework-restore</a>
 <a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
+<a class="eintrag" href="../vision/index.html">framework-vision</a>
 <a class="eintrag aktiv" href="index.html">framework-tonmessung</a>
 <div class="rubriken">
 <a class="rubrik" href="index.html#grundsaetze">Principles</a>
@@ -190,6 +191,7 @@ math[display="block"]{margin:10px 0}
 <a class="rubrik" href="index.html#stand">Status</a>
 <a class="unterseite aktiv" href="theorie.html">Methods of sound measurement</a>
 </div>
+<a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
 <div class="gruppe">Further</div>
 <a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
 <a class="eintrag" href="../usb/index.html">framework-usb</a>
@@ -282,16 +284,50 @@ After deconvolution the <i>k</i>-th harmonic lies <code>L ln k</code> before the
 <p>With noise as excitation, H1 = <i>S</i><sub>xy</sub>/<i>S</i><sub>xx</sub> estimates the frequency response from averaged
 spectra; the coherence γ² = |<i>S</i><sub>xy</sub>|²/(<i>S</i><sub>xx</sub><i>S</i><sub>yy</sub>) tells how much of the response
 comes from the excitation. Values close to 1 mean: noise and nonlinearity are small.</p>
+<p>How long a response rings on is measured by <code>abklingzeit</code> in blocks of 10 ms from the end of the lead-in: it counts
+up to the end of the last block <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> whose energy lies at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> dB below that of the loudest one,
+<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>=</mo><mo stretchy="false">(</mo><mi>b</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo><mo>⋅</mo><mn>10</mn><mspace width="0.3333em"/><mtext>ms</mtext></mrow><annotation encoding="application/x-tex">t = (b + 1) \cdot 10\ \text{ms}</annotation></semantics></math>. The lead-in itself does not count.</p>
 
 <h2 id="nachhall">Reverberation after ISO 3382-1</h2>
 <p>Schroeder backward integration of the squared impulse response gives the decay curve. T20 and T30 are the slopes between −5 and
 −25 or −35 dB, extrapolated to 60 dB; they are valid only if the curve lies at least 35 or 45 dB above the noise
 (ISO 3382-1, 5.3.2), otherwise they stay undetermined.</p>
+<p>If the decay curve jumps from the upper to below the lower level in a single step, for instance with a single impulse, there is
+no regression line; EDT, T20 and T30 stay undetermined. D50 is then 1: all energy lies in the first 50 ms.</p>
 
 <h2 id="wasapi">WASAPI: blocked and raw path</h2>
 <p><code>E_ACCESSDENIED</code> on opening means: blocked in the privacy settings; this is reported, not retried. The raw path is
 reported by the device property <code>PKEY_Devices_AudioDevice_RawProcessingSupported</code>; if it is requested and missing, there
 is an error.</p>
+<p>What the interface reports is checked like any number from outside before anything is computed from it. More than 256
+endpoints or a negative count is an error, and so is a buffer of zero or of more than ten seconds. An endpoint whose entry cannot
+be read is skipped, and the others stay in the list. If COM on the thread is already set up for single-threaded use, the interface
+keeps working in it; any other error during setup is reported. If the device rejects the raw path when it is set, there is a format
+error, and the stream is not set up at all.</p>
+<p>A stream that delivers no data, or accepts none, for two seconds counts as disconnected. This is reported and not silently passed
+on as silence. At the output, the duration of the buffer that has to be played empty is added to the timeout.</p>
+
+<h2 id="javasound">Java Sound: 16 bit there and back</h2>
+<p>Java Sound is always opened with 16 bit, signed, least significant byte first. On reading, every value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math> is divided by
+<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mn>2</mn></mrow><mrow><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2^{15}</annotation></semantics></math>; the channels are interleaved (left, right, left …):</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>x</mi><mo>=</mo><mfrac><mrow><mi>k</mi></mrow><mrow><mn>32768</mn></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>k</mi><mo>=</mo><msub><mrow><mi>b</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>+</mo><mn>256</mn><mspace width="0.1667em"/><msub><mrow><mi>b</mi></mrow><mrow><mn>1</mn></mrow></msub><mspace width="0.3333em"/><mtext>in two's complement</mtext></mrow><annotation encoding="application/x-tex">x = \frac{k}{32768}, \qquad k = b_0 + 256\,b_1 \ \text{in two's complement}</annotation></semantics></math></p>
+<p>One read fetches at most <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>4</mn><mo>,</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>/</mo><mn>50</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(4, f_s/50)</annotation></semantics></math> frames, that is 20 ms, and stores them from the requested position. On writing,
+values are multiplied by 32767, rounded and limited; every limited value counts on its own, per channel:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>k</mi><mo>=</mo><mspace width="0.1667em"/><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>32767</mn><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mo form="prefix" lspace="0" rspace="0">−</mo><mn>32768</mn><mo>,</mo><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>32767</mn><mspace width="0.1667em"/><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">k = \min\bigl(32767,\ \max(-32768,\ \operatorname{round}(32767\,x))\bigr)</annotation></semantics></math></p>
+<p>Java Sound has no raw path without the system's sound processing. Whoever requests it gets a format error before any device is
+touched. An identifier that is not a number or lies outside the device list means "no device".</p>
+<p>Java Sound does not report gaps. They are therefore only suspected: at the input as a read with a full buffer (available at
+least buffer size minus one frame), at the output as a write into an empty buffer after the start. The first block after the
+start naturally finds the buffer empty and does not count.</p>
+
+<h2 id="messlauf">Errors in the measurement run</h2>
+<p>Playing and recording run in two threads. If the output fails with a device error, that error reaches the caller unchanged;
+any other exception becomes a system error that carries it as its cause.</p>
+<p>If the recording thread is interrupted while waiting for the output, the run reports "interrupted" and sets the interrupt flag
+again so that the caller sees it.</p>
+<p>If the input ends early after <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> values, what was read after the lead-in of 0.25 s remains: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0</mn><mo>,</mo><mspace width="0.3333em"/><mi>n</mi><mo>−</mo><mn>0.25</mn><mspace width="0.1667em"/><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(0,\ n - 0.25\,f_s)</annotation></semantics></math>
+values per channel. Every value with a magnitude of 0.999 or more counts as overdriven, across all channels; such a recording is
+not clean.</p>
 
 <h2 id="messsignale">Measurement signals of the command line</h2>
 <p>White noise has no fixed peak. The tool sets the crest factor to 4, which is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>20</mn><mspace width="0.1667em"/><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mn>4</mn><mo>≈</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">20\log_{10} 4 \approx 12</annotation></semantics></math> dB: the RMS value is a quarter of the set peak. Larger excursions are limited.</p>

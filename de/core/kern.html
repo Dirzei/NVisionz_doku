@@ -190,7 +190,9 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../video/index.html">framework-video</a>
 <a class="eintrag" href="../restore/index.html">framework-restore</a>
 <a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
+<a class="eintrag" href="../vision/index.html">framework-vision</a>
 <a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
 <div class="gruppe">Weiteres</div>
 <a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
 <a class="eintrag" href="../usb/index.html">framework-usb</a>
@@ -242,6 +244,9 @@ math[display="block"]{margin:10px 0}
 <h2 id="registry">App-Verzeichnis</h2>
 <p><code>AppRegistry</code> ist der Katalog aller Apps, die der Wirt öffnen kann. <code>discover()</code> lässt den <code>ServiceLoader</code> alle Einträge unter <code>META-INF/services/envisionz.api.App</code> im Klassenpfad auflösen (Näheres zum Vertrag auf der <a href="../api/vertrag.html#entdeckung">Seite des api-Moduls</a>). Je gefundener App merkt sich das Verzeichnis zwei Dinge: den <code>AppDescriptor</code> und eine <b>Fabrik</b>, die über den parameterlosen Konstruktor der gefundenen Klasse eine <i>frische</i> Instanz erzeugt. Die vom Lader gelieferte Instanz dient nur dem Auslesen des Deskriptors.</p>
 <p>Abfragen: <code>all()</code> liefert die Einträge <b>nach Kennung sortiert</b> (nicht in der Reihenfolge der Entdeckung), <code>findById</code> einen <code>Optional</code>, <code>newInstance(id)</code> eine neue App – bei unbekannter Kennung mit <code>IllegalArgumentException</code>. Lässt sich eine Klasse nicht erzeugen, nennt die Fehlermeldung als wahrscheinlichste Ursache den fehlenden parameterlosen Konstruktor. Für Starter ohne Reflexion gibt es <code>register(descriptor, supplier)</code>. Finden sich beim Entdecken zwei App-Klassen mit derselben Kennung, gewinnt die später gefundene; jeder solche Fall wird als Warnung protokolliert und als Zeile <code>kennung: KlasseAlt ersetzt durch KlasseNeu</code> in <code>doppelteKennungen()</code> geführt.</p> <!-- GEAENDERT 2026-10-06 (WT40) -->
+<!-- NEU 2026-11-10 (ZD-CO) -->
+<p><code>discover()</code> ohne Argument sucht über den <b>Kontextklassenlader</b> des aufrufenden Fadens, nicht über den Lader, der <code>AppRegistry</code> selbst geladen hat – so findet ein Wirt auch Apps, die ein eigener Lader nachgereicht hat. Scheitert die Fabrik einer App, nennt die <code>IllegalStateException</code> die Klasse und trägt die ursprüngliche Ausnahme als Ursache.</p>
+<p>Eine App kann <b>frühere Kennungen</b> angeben, wenn sie umbenannt wurde. Das Verzeichnis merkt sich je frühere Kennung die heutige; <code>aufgeloest(id)</code>, <code>findById</code> und <code>newInstance</code> übersetzen eine frühere Kennung, aber nur, wenn es unter ihr selbst keine App gibt. Ein gesicherter Arbeitsstand mit dem alten Namen findet seine Tabs dadurch wieder.</p>
 
 <h2 id="bus">Ereignisbus und Dienstverzeichnis</h2>
 <p>Zwei Apps sollen miteinander reden können, ohne einander zu kennen: Die eine meldet „Datei geladen“, die andere reagiert darauf. Der Bus ist dafür die einfachste Form, die tragfähig ist.</p>
@@ -337,10 +342,43 @@ math[display="block"]{margin:10px 0}
 <p>Der Leser (<code>StaxStateReader</code>) schaltet DTD und äußere Entitäten ab und <b>übergeht unbekannte Eigenschaften</b>, statt zu scheitern – eine ältere Anwendung kann so eine neuere Datei lesen, ohne die zusätzlichen Schlüssel zu verstehen. <code>StateMigrator.migrate</code> ist der Platz für künftige Formatänderungen: Heute gilt <code>"1.0"</code>; leere oder fehlende Fassung wird als <code>"1.0"</code> gelesen; <b>jede andere Fassung wirft</b> <code>IllegalStateException</code>. Raten, was in einer unbekannten Fassung steht, wäre gefährlicher als Ablehnen.</p>
 <div class="hinweis"><b>Festlegung im Framework:</b> Die Ereigniszustellung erfolgt nach der <b>exakten</b> Klasse, synchron, im Schnappschuss und mit Fehlerisolation. Die Sitzungsdatei wird nie unmittelbar überschrieben, <code>path:</code>-Werte werden nur beim Schreiben verändert und danach zurückgesetzt, und eine unbekannte Formatfassung bricht das Laden ab.</div>
 
+<!-- NEU 2026-11-10 (ZD-CO): Abschnitte io und json -->
+<h2 id="io">Zwischenspeicher und Ströme</h2>
+<h3>Wo Zwischenspeicher liegen</h3>
+<p><code>Programmordner.programmordner()</code> unterscheidet zwei Fälle. Im übersetzten Abbild ist <code>java.home</code> nicht gesetzt; dann ist der Programmordner der Ordner neben der ausführbaren Datei, die der Prozess selbst meldet. Im JVM-Lauf zeigt dieselbe Abfrage auf die <code>java</code>-Datei des JDK, und dorthin gehört kein Zwischenspeicher – hier gilt das Arbeitsverzeichnis <code>user.dir</code>.</p>
+<p><code>tmpOrdner(app, name)</code> legt <code>&lt;Programmordner&gt;/tmp/&lt;name&gt;</code> an. Gelingt das nicht oder ist der Ordner nicht beschreibbar, weicht die Methode nach <code>~/.&lt;app&gt;/tmp/&lt;name&gt;</code> aus und hält den Grund fest – Ordner und Art der Ausnahme. Festgehalten wird nur der <b>erste</b> Grund einer Sitzung; er soll einmal in der Statuszeile stehen, nicht bei jedem Aufruf neu.</p>
+<p><code>raeumeAuf(ordner, tage)</code> entfernt jede Datei, deren letzte Änderung vor der Grenze</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>t</mi></mrow><mrow><mi>grenze</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><msub><mrow><mi>t</mi></mrow><mrow><mspace width="0.1667em"/><mi>jetzt</mi><mo>⁡</mo></mrow></msub><mo>−</mo><mspace width="0.1667em"/><mi>tage</mi><mo>⁡</mo><mo form="prefix" lspace="0" rspace="0">⋅</mo><mn>86</mn><mspace width="0.1667em"/><mn>400</mn><mspace width="0.1667em"/><mn>000</mn><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>ms</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">t_\mathrm{grenze} = t_\mathrm{jetzt} - \mathrm{tage}\cdot 86\,400\,000\ \mathrm{ms}</annotation></semantics></math>
+<p>liegt; Unterordner bleiben stehen. Bei <code>tage = 0</code> geht alles, was vor dem Aufruf geschrieben wurde. Eine Datei, die sich nicht löschen lässt, bricht den Lauf nicht ab – ein Zwischenspeicher ist nie die Quelle.</p>
+<h3>Aus einem Schreiber einen Leser machen</h3>
+<p><code>Schreibstrom</code> lässt einen Erzeuger, der in einen <code>OutputStream</code> schreibt, in einem eigenen Faden laufen und reicht dessen Bytes über ein Rohr von 1 MiB an den Leser. <code>read()</code> liefert Bytes ohne Vorzeichen (0 bis 255) und am Ende <code>-1</code>; <code>available()</code> sagt, was im Rohr bereitliegt. Scheitert der Schreiber, wirft der nächste <code>read</code> eine <code>IOException</code> mit der ursprünglichen Ursache. Schließt ein Faden den Strom, während er selbst unterbrochen ist, bleibt seine Unterbrechung gesetzt – <code>close</code> verschluckt sie nicht.</p>
+
+<h2 id="json">Zahlen und Zeichen in JSON</h2>
+<p><code>Json.schreiben</code> soll dieselben Zeichen erzeugen wie die JSON-Ausgabe der Python-Standardbibliothek, damit erzeugte Dateien Zeile für Zeile gegen frühere Ergebnisse gehalten werden können. Für ganze Zahlen ist das trivial, für Gleitkommazahlen nicht: Python schreibt die <b>kürzeste</b> Ziffernfolge, die beim Zurücklesen dieselbe Zahl ergibt, und wählt die Form nach dem Exponenten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi></mrow><annotation encoding="application/x-tex">e</annotation></semantics></math> der führenden Ziffer,</p>
+$$ e = \lfloor \log_{10} |x| \rfloor, \qquad \text{Festkomma, wenn } -4 \le e < 16, \quad \text{sonst } d.ddd\mathrm{e}{\pm}XX . $$
+<figure>
+<svg viewBox="0 0 620 120" width="620" font-family="sans-serif" font-size="12">
+  <line x1="20" y1="50" x2="600" y2="50" stroke="#5b6475"/>
+  <rect x="150" y="38" width="330" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="315" y="54" text-anchor="middle" fill="#1f5f8b">Festkomma: 0.0001 … 1234567890123456.0</text>
+  <text x="80" y="54" text-anchor="middle" fill="#9a6400">1e-05</text>
+  <text x="540" y="54" text-anchor="middle" fill="#9a6400">1e+16</text>
+  <line x1="150" y1="30" x2="150" y2="70" stroke="#9a6400"/>
+  <line x1="480" y1="30" x2="480" y2="70" stroke="#9a6400"/>
+  <text x="150" y="86" text-anchor="middle" fill="#5b6475">e = −4</text>
+  <text x="480" y="86" text-anchor="middle" fill="#5b6475">e = 16</text>
+  <text x="20" y="110" fill="#5b6475">Exponent mindestens zweistellig: 1.5e-05, 1e+16; −0.0 behält sein Vorzeichen; NaN, Infinity bleiben Wörter.</text>
+</svg>
+<figcaption>Wann eine Gleitkommazahl als Festkomma und wann mit Exponent geschrieben wird.</figcaption>
+</figure>
+<p>Die kürzeste Ziffernfolge liefert <code>Double.toString</code> seit JDK 19 selbst; die Methode zerlegt sie in Ziffern und Exponenten und setzt die Form nach der Regel oben zusammen. Der Exponent hat mindestens zwei Ziffern, <code>-0.0</code> behält sein Vorzeichen, <code>NaN</code> und <code>Infinity</code> werden wie bei Python als Wörter geschrieben. Eine frühere Fassung schrieb ganzzahlige Werte über eine Umwandlung nach <code>long</code> – für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>19</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{19}</annotation></semantics></math> entstand dabei der größte <code>long</code>-Wert statt der Zahl selbst. Der Rundlauf <code>lesen(schreiben(1e19))</code> ist deshalb eigens geprüft.</p>
+<p>Zeichenketten: Anführungszeichen, Rückstrich und die fünf benannten Steuerzeichen bekommen ihre kurze Fluchtfolge, alle übrigen Zeichen unter <code>U+0020</code> die Form <code>\u00xx</code>; alles andere, auch Umlaute, bleibt unverändert. Beim Lesen werden alle Fluchtfolgen nach RFC 8259 verstanden, auch <code>\/</code>; eine unbekannte wie <code>\x</code> wird mit Position abgewiesen. Ein Wert, dessen Typ kein JSON-Gegenstück hat, wird beim Schreiben abgewiesen statt über <code>toString</code> geraten.</p>
+
 <h2 id="pruefung">Wie geprüft wird</h2>
 <ul>
   <li><b><code>Kernprobe</code></b> (62 Prüfungen; Klassenabdeckung 16 von 16) prüft gegen <i>zugesagtes</i> Verhalten der Schnittstellen: dass der <b>konkrete</b> Ereignistyp die Empfänger bestimmt – in beide Richtungen –, die Anmeldereihenfolge, unschädliches doppeltes Abmelden, Fehlerisolation und Schnappschuss, den Rundlauf der Sitzung mit XML-Sonderzeichen, die Pfadrelativierung samt ihrer Grenze (mehr als drei Ebenen nach oben bleiben absolut), dass der übergebene Zustand nicht dauerhaft verändert wird, und dass eine unbekannte Fassung wirft; außerdem, dass <code>discover</code> zwei Apps mit gleicher Kennung meldet. Zehn Gegenproben – von „keine Fehlerisolation“ bis „unbekannte Fassung durchwinken“ – haben sie jeweils rot gemacht.</li>
   <li><b><code>Ablageprobe</code></b> prüft Schreiber und Leser: Rundlauf <i>Feld für Feld</i> über Datenstrom und über Datei (diese geht zusätzlich über Zwischendatei und Verschiebeschritt), spitze Klammern, kaufmännisches Und, Anführungszeichen, Zeilenumbrüche, Umlaute und Zeichen außerhalb der Grundebene in Werten, einen Wert von achtzigtausend Zeichen, und eine Datei mit äußerer Entität, wie sie ein Angreifer vorlegen würde. Nach einem misslungenen Schreibversuch darf keine Zwischendatei liegen bleiben.</li>
+  <li><b><code>Deckungsprobe</code></b> (29 Prüfungen, 22 Gegenproben, alle rot) geht den Wegen nach, die sonst keine Probe erreicht: Programmordner im JVM-Lauf und ohne <code>java.home</code>, Rückfall des Zwischenspeichers samt Grund, Aufräumen nach Alter, Fluchtfolgen und Zahlenform in JSON, Einzelbyte-Lesen und Unterbrechung am Schreibstrom, Kontextklassenlader und frühere Kennungen im App-Verzeichnis, die Protokolldatei ohne Endung und den Pfad auf einem anderen Laufwerk. Sie hat eine falsche Zahlenform in <code>Json</code> gefunden: große ganzzahlige Werte kamen als größter <code>long</code>-Wert zurück.</li>
   <li>Ein Absturz mitten im Schreiben lässt sich aus einer Probe heraus nicht herbeiführen; die Unteilbarkeit des Verschiebens ist deshalb <b>nicht</b> gemessen, nur der Fehlerweg.</li>
 </ul>
 

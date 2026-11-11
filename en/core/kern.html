@@ -190,7 +190,9 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../video/index.html">framework-video</a>
 <a class="eintrag" href="../restore/index.html">framework-restore</a>
 <a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
+<a class="eintrag" href="../vision/index.html">framework-vision</a>
 <a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
 <div class="gruppe">Further</div>
 <a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
 <a class="eintrag" href="../usb/index.html">framework-usb</a>
@@ -242,6 +244,9 @@ math[display="block"]{margin:10px 0}
 <h2 id="registry">App catalog</h2>
 <p><code>AppRegistry</code> is the catalog of all apps the host can open. <code>discover()</code> lets the <code>ServiceLoader</code> resolve all entries under <code>META-INF/services/envisionz.api.App</code> on the class path (more on the contract on the <a href="../api/vertrag.html#entdeckung">page of the api module</a>). For each app found, the catalog remembers two things: the <code>AppDescriptor</code> and a <b>factory</b> that creates a <i>fresh</i> instance through the no-argument constructor of the class found. The instance delivered by the loader serves only to read the descriptor.</p>
 <p>Queries: <code>all()</code> returns the entries <b>sorted by identifier</b> (not in discovery order), <code>findById</code> an <code>Optional</code>, <code>newInstance(id)</code> a new app – with <code>IllegalArgumentException</code> for an unknown identifier. If a class cannot be created, the error message names the missing no-argument constructor as the likely cause. For starters without reflection there is <code>register(descriptor, supplier)</code>. If discovery finds two app classes with the same identifier, the one found later wins; every such case is logged as a warning and listed in <code>doppelteKennungen()</code> as a line <code>kennung: KlasseAlt ersetzt durch KlasseNeu</code>.</p> <!-- GEAENDERT 2026-10-06 (WT40) -->
+<!-- NEU 2026-11-10 (ZD-CO) -->
+<p><code>discover()</code> without an argument searches through the calling thread's <b>context class loader</b>, not through the loader that loaded <code>AppRegistry</code> itself – so a host also finds apps that a loader of its own supplied later. If an app's factory fails, the <code>IllegalStateException</code> names the class and carries the original exception as its cause.</p>
+<p>An app can declare <b>earlier identifiers</b> when it has been renamed. The catalog remembers today's identifier for each earlier one; <code>aufgeloest(id)</code>, <code>findById</code> and <code>newInstance</code> translate an earlier identifier, but only if there is no app under that identifier itself. A saved workspace with the old name thus finds its tabs again.</p>
 
 <h2 id="bus">Event bus and service registry</h2>
 <p>Two apps should be able to talk to each other without knowing each other: one reports “file loaded”, the other reacts. The bus is the simplest form of this that holds up.</p>
@@ -337,10 +342,43 @@ math[display="block"]{margin:10px 0}
 <p>The reader (<code>StaxStateReader</code>) switches off DTDs and external entities and <b>skips unknown properties</b> instead of failing – an older application can thus read a newer file without understanding the additional keys. <code>StateMigrator.migrate</code> is the place for future format changes: today <code>"1.0"</code> applies; an empty or missing version is read as <code>"1.0"</code>; <b>any other version throws</b> <code>IllegalStateException</code>. Guessing what an unknown version contains would be more dangerous than refusing.</p>
 <div class="hinweis"><b>Decision in the framework:</b> Event delivery follows the <b>exact</b> class, synchronously, on a snapshot and with fault isolation. The session file is never overwritten directly, <code>path:</code> values are changed only while writing and reset afterwards, and an unknown format version aborts loading.</div>
 
+<!-- NEU 2026-11-10 (ZD-CO): sections io and json -->
+<h2 id="io">Caches and streams</h2>
+<h3>Where caches live</h3>
+<p><code>Programmordner.programmordner()</code> distinguishes two cases. In the compiled image <code>java.home</code> is not set; the program folder is then the folder next to the executable that the process itself reports. In a JVM run the same query points at the JDK's <code>java</code> file, and no cache belongs there – here the working directory <code>user.dir</code> applies.</p>
+<p><code>tmpOrdner(app, name)</code> creates <code>&lt;program folder&gt;/tmp/&lt;name&gt;</code>. If that fails or the folder is not writable, the method falls back to <code>~/.&lt;app&gt;/tmp/&lt;name&gt;</code> and records the reason – folder and kind of exception. Only the <b>first</b> reason of a session is recorded; it is meant to appear once in the status line, not anew on every call.</p>
+<p><code>raeumeAuf(folder, days)</code> removes every file whose last modification lies before the limit</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>t</mi></mrow><mrow><mi>limit</mi><mo>⁡</mo><mspace width="0.1667em"/></mrow></msub><mo>=</mo><msub><mrow><mi>t</mi></mrow><mrow><mspace width="0.1667em"/><mi>now</mi><mo>⁡</mo></mrow></msub><mo>−</mo><mspace width="0.1667em"/><mi>days</mi><mo>⁡</mo><mo form="prefix" lspace="0" rspace="0">⋅</mo><mn>86</mn><mspace width="0.1667em"/><mn>400</mn><mspace width="0.1667em"/><mn>000</mn><mspace width="0.3333em"/><mspace width="0.1667em"/><mi>ms</mi><mo>⁡</mo></mrow><annotation encoding="application/x-tex">t_\mathrm{limit} = t_\mathrm{now} - \mathrm{days}\cdot 86\,400\,000\ \mathrm{ms}</annotation></semantics></math>
+<p>sub-folders stay. With <code>days = 0</code> everything written before the call goes. A file that cannot be deleted does not abort the run – a cache is never the source.</p>
+<h3>Turning a writer into a reader</h3>
+<p><code>Schreibstrom</code> runs a producer that writes into an <code>OutputStream</code> in a thread of its own and passes its bytes to the reader through a pipe of 1 MiB. <code>read()</code> returns unsigned bytes (0 to 255) and <code>-1</code> at the end; <code>available()</code> tells what is ready in the pipe. If the writer fails, the next <code>read</code> throws an <code>IOException</code> carrying the original cause. If a thread closes the stream while it is itself interrupted, its interrupt flag stays set – <code>close</code> does not swallow it.</p>
+
+<h2 id="json">Numbers and characters in JSON</h2>
+<p><code>Json.schreiben</code> is meant to produce the same characters as the JSON output of the Python standard library, so that generated files can be compared line by line with earlier results. For integers that is trivial, for floating-point numbers it is not: Python writes the <b>shortest</b> digit string that reads back as the same number and chooses the form by the exponent <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>e</mi></mrow><annotation encoding="application/x-tex">e</annotation></semantics></math> of the leading digit,</p>
+$$ e = \lfloor \log_{10} |x| \rfloor, \qquad \text{fixed point if } -4 \le e < 16, \quad \text{otherwise } d.ddd\mathrm{e}{\pm}XX . $$
+<figure>
+<svg viewBox="0 0 620 120" width="620" font-family="sans-serif" font-size="12">
+  <line x1="20" y1="50" x2="600" y2="50" stroke="#5b6475"/>
+  <rect x="150" y="38" width="330" height="24" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="315" y="54" text-anchor="middle" fill="#1f5f8b">fixed point: 0.0001 … 1234567890123456.0</text>
+  <text x="80" y="54" text-anchor="middle" fill="#9a6400">1e-05</text>
+  <text x="540" y="54" text-anchor="middle" fill="#9a6400">1e+16</text>
+  <line x1="150" y1="30" x2="150" y2="70" stroke="#9a6400"/>
+  <line x1="480" y1="30" x2="480" y2="70" stroke="#9a6400"/>
+  <text x="150" y="86" text-anchor="middle" fill="#5b6475">e = −4</text>
+  <text x="480" y="86" text-anchor="middle" fill="#5b6475">e = 16</text>
+  <text x="20" y="110" fill="#5b6475">Exponent at least two digits: 1.5e-05, 1e+16; −0.0 keeps its sign; NaN, Infinity stay words.</text>
+</svg>
+<figcaption>When a floating-point number is written in fixed point and when with an exponent.</figcaption>
+</figure>
+<p>The shortest digit string is supplied by <code>Double.toString</code> itself since JDK 19; the method splits it into digits and exponent and assembles the form by the rule above. The exponent has at least two digits, <code>-0.0</code> keeps its sign, <code>NaN</code> and <code>Infinity</code> are written as words, as Python does. An earlier version wrote integral values through a conversion to <code>long</code> – for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mn>19</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{19}</annotation></semantics></math> this produced the largest <code>long</code> value instead of the number itself. The round trip <code>lesen(schreiben(1e19))</code> is therefore checked explicitly.</p>
+<p>Strings: quotation mark, backslash and the five named control characters get their short escape, all other characters below <code>U+0020</code> the form <code>\u00xx</code>; everything else, umlauts included, stays unchanged. When reading, all escapes of RFC 8259 are understood, <code>\/</code> included; an unknown one such as <code>\x</code> is rejected with its position. A value whose type has no JSON counterpart is rejected when writing instead of being guessed through <code>toString</code>.</p>
+
 <h2 id="pruefung">How it is checked</h2>
 <ul>
   <li><b><code>Kernprobe</code></b> (62 checks; class coverage 16 of 16) checks against the <i>promised</i> behaviour of the interfaces: that the <b>concrete</b> event type determines the recipients – in both directions –, subscription order, harmless double unsubscribing, fault isolation and snapshot, the round trip of the session with XML special characters, path relativisation including its limit (more than three levels up stay absolute), that the passed state is not changed permanently, and that an unknown version throws; also that <code>discover</code> reports two apps with the same identifier. Ten counter-tests – from “no fault isolation” to “wave an unknown version through” – each turned it red.</li>
   <li><b><code>Ablageprobe</code></b> checks writer and reader: round trip <i>field by field</i> through stream and through file (the latter additionally passes the temporary file and the move step), angle brackets, ampersand, quotation marks, line breaks, umlauts and characters outside the basic plane in values, a value of eighty thousand characters, and a file with an external entity as an attacker would present it. After a failed write attempt no temporary file may remain.</li>
+  <li><b><code>Deckungsprobe</code></b> (29 checks, 22 counter-tests, all red) follows the paths no other probe reaches: program folder in a JVM run and without <code>java.home</code>, the cache fallback with its reason, clean-up by age, escapes and number form in JSON, single-byte reads and interruption on the writer stream, context class loader and earlier identifiers in the app catalog, the log file without suffix and the path on another drive. It found a wrong number form in <code>Json</code>: large integral values came back as the largest <code>long</code> value.</li>
   <li>A crash in mid-write cannot be provoked from a probe; the indivisibility of the move is therefore <b>not</b> measured, only the error path.</li>
 </ul>
 
