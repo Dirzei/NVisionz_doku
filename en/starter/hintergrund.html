@@ -150,6 +150,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../compress/index.html">framework-compress</a>
 <a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
 <a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../ocr/index.html">framework-ocr</a>
 <a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
 <div class="gruppe">Visualisation</div>
 <a class="eintrag" href="../chart/index.html">framework-chart</a>
@@ -181,6 +182,8 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
 <a class="eintrag" href="../vision/index.html">framework-vision</a>
 <a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<a class="eintrag" href="../imaging/index.html">framework-imaging</a>
+<a class="eintrag" href="../lupe/index.html">framework-lupe</a>
 <a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
 <div class="gruppe">Further</div>
 <a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
@@ -217,6 +220,7 @@ math[display="block"]{margin:10px 0}
 <a class="eintrag" href="../cmd-cfd/index.html">commandline-cfd</a>
 <a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
 <a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../cmd-ocr/index.html">commandline-ocr</a>
 <a class="eintrag" href="../cmd-vision/index.html">commandline-vision</a>
 <a class="eintrag aktiv" href="index.html">launcher</a>
 <div class="rubriken">
@@ -228,6 +232,8 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite aktiv" href="hintergrund.html">Registration and start</a>
 <a class="rubrik" href="index.html#stand">State and limits</a>
 </div>
+<div class="gruppe">Testing</div>
+<a class="eintrag" href="../pruefstand/index.html">pruefstand</a>
 </nav>
 <main class="haupt">
 <div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">launcher</a> › How a single-app launcher registers and starts its app</span><a class="sprachwahl" href="../../de/starter/hintergrund.html">Deutsch</a></div>
@@ -262,10 +268,31 @@ math[display="block"]{margin:10px 0}
 <h2 id="fenster">The main window</h2>
 <p>Swing requires user interfaces to be created on the event thread. The launcher first sets up the environment on the start-up thread and then hands all of the window building to the event thread: main window, first tab and making it visible.</p>
 
+<h2 id="mehrfach">The multi-app launcher</h2>
+<p>The multi-app launcher registers nothing itself. It finds all apps through the <code>ServiceLoader</code>: every app whose project
+is on the class path and that brings a registration line appears. The started environment knows exactly these apps, no more and
+no fewer.</p>
+<p>Before the window it looks at the arguments. <code>-messung:&lt;name&gt;</code> runs a measurement without a user interface and
+exits with its return value. All other arguments without a leading dash are files; this is how the operating system calls an
+associated program. After start-up the frame opens every file with the app that knows its extension. If several apps know the
+extension, it opens nothing itself but offers the choice.</p>
+<p>The splash screen stays up for at least a fixed time and then hands over to the main window; the two never lie on top of each
+other.</p>
+
+<h3>Measuring the graphics unit</h3>
+<p><code>-messung:grafikeinheit</code> checks, in whatever mode the program is currently running (also as a native program),
+whether the graphics unit computes. On every device found, the kernel <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>←</mo><mi>a</mi><mspace width="0.1667em"/><msub><mrow><mi>x</mi></mrow><mrow><mi>i</mi></mrow></msub><mo>+</mo><msub><mrow><mi>y</mi></mrow><mrow><mi>i</mi></mrow></msub></mrow><annotation encoding="application/x-tex">y_i \leftarrow a\,x_i + y_i</annotation></semantics></math> runs over 10,007 values. Because
+addition and multiplication are correctly rounded on both sides and contraction into an fma is switched off, the result must be
+<em>bit-identical</em> to Java. A device that contracts anyway gets the last bit wrong in many values and turns the measurement
+red.</p>
+<p>Then the whole CFD step runs 20 steps per step kernel against the CPU. Each variable is compared relative to its largest magnitude;
+the three momenta share one reference, because in 2D the third momentum is zero and its own magnitude is no measure:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>d</mi><mo>=</mo><mspace width="0.1667em"/><msub><mi>max</mi><mrow><mi>v</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mfrac><mrow><msub><mi>max</mi><mrow><mi>i</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo>|</mo><msubsup><mrow><mi>u</mi></mrow><mrow><mi>v</mi><mo>,</mo><mi>i</mi></mrow><mrow><mi>GPU</mi><mo>⁡</mo></mrow></msubsup><mo>−</mo><msubsup><mrow><mi>u</mi></mrow><mrow><mi>v</mi><mo>,</mo><mi>i</mi></mrow><mrow><mi>CPU</mi><mo>⁡</mo></mrow></msubsup><mo>|</mo></mrow><mrow><msub><mi>max</mi><mrow><mi>i</mi></mrow></msub><mo>⁡</mo><mspace width="0.1667em"/><mo>|</mo><msubsup><mrow><mi>u</mi></mrow><mrow><mi>v</mi><mo>,</mo><mi>i</mi></mrow><mrow><mi>CPU</mi><mo>⁡</mo></mrow></msubsup><mo>|</mo></mrow></mfrac><mo>≤</mo><msup><mn>10</mn><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>10</mn></mrow></msup><mo>.</mo></mrow><annotation encoding="application/x-tex">d = \max_v \frac{\max_i |u_{v,i}^{\mathrm{GPU}} - u_{v,i}^{\mathrm{CPU}}|}{\max_i |u_{v,i}^{\mathrm{CPU}}|} \le 10^{-10}.</annotation></semantics></math></p>
+
 <h2 id="grenzen">Limits</h2>
 <ul>
-  <li>The window building itself runs in no probe of the single-app launcher, because it needs a screen.</li>
-  <li>This page describes the pattern of the single-app launchers. The multi-app launcher searches the class path for its apps.</li>
+  <li>The window building needs a screen. The probe of the equation-parser launcher therefore runs the whole start-up path only when one is present, with a user directory of its own; without a screen it reports that part as skipped. Line coverage is measured without a screen and so never counts the window building.</li>
+  <li>The load run across all apps (event thread and memory leaks) needs a screen and minutes; it is a tool, not a probe.</li>
 </ul>
 
 </div>
