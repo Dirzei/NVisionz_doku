@@ -345,6 +345,40 @@ math[display="block"]{margin:10px 0}
   }
   feld.addEventListener('input', function () { lade(suche); });
 })();
+(function () {
+  // NEU 2026-11-12 (Eignerwunsch): die Leiste sprang nach jedem Klick auf
+  // einen Eintrag weiter unten an den Anfang, weil jede Seite eine neue
+  // Leiste laedt. Beim Klick merkt sich die Seite, wie weit der Eintrag
+  // vom oberen Rand der Leiste stand; die naechste Seite stellt ihren
+  // aktiven Eintrag wieder dorthin. Ohne Merkwert (Lesezeichen, Suche,
+  // erster Aufruf) wird der aktive Eintrag in die Mitte geholt.
+  var nav = document.querySelector('nav.leiste');
+  if (!nav) { return; }
+  var SCHLUESSEL = 'leistenlage';
+  var akt = nav.querySelector('a.unterseite.aktiv') || nav.querySelector('a.eintrag.aktiv');
+  var abstand = null;
+  try {
+    var w = sessionStorage.getItem(SCHLUESSEL);
+    sessionStorage.removeItem(SCHLUESSEL);
+    if (w !== null && w !== '' && isFinite(w)) { abstand = Number(w); }
+  } catch (e) { /* ohne Speicher: nur mittig holen */ }
+  if (akt) {
+    var oben = akt.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+    if (abstand !== null) {
+      nav.scrollTop = Math.max(0, oben - abstand);
+    } else {
+      nav.scrollTop = Math.max(0, oben - nav.clientHeight / 2);
+    }
+  }
+  nav.addEventListener('click', function (ev) {
+    var a = ev.target.closest ? ev.target.closest('a') : null;
+    if (!a || !nav.contains(a)) { return; }
+    try {
+      sessionStorage.setItem(SCHLUESSEL,
+          String(a.getBoundingClientRect().top - nav.getBoundingClientRect().top));
+    } catch (e) { /* ohne Speicher springt die Leiste nur in die Mitte */ }
+  });
+})();
 </script>
 </body>
 </html>
