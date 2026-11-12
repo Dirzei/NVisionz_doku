@@ -155,6 +155,7 @@ math[display="block"]{margin:10px 0}
 <div class="gruppe">Darstellung</div>
 <a class="eintrag" href="../chart/index.html">framework-chart</a>
 <a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../diagramm/index.html">framework-diagramm</a>
 <a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
 <a class="eintrag" href="../image/index.html">framework-image</a>
 <div class="gruppe">Rechnen und Modellieren</div>
@@ -334,7 +335,7 @@ math[display="block"]{margin:10px 0}
   <tr><td>16 Bit</td><td>mit Vorzeichen</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{15}</annotation></semantics></math></td></tr>
   <tr><td>24 Bit</td><td>mit Vorzeichen, höchstes Byte vorzeichenerweitert</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>23</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{23}</annotation></semantics></math></td></tr>
   <tr><td>32 Bit, Formatkennung 3</td><td>IEEE-754 <code>float</code></td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> unverändert</td></tr>
-  <tr><td>32 Bit, sonst</td><td>mit Vorzeichen</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{31}</annotation></semantics></math></td></tr>
+  <tr><td>32 Bit, Formatkennung 1</td><td>mit Vorzeichen</td><td><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>/</mo><msup><mrow><mn>2</mn></mrow><mrow><mn>31</mn></mrow></msup></mrow><annotation encoding="application/x-tex">b / 2^{31}</annotation></semantics></math></td></tr>
 </table>
 <p>8 Bit ist als einzige Tiefe vorzeichenlos – die Mitte liegt bei 128. Mehrkanalige Dateien bleiben verschränkt (links, rechts, links, …); die Dauer ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>/</mo><mo stretchy="false">(</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub><mo>⋅</mo><mi>c</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">n / (f_s \cdot c)</annotation></semantics></math> mit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Werten, Abtastrate <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>s</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_s</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> Kanälen.</p>
 
@@ -349,11 +350,13 @@ p ← 12
     <b>wenn</b> kennung = "fmt " <b>und</b> ℓ ≥ 16:
         format ← le16(inhalt);  kanäle ← max(1, le16(inhalt+2))
         rate ← le32(inhalt+4);  bits ← le16(inhalt+14)
+        <b>wenn</b> format = 0xFFFE <b>und</b> ℓ ≥ 26:  format ← le16(inhalt+24)   <i>Unterformat</i>
     <b>sonst wenn</b> kennung = "data":  datenVon ← inhalt;  datenLänge ← ℓ
     p ← inhalt + ℓ + (ℓ mod 2)                                <i>Füllbyte</i>
 <b>prüfe</b> datenVon ≥ 0
+<b>prüfe</b> (format = 1 <b>und</b> bits ∈ {8, 16, 24, 32}) <b>oder</b> (format = 3 <b>und</b> bits = 32)
 w ← max(1, bits / 8);  n ← ⌊datenLänge / w⌋
-<b>für</b> i = 0 … n−1:  s[i] ← Umrechnung nach Tabelle, andere Tiefen 0
+<b>für</b> i = 0 … n−1:  s[i] ← Umrechnung nach Tabelle
 <b>gib zurück</b> (s, rate, kanäle)</pre>
 <p class="quelle">Quelle: <code>envisionz-framework-autograd/src/envisionz/autograd/corpus/CorpusLoader.java</code>, Methode <code>readWav</code>.</p>
 
@@ -395,10 +398,11 @@ w ← max(1, bits / 8);  n ← ⌊datenLänge / w⌋
 
 <h2 id="pruefung">Wie geprüft wird</h2>
 <ul>
-  <li><b><code>CorpusTest</code></b> baut einen Korpus im Speicher nach – Metadaten und WAV-Dateien werden selbst erzeugt –, damit das Sollergebnis bekannt ist. 18 Prüfungen:
+  <li><b><code>CorpusTest</code></b> baut einen Korpus im Speicher nach – Metadaten und WAV-Dateien werden selbst erzeugt –, damit das Sollergebnis bekannt ist. 23 Prüfungen:
     <ul>
       <li>WAV-Rundlauf eines 440-Hz-Sinus in 8, 16, 24 und 32 Bit mit Toleranzen 0,02 / 0,001 / 10<sup>−5</sup> / 10<sup>−5</sup>; gemessen wurden als größte Abweichung 1,17·10<sup>−2</sup>, 4,57·10<sup>−5</sup>, 1,49·10<sup>−7</sup> und 0;</li>
       <li>ein eingeschobener <code>LIST</code>-Block ungerader Länge mit Füllbyte wird übersprungen; eine Datei ohne RIFF-Kennung wird abgewiesen;</li>
+      <li>erweiterter Kopf (0xFFFE) mit Gleitkomma 32 Bit und mit PCM 16 Bit wird nach dem Unterformat gelesen; PCM 12 Bit, Gleitkomma 64 Bit und Format 2 werden abgewiesen;</li>
       <li>von fünf Metadatenzeilen mit vier vorhandenen Dateien werden vier gelesen; Trennzeichen und Vorrang des normalisierten Texts; der Bericht nennt die Abtastrate und rechnet die Dauer hoch; fehlende <code>metadata.csv</code> führt zu einer Ausnahme;</li>
       <li>Abdeckung: sauberer Text ohne unbekannte Zeichen, plausible Ausbeute, buchtypische Zeichen fallen auf, leere Umsetzungen werden gemeldet, zu niedrige Ausbeute wird angemahnt, <code>ok()</code> unterscheidet richtig.</li>
     </ul></li>
@@ -407,8 +411,8 @@ w ← max(1, bits / 8);  n ← ⌊datenLänge / w⌋
 
 <h2 id="grenzen">Grenzen</h2>
 <ul>
-  <li>Die Formatkennung wird nur für die Unterscheidung „32 Bit Gleitkomma oder ganzzahlig“ ausgewertet. Eine Datei im erweiterten Format (Kennung 0xFFFE) mit Gleitkommawerten wird wie ganzzahlige Werte gelesen – eine Probe mit den Werten 0,5 / −0,25 / 0,1 ergab 0,49 / −0,51 / 0,48. Komprimierte Formate werden nicht abgewiesen.</li>
-  <li>Andere Bittiefen als 8, 16, 24 und 32 (etwa 20 Bit) ergeben ohne Meldung lauter Nullen.</li>
+  <li>Gelesen werden nur unkomprimierte Werte: Formatkennung 1 (ganzzahlig, 8, 16, 24 oder 32 Bit) und 3 (Gleitkomma, 32 Bit), beim erweiterten Format (Kennung 0xFFFE) nach dem Unterformat. Alles andere – komprimierte Formate, Gleitkomma mit 64 Bit, Bittiefen wie 12 oder 20 – wird mit einer Ausnahme abgewiesen.</li>
+  <li>Beim erweiterten Format werden nur die ersten zwei Byte des Unterformats ausgewertet, nicht die ganze Kennung, und die Angabe der gültigen Bits wird nicht gelesen.</li>
   <li>Die ganze Datei wird auf einmal in den Speicher gelesen; für einzelne Korpusstücke ist das unkritisch, für stundenlange Aufnahmen nicht.</li>
   <li>Kanäle werden nicht getrennt; wer einkanalige Werte braucht, muss selbst entschachteln.</li>
   <li>Metadatenzeilen mit weniger als zwei Feldern werden ohne Zählung übergangen; nur fehlende Audiodateien werden gemeldet.</li>

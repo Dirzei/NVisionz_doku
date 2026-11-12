@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A chart surface of its own – JDK only, for screen, SVG, PNG, PDF and print – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../ocr/index.html">framework-ocr</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag aktiv" href="index.html">framework-diagramm</a>
+<div class="rubriken">
+<a class="rubrik" href="#grundsaetze">Principles of the module</a>
+<a class="rubrik" href="#bauform">Structure: chart, layers, renderers</a>
+<a class="rubrik" href="#achsen">Axes</a>
+<a class="rubrik" href="#arten">Chart types</a>
+<a class="rubrik" href="#farbfeld">Colour field and contours</a>
+<a class="rubrik" href="#ausgabe">Output: SVG, PNG, PDF, print</a>
+<a class="rubrik" href="#anmerkungen">Markers and annotations</a>
+<a class="rubrik" href="#bedienung">Operation in Swing</a>
+<a class="rubrik" href="#zustand">Saving the state</a>
+<a class="rubrik" href="#verfahren">How the chart surface computes</a>
+<a class="unterseite" href="verfahren.html">Algorithms</a>
+<a class="rubrik" href="#pruefstand">Test bench</a>
+<a class="rubrik" href="#grenzen">Limits</a>
+</div>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
+<a class="eintrag" href="../vision/index.html">framework-vision</a>
+<a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<a class="eintrag" href="../imaging/index.html">framework-imaging</a>
+<a class="eintrag" href="../lupe/index.html">framework-lupe</a>
+<a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<a class="eintrag" href="../usb/index.html">framework-usb</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-cfd/index.html">app-cfd</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-doku/index.html">app-doku</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-cfd/index.html">commandline-cfd</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../cmd-ocr/index.html">commandline-ocr</a>
+<a class="eintrag" href="../cmd-vision/index.html">commandline-vision</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+<div class="gruppe">Testing</div>
+<a class="eintrag" href="../pruefstand/index.html">pruefstand</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › framework-diagramm</span><a class="sprachwahl" href="../../de/diagramm/index.html">Deutsch</a></div>
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-diagramm</div>
+  <h1>A chart surface of its own – JDK only, for screen, SVG, PNG, PDF and print</h1>
+  <p class="unter">A building block for 2D charts without third-party libraries: Java2D for screen and PNG, own writers for SVG and PDF. A chart holds layers of data source and renderer, any number of axes, a colour field, markers and annotations; a Swing surface operates it with mouse and keys. The algorithms behind it – step sizes, bands, Delaunay, histogram, box plot, thinning, text width – have a page of their own.</p>
+</header>
+
+<div class="zahlen">
+  <div class="zahl"><b>60</b><span>source files in 4 packages</span></div>
+  <div class="zahl"><b>19</b><span>renderers, plus the contour field</span></div>
+  <div class="zahl"><b>4</b><span>outputs: SVG, PNG, PDF, print</span></div>
+  <div class="zahl"><b>0</b><span>dependencies, not even within the workspace</span></div>
+  <div class="zahl"><b>18</b><span>check classes</span></div>
+  <div class="zahl"><b>243</b><span>counter-checks</span></div>
+</div>
+
+<h2 id="grundsaetze">Principles of the module</h2>
+<div class="grundsatz">
+  <div><b>Depends on nothing.</b> Only <code>java.desktop</code>: Java2D, <code>javax.imageio</code> for PNG, Swing for the view. The module writes SVG and PDF itself; its own PDF writer is smaller than a new dependency.</div>
+  <div><b>Runs without a display.</b> SVG, PNG and PDF are produced without a window; the Swing view lives separately in the package <code>swing</code>.</div>
+  <div><b>Layers instead of fixed chart types.</b> A layer joins a data source with a renderer and an x and y axis. New chart types are new renderers; the painter knows them only through the interface.</div>
+  <div><b>Live data without copying.</b> <code>Reihe</code> is a thread-safe ring buffer of fixed size: the computing thread appends, the painter fetches a snapshot. Repainting happens only when the version has changed.</div>
+  <div><b>No locale, no machine fonts.</b> Numbers in labels, SVG and PDF always use a decimal point; text widths in SVG and PDF come from the advance widths of Helvetica. The files are character-identical on every machine.</div>
+  <div><b>No pop-up windows.</b> The surface has neither context menu nor dialog; the application chooses printer and page in its own sidebar.</div>
+</div>
+
+<!-- =============================================================== BAUFORM -->
+<h2 id="bauform">Structure: chart, layers, renderers <span class="paket">envisionz.diagramm · .daten · .darsteller</span></h2>
+
+<div class="karte">
+  <h3><code>Diagramm</code>, <code>Schicht</code>, <code>Darsteller</code>, <code>Zeichner</code>, <code>Leinwand</code></h3>
+  <p class="zweck">A <code>Diagramm</code> holds title and subtitle, any number of x and y axes, the layers, optionally a contour field, markers and annotations. It reports changes to its structure as an <code>Ereignis</code>; the view polls data via <code>version()</code>. The <code>Zeichner</code> lays out margins from the labels, fits automatic axes to the visible layers and paints grid, field, layers, axes, colour bar and legend onto a <code>Leinwand</code> – the same order for screen, PNG, SVG and PDF. <code>liegend(true)</code> turns any chart sideways: the painter hands the renderers a canvas mirrored at the diagonal; texts stay upright.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Diagramm(titel, xAchse, yAchse)</code>, <code>xAchseDazu</code>, <code>yAchseDazu</code>, <code>untertitel</code>, <code>legendenlage</code>, <code>gleicheMassstaebe</code>, <code>liegend</code>, <code>rand</code>, <code>achsenabstand</code></li>
+      <li><code>dazu(reihe)</code>, <code>dazu(name, daten, darsteller)</code>, <code>dazu(schicht)</code>, <code>weg</code>, <code>schichten()</code>; <code>Schicht.achsen(x, y)</code>, <code>sichtbar</code></li>
+      <li><code>treffer(...)</code> – nearest data point under the pointer; <code>beobachte</code>, <code>vergiss</code></li>
+      <li><code>Darsteller&lt;D&gt;</code>: <code>bereich</code>, <code>zeichne</code>, <code>legende</code>, <code>treffer</code>; data sources <code>XYDaten</code>, <code>XYIntervall</code>, <code>XYZDaten</code>, <code>Vektorfeld</code>, <code>Stapel</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-cfd: residual history, field image, isolines</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Charts in applications that keep supplying data or write images without a window.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – convergence history live and as SVG</h4>
+<pre><code>Reihe r = new Reihe("Residuum", 100_000);
+Diagramm d = new Diagramm("Konvergenz", new Achse("Schritt"), new Achse("Residuum").art(Achse.Art.LOG));
+d.dazu(r);
+DiagrammFlaeche flaeche = new DiagrammFlaeche(d);      // in the window
+r.dazu(schritt, residuum);                             // from the computing thread
+Ausgabe.schreibe(d, 800, 500, Stil.HELL, Path.of("konvergenz.svg"));</code></pre></div>
+</div>
+
+<!-- =============================================================== ACHSEN -->
+<h2 id="achsen">Axes <span class="paket">envisionz.diagramm.Achse</span></h2>
+
+<div class="karte">
+  <h3><code>Achse</code> – linear, logarithmic, time, categories, symbols</h3>
+  <p class="zweck">An axis has a fixed or automatic range, a position (first x at the bottom, further ones at the top, first y on the left, further ones on the right, or explicit) and ticks. Linear ticks sit at 1, 2 or 5 times a power of ten, logarithmic ones at powers of ten with minor ticks, on the time axis at calendar boundaries of a time zone (1 ms to 1000 years). Category axes always run from −0.5 to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">n - 0.5</annotation></semantics></math>. Reversal, fixed step, custom format, rotated labels (−90° to 90°) and fonts of their own for title and labels. <a class="vertiefung" href="verfahren.html#achsen">Step sizes and time axis →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>bereich(von, bis)</code>, <code>automatisch()</code>, <code>striche(n)</code>, <code>art(LINEAR|LOG)</code>, <code>invertiert</code>, <code>lage</code></li>
+      <li><code>zeit(zone)</code>, <code>zeitschritt(einheit, n)</code>, <code>kategorien(namen)</code>, <code>symbole(namen)</code>, <code>schrittFest(s)</code></li>
+      <li><code>format(v -&gt; text)</code>, <code>formatMuster</code>, <code>drehung(grad)</code>, <code>titelschrift</code>, <code>beschriftungsschrift</code></li>
+      <li><code>striche()</code>, <code>zuPixel</code>, <code>ausPixel</code>, <code>ablesen(v)</code>, <code>Achse.schritt(spanne, n)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-cfd: card for axes and titles</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Measurements over clock time, residuals over many decades, bars by category, several quantities with their own axes in one image.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== ARTEN -->
+<h2 id="arten">Chart types <span class="paket">envisionz.diagramm.darsteller · .daten</span></h2>
+
+<div class="karte">
+  <h3>19 renderers</h3>
+  <p class="zweck">Each renderer draws a data source and reports its extent for automatic axes, its legend symbol and the nearest point under the pointer. The calculation it rests on is public and thus usable by checks and applications (for example <code>Histogramm.klassen</code>, <code>Boxplot.kennwerte</code>). <a class="vertiefung" href="verfahren.html#histogramm">Histogram, box plot, thinning →</a></p>
+  <table>
+    <tr><th>Group</th><th>Renderers</th><th>Data</th></tr>
+    <tr><td>Points and lines</td><td><code>Linie</code> (polyline, six point symbols, dash patterns, a label per point; thinned per pixel column), <code>Stufe</code>, <code>Flaeche</code>, <code>Band</code>, <code>Fehlerbalken</code></td><td><code>XYDaten</code>, <code>Reihe</code>, <code>XYIntervall</code></td></tr>
+    <tr><td>Bars and areas</td><td><code>Saeulen</code>, <code>GestapelteFlaeche</code>, <code>Kategoriesaeulen</code> (grouped, stacked, percent, horizontal)</td><td><code>XYDaten</code>, <code>Stapel</code>, <code>Kategoriedaten</code></td></tr>
+    <tr><td>Distributions</td><td><code>Histogramm</code> (Sturges or a fixed number or width; count, fraction, density), <code>Boxplot</code> (type 7 quartiles, Tukey whiskers, outliers, mean)</td><td><code>Stichprobe</code>, <code>Boxdaten</code></td></tr>
+    <tr><td>Three quantities</td><td><code>Blasen</code>, <code>Kacheln</code> (colour scale), <code>Vektoren</code>, <code>Isolinien</code> of a contour field</td><td><code>XYZDaten</code>, <code>Vektorfeld</code>, <code>Konturfeld</code></td></tr>
+    <tr><td>Time and planning</td><td><code>Kerzen</code> (open, high, low, close), <code>Gantt</code> (bar plan with completed fraction, milestones)</td><td><code>Kerzendaten</code>, <code>Ganttdaten</code></td></tr>
+    <tr><td>Own centre</td><td><code>Kreis</code> (also ring), <code>Polar</code> (compass rose or mathematical), <code>Spinne</code></td><td><code>Kreisdaten</code>, <code>XYDaten</code>, <code>Kategoriedaten</code></td></tr>
+  </table>
+  <div class="bsp"><h4>Example – histogram of a sample</h4>
+<pre><code>Diagramm d = new Diagramm("Verteilung", new Achse("Wert"), new Achse("Anzahl"));
+d.dazu("Messung", Stichprobe.aus("Messung", werte), new Histogramm());</code></pre></div>
+  <div class="hinweis">Pie, polar and spider charts have their reference frame in the middle of the surface and belong in a chart with <code>ohneAchsen(true)</code>: no frame, no grid, no axis bands. Several polar layers in one chart need the same <code>radiusBis</code>.</div>
+</div>
+
+<!-- =============================================================== FARBFELD -->
+<h2 id="farbfeld">Colour field and contours <span class="paket">envisionz.diagramm.Konturfeld · Farbskala</span></h2>
+
+<div class="karte">
+  <h3><code>Konturfeld</code>, <code>Farbskala</code>, <code>darsteller.Isolinien</code></h3>
+  <p class="zweck">Polygons in data coordinates with one value per cell – the cells of an unstructured mesh or a cut directly, without resampling to a raster. Either cell colours, 2 to 64 bands of equal size, by ratios (logarithmic) or freely set, own band colours, isolines on the band boundaries with labels, mesh lines, a colour bar on the right or at the bottom. Band boundaries run smoothly through the cells because each cell is split into a fan around its centroid when drawn. Scattered points are triangulated by Delaunay. A colour raster computed elsewhere can be drawn directly. <a class="vertiefung" href="verfahren.html#kontur">Bands, fans, Delaunay →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new Konturfeld(name, anfang, x, y, wert)</code>, <code>werte(w)</code>, <code>bereich(a, b)</code>, <code>skala(s)</code></li>
+      <li><code>baender(n)</code>, <code>stufen(g…)</code>, <code>farben(rgb…)</code>, <code>logarithmisch</code>, <code>umgekehrt</code>, <code>isolinien</code>, <code>isobeschriftung(an, abstand)</code>, <code>netzlinien</code></li>
+      <li><code>farbleiste</code>, <code>leistentitel</code>, <code>leistenformat</code>, <code>leistenlage(RECHTS|UNTEN)</code>, <code>rasterbild(...)</code></li>
+      <li><code>Konturfeld.ausPunkten(name, x, y, w[, maxKante])</code>, <code>isostrecken()</code>, <code>knotenwerte()</code>, <code>bandgrenzen()</code></li>
+      <li><code>Farbskala</code>: <code>VIRIDIS</code> (default), <code>KUEHLWARM</code>, <code>GRAU</code>, <code>JET</code>, <code>HEISS</code>, <code>BLAUWEISSROT</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-cfd: field image, mesh view, isolines of further quantities</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Flow fields on the computational mesh, measurement points in the plane, maps from scattered data.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – contours from measurement points</h4>
+<pre><code>Konturfeld f = Konturfeld.ausPunkten("Druck", x, y, p).baender(10).isolinien(true);
+Diagramm d = new Diagramm("Druckverteilung", new Achse("x"), new Achse("y")).feld(f).gleicheMassstaebe(true);</code></pre></div>
+</div>
+
+<!-- =============================================================== AUSGABE -->
+<h2 id="ausgabe">Output: SVG, PNG, PDF, print <span class="paket">envisionz.diagramm.Ausgabe</span></h2>
+
+<div class="karte">
+  <h3><code>Ausgabe</code>, <code>SvgLeinwand</code>, <code>Java2dLeinwand</code>, <code>PdfLeinwand</code>, <code>Stil</code></h3>
+  <p class="zweck">One painter, four targets. <b>PNG</b> via Java2D with anti-aliasing. <b>SVG</b> as text with locale-free numbers, clipping via <code>clipPath</code>, opacity as <code>fill-opacity</code>. <b>PDF</b> as one page of chart size with vectors, the standard font Helvetica in WinAnsi (bold and italic only when used), opacity via a graphics state, images compressed. <b>Print</b> without a print dialog: the application chooses printer and page, the chart is fitted, centred horizontally and aligned to the top. <code>Stil</code> brings <code>HELL</code> and <code>DUNKEL</code> with a palette of eight colours.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Ausgabe.svg(d, b, h, stil)</code>, <code>bild(...)</code>, <code>pdf(...)</code>, <code>schreibe(d, b, h, stil, pfad)</code> by extension <code>.svg</code>, <code>.png</code>, <code>.pdf</code></li>
+      <li><code>Ausgabe.druckbar(d, b, h, stil)</code>, <code>massstab(seite, b, h)</code>, <code>drucker()</code>, <code>drucke(..., drucker, seite)</code></li>
+      <li><code>Schrift(groesse, fett, kursiv)</code> per element; <code>\n</code> separates lines in titles, legend and annotations</li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-cfd: images of the residual history and the field</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Report images that look the same in every program, images from computations without a display, printouts.</p></div>
+  </div>
+  <div class="hinweis">The text width in SVG and PDF comes from the advance widths of Helvetica, not from a font on the machine (<a href="verfahren.html#text">text width</a>). In PNG, Java2D measures with the machine's font; image and SVG are therefore not pixel-identical in the position of texts.</div>
+</div>
+
+<!-- =============================================================== ANMERKUNGEN -->
+<h2 id="anmerkungen">Markers and annotations <span class="paket">envisionz.diagramm.Marke · Anmerkung</span></h2>
+
+<div class="karte">
+  <h3><code>Marke</code>, <code>Anmerkung</code></h3>
+  <p class="zweck">Markers are lines at a value or bands over a range on an x or y axis, above grid and field, below the layers. Annotations are text (with alignment and rotation), line, polygon (outline, fill, opacity), arrow to a point with text at the end of the shaft, and image in a rectangle of the data – each attached to an x and y axis and behind or in front of the layers.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Marke.wert(inX, wert, farbe, text)</code>, <code>Marke.bereich(inX, von, bis, farbe, text)</code>; <code>Diagramm.marke(m)</code>, <code>markenLeeren()</code></li>
+      <li><code>Diagramm.anmerkung(a)</code>, <code>anmerkungWeg</code>, <code>anmerkungenLeeren</code>; kinds <code>Text</code>, <code>Linie</code>, <code>Vieleck</code>, <code>Pfeil</code>, <code>Bild</code>; layers <code>HINTEN</code>, <code>VORN</code></li></ul></div>
+    <div class="feld"><h4>What for</h4><p>Limits, operating ranges, pointers to single points, logos or sketches inside the chart.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== BEDIENUNG -->
+<h2 id="bedienung">Operation in Swing <span class="paket">envisionz.diagramm.swing</span></h2>
+
+<div class="karte">
+  <h3><code>DiagrammFlaeche</code>, <code>Klick</code></h3>
+  <p class="zweck">A <code>JComponent</code> without pop-up windows or context menu. Dragging with the left button selects a section (with Shift only in x), the wheel zooms around the pointer (Ctrl only x, Shift only y), right or middle button pan, a double click restores the initial view; arrow keys pan by a tenth, with Shift by half. Every change of the view goes into a history of at most 100 steps, Ctrl+Z undoes it (wheel and key steps within 0.6 s count as one). Crosshair with readout, optionally snapped to the nearest data point within 10 pixels; tooltips; clicks with pixel, values and hit; Ctrl+C copies the image. A 100 ms timer repaints only when the version has changed.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new DiagrammFlaeche(d)</code>, <code>verschiebe(fx, fy)</code>, <code>zoomMitte(f)</code>, <code>setVerschiebemodus</code>, <code>zurueck()</code></li>
+      <li><code>grenzen(achse, von, bis)</code>, <code>grenzenText(achse, von, bis)</code> – typed limits with comma or point, dates, category names</li>
+      <li><code>fadenkreuz(an)</code>, <code>ablesung()</code>, <code>tooltips(an)</code>, <code>tooltipText(f)</code>, <code>klick(k)</code>, <code>zeiger(...)</code></li>
+      <li><code>bild()</code>, <code>bild(b, h)</code>, <code>bildKopieren()</code>, <code>druckbar()</code>, <code>drucken(drucker, seite)</code>, <code>themenstil()</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-cfd: residual and field view</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Charts to be examined in a window. The application provides the button bar with its icons; the module itself depends on no icon set.</p></div>
+  </div>
+</div>
+
+<!-- =============================================================== ZUSTAND -->
+<h2 id="zustand">Saving the state <span class="paket">envisionz.diagramm.Zustand</span></h2>
+
+<div class="karte">
+  <h3><code>Zustand</code> – presentation as XML</h3>
+  <p class="zweck">Writes and reads the state of a chart as XML (StAX, version 2; version 1 remains readable): title, subtitle, legend, equal scales, horizontal orientation, margins, axis offset, fonts, axes with kind, range, reversal, position, rotation, step and format pattern, layers with visibility and axes, series with their appearance, markers, contour field settings and all annotations. Optionally the points of the series and the field with geometry and values come along. Reading applies to an existing chart; whatever does not fit is returned as a note, nothing is applied before the whole file is read, and DTDs and external entities are refused.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Zustand.alsText(d[, mitDaten])</code>, <code>schreibe(d, writer[, mitDaten])</code></li>
+      <li><code>Zustand.ausText(d, text)</code>, <code>lies(d, reader)</code> – returns the list of notes</li></ul></div>
+    <div class="feld"><h4>What for</h4><p>Saving and restoring views together with the work.</p></div>
+  </div>
+  <div class="hinweis">Not part of the state: data sources other than series, custom renderers, a display format set as a function.</div>
+</div>
+
+<!-- =============================================================== VERFAHREN -->
+<h2 id="verfahren">How the chart surface computes</h2>
+<div class="karte">
+  <h3><a href="verfahren.html">Algorithms</a></h3>
+  <p class="zweck">Round step sizes (1, 2, 5 times a power of ten), logarithmic division, time axis in calendar units of a zone; bands linear, logarithmic and free, smoothing via node values, fan around the centroid, isolines on the band boundaries; Delaunay by Bowyer-Watson with a relative tolerance; classes by Sturges, half-open; type 7 quartiles and Tukey whiskers; thinning to four points per pixel column; text width from advance widths. With worked examples from the checks.</p>
+</div>
+
+<!-- =============================================================== PRUEFSTAND -->
+<h2 id="pruefstand">Test bench</h2>
+<p class="einl">Checks are classes with <code>main</code> under <code>test/</code>; most of them also pass under German and Turkish locale. Run via <code>pruefen.cmd --nur framework-diagramm</code>, not part of the GUI collective run.</p>
+<table>
+  <tr><th>Check</th><th>Tests</th><th>Content</th></tr>
+  <tr><td><code>Diagrammprobe</code></td><td>21</td><td>step sizes, axes, mapping and zoom, ring buffer, colour scale, bands and isolines, mesh lines, thinning, SVG bit-identical also in German, live with 200 000 points from a second thread, markers, point symbols</td></tr>
+  <tr><td><code>Bauformprobe</code></td><td>12</td><td>layers, second x and y axis, position, events, hits, version, custom renderer</td></tr>
+  <tr><td><code>Darstellerprobe</code>, <code>darsteller.Naechsterprobe</code></td><td>12 + 1</td><td>step, area, bars, stacked, band, error bars, bubbles, vectors, tiles on the image</td></tr>
+  <tr><td><code>Achsenprobe</code></td><td>10</td><td>time axis, time zone and daylight saving time, categories, symbols, fixed step, rotation</td></tr>
+  <tr><td><code>Farbfeldprobe</code></td><td>10</td><td>free levels, own colours, logarithmic, reversed, colour bar, isoline labels, Delaunay</td></tr>
+  <tr><td><code>Anmerkungsprobe</code></td><td>9</td><td>all annotations, layers, legend position, PDF</td></tr>
+  <tr><td><code>Diagrammartenprobe</code>, <code>darsteller.Teileprobe</code></td><td>50 + 6</td><td>category bars, histogram, box plot against recomputed quartiles, candlesticks, bar plan, pie, polar, spider, without axes</td></tr>
+  <tr><td><code>swing.Bedienungsprobe</code></td><td>42</td><td>undo, typed limits, readout, crosshair, tooltip, click, image and clipboard</td></tr>
+  <tr><td><code>Zustandsdateiprobe</code>, <code>Zustandvollprobe</code></td><td>26 + 6</td><td>bit-identical round trip, notes, rejection of external entities, special characters; version 2 with data</td></tr>
+  <tr><td><code>Schriftprobe</code>, <code>Ausrichtungsprobe</code>, <code>Druckprobe</code>, <code>Querleinwandprobe</code></td><td>7, 6, 5, 8</td><td>advance widths, fonts per element, multi-line; horizontal, margins, offset; print without dialog; mirroring of the sideways canvas</td></tr>
+  <tr><td><code>Isolinienprobe</code>, <code>Rasterprobe</code></td><td>7, groups 01–07</td><td>isolines as a layer; finished colour raster in data coordinates</td></tr>
+</table>
+<p>In addition, <b>243 counter-checks</b> in <code>test/gegenproben.dat</code>: each a deliberate corruption of the source on which the responsible check must turn red.</p>
+
+<!-- =============================================================== GRENZEN -->
+<h2 id="grenzen">Limits</h2>
+<ul>
+<li>So far only the CFD user interface uses the module; the other charts of the workspace still run on JFreeChart.</li>
+<li>The Delaunay triangulation is meant for a few thousand points (all triangles are tested for each point).</li>
+<li>A milestone at the edge of the automatic range of a bar plan is cut in half; the range knows nothing about pixels.</li>
+<li>The print path has not been tried on a real printer.</li>
+<li>The state does not include data sources other than series or custom renderers.</li>
+</ul>
+
+<footer>
+envisionz-framework-diagramm · 60 source files in 4 packages · depends on nothing · checks: <code>pruefen.cmd --nur framework-diagramm</code>
+</footer>
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+</script>
+</body>
+</html>

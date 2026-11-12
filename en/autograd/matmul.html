@@ -155,6 +155,7 @@ math[display="block"]{margin:10px 0}
 <div class="gruppe">Visualisation</div>
 <a class="eintrag" href="../chart/index.html">framework-chart</a>
 <a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../diagramm/index.html">framework-diagramm</a>
 <a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
 <a class="eintrag" href="../image/index.html">framework-image</a>
 <div class="gruppe">Computation and modelling</div>
@@ -360,6 +361,8 @@ S ← product of batch axes of a;  work ← S·M·K·N
             <b>for</b> n ← 0 <b>to</b> N−1:  C[s,m,n] += av · B[(s),k,n]
 
 <b>backward</b> (G = C.grad):
+    <b>if</b> schnellerRueckwaerts <b>and</b> work ≥ schnellesMatmulAb:
+        schnellRueckwaerts(…);  <b>done</b>         <i>float kernel, see below</i>
     <b>if</b> A.grad ≠ null:
         <b>for each</b> row (s, m) — parallel:
             <b>for</b> k:  A.grad[s,m,k] += Σ_n G[s,m,n] · B[(s),k,n]
@@ -385,7 +388,7 @@ af ← toFloat(A);  bf ← toFloat(B)
     as ← slice s of af;  bs ← shared ? bf : slice s of bf
     kernel.matmul(as, bs, cf, M, K, N)        <i>kernels add into cf</i>
     C[s] ← cf                                 <i>set, not added</i></pre>
-<div class="hinweis"><b>Decision in the framework:</b> the switch is <b>off</b> by default, and the threshold <code>Ops.schnellesMatmulAb</code> is <b>1,000,000</b> multiplications – below that, converting there and back costs more than the kernel saves. Only the <b>forward step</b> is connected; the backward path always computes in <code>double</code> with the factors' <code>double</code> values. Gradient checking and bit-exact comparisons thus remain possible even with the switch on.</div>
+<div class="hinweis"><b>Decision in the framework:</b> the switch is <b>off</b> by default, and the threshold <code>Ops.schnellesMatmulAb</code> is <b>1,000,000</b> multiplications – below that, converting there and back costs more than the kernel saves. The switch affects only the <b>forward step</b>; the backward path then computes in <code>double</code> with the factors' <code>double</code> values. Gradient checking and bit-exact comparisons thus remain possible even with the switch on. For long training runs there is a second, independent switch <code>Ops.schnellerRueckwaerts</code> (also <b>off</b> by default, same threshold): it computes the gradients in <code>float</code> – <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>A</mi></mrow></msub><mo>=</mo><mi>G</mi><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">g_A = G B^T</annotation></semantics></math> via <code>matmulNT</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>B</mi></mrow></msub><mo>=</mo><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>G</mi></mrow><annotation encoding="application/x-tex">g_B = A^T G</annotation></semantics></math> via the product with <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math> transposed beforehand, for a shared matrix in a single product over all batch entries – and adds them to the existing <code>double</code> gradients.</div>
 
 <h2 id="beispiel">Worked example: which products run in parallel</h2>
 <p>An encoder of the size the module documentation names for stage 1 of the voice: width <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">d = 128</annotation></semantics></math>, four heads of <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>=</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">D_h = 32</annotation></semantics></math>, sequence length <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>100</mn></mrow><annotation encoding="application/x-tex">T = 100</annotation></semantics></math>.</p>

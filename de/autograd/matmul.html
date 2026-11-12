@@ -155,6 +155,7 @@ math[display="block"]{margin:10px 0}
 <div class="gruppe">Darstellung</div>
 <a class="eintrag" href="../chart/index.html">framework-chart</a>
 <a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../diagramm/index.html">framework-diagramm</a>
 <a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
 <a class="eintrag" href="../image/index.html">framework-image</a>
 <div class="gruppe">Rechnen und Modellieren</div>
@@ -360,6 +361,8 @@ S ← Produkt der Stapelachsen von a;  arbeit ← S·M·K·N
             <b>für</b> n ← 0 <b>bis</b> N−1:  C[s,m,n] += av · B[(s),k,n]
 
 <b>rückwärts</b> (G = C.grad):
+    <b>wenn</b> schnellerRueckwaerts <b>und</b> arbeit ≥ schnellesMatmulAb:
+        schnellRueckwaerts(…);  <b>fertig</b>       <i>float-Kern, siehe unten</i>
     <b>wenn</b> A.grad ≠ null:
         <b>für jede</b> Zeile (s, m) — parallel:
             <b>für</b> k:  A.grad[s,m,k] += Σ_n G[s,m,n] · B[(s),k,n]
@@ -385,7 +388,7 @@ af ← toFloat(A);  bf ← toFloat(B)
     as ← Ausschnitt s von af;  bs ← gemeinsam ? bf : Ausschnitt s von bf
     kern.matmul(as, bs, cf, M, K, N)          <i>Kerne addieren auf cf</i>
     C[s] ← cf                                 <i>gesetzt, nicht addiert</i></pre>
-<div class="hinweis"><b>Festlegung im Framework:</b> Der Schalter steht per Vorgabe auf <b>aus</b>, und die Schwelle <code>Ops.schnellesMatmulAb</code> auf <b>1 000 000</b> Multiplikationen – darunter kostet das Umwandeln hin und zurück mehr, als der Kern einspart. Angeschlossen ist nur der <b>Vorwärtsschritt</b>; der Rückwärtsweg rechnet immer in <code>double</code> mit den <code>double</code>-Werten der Faktoren. Gradientenprüfung und bitgenaue Vergleiche bleiben so auch bei eingeschaltetem Schalter möglich.</div>
+<div class="hinweis"><b>Festlegung im Framework:</b> Der Schalter steht per Vorgabe auf <b>aus</b>, und die Schwelle <code>Ops.schnellesMatmulAb</code> auf <b>1 000 000</b> Multiplikationen – darunter kostet das Umwandeln hin und zurück mehr, als der Kern einspart. Der Schalter betrifft nur den <b>Vorwärtsschritt</b>; der Rückwärtsweg rechnet dabei in <code>double</code> mit den <code>double</code>-Werten der Faktoren. Gradientenprüfung und bitgenaue Vergleiche bleiben so auch bei eingeschaltetem Schalter möglich. Für lange Trainingsläufe gibt es einen zweiten, unabhängigen Schalter <code>Ops.schnellerRueckwaerts</code> (Vorgabe ebenfalls <b>aus</b>, dieselbe Schwelle): Er rechnet die Gradienten in <code>float</code> – <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>A</mi></mrow></msub><mo>=</mo><mi>G</mi><msup><mrow><mi>B</mi></mrow><mrow><mi>T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">g_A = G B^T</annotation></semantics></math> über <code>matmulNT</code>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>g</mi></mrow><mrow><mi>B</mi></mrow></msub><mo>=</mo><msup><mrow><mi>A</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>G</mi></mrow><annotation encoding="application/x-tex">g_B = A^T G</annotation></semantics></math> über das Produkt mit vorher umgelegtem <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi></mrow><annotation encoding="application/x-tex">A</annotation></semantics></math>, bei gemeinsamer Matrix in einem einzigen Produkt über alle Stapeleinträge – und addiert sie auf die vorhandenen <code>double</code>-Gradienten.</div>
 
 <h2 id="beispiel">Rechenbeispiel: welche Produkte parallel laufen</h2>
 <p>Ein Encoder in der Größe, die die Moduldokumentation für Stufe 1 der Stimme nennt: Breite <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>128</mn></mrow><annotation encoding="application/x-tex">d = 128</annotation></semantics></math>, vier Köpfe zu <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>D</mi></mrow><mrow><mi>h</mi></mrow></msub><mo>=</mo><mn>32</mn></mrow><annotation encoding="application/x-tex">D_h = 32</annotation></semantics></math>, Folgenlänge <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>100</mn></mrow><annotation encoding="application/x-tex">T = 100</annotation></semantics></math>.</p>

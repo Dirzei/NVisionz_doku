@@ -155,6 +155,7 @@ math[display="block"]{margin:10px 0}
 <div class="gruppe">Visualisation</div>
 <a class="eintrag" href="../chart/index.html">framework-chart</a>
 <a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../diagramm/index.html">framework-diagramm</a>
 <a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
 <a class="eintrag" href="../image/index.html">framework-image</a>
 <div class="gruppe">Computation and modelling</div>
@@ -332,7 +333,7 @@ math[display="block"]{margin:10px 0}
 </ul>
 <p>There are three kinds of tensors. <code>Tensor.of</code> creates a leaf without gradient (input data, constants), <code>Tensor.param</code> a leaf with gradient (parameters), and every operation in <code>Ops</code> produces a result tensor through <code>Tensor.result</code>. That tensor carries a gradient and a backward function exactly when at least one parent carries a gradient. Computations that involve only data – a positional encoding, a mask, a precomputed spectrum – therefore never hang on the graph, and their backward path costs nothing.</p>
 <div class="hinweis"><b>Decision in the framework:</b> the graph is built <b>implicitly</b> during the forward computation. There is no tape, no recording and no mode to switch on: whoever computes, builds. Hence every call of the loss function builds a <b>fresh</b> graph – <code>GradCheck</code>, the trainers and the fitting methods rely on that.</div>
-<p>All values are <code>double</code>. That is deliberate: the gradient check needs the resolution, and bit-exact comparisons between the serial and the parallel path, or between an uninterrupted and a resumed training run, can only be made sharply in double precision. The optional <code>float</code> path concerns only the forward step of the matrix product (see <a href="index.html#vector">Matrix kernels</a>).</p>
+<p>All values are <code>double</code>. That is deliberate: the gradient check needs the resolution, and bit-exact comparisons between the serial and the parallel path, or between an uninterrupted and a resumed training run, can only be made sharply in double precision. The optional <code>float</code> paths concern only the matrix product, its forward step and – with a second switch of its own – its backward step (see <a href="index.html#vector">Matrix kernels</a> and <a href="matmul.html#schnell">Matrix product</a>); both are off by default.</p>
 
 <h2 id="backward">The backward pass</h2>
 <p><code>backward()</code> is only allowed on a tensor with exactly one element – the loss. It sets that gradient to 1, sorts the graph topologically and calls the backward functions in reverse order.</p>
@@ -340,7 +341,8 @@ math[display="block"]{margin:10px 0}
 <pre class="pseudo"><b>if</b> size() ≠ 1:          <b>throw</b> "backward() only on a scalar"
 <b>if</b> grad = null:         <b>throw</b> "no gradient path (no parameter in the graph?)"
 order ← topoSort(this)                    <i>parents before child</i>
-grad[0] ← 1                               <i>g_L = 1, set, not added</i>
+<b>for each</b> t in order with t.back ≠ null: t.grad ← 0   <i>intermediate nodes only</i>
+grad[0] ← 1                              <i>g_L = 1, set, not added</i>
 <b>for</b> i ← |order|−1 <b>down to</b> 0:
     t ← order[i]
     <b>if</b> t.back ≠ null: t.back.accumulate(t)     <i>distributes t.grad to t.parents</i></pre>
@@ -413,7 +415,7 @@ stack ← [(root, 0)]
 <h2 id="grenzen">Limits</h2>
 <ul>
   <li><b>First derivatives only.</b> The backward functions compute on raw arrays and build no graph; a derivative of the derivative (Hessian-vector products, gradient penalties) is not possible.</li>
-  <li><b>One backward pass per graph.</b> The gradients of intermediate nodes are not reset before a second <code>backward()</code> on the same graph. Recomputed for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mo largeop="true" movablelimits="true">∑</mo><mspace width="0.1667em"/><msup><mi>tanh</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mo stretchy="false">(</mo><mi>w</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L = \sum \tanh^2(w)</annotation></semantics></math>: after the second call <code>w.grad</code> does not hold twice but four times the single gradient. Whoever wants to differentiate twice builds the graph twice.</li>
+  <li><b>A second backward pass adds up.</b> Before each run <code>backward()</code> resets the gradients of the intermediate nodes, but not those of the parameters. A second <code>backward()</code> on the same graph therefore adds the same gradient once more: for <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>=</mo><mo largeop="true" movablelimits="true">∑</mo><mspace width="0.1667em"/><msup><mi>tanh</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mo stretchy="false">(</mo><mi>w</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">L = \sum \tanh^2(w)</annotation></semantics></math>, <code>w.grad</code> then holds exactly twice the single gradient. Whoever wants the gradient once calls <code>zeroGrad()</code> in between.</li>
   <li><b>Memory grows with the graph.</b> Every intermediate value is kept until the end of the backward pass – for a transformer all activations of all layers, for attention quadratically in the sequence length.</li>
   <li><b>No in-place operations.</b> Every operation creates a new tensor. Whoever changes a parameter's <code>data</code> directly (like the clamps in the fitting methods) does so outside the graph and after the optimiser step.</li>
   <li><b>Not for concurrent backward passes.</b> Parallelism lives inside the matrix product; two threads differentiating into the same parameters at the same time would corrupt each other's gradients.</li>
