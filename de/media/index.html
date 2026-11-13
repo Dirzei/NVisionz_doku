@@ -188,6 +188,8 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="programmstrom.html">Hintergrund</a>
 <a class="rubrik" href="#ton">Ton und Zeitstempel</a>
 <a class="unterseite" href="zeitmarken.html">Hintergrund</a>
+<a class="rubrik" href="#mp4">MP4 und QuickTime</a>
+<a class="rubrik" href="#avi">AVI</a>
 <a class="rubrik" href="#schaden">Schäden im Bildstrom</a>
 <a class="unterseite" href="schaeden.html">Hintergrund</a>
 <a class="rubrik" href="#erkennung">Was ist das für eine Datei?</a>
@@ -410,6 +412,44 @@ ps.befunde().forEach(System.out::println);</code></pre></div>
 <pre><code>Zeitmarken.Paar p = vobs.zeitmarken(120_000L, 0xC0);
 if (p.vollstaendig()) System.out.printf("Versatz %.3f s%n", p.versatzSekunden());</code></pre></div>
 </div>
+
+<!-- =============================================================== MP4 -->
+<h2 id="mp4">MP4 und QuickTime <span class="paket">envisionz.media.mp4</span></h2>
+
+<div class="karte">
+  <h3><code>Mp4Datei</code>, <code>Spur</code>, <code>Mp4Schreiber</code> – Kastenbaum nach ISO/IEC 14496-12 und QuickTime</h3>
+  <p class="zweck"><code>Mp4Datei</code> liest den Kastenbaum, die Spuren und ihre Probentafeln; die Proben selbst erst auf Anfrage. QuickTime-Dateien (Marke <code>qt  </code> oder gar kein <code>ftyp</code>, vorn <code>wide</code>, <code>free</code>, <code>skip</code> oder <code>pnot</code>) gehen denselben Weg. Forensisch wichtig sind die Angaben neben dem Bild: Aufnahme- und Änderungszeit aus <code>mvhd</code> (gezählt ab 1904), Texte in <code>udta</code> (Mac-Sprachcode unter 0x400 heißt MacRoman, darüber UTF-8 oder UTF-16 mit BOM), <code>meta</code> mit <code>keys</code> und <code>ilst</code> (Gerät, Ort nach ISO 6709, Software) und die Zeitcodespur <code>tmcd</code> mit SMPTE-Drop-Frame. Jede Zahl aus der Datei wird gegen den Rest geprüft, Angaben höchstens 256 (Lehre 9). Ton: MPEG, AC-3, AAC (Objektart 0x40, AudioSpecificConfig aus <code>esds</code>) und PCM (<code>sowt</code>, <code>twos</code>, <code>in24</code>, <code>in32</code>, <code>fl32</code>, <code>fl64</code>, <code>lpcm</code>, <code>ulaw</code>, <code>alaw</code>, Endung aus <code>enda</code>), bei fester Probengröße eine Probe je Block.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>Mp4Datei.oeffne(Path)</code>, <code>aus(byte[])</code>, <code>spuren()</code>, <code>spur(art)</code>, <code>probe(spur, i)</code>, <code>befunde()</code></li>
+      <li><code>quicktime()</code>, <code>erstellt()</code>, <code>geaendert()</code>, <code>angaben()</code>, <code>zeitcode(spur)</code>, <code>zeitcodeText(n, bilder, drop)</code></li>
+      <li><code>Spur.pcm()</code>, <code>pcmBits()</code>, <code>pcmGrosseEndung()</code>, <code>aacKonfig()</code>, <code>objektart()</code>, <code>zeitcodespur()</code></li>
+      <li><code>Mp4Schreiber.bildspur(…)</code>, <code>tonspurAac(asc, rate, kanaele)</code>; <code>Tonrahmen.adts(d)</code>, <code>adtsKopfFuer(asc, laenge)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-forensik: Steckbrief, ForensikPanel, Mp4Ton</span><span class="chip">framework-restore: Mp4Ausgabe</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Handy- und Kameraaufnahmen sichten, abspielen und restauriert wieder als MP4 ausgeben.</p></div>
+  </div>
+    <div class="bsp"><h4>Beispiel – Aufnahmezeit und Gerät einer MOV-Datei</h4>
+<pre><code>try (Mp4Datei d = Mp4Datei.oeffne(Path.of("IMG_0001.MOV"))) {
+    System.out.println(d.erstellt());
+    d.angaben().forEach((k, v) -> System.out.println(k + " = " + v));
+}</code></pre></div>
+</div>
+
+<!-- =============================================================== AVI -->
+<h2 id="avi">AVI <span class="paket">envisionz.media.avi</span></h2>
+
+<div class="karte">
+  <h3><code>AviDatei</code> – RIFF/AVI und OpenDML</h3>
+  <p class="zweck">Liest AVI mit <code>hdrl</code>, <code>movi</code> und <code>idx1</code>, dazu OpenDML für Dateien über 1 GB (weitere Teile <code>AVIX</code>, Überindex <code>indx</code> mit Standardindizes <code>ix##</code>). Die Ströme werden zu denselben <code>Spur</code>en wie bei MP4, sodass Wiedergabe, Ton und Ausgabe den Behälter nicht kennen müssen. Die Probentafel kommt aus dem OpenDML-Index, sonst aus <code>idx1</code> (bezogen auf <code>movi</code> oder auf den Dateianfang, beides kommt vor; entschieden an der ersten Eintragung), sonst werden die Blöcke in <code>movi</code> der Reihe nach gelesen – dann erkennt der Leser die Schlüsselbilder am Inhalt. H.264 (nach Anhang B oder mit <code>avcC</code>) und MPEG-1/2 werden dekodiert; MPEG-4 Teil 2, Motion-JPEG, DV und unkomprimierte Bilder stehen als Lücke im Befund, nicht verschluckt. Forensisch wichtig: <code>IDIT</code> (Aufnahmezeit vieler Digitalkameras), <code>INFO</code> (Software, Datum), leere Bildblöcke (ausgelassene oder wiederholte Bilder) und die Bildzahl im Kopf gegen die gelesene.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>AviDatei.oeffne(Path)</code>, <code>aus(byte[])</code>, <code>spuren()</code>, <code>spur(art)</code>, <code>probe(spur, i)</code>, <code>befunde()</code></li>
+      <li><code>angaben()</code>, <code>indexArt()</code>, <code>avixTeile()</code>, <code>avihBilder()</code>, <code>dmlhBilder()</code>, <code>meldungen()</code></li>
+      <li><code>Probenquelle</code> (gemeinsam mit <code>Mp4Datei</code>), <code>Spurbau</code>, <code>AvcKonfig.h264(spur)</code></li></ul></div>
+    <div class="feld"><h4>Eingesetzt in</h4><div class="einsatz"><span class="chip">app-forensik: Steckbrief, ForensikPanel, Mp4Ton</span></div>
+      <h4 style="margin-top:10px">Wofür</h4><p>Aufnahmen älterer Digitalkameras und Überwachungsanlagen sichten und abspielen.</p></div>
+  </div>
+  </div>
 
 <!-- =============================================================== SCHADEN -->
 <h2 id="schaden">Schäden im Bildstrom <span class="paket">envisionz.media.ps</span></h2>
