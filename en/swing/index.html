@@ -306,6 +306,7 @@ splash.uebergebeAn(frame[0]);          // wait for the remaining time, close spl
 <div class="karte">
   <h3><code>MainFrame</code>, <code>TabManager</code>, <code>MenuBuilder</code>, <code>ToolbarBuilder</code> – window, tabs, menu, toolbar</h3>
   <p class="zweck">The main window carries menu, toolbar, tabs above a collapsible log console and a status strip with a memory meter. Tabs can be detached into their own window; closing it returns the tab to its place. Closing honours the <code>canClose()</code> veto, then calls <code>dispose()</code>. Exit goes through <code>alleSchliessen()</code> (vetoes, <code>dispose</code>, working folders removed) and only then <code>System.exit</code>. Menu (File, Apps, View, Help) and toolbar are built from the descriptors in the order of <code>AppRegistry.all()</code>; apps with <code>~</code> in front of the menu label stay invisible. <b>Opening files:</b> “Open File…” (Ctrl+Shift+O), dropping from the file manager onto the window and files on the command line go to <code>SwingHost.oeffneDatei</code>. The host looks for the apps whose descriptor declares the extension, opens a new tab and passes the file to <code>App.oeffne</code>; a saved workspace is recognised by its root element and loaded. If several apps declare the extension (<code>csv</code>, images), a bar below the toolbar asks with one button per app – no window.</p>
+  <p>The toolbar is fixed (it cannot be torn off); apps with an icon show only the icon there. A focus request (<code>FocusAppEvent</code>) from another thread is handed to the EDT and opens exactly one tab; a second one selects it.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>new MainFrame(host, title)</code>, <code>tabManager()</code>, <code>logConsole()</code>, <code>showLogConsole()</code>, <code>confirmAndExit()</code>, <code>launch()</code></li>
@@ -322,6 +323,7 @@ splash.uebergebeAn(frame[0]);          // wait for the remaining time, close spl
 <div class="karte">
   <h3><code>BusyRunner</code> and <code>LoadingGlassPane</code> – long work without a frozen UI</h3>
   <p class="zweck">The framework standard instead of a raw <code>SwingWorker</code>: the task runs in the background, a glass pane with a message appears only after 250 ms and then stays at least 400 ms (no flicker), nested calls are counted. <code>onSuccess</code> and <code>onError</code> run on the EDT, the cause unwrapped from the <code>ExecutionException</code>; an error inside <code>onSuccess</code> is no longer reported as an error of the task.</p>
+  <p>The cancel button of <code>runCancellable</code> interrupts the background thread, shows “cancelling” and then calls <code>onCancelled</code> on the EDT – neither <code>onSuccess</code> nor <code>onError</code>.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>run(component, message, task, onSuccess, onError[, showDelayMs, minShowMs])</code></li>
@@ -345,6 +347,7 @@ splash.uebergebeAn(frame[0]);          // wait for the remaining time, close spl
 <div class="karte">
   <h3><code>Meldung</code> and <code>Meldungsleiste</code> – replacement for <code>JOptionPane.showMessageDialog</code></h3>
   <p class="zweck">In the main window a message appears in the status strip, per tab (switching tabs shows the message of the visible tab); in other windows at the bottom edge. Notes disappear after 8 s, warnings and errors stay until closed. Every message also goes to the log and into a recording that probes can read; without a screen, log and recording remain. Confirmations and inputs sit in the panel (<code>Rueckfrage</code>, <code>Eingabezeile</code>); only file choosers stay dialogs.</p>
+  <p>The tooltip of the bar shows the full message, for errors the exception with the first stack lines, and below that the five previous messages.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>hinweis(source, text)</code> (note), <code>warnung(source, text)</code> (warning), <code>fehler(source, text[, Throwable])</code> (error)</li>
@@ -365,6 +368,7 @@ Meldung.fehler(this, "Datei nicht lesbar", ex);</code></pre></div>
 <div class="karte">
   <h3><code>OptionsDock</code> and <code>ContentSidebar</code> – the vertical bar with cards</h3>
   <p class="zweck"><code>OptionsDock</code>: toggle buttons and a card area 344 points wide, so cards up to 360 points including border fit. A page is built only when first shown; exactly one button is pressed, pressing it again closes; the app supplies the icons. Before, the bar existed twice, in app-maps and as a rebuild in app-relief. <code>ContentSidebar</code>: content with card bar, action buttons, separators, show/hide and adjustable width.</p>
+  <p>Adjustable means: the divider is 8 points wide and can be dragged, otherwise 0 and locked. “Always visible” brings a hidden bar back and locks the toggle.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>new OptionsDock(icon, header, afterChange)</code>, <code>addPage(name, iconName, supplier)</code>, <code>zeige(name)</code> (show), <code>toggle()</code>, <code>west()</code>, <code>setBeiSichtbarkeit</code> (on visibility)</li>
@@ -387,6 +391,7 @@ add(dock.west(), BorderLayout.WEST);</code></pre></div>
 <div class="karte">
   <h3><code>Kartenbreite</code>, <code>Umbruchlayout</code>, <code>Rollschritt</code> – so that no card gets wider than 360 px</h3>
   <p class="zweck">Four measured ways of missing the limit, each with a remedy: a <code>JTable</code> in a scroll pane reports 450 px regardless of content (<code>sichtflaeche</code>), <code>FlowLayout</code> the sum of all children in one row (<code>Umbruchlayout</code> plus <code>gedeckelt</code>), long text the whole line (<code>umbruch</code>), a combo box its longest entry (<code>gedeckelt</code>). Text is wrapped, never cut off. <code>umbruch</code> uses the table form, because Swing multiplies <code>style='width:N'</code> by 1.3. <code>Umbruchlayout</code> (wrap layout) computes the height for the actual width and reports one column as minimum width.</p>
+  <p>That column is the widest <em>visible</em> child plus border and two gaps; a hidden child does not widen the card.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>GRENZE = 360</code> (limit), <code>TEXTBREITE = 320</code> (text width)</li>
@@ -427,6 +432,7 @@ return Kartenbreite.gedeckelt(tabellenflaeche, INHALT);</code></pre></div>
 <div class="karte">
   <h3><code>SettingsManager</code>, <code>ThemeManager</code>, <code>Rahmeneinstellungen</code> – what the user sets</h3>
   <p class="zweck"><code>SettingsManager</code>: UI and icon scaling (0.75 to 3.0) and language (default English), with listeners for language changes; at 100 % the font override is removed, theme values come from <code>getLookAndFeelDefaults()</code>. <code>ThemeManager</code>: 32 FlatLaf themes, saved in <code>theme.properties</code>, fallback system L&amp;F. <code>Rahmeneinstellungen</code> (frame settings, <code>rahmen.properties</code>): preview rows, H2 cache, unpacking limit, EDT-watch threshold, interval and file of the operation trace, start directories per app. <code>Themafarbe</code> reads frame colours from the theme at call time.</p>
+  <p>The rows of the H2 preview are clamped to 1 … 1,000,000 and written at once.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>SettingsManager.loadFrom</code>, <code>saveTo(dir, ui, icon, locale)</code>, <code>switchLocale(tag)</code>, <code>applyUiScale</code>, <code>addLocaleChangeListener</code></li>
@@ -441,6 +447,7 @@ return Kartenbreite.gedeckelt(tabellenflaeche, INHALT);</code></pre></div>
 <div class="karte">
   <h3><code>I18n</code>, <code>Icons</code>, <code>RecentDir</code> – texts, icons, remembered folders</h3>
   <p class="zweck"><code>I18n</code> reads one bundle per module (UTF-8 via <code>Utf8Control</code>), with suffixes for label, tooltip, accelerator and mnemonic; a missing key shows up visibly as <code>[key]</code>. <code>Icons</code> loads the Fugue icons from <code>/envisionz/swing/resources/icons/</code>, scaled and cached. <code>RecentDir</code> remembers the last folder per app for every file chooser.</p>
+  <p>The icon scale factor is clamped to 0.5 … 4.0; an icon's size is its original size times the factor, rounded.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>I18n.forModule(baseName)</code>, <code>get(key)</code>, <code>label</code>, <code>tooltip</code>, <code>accel</code>, <code>mnemonic</code>, <code>has</code></li>
@@ -462,6 +469,7 @@ RecentDir.attach(dateiwahl, this);</code></pre></div>
 <div class="karte">
   <h3><code>Eingabefeld</code> – label, text field, extra, with fixed focus behaviour</h3>
   <p class="zweck">Enter commits and gives up the focus, Escape discards and restores the last value, clicking in from outside selects everything, losing the focus commits only on change, <code>setText</code> does not commit. As a number field it also accepts <code>1e-3</code> and a decimal comma; unreadable content does not commit, turns red and bold and is additionally stated in words next to it. On the right a slot for the special-character button, a reference value or the default; the help text is always a tooltip.</p>
+  <p>The label is attached to the field (<code>setLabelFor</code>), and the field carries the label text without surrounding blanks as its name – this is how screen readers and probes find it.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>new Eingabefeld(text[, rows])</code>, <code>mehrzeilig</code> (multi-line), <code>mitSonderzeichen()</code>, <code>mitBezug(text)</code>, <code>mitHilfe(text)</code>, <code>mitVorgabe(text)</code> (with default)</li>
@@ -499,6 +507,9 @@ karte.add(linie); karte.add(farben.picker());              // one picker for all
 <div class="karte">
   <h3>Option cards – chart, axes, legend, plot, markers, series</h3>
   <p class="zweck">Cards bound to a <code>JFreeChart</code> that change it directly: <code>ChartGeneralPanel</code> (title, background image with twelve alignments, origin of the image), <code>AxisOptionsPanel</code> (range, unit conversion, rotated labels), <code>CategoryAxisOptionsPanel</code>, <code>PolarAxisOptionsPanel</code>, <code>LegendOptionsPanel</code> with <code>Legendentitel</code>, <code>PlotOptionsPanel</code>, <code>MarkerOptionsPanel</code>, <code>AnnotationOptionsPanel</code>, <code>PieOptionsPanel</code>, <code>SpiderOptionsPanel</code>, <code>SeriesStylePanel</code>. Every card releases its chart with <code>entbinde()</code> (unbind); before, 277 MB stayed behind after deleting nine charts.</p>
+  <p>Number fields accept a decimal comma: factor and offset of the axis card as well as the tick unit in the axis dialog; “0,5” is 0.5 and does not silently fall back to the old value. For a date axis the axis card loads interval, unit and date format from the axis, so setting and reloading show the same values.</p>
+  <p>A polygon of the marker card is entered as a point list: one point per line or separated by semicolons, between x and y blanks or a comma followed by a blank. A comma inside a number is a decimal comma – “1,5 2,5” is the point (1.5, 2.5). The old notation “x,y” without blanks still works because it is unambiguous; ambiguous input such as “1,2,3 4” is unreadable. If a line is unreadable or there are fewer than three points, the drawn polygon stays and a hint below the list names the line or the number of points read.</p>
+  <p>A band of the marker card loads its edge width as well; the annotation card remembers the loaded label and the loaded pointer separately, so loading a pointer no longer discards changes to the selected label. The legend card switches the frame off completely (<code>BlockBorder.NONE</code>), and an empty title in the chart dialog removes the title.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>bind(JFreeChart)</code>, <code>entbinde()</code>, <code>loadFromAxis()</code></li>
@@ -553,6 +564,8 @@ PathTreeTable&lt;Variable&gt; t = new PathTreeTable&lt;&gt;(wurzel, List.of(
 <div class="karte">
   <h3><code>CsvLoadPanel</code>, <code>DbLoadPanel</code> – CSV and H2 with units</h3>
   <p class="zweck">Choose or set a CSV file, parse it in the background, preview and automatically detected column types, conversion to SI, save to H2 (all via framework-data). <code>DbLoadPanel</code> reads a table from an H2 database, optionally only a limited preview; <code>ladeVoll</code> (load fully) fetches the whole table without UI. Results arrive via <code>LoadResultListener</code>.</p>
+  <p>If an H2 file holds several data tables, the panel asks instead of guessing: filling the selection list loads no table, only the user's choice does; a single table is loaded and reported exactly once. A given <code>.mv.db</code> extension is cut off. Transposing follows <code>LoadedTable.transposed()</code>: the first column becomes the labels, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> rows and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math> columns become <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">m-1</annotation></semantics></math> rows and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n+1</annotation></semantics></math> columns.</p>
+  <p>After <code>releaseHeld()</code> every changed option, including the type conversion, reloads the file. Findings of the parser, such as lines with more fields than the first, appear in the status line and in full in its tooltip.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>new CsvLoadPanel(ctx)</code>, <code>setFile(Path)</code> (also a test hook), <code>getLoadedTable()</code>, <code>setConvertSiSelected</code></li>
@@ -575,6 +588,7 @@ laden.setFile(Path.of("messung.csv"));</code></pre></div>
 <div class="karte">
   <h3><code>LogConsole</code>, <code>SwingLogHandler</code>, <code>Edtwache</code>, <code>Bedienspur</code>, <code>Altereignisbeobachter</code></h3>
   <p class="zweck">The log console shows messages in the window, with a filter by namespace per app and the start-up messages from the early buffer. <code>Edtwache</code> (EDT watch, only with <code>-Dedtwache=&lt;ms&gt;</code>) measures where the event thread hangs and then takes its stack trace; at the end a ranking. <code>Bedienspur</code> (operation trace, <code>-Dbedienspur=file</code>) writes user actions, used heap (raw and after collection every 15 ticks) as well as warnings and errors on one time axis into a file. <code>Altereignisbeobachter</code> (old-event observer) names windows that trigger the old AWT event model, which is not registered in the native image.</p>
+  <p>The ranking of the EDT watch is ordered by the summed duration of the hangs per location; the location is the first own line of the stack. The error recorder counts a repeated click on the same component once, Enter and Space every time; the operation trace describes a button without text by its tooltip. The console keeps at least 100 lines.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>new LogConsole()</code>, <code>SwingLogHandler.installRootHandler(console, level[, filter])</code>, <code>includeNamespaces(…)</code></li>
