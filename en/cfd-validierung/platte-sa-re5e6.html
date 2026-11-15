@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turbulent plate (Spalart-Allmaras) – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../ocr/index.html">framework-ocr</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../diagramm/index.html">framework-diagramm</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag aktiv" href="index.html">cfd-validierung</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#zweck">What these pages are for</a>
+<a class="rubrik" href="index.html#stoss">Oblique shock at a wedge</a>
+<a class="rubrik" href="index.html#reflexion">Shock reflection</a>
+<a class="rubrik" href="index.html#hoecker">Channel with a bump</a>
+<a class="rubrik" href="index.html#duese">Nozzle</a>
+<a class="rubrik" href="index.html#grenzschicht">Flat-plate boundary layer</a>
+<a class="unterseite" href="k-omega-sst.html">Turbulent plate, k-ω SST</a>
+<a class="unterseite" href="platte-blasius.html">Laminar plate (Blasius)</a>
+<a class="unterseite aktiv" href="platte-sa-re5e6.html">Turbulent plate (Spalart-Allmaras)</a>
+<a class="rubrik" href="index.html#staupunkt">Stagnation point</a>
+<a class="rubrik" href="index.html#gitter">Blade cascade and stage</a>
+</div>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
+<a class="eintrag" href="../vision/index.html">framework-vision</a>
+<a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<a class="eintrag" href="../imaging/index.html">framework-imaging</a>
+<a class="eintrag" href="../lupe/index.html">framework-lupe</a>
+<a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<a class="eintrag" href="../usb/index.html">framework-usb</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-cfd/index.html">app-cfd</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-doku/index.html">app-doku</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-mathlearn/index.html">app-mathlearn</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-cfd/index.html">commandline-cfd</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../cmd-ocr/index.html">commandline-ocr</a>
+<a class="eintrag" href="../cmd-vision/index.html">commandline-vision</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+<div class="gruppe">Testing</div>
+<a class="eintrag" href="../pruefstand/index.html">pruefstand</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">cfd-validierung</a> › Turbulent plate (Spalart-Allmaras)</span><a class="sprachwahl" href="../../de/cfd-validierung/platte-sa-re5e6.html">Deutsch</a></div>
+<!-- erzeugt von Fallseiten.java, nicht von Hand ändern -->
+<div class="seite">
+
+<header class="titel">
+  <div class="modul">envisionz-framework-cfd · Validation of the example cases</div>
+  <h1>Turbulent plate (Spalart-Allmaras)</h1>
+  <p class="unter">Set-up like the flat-plate case of the NASA turbulence modelling database (Mach 0.2, Re 5·10⁶): fully turbulent from the leading edge, first cell at y⁺ of about 0.5.</p>
+</header>
+
+<h2 id="steckbrief">Case summary</h2>
+<table>
+  <tr><th>Item</th><th>Value</th></tr>
+  <tr><td>Inflow Mach number</td><td>0.2000</td></tr>
+  <tr><td>Reynolds number</td><td>5.00·10<sup>6</sup></td></tr>
+  <tr><td>Model</td><td>Navier-Stokes, turbulent (sa)</td></tr>
+  <tr><td>Mesh</td><td>2,880 cells</td></tr>
+  <tr><td>Time stepping</td><td>Newton-Krylov (implicit)</td></tr>
+  <tr><td>Result of the run</td><td>converged after 215 steps, relative residual 9.2·10<sup>−9</sup></td></tr>
+</table>
+
+<h2 id="theorie">What the case shows</h2>
+<h3>Purpose</h3>
+<p>The case checks the Spalart-Allmaras turbulence model on the flat plate at Mach 0.2000 and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mi>e</mi><mo>=</mo><mn>5</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">Re = 5\cdot 10^6</annotation></semantics></math> per unit length, fully turbulent from the leading edge, with the first cell at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>y</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">+</mo></mrow></msup><mo>≈</mo><mn>0.51</mn></mrow><annotation encoding="application/x-tex">y^+ \approx 0.51</annotation></semantics></math>. The skin-friction coefficient <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_f</annotation></semantics></math> along the plate is compared with a solution of the NASA turbulence modelling database (R90) and, at one station, with approximate formulas.</p>
+
+<h3>Theory of the reference</h3>
+<p>The skin-friction coefficient is the wall shear stress relative to the dynamic pressure of the free stream. The computation forms it from the first cell at the wall (velocity <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>u</mi></mrow><mrow><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">u_t</annotation></semantics></math> parallel to the wall, wall distance <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi></mrow><annotation encoding="application/x-tex">d</annotation></semantics></math> of its centre); this needs <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>y</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">+</mo></mrow></msup></mrow><annotation encoding="application/x-tex">y^+</annotation></semantics></math> below 1:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>=</mo><mfrac><mrow><mi mathvariant="normal">μ</mi><mspace width="0.1667em"/><msub><mrow><mi>u</mi></mrow><mrow><mi>t</mi></mrow></msub><mo>/</mo><mi>d</mi></mrow><mrow><mstyle displaystyle="false"><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac></mstyle><msub><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>∞</mi></mrow></msub><msubsup><mrow><mi>U</mi></mrow><mrow><mi>∞</mi></mrow><mrow><mn>2</mn></mrow></msubsup></mrow></mfrac><mo>,</mo><mspace width="2em"/><mi>R</mi><msub><mrow><mi>e</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>=</mo><mfrac><mrow><msub><mrow><mi>U</mi></mrow><mrow><mi>∞</mi></mrow></msub><mi>x</mi></mrow><mrow><mi mathvariant="normal">ν</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">c_f = \frac{\mu\,u_t / d}{\tfrac12 \rho_\infty U_\infty^2}, \qquad Re_x = \frac{U_\infty x}{\nu}</annotation></semantics></math>
+<p>The reference along the plate is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>f</mi></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">c_f(x)</annotation></semantics></math> from a computation with the solver CFL3D and the same model on the finest grid of the database (545 × 385 cells); it is a computation, not a measurement. At one station two approximate formulas for the turbulent flat-plate boundary layer are added:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>0.455</mn></mrow><mrow><msup><mi>ln</mi><mrow><mn>2</mn></mrow></msup><mo>⁡</mo><mo stretchy="false">(</mo><mn>0.06</mn><mspace width="0.1667em"/><mi>R</mi><msub><mrow><mi>e</mi></mrow><mrow><mi>x</mi></mrow></msub><mo stretchy="false">)</mo></mrow></mfrac><mspace width="1em"/><mtext>(Coles-Fernholz)</mtext><mo>,</mo><mspace width="2em"/><msub><mrow><mi>c</mi></mrow><mrow><mi>f</mi></mrow></msub><mo>=</mo><mn>0.0592</mn><mspace width="0.1667em"/><mi>R</mi><msubsup><mrow><mi>e</mi></mrow><mrow><mi>x</mi></mrow><mrow><mo form="prefix" lspace="0" rspace="0">−</mo><mn>1</mn><mo>/</mo><mn>5</mn></mrow></msubsup><mspace width="1em"/><mtext>(1/5 law)</mtext></mrow><annotation encoding="application/x-tex">c_f = \frac{0.455}{\ln^2(0.06\,Re_x)}\quad\text{(Coles-Fernholz)}, \qquad c_f = 0.0592\,Re_x^{-1/5}\quad\text{(1/5 law)}</annotation></semantics></math>
+<p>The station is the cell column nearest to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0.97</mn></mrow><annotation encoding="application/x-tex">x = 0.97</annotation></semantics></math>, at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0.990</mn></mrow><annotation encoding="application/x-tex">x = 0.990</annotation></semantics></math> (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><msub><mrow><mi>e</mi></mrow><mrow><mi>x</mi></mrow></msub><mo>=</mo><mn>4.95</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>6</mn></mrow></msup></mrow><annotation encoding="application/x-tex">Re_x = 4.95\cdot 10^{6}</annotation></semantics></math>). There <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_f</annotation></semantics></math> is 0.002721 computed; Coles-Fernholz gives 0.002865, the 1/5 law 0.002713 and the database 0.002706.</p>
+
+<h3>What to look for in the picture</h3>
+<p>The result view shows the velocity <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math>: a thin boundary layer at the wall that grows downstream. In the plot <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>c</mi></mrow><mrow><mi>f</mi></mrow></msub></mrow><annotation encoding="application/x-tex">c_f</annotation></semantics></math> falls steeply from the leading edge and then flattens; the line of the computation runs on the dots of the database (from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">x = 0.1</annotation></semantics></math>). The RMS deviation is 1.91·10<sup>−5</sup> at a tolerance of 3.00·10<sup>−5</sup>, the largest deviation 2.35·10<sup>−5</sup> at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>1.45</mn></mrow><annotation encoding="application/x-tex">x = 1.45</annotation></semantics></math>.</p>
+
+<h3>Limits of the comparison</h3>
+<ul>
+  <li>The reference is the computation of another solver on a much finer mesh. The mesh here is coarse (48 cells along the plate); the comparison starts only at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">x = 0.1</annotation></semantics></math>.</li>
+  <li>The reference value of the database holds at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0.970</mn></mrow><annotation encoding="application/x-tex">x = 0.970</annotation></semantics></math>; the cell column of the computation is at <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0.990</mn></mrow><annotation encoding="application/x-tex">x = 0.990</annotation></semantics></math>. The comparison at the station is therefore only a rough guide.</li>
+  <li>The approximate formulas are empirical laws for the turbulent flat-plate boundary layer, not an exact reference; they differ from each other (Coles-Fernholz 0.002865 against 1/5 law 0.002713).</li>
+</ul>
+
+<h2 id="ergebnis">Result view</h2>
+<figure><img src="../../bilder/cfd-validierung/platte-sa-re5e6.png" alt="Velocity u at the turbulent plate: a thin boundary layer at the wall that grows downstream."><figcaption>Velocity u at the turbulent plate: a thin boundary layer at the wall that grows downstream. Colour bar: velocity u, 0.00345 to 0.200 (non-dimensional: density and speed of sound of the free stream equal to 1).</figcaption></figure>
+
+<h2 id="validierung">Validation</h2>
+<p>The reference is the computation of the NASA turbulence modelling database (R90, another solver, finest mesh): the skin-friction coefficient c_f along the plate from x = 0.1 (dots) against the computation (line). At one station two approximate formulas are added.</p>
+<figure><svg viewBox="0 0 480 270" width="480" font-family="sans-serif" font-size="12">
+<rect x="64.0" y="16.0" width="400.0" height="206.0" fill="#e8f0f6"/>
+<line x1="64.0" y1="16.0" x2="64.0" y2="222.0" stroke="#c9d1dc"/>
+<text x="64.0" y="238.0" text-anchor="middle" fill="#5b6475">0</text>
+<line x1="164.0" y1="16.0" x2="164.0" y2="222.0" stroke="#c9d1dc"/>
+<text x="164.0" y="238.0" text-anchor="middle" fill="#5b6475">0.5</text>
+<line x1="264.0" y1="16.0" x2="264.0" y2="222.0" stroke="#c9d1dc"/>
+<text x="264.0" y="238.0" text-anchor="middle" fill="#5b6475">1</text>
+<line x1="364.0" y1="16.0" x2="364.0" y2="222.0" stroke="#c9d1dc"/>
+<text x="364.0" y="238.0" text-anchor="middle" fill="#5b6475">1.5</text>
+<line x1="464.0" y1="16.0" x2="464.0" y2="222.0" stroke="#c9d1dc"/>
+<text x="464.0" y="238.0" text-anchor="middle" fill="#5b6475">2</text>
+<line x1="64.0" y1="222.0" x2="464.0" y2="222.0" stroke="#c9d1dc"/>
+<text x="58.0" y="226.0" text-anchor="end" fill="#5b6475">0.002</text>
+<line x1="64.0" y1="180.8" x2="464.0" y2="180.8" stroke="#c9d1dc"/>
+<text x="58.0" y="184.8" text-anchor="end" fill="#5b6475">0.004</text>
+<line x1="64.0" y1="139.6" x2="464.0" y2="139.6" stroke="#c9d1dc"/>
+<text x="58.0" y="143.6" text-anchor="end" fill="#5b6475">0.006</text>
+<line x1="64.0" y1="98.4" x2="464.0" y2="98.4" stroke="#c9d1dc"/>
+<text x="58.0" y="102.4" text-anchor="end" fill="#5b6475">0.008</text>
+<line x1="64.0" y1="57.2" x2="464.0" y2="57.2" stroke="#c9d1dc"/>
+<text x="58.0" y="61.2" text-anchor="end" fill="#5b6475">0.01</text>
+<line x1="64.0" y1="16.0" x2="464.0" y2="16.0" stroke="#c9d1dc"/>
+<text x="58.0" y="20.0" text-anchor="end" fill="#5b6475">0.012</text>
+<rect x="64.0" y="16.0" width="400.0" height="206.0" fill="none" stroke="#5b6475"/>
+<polyline fill="none" stroke="#9a6400" stroke-width="2" points="65.1,44.1 67.2,160.0 69.5,172.0 71.9,175.1 74.5,177.8 77.1,180.4 79.9,182.5 82.8,184.4 85.9,186.1 89.1,187.6 92.5,188.9 96.0,190.2 99.8,191.4 103.7,192.4 107.8,193.5 112.1,194.4 116.7,195.3 121.4,196.2 126.4,197.0 131.7,197.8 137.2,198.5 143.0,199.2 149.0,199.9 155.4,200.6 162.1,201.2 169.1,201.9 176.5,202.5 184.3,203.0 192.4,203.6 201.0,204.1 209.9,204.7 219.4,205.2 229.3,205.7 239.6,206.2 250.6,206.7 262.0,207.2 274.0,207.6 286.7,208.1 299.9,208.5 313.9,208.9 328.5,209.4 343.8,209.8 359.9,210.2 376.9,210.6 394.6,211.0 413.3,211.4 432.9,211.8 453.5,212.2"/>
+<circle cx="84.1" cy="185.1" r="4" fill="#1f5f8b"/>
+<circle cx="85.7" cy="185.9" r="4" fill="#1f5f8b"/>
+<circle cx="87.2" cy="186.8" r="4" fill="#1f5f8b"/>
+<circle cx="88.8" cy="187.5" r="4" fill="#1f5f8b"/>
+<circle cx="90.5" cy="188.2" r="4" fill="#1f5f8b"/>
+<circle cx="92.2" cy="188.9" r="4" fill="#1f5f8b"/>
+<circle cx="93.9" cy="189.6" r="4" fill="#1f5f8b"/>
+<circle cx="95.7" cy="190.3" r="4" fill="#1f5f8b"/>
+<circle cx="97.5" cy="190.9" r="4" fill="#1f5f8b"/>
+<circle cx="99.4" cy="191.5" r="4" fill="#1f5f8b"/>
+<circle cx="101.3" cy="192.0" r="4" fill="#1f5f8b"/>
+<circle cx="103.3" cy="192.6" r="4" fill="#1f5f8b"/>
+<circle cx="105.4" cy="193.1" r="4" fill="#1f5f8b"/>
+<circle cx="107.5" cy="193.7" r="4" fill="#1f5f8b"/>
+<circle cx="109.7" cy="194.2" r="4" fill="#1f5f8b"/>
+<circle cx="111.9" cy="194.7" r="4" fill="#1f5f8b"/>
+<circle cx="114.2" cy="195.2" r="4" fill="#1f5f8b"/>
+<circle cx="116.6" cy="195.7" r="4" fill="#1f5f8b"/>
+<circle cx="119.1" cy="196.1" r="4" fill="#1f5f8b"/>
+<circle cx="121.7" cy="196.6" r="4" fill="#1f5f8b"/>
+<circle cx="124.4" cy="197.1" r="4" fill="#1f5f8b"/>
+<circle cx="127.2" cy="197.5" r="4" fill="#1f5f8b"/>
+<circle cx="130.1" cy="198.0" r="4" fill="#1f5f8b"/>
+<circle cx="133.2" cy="198.4" r="4" fill="#1f5f8b"/>
+<circle cx="136.4" cy="198.8" r="4" fill="#1f5f8b"/>
+<circle cx="139.7" cy="199.3" r="4" fill="#1f5f8b"/>
+<circle cx="143.2" cy="199.7" r="4" fill="#1f5f8b"/>
+<circle cx="146.8" cy="200.1" r="4" fill="#1f5f8b"/>
+<circle cx="150.7" cy="200.5" r="4" fill="#1f5f8b"/>
+<circle cx="154.7" cy="201.0" r="4" fill="#1f5f8b"/>
+<circle cx="159.0" cy="201.4" r="4" fill="#1f5f8b"/>
+<circle cx="163.5" cy="201.8" r="4" fill="#1f5f8b"/>
+<circle cx="168.3" cy="202.2" r="4" fill="#1f5f8b"/>
+<circle cx="173.4" cy="202.7" r="4" fill="#1f5f8b"/>
+<circle cx="178.8" cy="203.1" r="4" fill="#1f5f8b"/>
+<circle cx="184.5" cy="203.5" r="4" fill="#1f5f8b"/>
+<circle cx="190.7" cy="203.9" r="4" fill="#1f5f8b"/>
+<circle cx="197.3" cy="204.4" r="4" fill="#1f5f8b"/>
+<circle cx="204.4" cy="204.8" r="4" fill="#1f5f8b"/>
+<circle cx="212.1" cy="205.3" r="4" fill="#1f5f8b"/>
+<circle cx="220.4" cy="205.7" r="4" fill="#1f5f8b"/>
+<circle cx="229.5" cy="206.2" r="4" fill="#1f5f8b"/>
+<circle cx="239.4" cy="206.7" r="4" fill="#1f5f8b"/>
+<circle cx="250.2" cy="207.1" r="4" fill="#1f5f8b"/>
+<circle cx="262.1" cy="207.6" r="4" fill="#1f5f8b"/>
+<circle cx="275.0" cy="208.1" r="4" fill="#1f5f8b"/>
+<circle cx="287.9" cy="208.6" r="4" fill="#1f5f8b"/>
+<circle cx="300.8" cy="209.0" r="4" fill="#1f5f8b"/>
+<circle cx="313.6" cy="209.4" r="4" fill="#1f5f8b"/>
+<circle cx="326.5" cy="209.8" r="4" fill="#1f5f8b"/>
+<circle cx="339.4" cy="210.1" r="4" fill="#1f5f8b"/>
+<circle cx="352.3" cy="210.5" r="4" fill="#1f5f8b"/>
+<circle cx="365.2" cy="210.8" r="4" fill="#1f5f8b"/>
+<circle cx="378.1" cy="211.1" r="4" fill="#1f5f8b"/>
+<circle cx="391.0" cy="211.4" r="4" fill="#1f5f8b"/>
+<circle cx="403.9" cy="211.6" r="4" fill="#1f5f8b"/>
+<circle cx="416.7" cy="211.9" r="4" fill="#1f5f8b"/>
+<circle cx="429.6" cy="212.1" r="4" fill="#1f5f8b"/>
+<circle cx="442.5" cy="212.4" r="4" fill="#1f5f8b"/>
+<circle cx="455.4" cy="212.5" r="4" fill="#1f5f8b"/>
+<circle cx="461.9" cy="212.6" r="4" fill="#1f5f8b"/>
+<text x="264.0" y="262" text-anchor="middle" fill="#5b6475">x</text>
+<text x="14" y="119.0" text-anchor="middle" fill="#5b6475" transform="rotate(-90 14 119.0)">c_f</text>
+<circle cx="255.5" cy="28.0" r="4" fill="#1f5f8b"/><text x="265.5" y="32.0" fill="#5b6475">reference (other computation)</text>
+<line x1="247.5" y1="46.0" x2="261.5" y2="46.0" stroke="#9a6400" stroke-width="2"/><text x="265.5" y="50.0" fill="#5b6475">Computation</text>
+</svg><figcaption>c_f versus x; dots: reference (other computation), line: Computation.</figcaption></figure>
+
+<h2 id="kennzahlen">Key figures</h2>
+<table>
+  <tr><th>Profile</th><th>Reference points</th><th>RMS deviation</th><th>largest deviation</th><th>tolerance (RMS)</th></tr>
+  <tr><td>c_f at the wall</td><td>354</td><td>1.91·10<sup>−5</sup></td><td>2.35·10<sup>−5</sup></td><td>3.00·10<sup>−5</sup> (met)</td></tr>
+</table>
+<table>
+  <tr><th>Quantity</th><th>computed</th><th>reference</th><th>deviation</th></tr>
+  <tr><td>c_f at x = 0.990 (Coles-Fernholz)</td><td>0.002721</td><td>0.002865</td><td>−5.05 %</td></tr>
+  <tr><td>c_f at x = 0.990 (1/5 law)</td><td>0.002721</td><td>0.002713</td><td>+0.29 %</td></tr>
+  <tr><td>c_f at x = 0.990 (database reference value)</td><td>0.002721</td><td>0.002706</td><td>+0.56 %</td></tr>
+</table>
+
+<h2 id="quellen">Sources</h2>
+<p><a href="../cfd/referenzen.html#R90">R90</a>.</p>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+(function () {
+  // NEU 2026-11-12 (Eignerwunsch): die Leiste sprang nach jedem Klick auf
+  // einen Eintrag weiter unten an den Anfang, weil jede Seite eine neue
+  // Leiste laedt. Beim Klick merkt sich die Seite, wie weit der Eintrag
+  // vom oberen Rand der Leiste stand; die naechste Seite stellt ihren
+  // aktiven Eintrag wieder dorthin. Ohne Merkwert (Lesezeichen, Suche,
+  // erster Aufruf) wird der aktive Eintrag in die Mitte geholt.
+  var nav = document.querySelector('nav.leiste');
+  if (!nav) { return; }
+  var SCHLUESSEL = 'leistenlage';
+  var akt = nav.querySelector('a.unterseite.aktiv') || nav.querySelector('a.eintrag.aktiv');
+  var abstand = null;
+  try {
+    var w = sessionStorage.getItem(SCHLUESSEL);
+    sessionStorage.removeItem(SCHLUESSEL);
+    if (w !== null && w !== '' && isFinite(w)) { abstand = Number(w); }
+  } catch (e) { /* ohne Speicher: nur mittig holen */ }
+  if (akt) {
+    var oben = akt.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+    if (abstand !== null) {
+      nav.scrollTop = Math.max(0, oben - abstand);
+    } else {
+      nav.scrollTop = Math.max(0, oben - nav.clientHeight / 2);
+    }
+  }
+  nav.addEventListener('click', function (ev) {
+    var a = ev.target.closest ? ev.target.closest('a') : null;
+    if (!a || !nav.contains(a)) { return; }
+    try {
+      sessionStorage.setItem(SCHLUESSEL,
+          String(a.getBoundingClientRect().top - nav.getBoundingClientRect().top));
+    } catch (e) { /* ohne Speicher springt die Leiste nur in die Mitte */ }
+  });
+})();
+</script>
+</body>
+</html>
