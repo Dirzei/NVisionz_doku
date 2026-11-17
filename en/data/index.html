@@ -158,17 +158,10 @@ math[display="block"]{margin:10px 0}
 <a class="rubrik" href="#formel">Computed columns</a>
 <a class="rubrik" href="#schnitt">Slices, grids, statistics</a>
 <a class="unterseite" href="raster.html">Slices and grids</a>
-<a class="rubrik" href="#tri">Triangulation in 2D</a>
-<a class="unterseite" href="triangulierung.html">Triangulation and boundary</a>
-<a class="rubrik" href="#rand">Boundary methods and manual correction</a>
-<a class="rubrik" href="#drei">Meshes and surfaces in 3D</a>
-<a class="unterseite" href="netze3d.html">Meshes and surfaces in 3D</a>
 <a class="rubrik" href="#tecplot">Tecplot data and layouts</a>
 <a class="rubrik" href="#hdf5">Bridge from HDF5 to the table</a>
 <a class="rubrik" href="#vergleich">Comparing two data states and handing over</a>
 <a class="rubrik" href="#einsatz">Usage matrix in the framework</a>
-<a class="rubrik" href="#referenzen">References</a>
-<a class="unterseite" href="referenzen.html">References</a>
 </div>
 <a class="eintrag" href="../compress/index.html">framework-compress</a>
 <a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
@@ -260,7 +253,7 @@ math[display="block"]{margin:10px 0}
   <div class="modul">envisionz-framework-data</div>
   <h1>From the CSV cell to the triangle mesh – one data layer for every application</h1>
   <p class="unter">Function overview for the presentation of the envisionz framework, as of 28 Sep 2026. Tables from CSV, Tecplot and HDF5,
-  the unit system, storage in H2, computed columns, slices and grids for charts, triangulation in 2D and 3D,
+  the unit system, storage in H2, computed columns, slices and grids for charts, 
   comparison of two data states. No user interface. For each method: purpose, API, use in the framework, applications, examples.
   The examples are shortened.
   Many API names are German (e.g. <code>Zahlenleser</code> = number reader, <code>Einheitentafel</code> = unit table, <code>Randverfahren</code> = boundary method, <code>Gitterfinder</code> = grid finder); they are shown unchanged.</p>
@@ -269,22 +262,20 @@ math[display="block"]{margin:10px 0}
 <figure class="kopfbild"><img src="../../bilder/data/kopf.svg" alt="Schema in three steps: a CSV table, points in the plane derived from it, and a triangle mesh over them."><figcaption>Schema: from the CSV table via points to the triangle mesh.</figcaption></figure>
 
 <div class="zahlen">
-  <div class="zahl"><b>84</b><span>source files in 15 packages</span></div>
+  <div class="zahl"><b>57</b><span>source files in 14 packages</span></div>
   <div class="zahl"><b>22</b><span>quantity kinds, 133 unit entries with factor and offset</span></div>
-  <div class="zahl"><b>3 + 3</b><span>triangulation and boundary methods behind registries</span></div>
   <div class="zahl"><b>1</b><span>third-party library: H2 2.5.250</span></div>
-  <div class="zahl"><b>27</b><span>probe classes</span></div>
-  <div class="zahl"><b>19</b><span>counter-probes</span></div>
+  <div class="zahl"><b>33</b><span>probe classes</span></div>
+  <div class="zahl"><b>99</b><span>counter-probes</span></div>
 </div>
 
 <h2 id="grundsaetze">Principles of the module</h2>
 <div class="grundsatz">
-  <div><b>One layer without a user interface.</b> Tables, units, storage and geometry for all applications, without Swing. Above it sit chart, swing and the apps; below it only framework-api and, for HDF5, framework-fileformats.</div>
+  <div><b>One layer without a user interface.</b> Tables, units and storage for all applications, without Swing. Above it sit chart, swing and the apps; below it only framework-api, framework-math and, for HDF5, framework-fileformats.</div>
   <div><b>Units with factor and offset.</b> A converter with factors only returns 0 K for 0 °C. Unknown units stay unchanged, and the name heuristic sets only the quantity kind, never a unit.</div>
   <div><b>One place for numbers from text.</b> <code>Zahlenleser</code> for file data, <code>Eingabezahl</code> for typed input – instead of scattered <code>replace(',', '.')</code>. The probes record what happens today, including where it goes wrong.</div>
-  <div><b>Scale-proof triangulation.</b> Delaunay is not scale-invariant. Computation runs normalised to [0,1] per axis with exact predicates; the original coordinates are returned bit for bit.</div>
-  <div><b>Known structure before Delaunay.</b> On a CFD mesh Delaunay filled concave regions and gave 102 % excess area. Where indices are known or can be read from the positions, the grid is split directly.</div>
   <div><b>Limits against malicious files.</b> Tecplot value counts against the file size, formulas at most 20,000 characters and 200 levels – a message instead of a memory or stack overflow.</div>
+  <div><b>Meshes are built by framework-math.</b> The triangulation for contours and volumes lives in <a href="../math/index.html#tri">framework-math</a>; this module supplies the slices and points for it.</div>
 </div>
 
 <!-- =============================================================== TABLE -->
@@ -446,82 +437,6 @@ GridSlice g    = Regrid.toGrid(s, RegridOptions.defaults().withGrid(200, 100));<
   </div>
 </div>
 
-<!-- =============================================================== TRI -->
-<h2 id="tri">Triangulation in 2D <span class="paket">envisionz.data.tri</span></h2>
-
-<div class="karte">
-  <h3><code>Triangulierverfahren</code>, <code>BowyerWatson</code>, <code>SweepHull</code>, <code>GuibasStolfi</code>, <code>ConstrainedDelaunay</code></h3>
-  <p class="zweck">Three Delaunay methods behind a registry – a new one is entered only there, and selection fields and probes pick it up by themselves. All compute normalised to [0,1] per axis with exact circumcircle tests; <code>BowyerWatson</code> with ghost triangles instead of super vertices, <code>GuibasStolfi</code> with guaranteed O(n log n). Constrained edges as well. At 1:1, 27:1, 33333:1 and 1:1000 the same set of triangles results. <a class="vertiefung" href="triangulierung.html">Background, formulas and pseudocode →</a></p>
-  <div class="gitter">
-    <div class="feld"><h4>Methods</h4><ul class="meth">
-      <li><code>Triangulierverfahren.alle()</code>, <code>finde(kennung)</code>, <code>erzeuge(kennung)</code> – <code>BOWYER_WATSON</code>, <code>SWEEP_HULL</code>, <code>GUIBAS_STOLFI</code></li>
-      <li><code>Triangulator.triangulate(x, y, f)</code>, <code>triangulate(schnitt)</code> → <code>TriMesh</code> (<code>tris</code>, <code>adj</code>)</li>
-      <li><code>new ConstrainedDelaunay().triangulate(x, y, f, segmente)</code></li>
-      <li><code>Geom.orient2d</code>, <code>inCircle</code>, <code>inTriangleCCW</code></li></ul></div>
-    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, Verfahrenswahl, Netzkarte</span><span class="chip">app-maps: MapsRootPanel</span><span class="chip">app-acft: AcftChartBuilder</span></div>
-      <h4 style="margin-top:10px">What for</h4><p>Contour plots from scattered measurement points, maps without a regular grid.</p></div>
-  </div>
-  <div class="bsp"><h4>Example – via the registry</h4>
-<pre><code>TriMesh netz = Triangulierverfahren.erzeuge("GUIBAS_STOLFI").triangulate(x, y, f);
-System.out.println(netz.triangleCount() + " triangles");</code></pre></div>
-</div>
-
-<div class="karte">
-  <h3><code>StructuredMesh</code> and <code>Gitterfinder</code> – structure instead of Delaunay</h3>
-  <p class="zweck">With known indices the grid is split into triangles directly, holes included. Without index columns <code>Gitterfinder</code> reads (i, j) from the positions of the points: growth from a start point via predicted neighbour positions, rejected on contradiction, fracture edge or sheared reading. On 77 blocks of the machieve example grids: 56 recognised exactly, 21 rejected, none wrong.</p>
-  <div class="gitter">
-    <div class="feld"><h4>Methods</h4><ul class="meth">
-      <li><code>StructuredMesh.build(x, y, f, iMax, jMax)</code>, <code>ausZellen(x, y, f, gi, gj, block)</code>, <code>merge(teile)</code></li>
-      <li><code>Gitterfinder.finde(x, y)</code> → <code>Gitter(i, j, block, bloecke, zellen)</code> or <code>null</code>; <code>untersuche(x, y)</code> → <code>Befund</code></li></ul></div>
-    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, StructuredBlocks, Gitterrollen</span><span class="chip">app-maps: Raumansicht</span></div>
-      <h4 style="margin-top:10px">What for</h4><p>Showing CFD results and maps with speed lines without wrongly filled concave regions.</p></div>
-  </div>
-  <div class="bsp"><h4>Example – try the structure first</h4>
-<pre><code>Gitterfinder.Gitter g = Gitterfinder.finde(x, y);
-TriMesh netz = (g != null) ? StructuredMesh.ausZellen(x, y, f, g.i(), g.j(), g.block())
-                           : Triangulierverfahren.erzeuge(Triangulierverfahren.VORGABE).triangulate(x, y, f);</code></pre></div>
-</div>
-
-<!-- =============================================================== BOUNDARY -->
-<h2 id="rand">Boundary methods and manual correction <span class="paket">envisionz.data.tri</span></h2>
-
-<div class="karte">
-  <h3><code>Randverfahren</code>, <code>AlphaShape</code>, <code>ChiShape</code>, <code>Nachbesserung</code></h3>
-  <p class="zweck">Delaunay covers the convex hull; the real boundary is often concave. <code>AlphaShape</code> discards triangles by circumradius or longest edge, measured in normalised space. <code>ChiShape</code> (Duckham et al. 2008) trims only from the boundary inwards, the boundary stays a simple polygon and no point drops out. <code>Nachbesserung</code> restores or discards individual triangles by hand, identified by the table rows of their corners. <a class="vertiefung" href="triangulierung.html#rand">Background, formulas and pseudocode →</a></p>
-  <div class="gitter">
-    <div class="feld"><h4>Methods</h4><ul class="meth">
-      <li><code>Randverfahren.anwende(netz, Einstellung)</code> → <code>Ergebnis</code> (before, removed, orphaned …); <code>KEINES</code>, <code>ALPHA</code>, <code>CHI</code></li>
-      <li><code>AlphaShape.filter(netz, alpha, kriterium)</code>, <code>autoAlpha(...)</code>, <code>sortedValuesDesc(...)</code></li>
-      <li><code>ChiShape.filter(netz, lambda)</code>, <code>filterAbsolut(netz, schwelle)</code>, <code>VORGABE_LAMBDA</code> = 2.0</li>
-      <li><code>Nachbesserung.anwende(basis, gefiltert, zeilen, liste)</code>, <code>Ausnahme.von(art, a, b, c)</code>, <code>treffer(...)</code></li></ul></div>
-    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: Randwahl, Randmeldung, Netzkarte, ChartAssembly</span><span class="chip">app-maps: MapsRootPanel (AlphaShape)</span></div>
-      <h4 style="margin-top:10px">What for</h4><p>Showing map and measurement regions without bridges across gaps; deciding borderline cases one by one.</p></div>
-  </div>
-  <div class="bsp"><h4>Example – chi boundary with the default</h4>
-<pre><code>ChiShape.Ergebnis e = ChiShape.filter(netz, ChiShape.VORGABE_LAMBDA);
-TriMesh rand = e.netz();                            // e.entfernt(), e.schwelle()</code></pre></div>
-</div>
-
-<!-- =============================================================== 3D -->
-<h2 id="drei">Meshes and surfaces in 3D <span class="paket">envisionz.data.tri</span></h2>
-
-<div class="karte">
-  <h3><code>DelaunayTet</code>, <code>StructuredTets</code>, <code>IsoSurface3D</code>, <code>AxisSlice3D</code>, <code>HullSurface3D</code></h3>
-  <p class="zweck">Tetrahedralisation normalised per axis, with ghost tetrahedra and exact predicates; the output carries the raw values. For structured blocks <code>StructuredTets</code> splits every hexahedral cell directly into six tetrahedra (Kuhn/Freudenthal). On top: iso-surfaces by marching tetrahedra, axis-parallel cuts (triangle or quadrilateral per tetrahedron), the hull, colour bands on surfaces, surfaces from a height grid. <a class="vertiefung" href="netze3d.html">Background, formulas and pseudocode →</a></p>
-  <div class="gitter">
-    <div class="feld"><h4>Methods</h4><ul class="meth">
-      <li><code>new DelaunayTet().triangulate(x, y, z, f)</code> → <code>TetMesh</code>; <code>StructuredTets.build(x, y, z, f, iMax, jMax, kMax)</code>, <code>merge</code></li>
-      <li><code>IsoSurface3D.surface(netz, niveau)</code>, <code>surface(netz, skalar, niveau)</code>, <code>levels(min, max, n)</code></li>
-      <li><code>AxisSlice3D.slice(netz, achse, wert)</code>, <code>slice2D(...)</code>; <code>HullSurface3D.faces(netz)</code></li>
-      <li><code>ContourBand3D.band(flaechen, niveaus)</code>, <code>GridSurface3D.faces(...)</code>, <code>FaceSplit.splitAt</code>, <code>clipKeep</code></li></ul></div>
-    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, StructuredBlocks</span><span class="chip">app-maps: Raumansicht</span><span class="chip">framework-chart: Isoflaechenlauf (tool)</span></div>
-      <h4 style="margin-top:10px">What for</h4><p>Volume charts of maps f(x, y, z), iso-surfaces in CFD fields, cutting planes.</p></div>
-  </div>
-  <div class="bsp"><h4>Example – iso-surface of a point cloud</h4>
-<pre><code>TetMesh tets = new DelaunayTet().triangulate(x, y, z, f);
-List&lt;double[]&gt; flaeche = IsoSurface3D.surface(tets, 0.85);</code></pre></div>
-</div>
-
 <!-- =============================================================== TECPLOT -->
 <h2 id="tecplot">Tecplot data and layouts <span class="paket">envisionz.data.tecplot · envisionz.data.tecplot.layout</span></h2>
 
@@ -609,34 +524,26 @@ Morph.Ergebnis r = Morph.rechne(alt, neu, p, Morph.Groesse.RELATIV, 1e-9);</code
 <h2 id="einsatz">Usage matrix in the framework</h2>
 <p class="einl">Which modules use which parts today, counted in the source code (excluding probes).</p>
 <table>
-  <tr><th>Module</th><th>CSV / table</th><th>Numbers</th><th>Units</th><th>H2</th><th>Formulas</th><th>Slice / analysis</th><th>Triangu&shy;lation</th><th>Tecplot</th><th>HDF5</th><th>Comparison / event</th><th>What for</th></tr>
-  <tr><td>app-charts</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td>Charts from CSV, H2 and Tecplot, contours, 3D, difference plot</td></tr>
-  <tr><td>app-maps</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td></td><td class="x">●</td><td>Operating lines, spatial view of maps</td></tr>
-  <tr><td>app-acft</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td>Data sources, flight performance charts</td></tr>
-  <tr><td>app-prelimdesign</td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Merging and handing on measurement series</td></tr>
-  <tr><td>app-eqnparser</td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Storing calculation runs</td></tr>
-  <tr><td>app-stats</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Statistics over H2 collections</td></tr>
-  <tr><td>app-neural</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Training data</td></tr>
-  <tr><td>app-pdfdigitizer</td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Storing digitised tables</td></tr>
-  <tr><td>app-hdf5reader</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td class="x">●</td><td>Handing on HDF5 as a table</td></tr>
-  <tr><td>app-settings</td><td></td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Database cache size</td></tr>
-  <tr><td>app-report</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Unit profiles in the operating-point report</td></tr>
-  <tr><td>framework-swing</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Load panels, input fields</td></tr>
-  <tr><td>framework-chart</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td>Envelope files, iso-surface tool</td></tr>
-  <tr><td>framework-reporttable</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Unit layer with registry</td></tr>
+  <tr><th>Module</th><th>CSV / table</th><th>Numbers</th><th>Units</th><th>H2</th><th>Formulas</th><th>Slice / analysis</th><th>Tecplot</th><th>HDF5</th><th>Comparison / event</th><th>What for</th></tr>
+  <tr><td>app-charts</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td>Charts from CSV, H2 and Tecplot, contours, 3D, difference plot</td></tr>
+  <tr><td>app-maps</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Operating lines, spatial view of maps</td></tr>
+  <tr><td>app-acft</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td>Data sources, flight performance charts</td></tr>
+  <tr><td>app-prelimdesign</td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Merging and handing on measurement series</td></tr>
+  <tr><td>app-eqnparser</td><td class="x">●</td><td></td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td>Storing calculation runs</td></tr>
+  <tr><td>app-stats</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td>Statistics over H2 collections</td></tr>
+  <tr><td>app-neural</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Training data</td></tr>
+  <tr><td>app-pdfdigitizer</td><td class="x">●</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td>Storing digitised tables</td></tr>
+  <tr><td>app-hdf5reader</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td class="x">●</td><td>Handing on HDF5 as a table</td></tr>
+  <tr><td>app-settings</td><td></td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td>Database cache size</td></tr>
+  <tr><td>app-report</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Unit profiles in the operating-point report</td></tr>
+  <tr><td>framework-swing</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td>Load panels, input fields</td></tr>
+  <tr><td>framework-chart</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Envelope files, iso-surface tool</td></tr>
+  <tr><td>framework-reporttable</td><td></td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Unit layer with registry</td></tr>
 </table>
 <div class="hinweis">The module is the most widely used foundation of the applications. Only <code>Interp3D</code> has no caller outside the probes. The Tecplot, formula, slice and comparison parts are used today by app-charts alone.</div>
 
-<h2 id="referenzen">References</h2>
-<div class="gitter">
-<div class="karte">
-  <h3><a href="referenzen.html">Sources</a></h3>
-  <p class="zweck">The sources this module's code is based on.</p>
-</div>
-</div>
-
 <footer>
-envisionz-framework-data · 84 source files in 15 packages · help pages DE/EN under <code>src/envisionz/data/help/</code> · third-party library <code>lib/h2-2_5_250.jar</code> · probes: <code>pruefen.cmd --nur framework-data</code>
+envisionz-framework-data · 57 source files in 14 packages · help pages DE/EN under <code>src/envisionz/data/help/</code> · third-party library <code>lib/h2-2_5_250.jar</code> · probes: <code>pruefen.cmd --nur framework-data</code>
 </footer>
 </div>
 </main>

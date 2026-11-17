@@ -197,6 +197,11 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="graph.html">Paths, flows and networks – background</a>
 <a class="rubrik" href="#randgebiete">Sequences, images, circuits, optics, celestial mechanics</a>
 <a class="unterseite" href="randgebiete.html">Background</a>
+<a class="rubrik" href="#tri">Triangulation in 2D</a>
+<a class="unterseite" href="triangulierung.html">Triangulation and boundary</a>
+<a class="rubrik" href="#rand">Boundary methods and manual correction</a>
+<a class="rubrik" href="#drei">Meshes and surfaces in 3D</a>
+<a class="unterseite" href="netze3d.html">Meshes and surfaces in 3D</a>
 <a class="rubrik" href="#einsatz">Usage matrix within the framework</a>
 <a class="rubrik" href="#referenzen">References</a>
 <a class="unterseite" href="referenzen.html">References</a>
@@ -285,11 +290,12 @@ math[display="block"]{margin:10px 0}
 
 <div class="zahlen">
   <div class="zahl"><b>0</b><span>dependencies, pure JDK (Java 25)</span></div>
-  <div class="zahl"><b>25</b><span>packages (since 2026-10-17 with 15 packages from the gap list)</span></div>
-  <div class="zahl"><b>127</b><span>classes</span></div>
+  <div class="zahl"><b>27</b><span>packages (since 2026-10-17 with 15 packages from the gap list)</span></div>
+  <div class="zahl"><b>186</b><span>classes</span></div>
   <div class="zahl"><b>&gt; 900</b><span>checks in more than 30 test programs</span></div>
-  <div class="zahl"><b>366</b><span>mutation tests, all caught</span></div>
+  <div class="zahl"><b>398</b><span>mutation tests, all caught</span></div>
   <div class="zahl"><b>22</b><span>modules use it</span></div>
+  <div class="zahl"><b>3 + 3</b><span>triangulation and boundary methods behind registries</span></div>
 </div>
 
 <h2 id="grundsaetze">Principles of the module</h2>
@@ -300,6 +306,8 @@ math[display="block"]{margin:10px 0}
   <div><b>Operator, not matrix class.</b> Krylov and eigen solvers only see <code>y = A x</code>: dense, sparse, stencil or directional derivative all fit.</div>
   <div><b>Verified against references.</b> Closed-form solutions, literature values (QUADPACK, Hock/Schittkowski, Hairer/Wanner) and example collections under <code>envisionz-examples/math</code>.</div>
   <div><b>One place per method.</b> Formerly scattered copies (FFT, splines, LinAlg, Optimize, GSPAR) moved here, proven bit-identical.</div>
+  <div><b>Scale-proof triangulation.</b> Delaunay is not scale-invariant. Computation runs normalised to [0,1] per axis with exact predicates; the original coordinates are returned bit for bit.</div>
+  <div><b>Known structure before Delaunay.</b> On a CFD mesh Delaunay filled concave regions and gave 102 % excess area. Where indices are known or can be read from the positions, the grid is split directly.</div>
 </div>
 <p class="einl">Note: the API is German (<code>loese</code> = solve, <code>integriere</code> = integrate, <code>minimiere</code> = minimise, <code>wert</code> = value); names are kept as in the code.</p>
 
@@ -832,20 +840,101 @@ double y = new Akima1D(xs, ys).value(0.37);</code></pre></div>
   <p class="zweck">Small, complete compute cores with textbook anchors (GATTACA, Self 1983, Curtis 5.2, figure-eight of three bodies).</p>
 </div>
 
+<!-- =============================================================== TRI -->
+<h2 id="tri">Triangulation in 2D <span class="paket">envisionz.math.tri</span></h2>
+
+<div class="karte">
+  <h3><code>Triangulierverfahren</code>, <code>BowyerWatson</code>, <code>SweepHull</code>, <code>GuibasStolfi</code>, <code>ConstrainedDelaunay</code></h3>
+  <p class="zweck">Three Delaunay methods behind a registry – a new one is entered only there, and selection fields and probes pick it up by themselves. All compute normalised to [0,1] per axis with exact circumcircle tests; <code>BowyerWatson</code> with ghost triangles instead of super vertices, <code>GuibasStolfi</code> with guaranteed O(n log n). Constrained edges as well. At 1:1, 27:1, 33333:1 and 1:1000 the same set of triangles results. <a class="vertiefung" href="triangulierung.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Triangulierverfahren.alle()</code>, <code>finde(kennung)</code>, <code>erzeuge(kennung)</code> – <code>BOWYER_WATSON</code>, <code>SWEEP_HULL</code>, <code>GUIBAS_STOLFI</code></li>
+      <li><code>Triangulator.triangulate(x, y, f)</code> → <code>TriMesh</code> (<code>tris</code>, <code>adj</code>)</li>
+      <li><code>new ConstrainedDelaunay().triangulate(x, y, f, segmente)</code></li>
+      <li><code>Geom.orient2d</code>, <code>inCircle</code>, <code>inTriangleCCW</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, Verfahrenswahl, Netzkarte</span><span class="chip">app-maps: MapsRootPanel</span><span class="chip">app-acft: AcftChartBuilder</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Contour plots from scattered measurement points, maps without a regular grid.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – via the registry</h4>
+<pre><code>TriMesh netz = Triangulierverfahren.erzeuge("GUIBAS_STOLFI").triangulate(x, y, f);
+System.out.println(netz.triangleCount() + " triangles");</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>StructuredMesh</code> and <code>Gitterfinder</code> – structure instead of Delaunay</h3>
+  <p class="zweck">With known indices the grid is split into triangles directly, holes included. Without index columns <code>Gitterfinder</code> reads (i, j) from the positions of the points: growth from a start point via predicted neighbour positions, rejected on contradiction, fracture edge or sheared reading. On 77 blocks of the machieve example grids: 56 recognised exactly, 21 rejected, none wrong.</p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>StructuredMesh.build(x, y, f, iMax, jMax)</code>, <code>ausZellen(x, y, f, gi, gj, block)</code>, <code>merge(teile)</code></li>
+      <li><code>Gitterfinder.finde(x, y)</code> → <code>Gitter(i, j, block, bloecke, zellen)</code> or <code>null</code>; <code>untersuche(x, y)</code> → <code>Befund</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, StructuredBlocks, Gitterrollen</span><span class="chip">app-maps: Raumansicht</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Showing CFD results and maps with speed lines without wrongly filled concave regions.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – try the structure first</h4>
+<pre><code>Gitterfinder.Gitter g = Gitterfinder.finde(x, y);
+TriMesh netz = (g != null) ? StructuredMesh.ausZellen(x, y, f, g.i(), g.j(), g.block())
+                           : Triangulierverfahren.erzeuge(Triangulierverfahren.VORGABE).triangulate(x, y, f);</code></pre></div>
+</div>
+
+<!-- =============================================================== BOUNDARY -->
+<h2 id="rand">Boundary methods and manual correction <span class="paket">envisionz.math.tri</span></h2>
+
+<div class="karte">
+  <h3><code>Randverfahren</code>, <code>AlphaShape</code>, <code>ChiShape</code>, <code>Nachbesserung</code></h3>
+  <p class="zweck">Delaunay covers the convex hull; the real boundary is often concave. <code>AlphaShape</code> discards triangles by circumradius or longest edge, measured in normalised space. <code>ChiShape</code> (Duckham et al. 2008) trims only from the boundary inwards, the boundary stays a simple polygon and no point drops out. <code>Nachbesserung</code> restores or discards individual triangles by hand, identified by the table rows of their corners. <a class="vertiefung" href="triangulierung.html#rand">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>Randverfahren.anwende(netz, Einstellung)</code> → <code>Ergebnis</code> (before, removed, orphaned …); <code>KEINES</code>, <code>ALPHA</code>, <code>CHI</code></li>
+      <li><code>AlphaShape.filter(netz, alpha, kriterium)</code>, <code>autoAlpha(...)</code>, <code>sortedValuesDesc(...)</code></li>
+      <li><code>ChiShape.filter(netz, lambda)</code>, <code>filterAbsolut(netz, schwelle)</code>, <code>VORGABE_LAMBDA</code> = 2.0</li>
+      <li><code>Nachbesserung.anwende(basis, gefiltert, zeilen, liste)</code>, <code>Ausnahme.von(art, a, b, c)</code>, <code>treffer(...)</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: Randwahl, Randmeldung, Netzkarte, ChartAssembly</span><span class="chip">app-maps: MapsRootPanel (AlphaShape)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Showing map and measurement regions without bridges across gaps; deciding borderline cases one by one.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – chi boundary with the default</h4>
+<pre><code>ChiShape.Ergebnis e = ChiShape.filter(netz, ChiShape.VORGABE_LAMBDA);
+TriMesh rand = e.netz();                            // e.entfernt(), e.schwelle()</code></pre></div>
+</div>
+
+<!-- =============================================================== 3D -->
+<h2 id="drei">Meshes and surfaces in 3D <span class="paket">envisionz.math.tri</span></h2>
+
+<div class="karte">
+  <h3><code>DelaunayTet</code>, <code>StructuredTets</code>, <code>IsoSurface3D</code>, <code>AxisSlice3D</code>, <code>HullSurface3D</code></h3>
+  <p class="zweck">Tetrahedralisation normalised per axis, with ghost tetrahedra and exact predicates; the output carries the raw values. For structured blocks <code>StructuredTets</code> splits every hexahedral cell directly into six tetrahedra (Kuhn/Freudenthal). On top: iso-surfaces by marching tetrahedra, axis-parallel cuts (triangle or quadrilateral per tetrahedron), the hull, colour bands on surfaces, surfaces from a height grid. <a class="vertiefung" href="netze3d.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>new DelaunayTet().triangulate(x, y, z, f)</code> → <code>TetMesh</code>; <code>StructuredTets.build(x, y, z, f, iMax, jMax, kMax)</code>, <code>merge</code></li>
+      <li><code>IsoSurface3D.surface(netz, niveau)</code>, <code>surface(netz, skalar, niveau)</code>, <code>levels(min, max, n)</code></li>
+      <li><code>AxisSlice3D.slice(netz, achse, wert)</code>, <code>slice2D(...)</code>; <code>HullSurface3D.faces(netz)</code></li>
+      <li><code>ContourBand3D.band(flaechen, niveaus)</code>, <code>GridSurface3D.faces(...)</code>, <code>FaceSplit.splitAt</code>, <code>clipKeep</code></li></ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-charts: ChartAssembly, StructuredBlocks</span><span class="chip">app-maps: Raumansicht</span><span class="chip">framework-chart: Isoflaechenlauf (tool)</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Volume charts of maps f(x, y, z), iso-surfaces in CFD fields, cutting planes.</p></div>
+  </div>
+  <div class="bsp"><h4>Example – iso-surface of a point cloud</h4>
+<pre><code>TetMesh tets = new DelaunayTet().triangulate(x, y, z, f);
+List&lt;double[]&gt; flaeche = IsoSurface3D.surface(tets, 0.85);</code></pre></div>
+</div>
+
 <!-- =============================================================== EINSATZ -->
 <h2 id="einsatz">Usage matrix within the framework</h2>
 <p class="einl">Which modules use which packages today, counted in the source code (tests excluded).</p>
 <table>
-  <tr><th>Module</th><th>Fourier</th><th>linear</th><th>GSPAR</th><th>Krylov</th><th>ODE</th><th>Optimisation</th><th>Curves</th><th>Purpose</th></tr>
-  <tr><td>commandline-eqnparser</td><td></td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td>Newton, Broyden, LM, homotopy and Newton-GMRES solvers, normalisation, diagnostics</td></tr>
+  <tr><th>Module</th><th>Fourier</th><th>linear</th><th>GSPAR</th><th>Krylov</th><th>ODE</th><th>Optimisation</th><th>Curves</th><th>Triangu&shy;lation</th><th>Purpose</th></tr>
+  <tr><td>commandline-eqnparser</td><td></td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td></td><td>Newton, Broyden, LM, homotopy and Newton-GMRES solvers, normalisation, diagnostics</td></tr>
   <!-- GEAENDERT 2026-10-06: Kinetik nach framework-thermo umgezogen; EigenQr hat einen Aufrufer -->
-  <tr><td>framework-thermo</td><td></td><td></td><td></td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td>Inverting equations of state, heat conduction, material characteristics, stiff chemistry (RODAS4, package kinetik), energy levels of hindered rotors (eigenvalues)</td></tr>
-  <tr><td>framework-stats</td><td></td><td class="x">●</td><td></td><td></td><td></td><td class="x">●</td><td></td><td>Regression, GLM, PCA, correlation, quantiles</td></tr>
-  <tr><td>framework-audio</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>MFCC features</td></tr>
-  <tr><td>framework-audiometrik</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Spectra, cross-correlation, time alignment</td></tr>
-  <tr><td>framework-image</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Notch filter, smoothing</td></tr>
-  <tr><td>framework-chart3d</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>3D lines</td></tr>
-  <tr><td>app-digitizer</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Separating grid and curves, curve fit</td></tr>
+  <tr><td>framework-thermo</td><td></td><td></td><td></td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td>Inverting equations of state, heat conduction, material characteristics, stiff chemistry (RODAS4, package kinetik), energy levels of hindered rotors (eigenvalues)</td></tr>
+  <tr><td>framework-stats</td><td></td><td class="x">●</td><td></td><td></td><td></td><td class="x">●</td><td></td><td></td><td>Regression, GLM, PCA, correlation, quantiles</td></tr>
+  <tr><td>framework-audio</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>MFCC features</td></tr>
+  <tr><td>framework-audiometrik</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>Spectra, cross-correlation, time alignment</td></tr>
+  <tr><td>framework-image</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td></td><td>Notch filter, smoothing</td></tr>
+  <tr><td>framework-chart3d</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td></td><td>3D lines</td></tr>
+  <tr><td>app-digitizer</td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td></td><td>Separating grid and curves, curve fit</td></tr>
+  <tr><td>app-charts</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Contour plots, mesh choice, boundary methods, 3D volume</td></tr>
+  <tr><td>app-maps</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Spatial view of the maps</td></tr>
+  <tr><td>app-acft</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Flight performance charts</td></tr>
+  <tr><td>framework-chart</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Iso-surface tool</td></tr>
+  <tr><td>framework-data</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="x">●</td><td>Tecplot zones as mesh</td></tr>
 </table>
 <div class="hinweis">Quadrature, L-BFGS(-B), SQP and NURBS are verified and ready but have no caller outside the tests yet. So far only framework-thermo uses eigenvalues (energy levels of hindered rotors). Obvious first uses: stability of linearised engine models (eigenvalues), map fitting (LbfgsB), design with limits (Sqp), blade and annulus geometry (NURBS).</div>
 
@@ -858,7 +947,7 @@ double y = new Akima1D(xs, ys).value(0.37);</code></pre></div>
 </div>
 
 <footer>
-envisionz-framework-math · 70 classes in 9 packages · example collections under <code>envisionz-examples/math</code> (quadrature, Krylov, ODE, eigenvalues, optimisation, curves, legacy) · tests: <code>pruefen.cmd --nur framework-math</code>
+envisionz-framework-math · 186 classes in 27 packages · example collections under <code>envisionz-examples/math</code> (quadrature, Krylov, ODE, eigenvalues, optimisation, curves, legacy) · tests: <code>pruefen.cmd --nur framework-math</code>
 </footer>
 </div>
 </main>
