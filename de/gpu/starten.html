@@ -124,6 +124,7 @@ figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radi
 figcaption{font-size:13px;color:var(--mu);margin-top:6px}
 /* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
 figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figure video{max-width:100%;height:auto;display:block;margin:0 auto}
 @media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
 figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
 @media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
@@ -342,6 +343,43 @@ aufgezeichnetes, noch nicht fertiges Paket benutzt, darf nicht verändert werden
 600-mal in einem Paket und verlangt jedes Ergebnis richtig; eine Gegenprobe lässt den Satz nach einem Pufferwechsel stehen und muss rot
 werden.</p>
 
+<h2 id="einmal">Einmal aufzeichnen, oft abschicken</h2>
+<p>Ein Trainingsschritt des Sprachmodells startet einige hundert Kerne, und von Schritt zu Schritt sind es dieselben: dieselben Kerne,
+dieselben Puffer, dieselben Zahlen – nur der Inhalt der Puffer ändert sich. Den Befehlspuffer jedes Mal neu zu schreiben, heißt je Start
+einige Aufrufe aus Java in den Treiber, einen Deskriptorsatz beschreiben und die Logik des Schritts durchlaufen. Die Warteschlange kann
+ein solches Paket deshalb <b>einmal</b> aufzeichnen und danach nur noch abschicken:</p>
+<pre class="pseudo">beginneAufzeichnung():
+    fertig();  neuer Befehlsvorrat mit einem Befehlspuffer;  vkBeginCommandBuffer   <i>ohne ONE_TIME_SUBMIT</i>
+
+starte(k, n) während der Aufzeichnung:
+    Satz aus dem Vorrat der Aufzeichnung (je 256 Sätze ein neuer Vorrat)
+    Sperre zwischen zwei Starts wie sonst;  vkCmdBindPipeline;  vkCmdBindDescriptorSets
+    vkCmdPushConstants(k.zahlen)                     <i>die Zahlen sind ab jetzt eingefroren</i>
+    vkCmdDispatch;  merke die Puffer von k
+
+beendeAufzeichnung():
+    Sperre: Schreiben der Shader → Lesen durch den Rechner;  vkEndCommandBuffer
+
+spiele(a):
+    <b>wenn</b> ein Puffer von a freigegeben ist:  Fehler
+    fertig()                                         <i>was vorher gestartet wurde, rechnet zuerst</i>
+    vkQueueSubmit(a.puffer, zaun)                    <i>das nächste Lesen wartet wie sonst</i>
+
+verwirf(a):  fertig();  Satzvorräte und Befehlsvorrat von a zerstören</pre>
+<p class="quelle">Quelle: <code>Warteschlange.beginneAufzeichnung</code>, <code>spiele</code>, <code>verwirf</code>; gemeinsame Schicht
+<code>envisionz.gpu.Sitzung</code> und <code>envisionz.gpu.Aufzeichnung</code>.</p>
+<p>Zwei Folgen muss der Aufrufer kennen. Erstens sind die <b>Zahlen</b> eines Kerns beim Aufzeichnen eingefroren; was sich von Schritt zu
+Schritt ändert, gehört in einen Puffer. Im Trainingsschritt sind das Lernrate, Startkorrektur und Kappen von Adam: der Kern
+<code>adam_w</code> liest sie aus acht floats, die vor jedem Abspielen geschrieben werden, und rechnet Zeile für Zeile wie
+<code>adam</code>. Zweitens hält eine Aufzeichnung ihre <b>Puffer</b> fest. Der Trainingsschritt zeichnet deshalb erst beim zweiten Aufruf
+derselben Form (Folgen, Länge, mit oder ohne Rückweg) auf – der erste lässt die Puffer auf ihre Größe wachsen –, und wächst später ein
+Puffer für eine größere Form, verwirft er alle Aufzeichnungen und zeichnet neu auf. Während einer Aufzeichnung wird nichts gelesen,
+geschrieben, freigegeben oder abgeschickt; die Warteschlange weist das ab.</p>
+<p>Ein Schritt besteht damit aus drei abgespielten Paketen: Vorwärts- und Rückweg, Gradientennorm, Adam. Dazwischen liest Java nur den
+Verlust und die Norm. Die Probe verlangt Verlust, Gradienten, Gewichte und Adam-Momente mit und ohne Aufzeichnung Bit für Bit gleich, auch
+über Formwechsel und wachsende Puffer. Abschalten lässt es sich mit <code>-Denvisionz.autograd.aufzeichnen=nein</code>; das Messwerkzeug
+vergleicht beides mit <code>tools\gpuschritt-messen.cmd -rueckende:vulkan -aufzeichnen:ja,nein</code>.</p>
+
 <h2 id="warten">Warten: kreisen oder schlafen</h2>
 <p><code>vkWaitForFences</code> legt den Faden schlafen, bis der Treiber ihn weckt. Die erste Messung auf der Karte legte nahe, dass das
 Aufwachen spät kommt. Das Framework fragt deshalb auf Karten den Zaun selbst ab (<code>vkGetFenceStatus</code> in einer Schleife,
@@ -391,6 +429,8 @@ Meldung, im Anlauf. Das Framework bleibt deshalb beim Zaun; gewonnen wird über 
 <p>OpenCL hat keine aufgezeichneten Befehlspuffer im Sinne von Vulkan; jeder Start wird in eine Befehlswarteschlange eingereiht, die der
 Treiber in Reihenfolge abarbeitet. Ein blockierendes Lesen wartet auf alles davor. Das Paket entsteht so von selbst, solange niemand
 zwischendurch liest. Deshalb gilt dieselbe Regel – Norm und dt erst am Ende lesen – für beide Rückenden.</p>
+<p>Aufzeichnen und Abspielen gibt es unter OpenCL nicht (<code>kannAufzeichnen()</code> sagt dort nein): der Trainingsschritt startet seine
+Kerne dort wie bisher einzeln, und das Paket bildet der Treiber.</p>
 
 </div>
 </main>

@@ -124,6 +124,7 @@ figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radi
 figcaption{font-size:13px;color:var(--mu);margin-top:6px}
 /* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
 figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figure video{max-width:100%;height:auto;display:block;margin:0 auto}
 @media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
 figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
 @media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
@@ -341,6 +342,42 @@ finished batch must not be changed. The framework keeps to a simple rule:</p>
 <p>In the CFD step a kernel's buffers never change – each kernel gets its sets once and keeps them. Probe VK-09 switches 600 times within one
 batch and requires every result to be right; a counter-probe keeps the set after a buffer change and has to turn red.</p>
 
+<h2 id="einmal">Record once, submit often</h2>
+<p>A training step of the language model launches a few hundred kernels, and from step to step they are the same: the same kernels, the
+same buffers, the same numbers – only the contents of the buffers change. Writing the command buffer anew every time means, per launch,
+several calls from Java into the driver, writing a descriptor set and running through the logic of the step. The queue can therefore
+record such a batch <b>once</b> and afterwards only submit it:</p>
+<pre class="pseudo">beginneAufzeichnung():
+    fertig();  new command pool with one command buffer;  vkBeginCommandBuffer   <i>without ONE_TIME_SUBMIT</i>
+
+starte(k, n) during the recording:
+    set from the recording's pool (a new pool every 256 sets)
+    barrier between two launches as usual;  vkCmdBindPipeline;  vkCmdBindDescriptorSets
+    vkCmdPushConstants(k.numbers)                    <i>the numbers are frozen from now on</i>
+    vkCmdDispatch;  remember the buffers of k
+
+beendeAufzeichnung():
+    barrier: shader writes → host reads;  vkEndCommandBuffer
+
+spiele(a):
+    <b>if</b> a buffer of a has been freed:  error
+    fertig()                                         <i>what was launched before computes first</i>
+    vkQueueSubmit(a.buffer, fence)                   <i>the next read waits as usual</i>
+
+verwirf(a):  fertig();  destroy the set pools and the command pool of a</pre>
+<p class="quelle">Source: <code>Warteschlange.beginneAufzeichnung</code>, <code>spiele</code>, <code>verwirf</code>; shared layer
+<code>envisionz.gpu.Sitzung</code> and <code>envisionz.gpu.Aufzeichnung</code>.</p>
+<p>The caller has to know two consequences. First, the <b>numbers</b> of a kernel are frozen at recording time; whatever changes from step
+to step belongs in a buffer. In the training step these are Adam's learning rate, bias correction and clipping: the kernel
+<code>adam_w</code> reads them from eight floats written before every replay and computes line by line like <code>adam</code>. Second, a
+recording holds on to its <b>buffers</b>. The training step therefore records only on the second call with the same shape (sequences,
+length, with or without backward pass) – the first lets the buffers grow to their size – and if a buffer later grows for a larger shape,
+it discards all recordings and records anew. During a recording nothing is read, written, freed or submitted; the queue rejects that.</p>
+<p>A step thus consists of three replayed batches: forward and backward pass, gradient norm, Adam. In between Java reads only the loss and
+the norm. The probe requires loss, gradients, weights and Adam moments to be bit-identical with and without recording, also across shape
+changes and growing buffers. It can be switched off with <code>-Denvisionz.autograd.aufzeichnen=nein</code>; the measuring tool compares
+both with <code>tools\gpuschritt-messen.cmd -rueckende:vulkan -aufzeichnen:ja,nein</code>.</p>
+
 <h2 id="warten">Waiting: spin or sleep</h2>
 <p><code>vkWaitForFences</code> puts the thread to sleep until the driver wakes it. The first measurement on the card suggested that the
 wake-up comes late. On cards the framework therefore polls the fence itself (<code>vkGetFenceStatus</code> in a loop, at most 50 ms, then
@@ -389,6 +426,8 @@ therefore stays with the fence; the gain comes from the number of waiting points
 <p>OpenCL has no recorded command buffers in the Vulkan sense; every launch is enqueued into a command queue that the driver processes in
 order. A blocking read waits for everything before it. The batch thus forms by itself as long as nobody reads in between. That is why the same
 rule – read norm and dt only at the end – applies to both back ends.</p>
+<p>Recording and replaying do not exist under OpenCL (<code>kannAufzeichnen()</code> says no there): the training step launches its kernels
+one by one as before, and the driver forms the batch.</p>
 
 </div>
 </main>
