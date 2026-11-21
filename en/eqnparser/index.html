@@ -177,13 +177,16 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="nfml-syntax.html">NFML-Syntax</a>
 <a class="rubrik" href="#ausdruck">Expressions and derivatives</a>
 <a class="rubrik" href="#builtins">Built-in functions</a>
-<a class="rubrik" href="#loeser">Twelve solvers behind one interface</a>
+<a class="rubrik" href="#loeser">Fourteen solvers behind one interface</a>
 <a class="unterseite" href="fortsetzung.html">Continuation</a>
+<a class="unterseite" href="globalisierung.html">Dogleg, pseudo-time, deflation</a>
 <a class="unterseite" href="newton.html">Newton and Jacobian</a>
 <a class="rubrik" href="#normierung">Scaling and normalisation</a>
 <a class="rubrik" href="#start">Start values and robustness</a>
 <a class="unterseite" href="zerlegung.html">Block ordering</a>
 <a class="rubrik" href="#diagnose">Diagnostics</a>
+<a class="unterseite" href="einheiten.html">Unit check</a>
+<a class="unterseite" href="empfindlichkeit.html">Sensitivity</a>
 <a class="rubrik" href="#ausgabe">C source, LaTeX and derivative overview</a>
 <a class="rubrik" href="#konverter">Converters from other tools</a>
 <a class="rubrik" href="#api">Embedding and command line</a>
@@ -271,13 +274,14 @@ math[display="block"]{margin:10px 0}
 
 <figure class="kopfbild"><img src="../../bilder/eqnparser/kopf.svg" alt="Two equation curves, a circle and an exponential curve, with the Newton iteration paths from two starting points to the two intersections."><figcaption>Computed with <code>SolverAPI</code> and <code>NEWTON_ARMIJO</code>: two equations, two starting points, two solutions.</figcaption></figure>
 
+<!-- Zahlen nachgezählt 2026-11-21: Löser = Werte von SolverType, Klassen = .java unter src/, Pakete = Ordner mit solchen Dateien, Probenklassen = Klassen mit main unter test/, Gegenproben = Köpfe [name] in test/gegenproben.dat, Decks = *.nfml und *.cas unter envisionz-examples/eqnparser -->
 <div class="zahlen">
-  <div class="zahl"><b>12</b><span>solvers, from Newton-Armijo to Newton-Krylov (GMRES)</span></div>
+  <div class="zahl"><b>14</b><span>solvers, from Newton-Armijo via Newton-Krylov (GMRES) to dogleg and pseudo-transient</span></div>
   <div class="zahl"><b>6</b><span>scaling methods, including dynamic normalisation</span></div>
   <div class="zahl"><b>40</b><span>built-in functions (thermo, ACM, T-MATS)</span></div>
   <div class="zahl"><b>3</b><span>converters: ACM, NPSS, Simulink/T-MATS</span></div>
   <div class="zahl"><b>68 + 38</b><span>NFML and CAS decks in envisionz-examples</span></div>
-  <div class="zahl"><b>167</b><span>counter-probes, all red</span></div>
+  <div class="zahl"><b>192</b><span>counter-probes, all red, for 61 probe classes</span></div>
 </div>
 
 <h2 id="grundsaetze">Principles of the module</h2>
@@ -402,11 +406,11 @@ CALL(WC) = KF2D(KFNR, METHODE, NC, BETA);     # map number, interpolation method
 </div>
 
 <!-- =============================================================== SOLVERS -->
-<h2 id="loeser">Twelve solvers behind one interface <span class="paket">apps.eqnParser.solver</span></h2>
+<h2 id="loeser">Fourteen solvers behind one interface <span class="paket">apps.eqnParser.solver</span></h2>
 
 <div class="karte">
   <h3><code>SolverType</code> and <code>SolverFactory</code></h3>
-  <p class="zweck">Shared loop in <code>AbstractSolver</code>: NaN detection, Jacobian built in parallel, bounds, stagnation window, absolute and relative convergence. The sparse LU (GSPAR) and GMRES come from framework-math. Probe <code>Loeservergleichprobe</code>: all methods, the same root; <code>SolverFactory</code> must map each type to the class it promises. <a class="vertiefung" href="newton.html">Newton method, Jacobian and damping →</a> <a class="vertiefung" href="fortsetzung.html">Continuation methods →</a></p>
+  <p class="zweck">Shared loop in <code>AbstractSolver</code>: NaN detection, Jacobian built in parallel, bounds, stagnation window, absolute and relative convergence. The sparse LU (GSPAR) and GMRES come from framework-math. Probe <code>Loeservergleichprobe</code>: all methods, the same root; <code>SolverFactory</code> must map each type to the class it promises. <a class="vertiefung" href="newton.html">Newton method, Jacobian and damping →</a> <a class="vertiefung" href="fortsetzung.html">Continuation methods →</a> <a class="vertiefung" href="globalisierung.html">Dogleg, pseudo-time and deflation →</a></p>
   <table>
     <tr><th>Type</th><th>Method</th><th>Good for</th></tr>
     <tr><td><code>NEWTON_ARMIJO</code></td><td>Newton-Raphson with Armijo line search, dense</td><td>small to medium models, default</td></tr>
@@ -416,6 +420,8 @@ CALL(WC) = KF2D(KFNR, METHODE, NC, BETA);     # map number, interpolation method
     <tr><td><code>LEVENBERG_MARQUARDT</code></td><td>damped Gauss-Newton</td><td>poor start values, nearly singular Jacobian</td></tr>
     <tr><td><code>SMOOTH_NEWTON</code>, <code>TWO_PHASE</code></td><td>smoothed MIN/MAX/ABS (β = 200), two-stage</td><td>models with kinks and regime changes</td></tr>
     <tr><td><code>HOMOTOPY</code>, <code>ARC_LENGTH</code>, <code>ADAPTIVE_LAMBDA</code></td><td>continuation, arc length, adaptive λ</td><td>when Newton does not get there from the start point</td></tr>
+    <tr><td><code>DOGLEG</code></td><td>trust region with Powell's dogleg, scaled</td><td>nearly singular Jacobian where the line search gets stuck</td></tr>
+    <tr><td><code>PSEUDO_TRANSIENT</code></td><td>pseudo-transient continuation, step size from the residual</td><td>local minima of ‖F‖ without a root (stable roots only)</td></tr>
   </table>
   <div class="bsp"><h4>Example – choosing solver and scaling via the API</h4>
 <pre><code>SolverResult r = new SolverAPI()
@@ -479,6 +485,27 @@ CALL(WC) = KF2D(KFNR, METHODE, NC, BETA);     # map number, interpolation method
   </div>
   <div class="bsp"><h4>Example – which solver gets there?</h4>
 <pre><code>java cmd.SolverMatrix axial_v4_bladeelement.nfml -timeout:60 -scaling:EQUILIBRATE</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>Empfindlichkeit</code>, <code>Unsicherheit</code>, <code>Modellanpassung</code></h3>
+  <p class="zweck">After solving: derivative of the solution with respect to chosen parameters from the implicit function theorem (one LU of the Jacobian, symbolic derivatives), absolute and relative; propagation of parameter uncertainty linearly (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>SC</mi><mrow><mi>p</mi></mrow></msub><msup><mrow><mi mathvariant="normal">S</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\mathbf S\mathbf C_p\mathbf S^{\mathsf T}</annotation></semantics></math>) and as Monte Carlo with Sobol points (repeatable); fitting parameters to data points with Levenberg-Marquardt including covariance. <a class="vertiefung" href="empfindlichkeit.html">Sensitivity, uncertainty and fitting →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>cmd.Empfindlichkeit model -p:A,B [-relativ] [-sigma:sA,sB] [-mc:400] [-saat:0]</code></li>
+      <li><code>cmd.Anpassung model -p:K,N -start:1,1 -messung:points.csv [-vorgabe:U]</code></li></ul></div>
+    <div class="feld"><h4>What for</h4><p>Which input drives the result, how certain it is, which coefficients match the measurement.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>Einheiten</code>, <code>Dulmage</code></h3>
+  <p class="zweck">Checks without solving: every equation for matching dimension (seven SI exponents, numbers with unknown unit as a linear system, switches as factors; verdicts correct, hint, finding, not checkable) and the Dulmage-Mendelsohn decomposition into over-, under- and well-determined part. <a class="vertiefung" href="einheiten.html">Unit check →</a> <a class="vertiefung" href="zerlegung.html#dulmage">Dulmage and Mendelsohn →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>cmd.Modellpruefung model [-einheiten] [-dm] [-alle]</code></li></ul></div>
+    <div class="feld"><h4>What for</h4><p>Find forgotten conversions and wrong declarations before computing; name missing or duplicate equations.</p></div>
+  </div>
 </div>
 
 <!-- =============================================================== OUTPUT -->
@@ -615,7 +642,7 @@ PRINT PERF.FN PERF.SFC</code></pre>
 </div>
 
 <footer>
-envisionz-commandline-eqnparser · 128 classes · manuals <code>NFML-Syntax-Referenz.pdf</code>, <code>CAS-Syntax-Referenz.pdf</code>, <code>docs/NFML-FUNKTIONSUEBERSICHT.md</code> · examples under <code>envisionz-examples/eqnparser</code> and <code>examples/kochbuch</code> · probes: <code>pruefen.cmd --nur commandline-eqnparser</code>
+envisionz-commandline-eqnparser · 146 classes in 11 packages · manuals <code>NFML-Syntax-Referenz.pdf</code>, <code>CAS-Syntax-Referenz.pdf</code>, <code>docs/NFML-FUNKTIONSUEBERSICHT.md</code> · examples under <code>envisionz-examples/eqnparser</code> and <code>examples/kochbuch</code> · probes: <code>pruefen.cmd --nur commandline-eqnparser</code>
 </footer>
 </div>
 </main>

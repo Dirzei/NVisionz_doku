@@ -177,13 +177,16 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="nfml-syntax.html">NFML-Syntax</a>
 <a class="rubrik" href="#ausdruck">Ausdrücke und Ableitungen</a>
 <a class="rubrik" href="#builtins">Eingebaute Funktionen</a>
-<a class="rubrik" href="#loeser">Zwölf Löser hinter einer Schnittstelle</a>
+<a class="rubrik" href="#loeser">Vierzehn Löser hinter einer Schnittstelle</a>
 <a class="unterseite" href="fortsetzung.html">Fortsetzung</a>
+<a class="unterseite" href="globalisierung.html">Dogleg, Pseudozeit, Deflation</a>
 <a class="unterseite" href="newton.html">Newton und Jacobi</a>
 <a class="rubrik" href="#normierung">Skalierung und Normierung</a>
 <a class="rubrik" href="#start">Startwerte und Robustheit</a>
 <a class="unterseite" href="zerlegung.html">Blockordnung</a>
 <a class="rubrik" href="#diagnose">Diagnose</a>
+<a class="unterseite" href="einheiten.html">Einheitenprüfung</a>
+<a class="unterseite" href="empfindlichkeit.html">Empfindlichkeit</a>
 <a class="rubrik" href="#ausgabe">C-Quelltext, LaTeX und Ableitungsübersicht</a>
 <a class="rubrik" href="#konverter">Konverter aus fremden Werkzeugen</a>
 <a class="rubrik" href="#api">Einbettung und Kommandozeile</a>
@@ -270,13 +273,14 @@ math[display="block"]{margin:10px 0}
 
 <figure class="kopfbild"><img src="../../bilder/eqnparser/kopf.svg" alt="Zwei Gleichungskurven, ein Kreis und eine Exponentialkurve, mit den Iterationspfaden des Newton-Verfahrens von zwei Startpunkten zu den beiden Schnittpunkten."><figcaption>Mit <code>SolverAPI</code> und <code>NEWTON_ARMIJO</code> gerechnet: zwei Gleichungen, zwei Startpunkte, zwei Lösungen.</figcaption></figure>
 
+<!-- Zahlen nachgezählt 2026-11-21: Löser = Werte von SolverType, Klassen = .java unter src/, Pakete = Ordner mit solchen Dateien, Probenklassen = Klassen mit main unter test/, Gegenproben = Köpfe [name] in test/gegenproben.dat, Decks = *.nfml und *.cas unter envisionz-examples/eqnparser -->
 <div class="zahlen">
-  <div class="zahl"><b>12</b><span>Löser, von Newton-Armijo bis Newton-Krylov (GMRES)</span></div>
+  <div class="zahl"><b>14</b><span>Löser, von Newton-Armijo über Newton-Krylov (GMRES) bis Hundebein und Pseudozeit</span></div>
   <div class="zahl"><b>6</b><span>Skalierungsverfahren, darunter dynamische Normierung</span></div>
   <div class="zahl"><b>40</b><span>eingebaute Funktionen (Thermo, ACM, T-MATS)</span></div>
   <div class="zahl"><b>3</b><span>Konverter: ACM, NPSS, Simulink/T-MATS</span></div>
   <div class="zahl"><b>68 + 38</b><span>NFML- und CAS-Decks in envisionz-examples</span></div>
-  <div class="zahl"><b>167</b><span>Gegenproben, alle rot</span></div>
+  <div class="zahl"><b>192</b><span>Gegenproben, alle rot, zu 61 Probenklassen</span></div>
 </div>
 
 <h2 id="grundsaetze">Grundsätze des Moduls</h2>
@@ -401,11 +405,11 @@ CALL(WC) = KF2D(KFNR, METHODE, NC, BETA);     # Kennfeldnummer, Interpolationsar
 </div>
 
 <!-- =============================================================== LOESER -->
-<h2 id="loeser">Zwölf Löser hinter einer Schnittstelle <span class="paket">apps.eqnParser.solver</span></h2>
+<h2 id="loeser">Vierzehn Löser hinter einer Schnittstelle <span class="paket">apps.eqnParser.solver</span></h2>
 
 <div class="karte">
   <h3><code>SolverType</code> und <code>SolverFactory</code></h3>
-  <p class="zweck">Gemeinsame Schleife in <code>AbstractSolver</code>: NaN-Erkennung, parallel aufgebaute Jacobi-Matrix, Schranken, Stagnationsfenster, absolute und relative Konvergenz. Die dünne LU (GSPAR) und GMRES kommen aus framework-math. Probe <code>Loeservergleichprobe</code>: alle Verfahren, dieselbe Wurzel; <code>SolverFactory</code> muss jeden Typ auf die versprochene Klasse abbilden. <a class="vertiefung" href="newton.html">Newton-Verfahren, Jacobi-Matrix und Dämpfung →</a> <a class="vertiefung" href="fortsetzung.html">Fortsetzungsverfahren →</a></p>
+  <p class="zweck">Gemeinsame Schleife in <code>AbstractSolver</code>: NaN-Erkennung, parallel aufgebaute Jacobi-Matrix, Schranken, Stagnationsfenster, absolute und relative Konvergenz. Die dünne LU (GSPAR) und GMRES kommen aus framework-math. Probe <code>Loeservergleichprobe</code>: alle Verfahren, dieselbe Wurzel; <code>SolverFactory</code> muss jeden Typ auf die versprochene Klasse abbilden. <a class="vertiefung" href="newton.html">Newton-Verfahren, Jacobi-Matrix und Dämpfung →</a> <a class="vertiefung" href="fortsetzung.html">Fortsetzungsverfahren →</a> <a class="vertiefung" href="globalisierung.html">Hundebein, Pseudozeit und Deflation →</a></p>
   <table>
     <tr><th>Typ</th><th>Verfahren</th><th>Gut für</th></tr>
     <tr><td><code>NEWTON_ARMIJO</code></td><td>Newton-Raphson mit Armijo-Liniensuche, dicht</td><td>kleine bis mittlere Modelle, Standard</td></tr>
@@ -415,6 +419,8 @@ CALL(WC) = KF2D(KFNR, METHODE, NC, BETA);     # Kennfeldnummer, Interpolationsar
     <tr><td><code>LEVENBERG_MARQUARDT</code></td><td>gedämpfte Gauß-Newton</td><td>schlechte Startwerte, fast singuläre Jacobi-Matrix</td></tr>
     <tr><td><code>SMOOTH_NEWTON</code>, <code>TWO_PHASE</code></td><td>geglättete MIN/MAX/ABS (β = 200), zweistufig</td><td>Modelle mit Knicken und Regimewechseln</td></tr>
     <tr><td><code>HOMOTOPY</code>, <code>ARC_LENGTH</code>, <code>ADAPTIVE_LAMBDA</code></td><td>Fortsetzungsverfahren, Bogenlänge, adaptives λ</td><td>wenn Newton vom Start aus nicht ankommt</td></tr>
+    <tr><td><code>DOGLEG</code></td><td>Vertrauensbereich mit Powells Hundebein, skaliert</td><td>fast singuläre Jacobi-Matrix, wo die Liniensuche stecken bleibt</td></tr>
+    <tr><td><code>PSEUDO_TRANSIENT</code></td><td>pseudo-transiente Fortsetzung, Schrittweite nach dem Residuum</td><td>lokale Minima von ‖F‖ ohne Nullstelle (nur an stabilen Wurzeln)</td></tr>
   </table>
   <div class="bsp"><h4>Beispiel – Löser und Skalierung über die API wählen</h4>
 <pre><code>SolverResult r = new SolverAPI()
@@ -478,6 +484,27 @@ CALL(WC) = KF2D(KFNR, METHODE, NC, BETA);     # Kennfeldnummer, Interpolationsar
   </div>
   <div class="bsp"><h4>Beispiel – welcher Löser kommt an?</h4>
 <pre><code>java cmd.SolverMatrix axial_v4_bladeelement.nfml -timeout:60 -scaling:EQUILIBRATE</code></pre></div>
+</div>
+
+<div class="karte">
+  <h3><code>Empfindlichkeit</code>, <code>Unsicherheit</code>, <code>Modellanpassung</code></h3>
+  <p class="zweck">Nach dem Lösen: Ableitung der Lösung nach gewählten Parametern aus dem Satz über implizite Funktionen (eine LU der Jacobi-Matrix, symbolische Ableitungen), absolut und relativ; Fortpflanzung der Parameterunsicherheit linear (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>SC</mi><mrow><mi>p</mi></mrow></msub><msup><mrow><mi mathvariant="normal">S</mi></mrow><mrow><mi mathvariant="normal">T</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\mathbf S\mathbf C_p\mathbf S^{\mathsf T}</annotation></semantics></math>) und als Monte-Carlo mit Sobol-Punkten (wiederholbar); Anpassung von Parametern an Messpunkte mit Levenberg-Marquardt samt Kovarianz. <a class="vertiefung" href="empfindlichkeit.html">Empfindlichkeit, Unsicherheit und Anpassung →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>cmd.Empfindlichkeit modell -p:A,B [-relativ] [-sigma:sA,sB] [-mc:400] [-saat:0]</code></li>
+      <li><code>cmd.Anpassung modell -p:K,N -start:1,1 -messung:punkte.csv [-vorgabe:U]</code></li></ul></div>
+    <div class="feld"><h4>Wofür</h4><p>Welche Eingabe treibt das Ergebnis, wie sicher ist es, welche Beiwerte passen zur Messung.</p></div>
+  </div>
+</div>
+
+<div class="karte">
+  <h3><code>Einheiten</code>, <code>Dulmage</code></h3>
+  <p class="zweck">Prüfung ohne Lösen: jede Gleichung auf passende Dimension (sieben SI-Exponenten, Zahlen mit unbekannter Einheit als lineares System, Schalter als Faktor; Urteile stimmt, Hinweis, Befund, nicht prüfbar) und die Zerlegung nach Dulmage und Mendelsohn in über-, unter- und wohlbestimmten Teil. <a class="vertiefung" href="einheiten.html">Einheitenprüfung →</a> <a class="vertiefung" href="zerlegung.html#dulmage">Dulmage und Mendelsohn →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methoden</h4><ul class="meth">
+      <li><code>cmd.Modellpruefung modell [-einheiten] [-dm] [-alle]</code></li></ul></div>
+    <div class="feld"><h4>Wofür</h4><p>Vergessene Umrechnungen und falsche Deklarationen finden, bevor gerechnet wird; fehlende oder doppelte Gleichungen benennen.</p></div>
+  </div>
 </div>
 
 <!-- =============================================================== AUSGABE -->
@@ -614,7 +641,7 @@ PRINT PERF.FN PERF.SFC</code></pre>
 </div>
 
 <footer>
-envisionz-commandline-eqnparser · 128 Klassen · Handbücher <code>NFML-Syntax-Referenz.pdf</code>, <code>CAS-Syntax-Referenz.pdf</code>, <code>docs/NFML-FUNKTIONSUEBERSICHT.md</code> · Beispiele unter <code>envisionz-examples/eqnparser</code> und <code>examples/kochbuch</code> · Proben: <code>pruefen.cmd --nur commandline-eqnparser</code>
+envisionz-commandline-eqnparser · 146 Klassen in 11 Paketen · Handbücher <code>NFML-Syntax-Referenz.pdf</code>, <code>CAS-Syntax-Referenz.pdf</code>, <code>docs/NFML-FUNKTIONSUEBERSICHT.md</code> · Beispiele unter <code>envisionz-examples/eqnparser</code> und <code>examples/kochbuch</code> · Proben: <code>pruefen.cmd --nur commandline-eqnparser</code>
 </footer>
 </div>
 </main>

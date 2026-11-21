@@ -191,6 +191,8 @@ math[display="block"]{margin:10px 0}
 <a class="rubrik" href="#trennung">Source separation</a>
 <a class="rubrik" href="#aac">AAC decoder</a>
 <a class="rubrik" href="#flac">FLAC decoder</a>
+<a class="rubrik" href="#opus">Ogg Opus</a>
+<a class="unterseite" href="opus.html">Ogg Opus</a>
 <a class="rubrik" href="#radio">Internet radio</a>
 <a class="rubrik" href="#mfcc">MFCC features</a>
 <a class="unterseite" href="mfcc.html">MFCC and phoneme features</a>
@@ -266,7 +268,7 @@ math[display="block"]{margin:10px 0}
   <div class="modul">envisionz-framework-audio</div>
   <h1>Reading, playing and recognising sound – without third-party libraries</h1>
   <p class="unter">Function overview for the presentation of the envisionz framework, as of 5 Oct 2026. One common source interface for
-  PCM, own decoders for WAV, MP3 (Layer III), MPEG-1 Layer II, AAC and FLAC, an own MP3 encoder with lossless cutting, equaliser, source separation, reading and writing track info, internet radio, playback and microphone via <code>javax.sound</code>, MFCC features,
+  PCM, own decoders for WAV, MP3 (Layer III), MPEG-1 Layer II, AAC, FLAC, Ogg Vorbis and Opus, an own MP3 encoder with lossless cutting, equaliser, source separation, reading and writing track info, internet radio, playback and microphone via <code>javax.sound</code>, MFCC features,
   closed-vocabulary word recognition and the feature chain for later phone recognition.
   For each method: purpose, API, use in the framework, applications, examples. The examples are shortened.
   Many API names are German (e.g. <code>Tonmischer</code> = sound mixer, <code>Horcher</code> = listener, <code>Wortgrenzen</code> = word boundaries); they are shown unchanged.</p>
@@ -275,12 +277,12 @@ math[display="block"]{margin:10px 0}
 <figure class="kopfbild"><img src="../../bilder/audio/kopf.svg" alt="Waveform of two generated sine tones (440 Hz and 880 Hz) above a matrix of MFCC coefficients that changes at the tone change."><figcaption>Drawn with <code>SineSource</code> and <code>Mfcc</code>: two tones and their MFCC matrix.</figcaption></figure>
 
 <div class="zahlen">
-  <div class="zahl"><b>104</b><span>classes in 15 packages</span></div>
+  <div class="zahl"><b>122</b><span>classes in 16 packages</span></div>
   <div class="zahl"><b>3</b><span>MPEG versions in the MP3 decoder (1, 2, 2.5), plus Layer II</span></div>
   <div class="zahl"><b>2.1·10<sup>−7</sup></b><span>RMS deviation of the MP3 decoder against ffmpeg (norm 3.05·10<sup>−5</sup>)</span></div>
   <div class="zahl"><b>138 dB</b><span>SNR of the AAC decoder against a third-party decode</span></div>
   <div class="zahl"><b>0</b><span>third-party libraries; FFT/DCT from framework-math, network from framework-neural</span></div>
-  <div class="zahl"><b>39</b><span>probe classes, 175 counter-probes</span></div>
+  <div class="zahl"><b>44</b><span>probe classes, 224 counter-probes</span></div>
 </div>
 
 <h2 id="grundsaetze">Principles of the module</h2>
@@ -450,7 +452,7 @@ p.play();</code></pre></div>
 
 <div class="karte">
   <h3><code>Mp3Kodierer</code> – MPEG-1 Layer III, CBR and VBR</h3>
-  <p class="zweck">Analysis filter bank (counterpart of the synthesis filter, round trip at 84 dB SNR), MDCT with window switching (short blocks on attacks), psychoacoustic model with Bark spreading and tonality, inner and outer quantisation loop, scale factors, free region boundaries, bit reservoir up to 511 bytes, mid/side. VBR with quality 0 to 9 picks the smallest fitting bitrate per frame and writes a Xing header with table of contents.</p>
+  <p class="zweck">Analysis filter bank (counterpart of the synthesis filter, round trip at 84 dB SNR), MDCT with window switching (short blocks on attacks), psychoacoustic model with Bark spreading and tonality, inner and outer quantisation loop, scale factors with preflag, scfsi and subblock_gain (only where they save bits; the quantisation stays identical), free region boundaries, bit reservoir up to 511 bytes, mid/side, and on request intensity stereo above a cut-off frequency (<code>intensitaet(abHz)</code>, off by default). VBR with quality 0 to 9 picks the smallest fitting bitrate per frame and writes a Xing header with table of contents.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>Mp3Kodierer(aus, rate, kanaele, kbps)</code>, <code>schreibe(pcm, off, n)</code>, <code>close()</code></li>
@@ -543,12 +545,28 @@ p.play();</code></pre></div>
   </div>
 </div>
 
+<!-- =============================================================== OPUS -->
+<h2 id="opus">Ogg Opus <span class="paket">envisionz.audio.opus</span></h2>
+
+<div class="karte">
+  <h3><code>OpusSource</code>, <code>OpusStrom</code>, <code>OpusDekoder</code> – Ogg Opus</h3>
+  <p class="zweck">Own Opus decoder after RFC 6716 with the behaviour of libopus 1.5: range decoder, SILK (integer, bit-exact with the reference), CELT (energy, bit allocation, PVQ, IMDCT, comb filter), hybrid, mode changes with redundancy. Missing packets are concealed (SILK, CELT with pitch, DTX) or restored from the LBRR copy in the next packet (FEC). Ogg after RFC 7845: pre-skip, output gain, start offset, channel families 0, 1, 2 and 3 (ambisonics, RFC 8486) and 255, downmixed to at most stereo; tags from <code>OpusTags</code>; seeking with 80 ms pre-roll. As a stream without length (<code>OpusStrom</code>) also in internet radio, with title chains. Ogg Vorbis is read as well (<code>VorbisSource</code>, <code>VorbisStrom</code>). <a class="vertiefung" href="opus.html">Background, formulas and pseudocode →</a></p>
+  <div class="gitter">
+    <div class="feld"><h4>Methods</h4><ul class="meth">
+      <li><code>OpusSource(datei)</code>, <code>seek</code>, <code>anfangszeit()</code>, <code>fehlseiten()</code>, <code>verdeckt()</code>, <code>fecRahmen()</code>; <code>OpusSource.istOpus(datei)</code>, <code>angaben(datei)</code></li>
+      <li><code>OpusStrom(in, titelHoerer)</code>, <code>titel()</code>; <code>OpusDekoder.dekodiere</code>, <code>verdecke</code>, <code>dekodiereFec</code></li>
+    </ul></div>
+    <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-audio: opening Opus, library, track info</span><span class="chip">app-audio: radio card</span></div>
+      <h4 style="margin-top:10px">What for</h4><p>Speech and music files and internet radio in Opus format, without a third-party library.</p></div>
+  </div>
+</div>
+
 <!-- =============================================================== RADIO -->
 <h2 id="radio">Internet radio <span class="paket">envisionz.audio.radio</span></h2>
 
 <div class="karte">
   <h3><code>Radiostrom</code>, <code>HttpLeser</code>, <code>Netzregeln</code> – receiving stations safely</h3>
-  <p class="zweck">MP3 and AAC stations with ICY titles behind a 512 KB prebuffer; playlists (M3U, PLS) are resolved. The in-house HTTP reader connects to exactly the checked address: only <code>http</code>/<code>https</code>, no targets on the own computer or in the home network (not after a redirect either), at most three redirects, limits for header lines and content, timeouts. Titles and station names are cleaned (<code>Netztext</code>): no control characters, no direction overrides, no HTML for Swing. Nothing is written to disk.</p>
+  <p class="zweck">MP3, AAC, Ogg Vorbis and Ogg Opus stations with ICY titles behind a 512 KB prebuffer; playlists (M3U, PLS) are resolved. The in-house HTTP reader connects to exactly the checked address: only <code>http</code>/<code>https</code>, no targets on the own computer or in the home network (not after a redirect either), at most three redirects, limits for header lines and content, timeouts. Titles and station names are cleaned (<code>Netztext</code>): no control characters, no direction overrides, no HTML for Swing. Nothing is written to disk.</p>
   <div class="gitter">
     <div class="feld"><h4>Methods</h4><ul class="meth">
       <li><code>Radiostrom.oeffne(url, Netzregeln.STRENG, titelHoerer)</code> – <code>name()</code>, <code>art()</code>, <code>titel()</code>, <code>fuellstand()</code></li>
@@ -558,7 +576,7 @@ p.play();</code></pre></div>
     <div class="feld"><h4>Used in</h4><div class="einsatz"><span class="chip">app-audio: radio card</span></div>
       <h4 style="margin-top:10px">What for</h4><p>Internet radio in your own application, switchable and without an attack surface.</p></div>
   </div>
-  <div class="hinweis">Ogg streams (Vorbis, Opus) are rejected with a message. Segmented streams (HLS) are read: master playlist with a variant without video up to 320 kbit/s, live playlists starting three segments before the end with reloading, segments as MPEG transport stream (AAC or MP3) or as plain AAC/MP3 segments, AES-128 decrypted; fMP4/CMAF and SAMPLE-AES are rejected with a message. In the applications network access is off by default and is switched on in the app settings under Security.</div>
+  <div class="hinweis">Ogg streams are read: Vorbis and Opus, also as a chain of several titles; titles from the comments if the station sends no ICY titles. Segmented streams (HLS) are read: master playlist with a variant without video up to 320 kbit/s, live playlists starting three segments before the end with reloading, segments as MPEG transport stream (AAC or MP3) or as plain AAC/MP3 segments, AES-128 decrypted; fMP4/CMAF and SAMPLE-AES are rejected with a message. In the applications network access is off by default and is switched on in the app settings under Security.</div>
 </div>
 
 <!-- =============================================================== MFCC -->
@@ -630,7 +648,7 @@ try (Horcher h = new Horcher(mic, e.modell())) {
 <h2 id="einsatz">Usage matrix in the framework</h2>
 <p class="einl">Which modules use which packages today, counted in the source code (excluding probes).</p>
 <table>
-  <tr><th>Module</th><th>Sources / player / mixer</th><th>WAV</th><th>MP3</th><th>Layer II</th><th>AAC / FLAC</th><th>Encoder / cutting</th><th>Radio</th><th>MFCC</th><th>Word recog&shy;nition</th><th>Phone features</th><th>What for</th></tr>
+  <tr><th>Module</th><th>Sources / player / mixer</th><th>WAV</th><th>MP3</th><th>Layer II</th><th>AAC / FLAC / Ogg</th><th>Encoder / cutting</th><th>Radio</th><th>MFCC</th><th>Word recog&shy;nition</th><th>Phone features</th><th>What for</th></tr>
   <tr><td>app-forensik</td><td class="x">●</td><td class="x">●</td><td></td><td class="x">●</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Play, mix and offset the sound of a DVD backup against the picture, extract it as WAV</td></tr>
   <tr><td>app-audio</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td class="x">●</td><td></td><td></td><td></td><td>Player and editor with library, equaliser, separation, track info and internet radio</td></tr>
 </table>

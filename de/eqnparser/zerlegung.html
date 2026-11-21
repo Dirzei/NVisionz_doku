@@ -177,13 +177,16 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="nfml-syntax.html">NFML-Syntax</a>
 <a class="rubrik" href="index.html#ausdruck">Ausdrücke und Ableitungen</a>
 <a class="rubrik" href="index.html#builtins">Eingebaute Funktionen</a>
-<a class="rubrik" href="index.html#loeser">Zwölf Löser hinter einer Schnittstelle</a>
+<a class="rubrik" href="index.html#loeser">Vierzehn Löser hinter einer Schnittstelle</a>
 <a class="unterseite" href="fortsetzung.html">Fortsetzung</a>
+<a class="unterseite" href="globalisierung.html">Dogleg, Pseudozeit, Deflation</a>
 <a class="unterseite" href="newton.html">Newton und Jacobi</a>
 <a class="rubrik" href="index.html#normierung">Skalierung und Normierung</a>
 <a class="rubrik" href="index.html#start">Startwerte und Robustheit</a>
 <a class="unterseite aktiv" href="zerlegung.html">Blockordnung</a>
 <a class="rubrik" href="index.html#diagnose">Diagnose</a>
+<a class="unterseite" href="einheiten.html">Einheitenprüfung</a>
+<a class="unterseite" href="empfindlichkeit.html">Empfindlichkeit</a>
 <a class="rubrik" href="index.html#ausgabe">C-Quelltext, LaTeX und Ableitungsübersicht</a>
 <a class="rubrik" href="index.html#konverter">Konverter aus fremden Werkzeugen</a>
 <a class="rubrik" href="index.html#api">Einbettung und Kommandozeile</a>
@@ -369,6 +372,16 @@ Blöcke ← umgekehrte Reihenfolge von sccs     <i>Abhängigkeiten zuerst</i>
     <b>wenn nicht</b> ok: setze Werte des Blocks zurück;  vermerke im Protokoll</pre>
 <p class="quelle">Quelle: <code>eqnparser/src/apps/eqnParser/solver/BlockOrdnung.java</code> (<code>analysiere</code>, <code>kuhnAugment</code>, <code>tarjan</code>), <code>AutoInitSweep.java</code> (<code>ausfuehren</code>, <code>loese1DKern</code>, <code>loeseBlock</code>, <code>grossblockPass</code>)</p>
 
+<h2 id="dulmage">Über-, unter- und wohlbestimmt: Dulmage und Mendelsohn</h2>
+<p>Die Blockordnung setzt voraus, dass jede Gleichung eine Größe bekommt. Fehlt eine Randbedingung oder ist eine doppelt, gibt es kein perfektes Matching, und die Frage ist: <i>wo</i>? Die Zerlegung nach Dulmage und Mendelsohn beantwortet sie strukturell, ohne zu lösen. Mit einem maximalen Matching (dieselbe Kuhn-Augmentierung wie oben) zerfällt der bipartite Graph eindeutig in drei Teile:</p>
+<ul>
+<li><b>überbestimmt</b>: alle Gleichungen und Größen, die von einer <i>ungematchten Gleichung</i> aus über alternierende Pfade erreichbar sind (Gleichung → Größe über eine beliebige Kante, Größe → Gleichung über die Matchingkante). Dort stehen mehr Gleichungen als Größen.</li>
+<li><b>unterbestimmt</b>: alle Größen und Gleichungen, die von einer <i>ungematchten Größe</i> aus erreichbar sind (Größe → Gleichung über eine Kante, Gleichung → Größe über das Matching). Dort fehlen Gleichungen.</li>
+<li><b>wohlbestimmt</b>: der Rest, quadratisch mit perfektem Matching; seine feine Zerlegung sind die starken Zusammenhangskomponenten nach Tarjan in Lösungsreihenfolge, die Block-Dreiecksform von oben.</li>
+</ul>
+<p>Welches maximale Matching gefunden wurde, spielt keine Rolle: die drei Teile sind dieselben (Satz von Dulmage und Mendelsohn). Der Strukturrang ist die Größe des Matchings; das System ist strukturell regulär, wenn über- und unterbestimmter Teil leer sind. Beispiel: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mn>1</mn><mo>,</mo><mspace width="0.2778em"/><msup><mrow><mi>X</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><mn>1</mn><mo>,</mo><mspace width="0.2778em"/><mi>Y</mi><mo>+</mo><mi>Z</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">X=1,\;X^2=1,\;Y+Z=1</annotation></semantics></math>. Die ersten beiden Gleichungen teilen sich <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> – überbestimmt; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi></mrow><annotation encoding="application/x-tex">Y</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math> teilen sich eine Gleichung – unterbestimmt; der wohlbestimmte Teil ist leer.</p>
+<p>Auf der Kommandozeile: <code>java cmd.Modellpruefung modell.nfml -dm</code> nennt die Teile mit Gleichungen und Größen, Rückgabe 0 nur bei strukturell regulärem System. <code>Dulmageprobe</code> (8 Prüfungen) prüft je ein über-, unter- und wohlbestimmtes System, den Strukturrang, die Block-Dreiecksform an einem Dreieck und am Beispiel unten, den gemischten Fall und die Kommandozeile.</p>
+
 <h2 id="beispiel">Rechenbeispiel</h2>
 <p>Für <code>X+Y = 3, X−Y = 1, Z = 2X</code> findet die LHS-Heuristik nur bei der dritten Gleichung eine Variable (<code>Z</code>); die ersten beiden haben links einen Ausdruck und werden von der Kuhn-Augmentierung zugeordnet. E1 und E2 benutzen beide <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> und <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi></mrow><annotation encoding="application/x-tex">Y</annotation></semantics></math> und gehören je einer davon, also hängen sie gegenseitig voneinander ab: ein Block der Größe 2. E3 benutzt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math>, dessen Besitzer in diesem Block liegt, also kommt E3 danach. Der Sweep löst zuerst <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>+</mo><mi>Y</mi><mo>=</mo><mn>3</mn><mo>,</mo><mspace width="0.2778em"/><mi>X</mi><mo>−</mo><mi>Y</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">X+Y=3,\; X-Y=1</annotation></semantics></math> (Lösung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mn>2</mn><mo>,</mo><mspace width="0.2778em"/><mi>Y</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">X=2,\;Y=1</annotation></semantics></math>) und danach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi><mo>=</mo><mn>2</mn><mi>X</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">Z=2X=4</annotation></semantics></math>. Die Probe bindet dieses Modell als Text und prüft die Zerlegung, ohne zu lösen; eine zweite rechnet den Sweep vom Start <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mi>Y</mi><mo>=</mo><mi>Z</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">X=Y=Z=0</annotation></semantics></math> bis zu diesen Werten.</p>
 
@@ -386,7 +399,7 @@ Blöcke ← umgekehrte Reihenfolge von sccs     <i>Abhängigkeiten zuerst</i>
 </ul>
 
 <h2 id="quellen">Quellen</h2>
-<p>Die vollständigen Angaben stehen in den <a href="referenzen.html">Referenzen</a> des Moduls: <a href="referenzen.html#R11">R11</a>, <a href="referenzen.html#R12">R12</a>, <a href="referenzen.html#R13">R13</a>, <a href="referenzen.html#R14">R14</a>, <a href="referenzen.html#R15">R15</a>.</p>
+<p>Die vollständigen Angaben stehen in den <a href="referenzen.html">Referenzen</a> des Moduls: <a href="referenzen.html#R11">R11</a>, <a href="referenzen.html#R12">R12</a>, <a href="referenzen.html#R13">R13</a>, <a href="referenzen.html#R14">R14</a>, <a href="referenzen.html#R15">R15</a>, <a href="referenzen.html#R20">R20</a>.</p>
 
 </div>
 </main>

@@ -177,13 +177,16 @@ math[display="block"]{margin:10px 0}
 <a class="unterseite" href="nfml-syntax.html">NFML-Syntax</a>
 <a class="rubrik" href="index.html#ausdruck">Expressions and derivatives</a>
 <a class="rubrik" href="index.html#builtins">Built-in functions</a>
-<a class="rubrik" href="index.html#loeser">Twelve solvers behind one interface</a>
+<a class="rubrik" href="index.html#loeser">Fourteen solvers behind one interface</a>
 <a class="unterseite" href="fortsetzung.html">Continuation</a>
+<a class="unterseite" href="globalisierung.html">Dogleg, pseudo-time, deflation</a>
 <a class="unterseite" href="newton.html">Newton and Jacobian</a>
 <a class="rubrik" href="index.html#normierung">Scaling and normalisation</a>
 <a class="rubrik" href="index.html#start">Start values and robustness</a>
 <a class="unterseite aktiv" href="zerlegung.html">Block ordering</a>
 <a class="rubrik" href="index.html#diagnose">Diagnostics</a>
+<a class="unterseite" href="einheiten.html">Unit check</a>
+<a class="unterseite" href="empfindlichkeit.html">Sensitivity</a>
 <a class="rubrik" href="index.html#ausgabe">C source, LaTeX and derivative overview</a>
 <a class="rubrik" href="index.html#konverter">Converters from other tools</a>
 <a class="rubrik" href="index.html#api">Embedding and command line</a>
@@ -368,6 +371,16 @@ blocks ← reversed order of sccs              <i>dependencies first</i>
     <b>if not</b> ok: reset the values of the block;  note in the log</pre>
 <p class="quelle">Source: <code>eqnparser/src/apps/eqnParser/solver/BlockOrdnung.java</code> (<code>analysiere</code>, <code>kuhnAugment</code>, <code>tarjan</code>), <code>AutoInitSweep.java</code> (<code>ausfuehren</code>, <code>loese1DKern</code>, <code>loeseBlock</code>, <code>grossblockPass</code>)</p>
 
+<h2 id="dulmage">Over-, under- and well-determined: Dulmage and Mendelsohn</h2>
+<p>The block ordering assumes that every equation gets a quantity. If a boundary condition is missing or given twice, there is no perfect matching, and the question is: <i>where</i>? The Dulmage-Mendelsohn decomposition answers it structurally, without solving. With a maximum matching (the same Kuhn augmentation as above) the bipartite graph splits uniquely into three parts:</p>
+<ul>
+<li><b>over-determined</b>: all equations and quantities reachable from an <i>unmatched equation</i> via alternating paths (equation → quantity over any edge, quantity → equation over the matching edge). There are more equations than quantities there.</li>
+<li><b>under-determined</b>: all quantities and equations reachable from an <i>unmatched quantity</i> (quantity → equation over an edge, equation → quantity over the matching). Equations are missing there.</li>
+<li><b>well-determined</b>: the rest, square with a perfect matching; its fine decomposition is the strongly connected components after Tarjan in solution order, the block triangular form from above.</li>
+</ul>
+<p>Which maximum matching was found does not matter: the three parts are the same (Dulmage-Mendelsohn theorem). The structural rank is the size of the matching; the system is structurally regular if the over- and under-determined parts are empty. Example: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mn>1</mn><mo>,</mo><mspace width="0.2778em"/><msup><mrow><mi>X</mi></mrow><mrow><mn>2</mn></mrow></msup><mo>=</mo><mn>1</mn><mo>,</mo><mspace width="0.2778em"/><mi>Y</mi><mo>+</mo><mi>Z</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">X=1,\;X^2=1,\;Y+Z=1</annotation></semantics></math>. The first two equations share <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> – over-determined; <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi></mrow><annotation encoding="application/x-tex">Y</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math> share one equation – under-determined; the well-determined part is empty.</p>
+<p>On the command line: <code>java cmd.Modellpruefung model.nfml -dm</code> lists the parts with equations and quantities, return code 0 only for a structurally regular system. <code>Dulmageprobe</code> (8 checks) tests one over-, one under- and one well-determined system each, the structural rank, the block triangular form on a triangle and on the example below, the mixed case and the command line.</p>
+
 <h2 id="beispiel">Worked example</h2>
 <p>For <code>X+Y = 3, X−Y = 1, Z = 2X</code> the LHS heuristic finds a variable only for the third equation (<code>Z</code>); the first two have an expression on the left and are assigned by Kuhn augmentation. E1 and E2 both use <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math> and <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi></mrow><annotation encoding="application/x-tex">Y</annotation></semantics></math> and each owns one of them, so they depend on each other: a block of size 2. E3 uses <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math>, whose owner lies in that block, so E3 comes after. The sweep first solves <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>+</mo><mi>Y</mi><mo>=</mo><mn>3</mn><mo>,</mo><mspace width="0.2778em"/><mi>X</mi><mo>−</mo><mi>Y</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">X+Y=3,\; X-Y=1</annotation></semantics></math> (solution <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mn>2</mn><mo>,</mo><mspace width="0.2778em"/><mi>Y</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">X=2,\;Y=1</annotation></semantics></math>) and then <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi><mo>=</mo><mn>2</mn><mi>X</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">Z=2X=4</annotation></semantics></math>. The probe binds this model as text and checks the decomposition without solving; a second one runs the sweep from the start <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>=</mo><mi>Y</mi><mo>=</mo><mi>Z</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">X=Y=Z=0</annotation></semantics></math> to these values.</p>
 
@@ -385,7 +398,7 @@ blocks ← reversed order of sccs              <i>dependencies first</i>
 </ul>
 
 <h2 id="quellen">Sources</h2>
-<p>Full citations are in the module's <a href="referenzen.html">references</a>: <a href="referenzen.html#R11">R11</a>, <a href="referenzen.html#R12">R12</a>, <a href="referenzen.html#R13">R13</a>, <a href="referenzen.html#R14">R14</a>, <a href="referenzen.html#R15">R15</a>.</p>
+<p>Full citations are in the module's <a href="referenzen.html">references</a>: <a href="referenzen.html#R11">R11</a>, <a href="referenzen.html#R12">R12</a>, <a href="referenzen.html#R13">R13</a>, <a href="referenzen.html#R14">R14</a>, <a href="referenzen.html#R15">R15</a>, <a href="referenzen.html#R20">R20</a>.</p>
 
 </div>
 </main>
