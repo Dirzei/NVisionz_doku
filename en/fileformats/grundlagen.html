@@ -364,6 +364,56 @@ math[display="block"]{margin:10px 0}
 <p>A text file may start with a byte order mark. It arrives in two ways: read correctly as the character U+FEFF, or – if the file was read as Latin-1 – as the three characters <code>ï»¿</code> (the bytes EF BB BF). Both forms are recognised and removed.</p>
 <p>The metadata tree is walked depth-first with a node before its children, so that a search for all tables reproduces the order of the file. Two findings are equal if key and values are equal – also when a value is itself an array; the comparison is deep for that. A column is found by name regardless of case; a missing one is reported together with the names that exist.</p>
 
+<h2 id="lesepfad">The reading path: from the file to the table</h2>
+<p>In this module a file always takes the same path: <b>detection</b> reads the header and determines the format from the content, never from the extension; the <b>factory</b> <code>Datenquellen.oeffne</code> picks the reader in a <code>switch</code>; the reader checks every count taken from the file with <code>Lesegrenzen</code> before allocating memory for it; the <b>data source</b> hands out a <b>record cursor</b> per table that only ever holds one record. Today this path ends in the file analysis, which writes the records into a Swing table.</p>
+<p>The tables that are computed with (<code>LoadedTable</code> in framework-data) arise on a <b>second</b> path: CSV through <code>CsvParser</code>, Tecplot through <code>TecplotReader</code> and <code>TecplotTables</code>, both in framework-data and without a data source. A bridge from the data source to <code>LoadedTable</code>, as the module boundary intends, does not exist yet; it is drawn dashed in red.</p>
+<figure>
+<svg viewBox="0 0 640 370" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="20" y="40" fill="#1f5f8b" font-weight="bold">framework-fileformats</text>
+  <text x="20" y="230" fill="#2e7d32" font-weight="bold">framework-data / framework-swing</text>
+  <g>    <rect x="20" y="60" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="90" y="81" text-anchor="middle" fill="#1f5f8b">Formaterkennung.erkenne</text></g>
+  <g>    <rect x="180" y="60" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="245" y="81" text-anchor="middle" fill="#1f5f8b">Datenquellen.oeffne</text></g>
+  <g>    <rect x="330" y="60" width="120" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="390" y="81" text-anchor="middle" fill="#1f5f8b">Datenquelle.kursor</text></g>
+  <g>    <rect x="470" y="60" width="150" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="545" y="81" text-anchor="middle" fill="#1f5f8b">Satzkursor.wert(name)</text></g>
+  <g>    <rect x="180" y="120" width="130" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="245" y="141" text-anchor="middle" fill="#9a6400">Lesegrenzen.anzahl</text></g>
+  <g>    <rect x="470" y="120" width="150" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="545" y="141" text-anchor="middle" fill="#5b6475">Datenpanel.satzmodell</text></g>
+  <g>    <rect x="20" y="250" width="140" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="90" y="271" text-anchor="middle" fill="#2e7d32">CsvLoadPanel.reparse</text></g>
+  <g>    <rect x="180" y="250" width="130" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="245" y="271" text-anchor="middle" fill="#2e7d32">CsvParser.parse</text></g>
+  <g>    <rect x="20" y="310" width="140" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="90" y="331" text-anchor="middle" fill="#2e7d32">TecplotReader.read</text></g>
+  <g>    <rect x="180" y="310" width="130" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="245" y="331" text-anchor="middle" fill="#2e7d32">TecplotTables.toTable</text></g>
+  <line x1="160" y1="77" x2="178" y2="77" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil)"/>
+  <line x1="310" y1="77" x2="328" y2="77" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil)"/>
+  <line x1="450" y1="77" x2="468" y2="77" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil)"/>
+  <line x1="245" y1="94" x2="245" y2="118" stroke="#9a6400" stroke-dasharray="3 3"/>
+  <line x1="545" y1="94" x2="545" y2="118" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil)"/>
+  <text x="320" y="141" fill="#9a6400">inside every reader</text>
+  <text x="470" y="172" fill="#5b6475">app-fileanalysis: Swing table</text>
+  <line x1="160" y1="267" x2="178" y2="267" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil)"/>
+  <line x1="160" y1="327" x2="178" y2="327" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil)"/>
+  <line x1="310" y1="267" x2="398" y2="290" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil)"/>
+  <line x1="310" y1="327" x2="398" y2="304" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil)"/>
+  <rect x="400" y="280" width="110" height="34" rx="4" fill="#eaf4ea" stroke="#2e7d32"/>
+  <text x="455" y="301" text-anchor="middle" fill="#2e7d32">LoadedTable</text>
+  <rect x="330" y="180" width="120" height="40" rx="4" fill="none" stroke="#b00020" stroke-dasharray="5 4"/>
+  <text x="390" y="197" text-anchor="middle" fill="#b00020">bridge Datenquelle</text>
+  <text x="390" y="212" text-anchor="middle" fill="#b00020">→ LoadedTable: missing</text>
+  <line x1="390" y1="94" x2="390" y2="178" stroke="#b00020" stroke-dasharray="5 4"/>
+  <line x1="420" y1="220" x2="445" y2="278" stroke="#b00020" stroke-dasharray="5 4"/>
+</svg>
+<figcaption>The reading chain between fileformats and data. Every box carries a reference to the method it shows; if one of them is renamed or removed, the theory checker reports the picture as outdated. In the internal edition the reference appears as a tooltip on the box.</figcaption>
+</figure>
+
 <h2 id="folgt">What follows</h2>
 <ul>
 <li>Assumption: the file size is known before reading. For streams without a length the limits do not apply; only the fixed decompression limit of the compression module remains.</li>
