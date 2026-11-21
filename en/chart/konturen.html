@@ -263,6 +263,54 @@ math[display="block"]{margin:10px 0}
 <p>A performance map, a temperature field or a CFD result is given as a value <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> at individual nodes – on a grid or, for measurement clouds, at scattered points. Two displays turn this into a picture: <b>isolines</b> join points of equal value (the efficiency island in a compressor map is such a bundle of lines), <b>colour fills</b> colour every location by its value. Both need an assumption about how <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> behaves between the nodes. The framework takes the simplest one: <b>linear along the edges</b> of a cell or triangle, and bilinear inside a grid cell.</p>
 <p>The computation lives in <code>ContourLayers.levelSegments</code> (segments), <code>IsoPolyline</code> (chaining), <code>ContourRenderer</code> (colour on the grid), <code>TriIsoLines</code> and <code>TriContourRenderer</code> (triangle mesh) and <code>Colormap</code> and <code>ColormapPaintScale</code> (colour). Drawing is done by JFreeChart; this page covers only what is computed before that.</p>
 
+<h2 id="ablauf-kontur">How a contour chart is built</h2>
+<p><code>ContourChartFactory.create</code> builds a chart with three layers from a grid field: the fill at the bottom, the data mesh above it, the isolines on top, and the colour bar on the right. In band mode the field is first refined bilinearly once, and fill and isolines are computed on <b>the same</b> fine grid – so every line lies on a colour change. The data mesh stays on the real nodes. The fill is computed only while drawing: JFreeChart calls <code>drawItem</code> per cell, continuous or in bands by half-plane clipping.</p>
+<figure>
+<svg viewBox="0 0 640 320" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-ablauf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <rect x="16" y="20" width="120" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="76" y="41" text-anchor="middle" fill="#1f5f8b">ContourDataset</text>
+  <g>    <rect x="200" y="20" width="190" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="295" y="41" text-anchor="middle" fill="#1f5f8b">ContourChartFactory.create</text></g>
+  <g>    <rect x="220" y="80" width="150" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="295" y="101" text-anchor="middle" fill="#9a6400">ContourDataset.refine</text></g>
+  <text x="380" y="80" fill="#9a6400">band mode only</text>
+  <text x="16" y="144" fill="#5b6475">middle: mesh</text>
+  <g>    <rect x="16" y="150" width="168" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="100" y="171" text-anchor="middle" fill="#1f5f8b">ContourLayers.gridDataset</text></g>
+  <text x="16" y="202" fill="#5b6475">real nodes</text>
+  <text x="188" y="144" fill="#5b6475">bottom: fill</text>
+  <g>    <rect x="188" y="150" width="214" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="295" y="171" text-anchor="middle" fill="#1f5f8b">ContourRenderer.drawItem</text></g>
+  <g>    <rect x="188" y="210" width="104" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="240" y="231" text-anchor="middle" fill="#1f5f8b">drawContinuous</text></g>
+  <g>    <rect x="298" y="210" width="104" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="350" y="231" text-anchor="middle" fill="#2e7d32">drawIsoBands</text></g>
+  <g>    <rect x="298" y="270" width="104" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="350" y="291" text-anchor="middle" fill="#2e7d32">clipHalfPlane</text></g>
+  <text x="188" y="291" fill="#5b6475">while drawing</text>
+  <text x="440" y="144" fill="#5b6475">top: isolines</text>
+  <g>    <rect x="440" y="150" width="184" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="532" y="171" text-anchor="middle" fill="#1f5f8b">ContourLayers.isoDataset</text></g>
+  <g>    <rect x="440" y="196" width="184" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="532" y="217" text-anchor="middle" fill="#2e7d32">isoDatasetAtBands</text></g>
+  <g>    <rect x="440" y="262" width="184" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="532" y="283" text-anchor="middle" fill="#1f5f8b">ContourLayers.addLevel</text></g>
+  <text x="440" y="314" fill="#5b6475">marching squares per level</text>
+  <line x1="136" y1="37" x2="198" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="295" y1="54" x2="295" y2="78" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="206,54 206,128 96,128 96,148" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="295" y1="114" x2="295" y2="148" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="370,97 600,97 600,148" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="240" y1="184" x2="240" y2="208" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="350" y1="184" x2="350" y2="208" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="350" y1="244" x2="350" y2="268" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="532" y1="230" x2="532" y2="260" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="626,167 632,167 632,279 626,279" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+</svg>
+<figcaption>Structure of a contour chart. Green is band mode: refined grid, bands by half-plane clipping, isolines exactly on the band limits. Without band mode, fill and isolines start from the unchanged grid.</figcaption>
+</figure>
+
 <h2 id="ms">Marching squares: isolines on the grid</h2>
 <p>Each grid cell has four corners <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">a, b, c, d</annotation></semantics></math> (counter-clockwise) with values <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>a</mi></mrow></msub><mo>…</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_a \dots f_d</annotation></semantics></math>. For a level <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> every corner is either "above" (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>≥</mo><mi>L</mi></mrow><annotation encoding="application/x-tex">f \ge L</annotation></semantics></math>) or "below". The isoline crosses exactly those edges whose end points lie on different sides. On such an edge from <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi></mrow><annotation encoding="application/x-tex">P</annotation></semantics></math> to <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi></mrow><annotation encoding="application/x-tex">Q</annotation></semantics></math> the crossing point, linearly interpolated, is at</p>
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>t</mi><mo>=</mo><mfrac><mrow><mi>L</mi><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>P</mi></mrow></msub></mrow><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>Q</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>P</mi></mrow></msub></mrow></mfrac><mo>,</mo><mspace width="2em"/><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">→</mo></mover><mo>=</mo><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">→</mo></mover></mrow><mrow><mi>P</mi></mrow></msub><mo>+</mo><mi>t</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">→</mo></mover></mrow><mrow><mi>Q</mi></mrow></msub><mo>−</mo><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">→</mo></mover></mrow><mrow><mi>P</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">t = \frac{L - f_P}{f_Q - f_P}, \qquad \vec{x} = \vec{x}_P + t\,(\vec{x}_Q - \vec{x}_P)</annotation></semantics></math></p>

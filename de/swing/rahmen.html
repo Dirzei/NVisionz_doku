@@ -276,6 +276,57 @@ math[display="block"]{margin:10px 0}
 <p class="quelle">Quelle: <code>envisionz-framework-swing/src/envisionz/swing/FrameworkBootstrap.java</code> (<code>start</code>, Kommentare 0 bis 4).</p>
 <div class="hinweis"><b>Festlegung im Framework:</b> Sprache und Symbolgröße vor dem Aufbau der Oberfläche, Protokoll vor allem, was scheitern kann, App-Verzeichnis nach der Sprache. Die Reihenfolge ist Teil des Vertrags von <code>start()</code>; wer einen Schritt verschiebt, verändert, wie die Apps aussehen.</div>
 
+<h2 id="ablauf-hintergrund">Lange Arbeit im Hintergrund, Rückkehr auf den Ereignisfaden</h2>
+<p>Swing-Komponenten dürfen nur auf dem Ereignisfaden (EDT) verändert werden; was dort lange rechnet, friert das Fenster ein. <code>BusyRunner.run</code> trennt beides: Kommt der Aufruf nicht vom EDT, stellt er sich selbst dorthin um und beginnt neu. Auf dem EDT startet er einen Zeitgeber für die Glasscheibe und einen <code>SwingWorker</code>, dessen <code>doInBackground</code> die Aufgabe auf einem Hintergrundfaden ausführt. Eine Meldung aus der Aufgabe (<code>busy.setMessage</code>) geht über <code>invokeLater</code> an die Scheibe zurück.</p>
+<p>Ist die Aufgabe fertig, ruft Swing <code>done</code> auf dem EDT. Dort holt <code>get()</code> das Ergebnis; nur um diesen Aufruf liegt der Fänger, sodass <code>onError</code> nur Fehler der Aufgabe sieht. Danach läuft <code>onSuccess</code>, und in jedem Fall wird die Scheibe abgebaut – frühestens 400 ms nachdem sie erschienen ist. War die Aufgabe nach 250 ms schon fertig, erscheint sie gar nicht.</p>
+<figure>
+<svg viewBox="0 0 640 270" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-busy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="10" y="28" fill="#1f5f8b" font-weight="bold">Ereignisfaden (EDT)</text>
+  <text x="10" y="200" fill="#2e7d32" font-weight="bold">Hintergrundfaden</text>
+  <line x1="10" y1="180" x2="630" y2="180" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <g>    <rect x="10" y="40" width="130" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="75" y="56" text-anchor="middle" fill="#1f5f8b">BusyRunner</text>
+    <text x="75" y="71" text-anchor="middle" fill="#1f5f8b">.run</text></g>
+  <g>    <rect x="170" y="40" width="140" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="240" y="56" text-anchor="middle" fill="#1f5f8b">LoadingGlassPane</text>
+    <text x="240" y="71" text-anchor="middle" fill="#1f5f8b">.showOn</text></g>
+  <g>    <rect x="340" y="40" width="120" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="400" y="56" text-anchor="middle" fill="#1f5f8b">SwingWorker</text>
+    <text x="400" y="71" text-anchor="middle" fill="#1f5f8b">.done</text></g>
+  <rect x="490" y="40" width="140" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+  <text x="560" y="56" text-anchor="middle" fill="#5b6475">onSuccess</text>
+  <text x="560" y="71" text-anchor="middle" fill="#5b6475">oder onError</text>
+  <g>    <rect x="170" y="110" width="140" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="240" y="126" text-anchor="middle" fill="#1f5f8b">LoadingGlassPane</text>
+    <text x="240" y="141" text-anchor="middle" fill="#1f5f8b">.setMessage</text></g>
+  <g>    <rect x="460" y="110" width="170" height="40" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="545" y="126" text-anchor="middle" fill="#9a6400">BusyRunner</text>
+    <text x="545" y="141" text-anchor="middle" fill="#9a6400">.dismissRespectingMinShow</text></g>
+  <g>    <rect x="10" y="210" width="130" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="75" y="226" text-anchor="middle" fill="#2e7d32">SwingWorker</text>
+    <text x="75" y="241" text-anchor="middle" fill="#2e7d32">.doInBackground</text></g>
+  <rect x="170" y="210" width="140" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+  <text x="240" y="226" text-anchor="middle" fill="#5b6475">task.run(busy)</text>
+  <text x="240" y="241" text-anchor="middle" fill="#5b6475">Arbeit der App</text>
+  <line x1="140" y1="60" x2="168" y2="60" stroke="#1f5f8b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#pfeil-busy)"/>
+  <text x="142" y="88" font-size="11" fill="#9a6400">Zeitgeber 250 ms,</text>
+  <text x="142" y="100" font-size="11" fill="#9a6400">nur falls nicht fertig</text>
+  <line x1="75" y1="80" x2="75" y2="208" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-busy)"/>
+  <text x="80" y="165" font-size="11" fill="#5b6475">execute()</text>
+  <line x1="140" y1="230" x2="168" y2="230" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-busy)"/>
+  <line x1="240" y1="210" x2="240" y2="152" stroke="#2e7d32" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#pfeil-busy)"/>
+  <text x="234" y="165" font-size="11" fill="#5b6475" text-anchor="end">setMessage</text>
+  <text x="234" y="177" font-size="11" fill="#5b6475" text-anchor="end">über invokeLater</text>
+  <line x1="310" y1="225" x2="398" y2="82" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-busy)"/>
+  <text x="352" y="215" font-size="11" fill="#5b6475">Ergebnis oder Ausnahme</text>
+  <line x1="460" y1="60" x2="488" y2="60" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-busy)"/>
+  <line x1="560" y1="80" x2="560" y2="108" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-busy)"/>
+  <text x="460" y="168" font-size="11" fill="#9a6400">Scheibe mindestens 400 ms</text>
+</svg>
+<figcaption>Der Weg eines <code>BusyRunner.run</code>-Aufrufs. Oben alles, was auf dem Ereignisfaden läuft, unten der Hintergrundfaden. Grau sind die Teile, die die App selbst mitbringt. <code>runCancellable</code> geht denselben Weg und ruft nach einem Abbruch statt <code>onSuccess</code> oder <code>onError</code> den Rückruf <code>onCancelled</code>.</figcaption>
+</figure>
+
 <h2 id="arbeitsflaeche">Arbeitsfläche sichern, wiederherstellen und neu aufbauen</h2>
 <p>Die Arbeitsfläche besteht aus den offenen Tabs. Der <code>TabManager</code> hält sie zusammen mit den Instanzen der Apps; zwei Wege bauen sie aus gesichertem Zustand neu auf, und beide nutzen denselben Vertrag aus <code>captureState()</code> und <code>restoreState()</code> (<a href="../api/vertrag.html#lebenslauf">Lebenslauf der App</a>).</p>
 
@@ -285,35 +336,35 @@ math[display="block"]{margin:10px 0}
     <marker id="pfeil-rahmen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5f8b"/></marker>
   </defs>
   <text x="12" y="18" font-weight="bold" fill="#1f5f8b">Arbeitsfläche laden</text>
-  <rect x="12" y="28" width="136" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <g>  <rect x="12" y="28" width="136" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
   <text x="80" y="48" text-anchor="middle" fill="#1f5f8b">Datei lesen</text>
-  <text x="80" y="66" text-anchor="middle" font-size="11" fill="#5b6475">Fassung prüfen</text>
-  <rect x="162" y="28" width="136" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="80" y="66" text-anchor="middle" font-size="11" fill="#5b6475">Fassung prüfen</text></g>
+  <g>  <rect x="162" y="28" width="136" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
   <text x="230" y="48" text-anchor="middle" fill="#1f5f8b">alle Tabs schließen</text>
-  <text x="230" y="66" text-anchor="middle" font-size="11" fill="#5b6475">dann Eintrag für Eintrag</text>
-  <rect x="312" y="28" width="136" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="230" y="66" text-anchor="middle" font-size="11" fill="#5b6475">dann Eintrag für Eintrag</text></g>
+  <g>  <rect x="312" y="28" width="136" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
   <text x="380" y="48" text-anchor="middle" fill="#1f5f8b">neue App je Kennung</text>
-  <text x="380" y="66" text-anchor="middle" font-size="11" fill="#5b6475">aus dem Verzeichnis</text>
-  <rect x="462" y="28" width="146" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="380" y="66" text-anchor="middle" font-size="11" fill="#5b6475">aus dem Verzeichnis</text></g>
+  <g>  <rect x="462" y="28" width="146" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
   <text x="535" y="48" text-anchor="middle" fill="#1f5f8b">openTab(app, Zustand)</text>
-  <text x="535" y="66" text-anchor="middle" font-size="11" fill="#5b6475">Fehler: Tab überspringen</text>
+  <text x="535" y="66" text-anchor="middle" font-size="11" fill="#5b6475">Fehler: Tab überspringen</text></g>
   <line x1="148" y1="53" x2="160" y2="53" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-rahmen)"/>
   <line x1="298" y1="53" x2="310" y2="53" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-rahmen)"/>
   <line x1="448" y1="53" x2="460" y2="53" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-rahmen)"/>
   <line x1="12" y1="104" x2="608" y2="104" stroke="#c9d1dc" stroke-dasharray="4 3"/>
   <text x="12" y="128" font-weight="bold" fill="#9a6400">Neuaufbau (Sprachwechsel)</text>
-  <rect x="12" y="138" width="136" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <g>  <rect x="12" y="138" width="136" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
   <text x="80" y="158" text-anchor="middle" fill="#9a6400">captureState()</text>
-  <text x="80" y="176" text-anchor="middle" font-size="11" fill="#5b6475">aller offenen Apps</text>
-  <rect x="162" y="138" width="136" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="80" y="176" text-anchor="middle" font-size="11" fill="#5b6475">aller offenen Apps</text></g>
+  <g>  <rect x="162" y="138" width="136" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
   <text x="230" y="158" text-anchor="middle" fill="#9a6400">Titel merken</text>
-  <text x="230" y="176" text-anchor="middle" font-size="11" fill="#5b6475">abgetrennt, Auswahl</text>
-  <rect x="312" y="138" width="136" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="230" y="176" text-anchor="middle" font-size="11" fill="#5b6475">abgetrennt, Auswahl</text></g>
+  <g>  <rect x="312" y="138" width="136" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
   <text x="380" y="158" text-anchor="middle" fill="#9a6400">alte Instanzen</text>
-  <text x="380" y="176" text-anchor="middle" font-size="11" fill="#5b6475">dispose(), ohne Frage</text>
-  <rect x="462" y="138" width="146" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="380" y="176" text-anchor="middle" font-size="11" fill="#5b6475">dispose(), ohne Frage</text></g>
+  <g>  <rect x="462" y="138" width="146" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
   <text x="535" y="158" text-anchor="middle" fill="#9a6400">frische Instanzen</text>
-  <text x="535" y="176" text-anchor="middle" font-size="11" fill="#5b6475">restoreState, Titel</text>
+  <text x="535" y="176" text-anchor="middle" font-size="11" fill="#5b6475">restoreState, Titel</text></g>
   <line x1="148" y1="163" x2="160" y2="163" stroke="#9a6400" stroke-width="2" marker-end="url(#pfeil-rahmen)"/>
   <line x1="298" y1="163" x2="310" y2="163" stroke="#9a6400" stroke-width="2" marker-end="url(#pfeil-rahmen)"/>
   <line x1="448" y1="163" x2="460" y2="163" stroke="#9a6400" stroke-width="2" marker-end="url(#pfeil-rahmen)"/>
@@ -323,14 +374,15 @@ math[display="block"]{margin:10px 0}
 </figure>
 
 <h3>Laden</h3>
-<p><code>SwingHost.loadWorkspace(datei)</code> liest die Datei über den <code>PersistenceManager</code> (<a href="../core/index.html#persistenz">Sitzungsablage</a>) <i>bevor</i> es etwas schließt: Ist die Datei unlesbar oder hat sie eine unbekannte Fassung, bleibt die aktuelle Arbeitsfläche unangetastet. Erst dann werden alle Tabs geschlossen und die gesicherten Tabs in Dateireihenfolge geöffnet. Scheitert ein einzelner Tab – etwa weil seine App im Klassenpfad fehlt –, wird das protokolliert und der nächste geöffnet; die Sitzung kommt dann unvollständig, statt gar nicht. Zuletzt wird der gesicherte aktive Tab gewählt, sofern der Index im gültigen Bereich liegt.</p>
+<p><code>SwingHost.loadWorkspace(datei)</code> liest die Datei über den <code>PersistenceManager</code> (<a href="../core/index.html#persistenz">Sitzungsablage</a>) <i>bevor</i> es etwas schließt: Ist die Datei unlesbar oder hat sie eine unbekannte Fassung, bleibt die aktuelle Arbeitsfläche unangetastet. Erst dann werden alle Tabs geschlossen. Verweigert ein Tab das Schließen – etwa wegen ungesicherter Änderungen –, wird nichts geladen und der Rückgabewert ist <code>false</code>; der Anwender bekommt einen Hinweis, und die Tabs aus der Datei kommen nicht neben dem verweigernden dazu. Sonst werden die gesicherten Tabs in Dateireihenfolge geöffnet. Scheitert ein einzelner Tab – etwa weil seine App im Klassenpfad fehlt –, wird das protokolliert und der nächste geöffnet; die Sitzung kommt dann unvollständig, statt gar nicht. Zuletzt wird der gesicherte aktive Tab gewählt, sofern der Index im gültigen Bereich liegt. Aus dem Menü laufen Lesen und Schreiben der Datei über <code>BusyRunner</code> im Hintergrund; das Erfassen der Zustände, das Schließen und das Öffnen der Tabs bleiben auf dem Ereignisfaden.</p>
 <pre class="pseudo"><b>loadWorkspace</b>(datei):
     zustand ← persistenz.lade(datei)                      <i>wirft, bevor etwas geschlossen wird</i>
-    tabManager.alleTabsSchließen()
+    <b>wenn nicht</b> tabManager.alleSchließen():  <b>gib</b> falsch          <i>ein Tab hat verweigert, nichts geladen</i>
     <b>für jeden</b> tab <b>in</b> zustand.tabs:
         <b>versuche</b>  app ← verzeichnis.neueInstanz(tab.appId);  tabManager.openTab(app, tab)
         <b>fange</b> Ausnahme → ins Protokoll, weiter mit dem nächsten
     <b>wenn</b> 0 ≤ zustand.aktiverTab &lt; Anzahl offener Tabs:  tabManager.wähle(zustand.aktiverTab)
+    <b>gib</b> wahr
 
 <b>saveWorkspace</b>(datei):
     <b>wenn</b> kein TabManager: <b>wirf</b> IllegalStateException
@@ -384,7 +436,7 @@ math[display="block"]{margin:10px 0}
 <h2 id="grenzen">Grenzen</h2>
 <ul>
   <li>Der Neuaufbau nach einem Sprachwechsel ist nur so vollständig wie <code>captureState()</code> der jeweiligen App. Zustand, der nur in Komponenten steht, geht verloren.</li>
-  <li><code>loadWorkspace</code> schließt die bestehende Arbeitsfläche, sobald die Datei gelesen ist; ein Tab, dessen App fehlt, wird übersprungen, ohne dass der Anwender gefragt wird (nur ein Protokolleintrag).</li>
+  <li><code>loadWorkspace</code> schließt die bestehende Arbeitsfläche, sobald die Datei gelesen ist (oder lädt gar nicht, wenn ein Tab verweigert); ein Tab, dessen App fehlt, wird übersprungen, ohne dass der Anwender gefragt wird (nur ein Protokolleintrag).</li>
   <li><code>Kartenbreite</code> wirkt über die bevorzugte (und bei <code>gedeckelt</code> die kleinste) Breite. Die Breite der Leiste selbst legt der Aufrufer mit <code>new ContentSidebar(inhalt, breite)</code> fest; die Konstante <code>GRENZE</code> ist eine Konvention, die er einhalten muss, keine Erzwingung.</li>
   <li>Die Reihenfolge der Startschritte ist fest; ein Einsatz ohne Protokoll oder ohne Erscheinungsbild ist nicht vorgesehen.</li>
 </ul>

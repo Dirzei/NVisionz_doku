@@ -297,6 +297,46 @@ math[display="block"]{margin:10px 0}
   <li><b>Checkpoints.</b> Every <code>checkpointEvery</code> steps and in any case at the end the trainer writes weights and optimiser state (see <a href="gewichtsdatei.html#pruefpunkt">Checkpoint</a>); the provenance receives the current step count.</li>
   <li><b>Watching and cancelling.</b> A <code>Listener</code> is called after every step, epoch and checkpoint – from the training thread; a user interface must wrap its calls itself. Cancellation is cooperative: before every batch the trainer asks a <code>BooleanSupplier</code>.</li>
 </ul>
+<p>One step of the loop in <code>trainResume</code> looks like this: ask for cancellation, set the learning rate from the schedule, reset the gradients, for each sequence of the batch run the loss recipe forward and differentiate backward, divide the sum by the batch size, take the optimiser step and, when due, write a checkpoint.</p>
+<figure>
+<svg viewBox="0 0 640 240" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-sequenz" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <g>    <rect x="10" y="20" width="190" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="105" y="41" text-anchor="middle" fill="#1f5f8b">SequenceTrainer.trainResume</text></g>
+  <rect x="215" y="20" width="120" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="275" y="41" text-anchor="middle" fill="#9a6400">cancelled?</text>
+  <g>    <rect x="350" y="20" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="415" y="41" text-anchor="middle" fill="#1f5f8b">Adam.schedule</text></g>
+  <g>    <rect x="495" y="20" width="135" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="562" y="41" text-anchor="middle" fill="#1f5f8b">Adam.zeroGrad</text></g>
+  <rect x="290" y="86" width="340" height="62" rx="6" fill="none" stroke="#c9d1dc" stroke-dasharray="5 4"/>
+  <text x="625" y="163" text-anchor="end" fill="#5b6475" font-size="11">per sequence in the batch</text>
+  <rect x="460" y="100" width="160" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+  <text x="540" y="121" text-anchor="middle" fill="#5b6475">LossFunction.loss</text>
+  <g>    <rect x="300" y="100" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="370" y="121" text-anchor="middle" fill="#1f5f8b">Tensor.backward</text></g>
+  <g>    <rect x="60" y="100" width="150" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="135" y="121" text-anchor="middle" fill="#1f5f8b">Adam.step</text></g>
+  <g>    <rect x="60" y="185" width="150" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="135" y="206" text-anchor="middle" fill="#9a6400">Checkpoint.save</text></g>
+  <g>    <rect x="290" y="185" width="190" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="385" y="206" text-anchor="middle" fill="#1f5f8b">SequenceTrainer.bewerten</text></g>
+  <line x1="200" y1="37" x2="213" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sequenz)"/>
+  <line x1="335" y1="37" x2="348" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sequenz)"/>
+  <line x1="480" y1="37" x2="493" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sequenz)"/>
+  <line x1="562" y1="54" x2="545" y2="98" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sequenz)"/>
+  <line x1="460" y1="117" x2="442" y2="117" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sequenz)"/>
+  <line x1="300" y1="117" x2="212" y2="117" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sequenz)"/>
+  <text x="255" y="110" text-anchor="middle" fill="#5b6475" font-size="11">sum ÷ B</text>
+  <line x1="135" y1="134" x2="135" y2="183" stroke="#9a6400" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#pfeil-sequenz)"/>
+  <text x="142" y="164" fill="#9a6400" font-size="11">every N steps</text>
+  <path d="M60,117 L30,117 L30,72 L275,72 L275,56" fill="none" stroke="#5b6475" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#pfeil-sequenz)"/>
+  <text x="36" y="86" fill="#5b6475" font-size="11">next batch</text>
+  <line x1="370" y1="148" x2="380" y2="183" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sequenz)"/>
+  <text x="390" y="172" fill="#5b6475" font-size="11">after the epoch</text>
+</svg>
+<figcaption>The loop of <code>SequenceTrainer.trainResume</code>. Dashed frame: forward and backward per sequence, without resetting the gradients in between. Amber: the cooperative cancellation check before every batch and the checkpoint, written every <code>checkpointEvery</code> steps and at the end of the run. The recipe <code>LossFunction</code> comes from the caller.</figcaption>
+</figure>
 
 <h2 id="fortsetzen">Resuming bit for bit</h2>
 <p>For a run interrupted after <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>E</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">E_d</annotation></semantics></math> epochs to continue exactly like the uninterrupted one, three things must be right:</p>

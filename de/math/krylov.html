@@ -466,6 +466,56 @@ r̂₀ ← r;  ρ ← α ← ω ← 1;  v ← p ← 0
 <p>Beim CG-Verfahren muss <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> symmetrisch positiv definit sein; die Klasse prüft das indirekt über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>r</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>z</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">r^T z &gt; 0</annotation></semantics></math>. Wirkung in der Probe: auf der beidseitig skalierten 1D-Poisson-Matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mi>A</mi><mi>D</mi></mrow><annotation encoding="application/x-tex">D A D</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mo>=</mo><mspace width="0.1667em"/><mi>diag</mi><mo>⁡</mo><mo stretchy="false">(</mo><msup><mn>10</mn><mrow><mn>3</mn><mi>i</mi><mo>/</mo><mn>99</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">D = \operatorname{diag}(10^{3i/99})</annotation></semantics></math>, braucht CG ohne Vorkonditionierer 1502 Schritte, mit Jacobi 100; GMRES(30) schöpft auf der spaltenweise skalierten Konvektionsaufgabe ohne Vorkonditionierer die erlaubten 3000 Schritte aus, mit Jacobi von rechts genügen 571; BiCGStab braucht 245 statt der vollen 5000. Auf der 2D-Poisson-Aufgabe der <code>Vorkonditioniererprobe</code> braucht CG mit SSOR(1,7) 27 statt 108 Schritte, GMRES(30) mit ILU(0) 42 statt 221. Eine Aufgabe mit Kondition um <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1,5</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1{,}5\cdot10^{12}</annotation></semantics></math> erreicht GMRES(50) ohne Vorkonditionierer in 480 Schritten nicht; mit der eingefrorenen LU der ungestörten Matrix genügen bei 1 % Störung 4, bei 10 % 9 Schritte.</p>
 <div class="hinweis"><b>Festlegung im Framework:</b> ILU(0) und SSOR arbeiten auf der CSR-Matrix und kopieren sie; die Spalten einer Zeile dürfen unsortiert sein. Daneben lässt sich jeder vorhandene Löser als Vorkonditionierer anschließen. Jacobi von <b>rechts</b> gleicht Spalten-, nicht Zeilenskalierung aus; die erste Fassung einer Probenaufgabe war daran falsch entworfen (Befund beim Bau).</div>
 
+<h3>Der Weg durch GMRES mit Vorkonditionierer</h3>
+<p>Der Vorkonditionierer wirkt in GMRES von rechts und an zwei Stellen: in jedem Arnoldi-Schritt vor der Anwendung des Operators und einmal am Ende eines Neustartzyklus, wenn die Korrektur aus der Krylov-Basis zurück in die Unbekannten übertragen wird. Über Konvergenz entscheidet jeweils das danach frisch gerechnete wahre Residuum, nicht das mitgeführte <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>|</mo></mrow><annotation encoding="application/x-tex">|g_{j+1}|</annotation></semantics></math>.</p>
+<figure>
+<svg viewBox="0 0 640 350" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-gmres" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <rect x="10" y="90" width="510" height="250" rx="6" fill="none" stroke="#c9d1dc" stroke-dasharray="5 4"/>
+  <text x="510" y="332" text-anchor="end" fill="#5b6475">Neustartzyklus, j = 0 … k − 1</text>
+  <g>    <rect x="20" y="20" width="120" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="80" y="41" text-anchor="middle" fill="#1f5f8b">Gmres.loese</text></g>
+  <g>    <rect x="170" y="20" width="170" height="44" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="255" y="38" text-anchor="middle" fill="#1f5f8b">Ablauf.residuum</text>
+    <text x="255" y="55" text-anchor="middle" fill="#5b6475">r = b − A x</text></g>
+  <rect x="370" y="20" width="150" height="44" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="445" y="38" text-anchor="middle" fill="#9a6400">‖r‖ ≤ Ziel</text>
+  <text x="445" y="55" text-anchor="middle" fill="#9a6400">oder it ≥ maxIt ?</text>
+  <g>    <rect x="540" y="20" width="90" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="585" y="41" text-anchor="middle" fill="#1f5f8b">Ablauf.ende</text></g>
+  <rect x="540" y="80" width="90" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="585" y="101" text-anchor="middle" fill="#1f5f8b">Loesung</text>
+  <g>    <rect x="330" y="110" width="170" height="44" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="415" y="128" text-anchor="middle" fill="#2e7d32">Ilu0.anwenden</text>
+    <text x="415" y="145" text-anchor="middle" fill="#5b6475">t = M⁻¹ v_j</text></g>
+  <g>    <rect x="130" y="110" width="170" height="44" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="215" y="128" text-anchor="middle" fill="#1f5f8b">Ablauf.anwenden</text>
+    <text x="215" y="145" text-anchor="middle" fill="#5b6475">w = A t</text></g>
+  <g>    <rect x="130" y="184" width="250" height="44" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="255" y="202" text-anchor="middle" fill="#1f5f8b">Gram-Schmidt, Givens-Drehung</text>
+    <text x="255" y="219" text-anchor="middle" fill="#5b6475">|g_j+1| ≤ Ziel ?</text></g>
+  <g>    <rect x="130" y="258" width="250" height="44" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="255" y="276" text-anchor="middle" fill="#1f5f8b">H y = g lösen</text>
+    <text x="255" y="293" text-anchor="middle" fill="#2e7d32">x ← x + M⁻¹ V y</text></g>
+  <line x1="140" y1="37" x2="168" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <line x1="340" y1="42" x2="368" y2="42" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <line x1="520" y1="37" x2="538" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="522" y="31" fill="#5b6475">ja</text>
+  <line x1="585" y1="54" x2="585" y2="78" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <line x1="415" y1="64" x2="415" y2="108" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="421" y="84" fill="#5b6475">nein</text>
+  <line x1="330" y1="132" x2="302" y2="132" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <line x1="215" y1="154" x2="215" y2="182" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <polyline points="380,206 415,206 415,156" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="421" y="196" fill="#5b6475">nein, j &lt; k</text>
+  <line x1="255" y1="228" x2="255" y2="256" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="261" y="248" fill="#5b6475">ja oder j = k</text>
+  <polyline points="130,280 30,280 30,76 255,76 255,66" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="38" y="206" fill="#5b6475">Neustart</text>
+</svg>
+<figcaption>Ein Lauf von <code>Gmres.loese</code> mit Vorkonditionierer von rechts, hier ILU(0) (grün: wo der Vorkonditionierer wirkt; jede andere Umsetzung von <code>Vorkonditionierer</code> sitzt an derselben Stelle). Bricht die Arnoldi-Folge zusammen oder wird die Iterierte nicht endlich, endet der Lauf über <code>Ablauf.ende</code> sofort mit Meldung.</figcaption>
+</figure>
+
 <h2 id="abbruch">Abbruch und wahres Residuum</h2>
 <p>Alle drei Verfahren führen das Residuum über eine Rekursion mit und nicht über <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>−</mo><mi>A</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">b - A x</annotation></semantics></math>. In Gleitkommarechnung laufen beide auseinander; das mitgeführte kann weiter fallen, während das wahre stehen bleibt. Deshalb gilt:</p>
 <ul>

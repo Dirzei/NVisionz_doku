@@ -263,6 +263,54 @@ math[display="block"]{margin:10px 0}
 <p>Ein Kennfeld, ein Temperaturfeld oder ein CFD-Ergebnis liegt als Wert <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> an einzelnen Stützstellen vor – auf einem Gitter oder, bei Messwolken, an beliebig verteilten Punkten. Zwei Darstellungen machen daraus ein Bild: <b>Isolinien</b> verbinden Punkte gleichen Wertes (die Wirkungsgradmuschel im Verdichterkennfeld ist so ein Linienbündel), <b>Farbflächen</b> färben jede Stelle nach ihrem Wert. Beides braucht eine Annahme, wie sich <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi></mrow><annotation encoding="application/x-tex">f</annotation></semantics></math> zwischen den Stützstellen verhält. Das Framework nimmt die einfachste: <b>linear entlang der Kanten</b> einer Zelle beziehungsweise eines Dreiecks, auf dem Gitter in der Zellfläche bilinear.</p>
 <p>Die Rechnung steckt in <code>ContourLayers.levelSegments</code> (Segmente), <code>IsoPolyline</code> (Verketten), <code>ContourRenderer</code> (Farbe auf dem Gitter), <code>TriIsoLines</code> und <code>TriContourRenderer</code> (Dreiecksnetz) sowie <code>Colormap</code> und <code>ColormapPaintScale</code> (Farbe). Gezeichnet wird mit JFreeChart; hier geht es nur um das, was davor gerechnet wird.</p>
 
+<h2 id="ablauf-kontur">Wie ein Konturdiagramm entsteht</h2>
+<p><code>ContourChartFactory.create</code> baut aus einem Gitterfeld ein Diagramm mit drei Schichten: unten die Füllung, darüber das Datennetz, oben die Isolinien, rechts die Farbleiste. Im Bandmodus wird das Feld vorher einmal bilinear verfeinert, und Füllung und Isolinien rechnen auf <b>demselben</b> feinen Gitter – dadurch liegt jede Linie auf einem Farbwechsel. Das Datennetz bleibt auf den echten Knoten. Die Füllung wird erst beim Zeichnen gerechnet: JFreeChart ruft <code>drawItem</code> je Zelle, stetig oder in Bändern mit Halbebenenschnitt.</p>
+<figure>
+<svg viewBox="0 0 640 320" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-ablauf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <rect x="16" y="20" width="120" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="76" y="41" text-anchor="middle" fill="#1f5f8b">ContourDataset</text>
+  <g>    <rect x="200" y="20" width="190" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="295" y="41" text-anchor="middle" fill="#1f5f8b">ContourChartFactory.create</text></g>
+  <g>    <rect x="220" y="80" width="150" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="295" y="101" text-anchor="middle" fill="#9a6400">ContourDataset.refine</text></g>
+  <text x="380" y="80" fill="#9a6400">nur im Bandmodus</text>
+  <text x="16" y="144" fill="#5b6475">Mitte: Netz</text>
+  <g>    <rect x="16" y="150" width="168" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="100" y="171" text-anchor="middle" fill="#1f5f8b">ContourLayers.gridDataset</text></g>
+  <text x="16" y="202" fill="#5b6475">echte Knoten</text>
+  <text x="188" y="144" fill="#5b6475">unten: Füllung</text>
+  <g>    <rect x="188" y="150" width="214" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="295" y="171" text-anchor="middle" fill="#1f5f8b">ContourRenderer.drawItem</text></g>
+  <g>    <rect x="188" y="210" width="104" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="240" y="231" text-anchor="middle" fill="#1f5f8b">drawContinuous</text></g>
+  <g>    <rect x="298" y="210" width="104" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="350" y="231" text-anchor="middle" fill="#2e7d32">drawIsoBands</text></g>
+  <g>    <rect x="298" y="270" width="104" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="350" y="291" text-anchor="middle" fill="#2e7d32">clipHalfPlane</text></g>
+  <text x="188" y="291" fill="#5b6475">beim Zeichnen</text>
+  <text x="440" y="144" fill="#5b6475">oben: Isolinien</text>
+  <g>    <rect x="440" y="150" width="184" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="532" y="171" text-anchor="middle" fill="#1f5f8b">ContourLayers.isoDataset</text></g>
+  <g>    <rect x="440" y="196" width="184" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="532" y="217" text-anchor="middle" fill="#2e7d32">isoDatasetAtBands</text></g>
+  <g>    <rect x="440" y="262" width="184" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="532" y="283" text-anchor="middle" fill="#1f5f8b">ContourLayers.addLevel</text></g>
+  <text x="440" y="314" fill="#5b6475">je Niveau Marching Squares</text>
+  <line x1="136" y1="37" x2="198" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="295" y1="54" x2="295" y2="78" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="206,54 206,128 96,128 96,148" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="295" y1="114" x2="295" y2="148" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="370,97 600,97 600,148" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="240" y1="184" x2="240" y2="208" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="350" y1="184" x2="350" y2="208" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="350" y1="244" x2="350" y2="268" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="532" y1="230" x2="532" y2="260" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="626,167 632,167 632,279 626,279" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+</svg>
+<figcaption>Aufbau eines Konturdiagramms. Grün ist der Bandmodus: verfeinertes Gitter, Bänder durch Halbebenenschnitt, Isolinien genau an den Bandgrenzen. Ohne Bandmodus gehen Füllung und Isolinien vom ungeänderten Gitter aus.</figcaption>
+</figure>
+
 <h2 id="ms">Marching Squares: Isolinien auf dem Gitter</h2>
 <p>Jede Gitterzelle hat vier Ecken <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>,</mo><mi>b</mi><mo>,</mo><mi>c</mi><mo>,</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">a, b, c, d</annotation></semantics></math> (gegen den Uhrzeigersinn) mit den Werten <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>a</mi></mrow></msub><mo>…</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>d</mi></mrow></msub></mrow><annotation encoding="application/x-tex">f_a \dots f_d</annotation></semantics></math>. Für ein Niveau <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math> ist jede Ecke entweder „oben" (<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo>≥</mo><mi>L</mi></mrow><annotation encoding="application/x-tex">f \ge L</annotation></semantics></math>) oder „unten". Die Isolinie kreuzt genau die Kanten, deren Endpunkte auf verschiedenen Seiten liegen. Auf einer solchen Kante von <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi></mrow><annotation encoding="application/x-tex">P</annotation></semantics></math> nach <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi></mrow><annotation encoding="application/x-tex">Q</annotation></semantics></math> liegt der Kreuzungspunkt, linear interpoliert, bei</p>
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>t</mi><mo>=</mo><mfrac><mrow><mi>L</mi><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>P</mi></mrow></msub></mrow><mrow><msub><mrow><mi>f</mi></mrow><mrow><mi>Q</mi></mrow></msub><mo>−</mo><msub><mrow><mi>f</mi></mrow><mrow><mi>P</mi></mrow></msub></mrow></mfrac><mo>,</mo><mspace width="2em"/><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">→</mo></mover><mo>=</mo><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">→</mo></mover></mrow><mrow><mi>P</mi></mrow></msub><mo>+</mo><mi>t</mi><mspace width="0.1667em"/><mo stretchy="false">(</mo><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">→</mo></mover></mrow><mrow><mi>Q</mi></mrow></msub><mo>−</mo><msub><mrow><mover accent="true"><mrow><mi>x</mi></mrow><mo stretchy="true">→</mo></mover></mrow><mrow><mi>P</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">t = \frac{L - f_P}{f_Q - f_P}, \qquad \vec{x} = \vec{x}_P + t\,(\vec{x}_Q - \vec{x}_P)</annotation></semantics></math></p>

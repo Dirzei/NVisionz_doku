@@ -359,6 +359,66 @@ math[display="block"]{margin:10px 0}
 </table>
 <p class="quelle">Auszug aus <code>units/QuantityNameDefaults.java</code>; die Reihenfolge der Regeln ist wesentlich, weil die erste passende gewinnt.</p>
 <p>Am Ende steht <code>LoadedTable.withSiValues(registry)</code>: eine <b>Kopie</b>, in der jede numerische Spalte mit bekannter Quelleinheit in die SI-Basis ihrer Größenart umgerechnet ist. Die Quelleinheit bleibt als Metadatum erhalten, die Spalte wird als umgerechnet markiert, und eine so markierte Spalte wird nicht ein zweites Mal umgerechnet. Unbekannte Einheiten, Textspalten und leere oder nicht lesbare Zellen bleiben unverändert; eine Ganzzahlspalte wird zur Dezimalspalte, wenn die Umrechnung nicht die Identität ist.</p>
+<p>Der ganze Einleseweg läuft heute über das Ladepanel <code>CsvLoadPanel</code> aus framework-swing, in zwei Stufen. Die erste liest die Datei und wendet die drei Quellen der Einheit in der Reihenfolge oben an; das Ergebnis ist die Rohtabelle, nur mit Textspalten. Die zweite (<code>runPipeline</code>) arbeitet auf einer Kopie der Rohtabelle: Tauschen von Zeilen und Spalten, leere Spalten weglassen, Typen erkennen, die Zuordnungen aus der Typentafel darüberlegen, Textspalten weglassen und zuletzt die Umrechnung in SI. Beide Stufen laufen über <code>BusyRunner</code> im Hintergrund; das Ergebnis kommt jeweils auf dem Ereignisfaden an. Jede Änderung einer Option fährt nur die zweite Stufe neu, ab den Rohdaten, deshalb wird nie doppelt umgerechnet. Gesichert wird in H2 erst auf Knopfdruck, wieder im Hintergrund.</p>
+<figure>
+<svg viewBox="0 0 670 330" width="670" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-ablauf-csv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="20" y="28" fill="#5b6475" font-weight="bold">Ereignisfaden (framework-swing)</text>
+  <line x1="10" y1="96" x2="660" y2="96" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <text x="20" y="113" fill="#1f5f8b" font-weight="bold">Hintergrund (BusyRunner.run)</text>
+  <g>    <rect x="20" y="40" width="190" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="115" y="57" text-anchor="middle" fill="#5b6475">CsvLoadPanel</text>
+    <text x="115" y="72" text-anchor="middle" fill="#5b6475">.reparse</text></g>
+  <g>    <rect x="240" y="40" width="190" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="335" y="57" text-anchor="middle" fill="#5b6475">CsvLoadPanel</text>
+    <text x="335" y="72" text-anchor="middle" fill="#5b6475">.applyTransformsAndRefresh</text></g>
+  <g>    <rect x="460" y="40" width="190" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="555" y="57" text-anchor="middle" fill="#5b6475">CsvLoadPanel</text>
+    <text x="555" y="72" text-anchor="middle" fill="#5b6475">.saveToH2</text></g>
+  <g>    <rect x="20" y="120" width="190" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="115" y="137" text-anchor="middle" fill="#1f5f8b">CsvParser</text>
+    <text x="115" y="152" text-anchor="middle" fill="#1f5f8b">.parse</text></g>
+  <g>    <rect x="20" y="170" width="190" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="115" y="187" text-anchor="middle" fill="#1f5f8b">UnitHeaders</text>
+    <text x="115" y="202" text-anchor="middle" fill="#1f5f8b">.applyHeaderConvention</text></g>
+  <g>    <rect x="20" y="220" width="190" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="115" y="237" text-anchor="middle" fill="#1f5f8b">UnitAssignmentStore</text>
+    <text x="115" y="252" text-anchor="middle" fill="#1f5f8b">.apply</text></g>
+  <g>    <rect x="20" y="270" width="190" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="115" y="287" text-anchor="middle" fill="#1f5f8b">QuantityNameDefaults</text>
+    <text x="115" y="302" text-anchor="middle" fill="#1f5f8b">.applyNameDefaults</text></g>
+  <g>    <rect x="240" y="120" width="190" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="335" y="137" text-anchor="middle" fill="#1f5f8b">CsvLoadPanel</text>
+    <text x="335" y="152" text-anchor="middle" fill="#1f5f8b">.runPipeline</text></g>
+  <g>    <rect x="240" y="170" width="190" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="335" y="187" text-anchor="middle" fill="#1f5f8b">CsvTypeDetector</text>
+    <text x="335" y="202" text-anchor="middle" fill="#1f5f8b">.detectAndApply</text></g>
+  <g>    <rect x="240" y="220" width="190" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="335" y="237" text-anchor="middle" fill="#1f5f8b">LoadedTable</text>
+    <text x="335" y="252" text-anchor="middle" fill="#1f5f8b">.withSiValues</text></g>
+  <rect x="240" y="270" width="190" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="335" y="294" text-anchor="middle" fill="#1f5f8b">LoadedTable der Anzeige</text>
+  <g>    <rect x="460" y="120" width="190" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="555" y="137" text-anchor="middle" fill="#1f5f8b">H2DataStore</text>
+    <text x="555" y="152" text-anchor="middle" fill="#1f5f8b">.writeTable</text></g>
+  <rect x="460" y="170" width="190" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="555" y="194" text-anchor="middle" fill="#1f5f8b">H2-Datei neben der CSV</text>
+  <line x1="115" y1="80" x2="115" y2="118" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="115" y1="160" x2="115" y2="168" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="115" y1="210" x2="115" y2="218" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="115" y1="260" x2="115" y2="268" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <path d="M210 290 L225 290 L225 60 L238 60" fill="none" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="335" y1="80" x2="335" y2="118" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="335" y1="160" x2="335" y2="168" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="335" y1="210" x2="335" y2="218" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="335" y1="260" x2="335" y2="268" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <path d="M430 290 L445 290 L445 60 L458 60" fill="none" stroke="#5b6475" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="555" y1="80" x2="555" y2="118" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <line x1="555" y1="160" x2="555" y2="168" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-csv)"/>
+  <text x="460" y="240" fill="#5b6475">gestrichelt: erst auf Knopfdruck</text>
+</svg>
+<figcaption>Der Einleseweg einer CSV-Datei. Links die erste Stufe mit den drei Quellen der Einheit, in der Mitte die zweite Stufe, die bei jeder Option neu läuft, rechts das Sichern in H2. Oben stehen die Methoden, die auf dem Ereignisfaden laufen, darunter die Arbeit im Hintergrund; die grauen Pfeile sind die Rückkehr auf den Ereignisfaden.</figcaption>
+</figure>
 
 <h2 id="zahl">Zahlen aus Text</h2>
 <p>Dieselbe Zeichenfolge kann Verschiedenes bedeuten: „1,500“ ist in einer deutschen Datei die Zahl 1,5, in einer englischen tausendfünfhundert. Das Modul hat deshalb <b>eine</b> Stelle, an der aus Text eine Zahl wird – <code>Zahlenleser</code> für Dateidaten (CSV, H2-Zellen, Tabellenzellen, Hüllkurvendateien) und <code>Eingabezahl</code> für getippten Text. Beide haben zwei Gesichter.</p>

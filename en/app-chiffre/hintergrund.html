@@ -260,6 +260,48 @@ math[display="block"]{margin:10px 0}
 <h2 id="vermutung">Which breakers run</h2>
 <p>If a cipher is chosen explicitly, exactly its breaker runs. “By guess” asks the profile of the ciphertext for its guesses. Of these the app takes only the ciphers that have a breaker <b>and</b> whose breaker is fast. The slow ones (the Enigma, for instance) never run on mere suspicion, because they can take minutes. If nothing is left, the status line says so instead of starting a run without a target.</p>
 <p>An empty ciphertext is not broken at all. The message is the same as in the analysis; before, the Caesar breaker returned a “candidate” with zero language similarity for an empty text.</p>
+<p>Selection and preset are made on the event dispatch thread. The computing happens in the background: the background runner drives the breakers one after the other, collects all candidates and sorts them by language similarity. Cancelling sets a flag that every breaker queries through its progress object, and interrupts the thread. List and status line are filled only when the result arrives back on the event dispatch thread.</p>
+<figure>
+<svg viewBox="0 0 660 310" width="660" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-ablauf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="20" y="20" fill="#5b6475">event dispatch thread</text>
+  <g>    <rect x="20" y="30" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="85" y="51" text-anchor="middle" fill="#1f5f8b">ChiffrePanel.brich</text></g>
+  <g>    <rect x="180" y="30" width="120" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="240" y="51" text-anchor="middle" fill="#1f5f8b">Steckbrief.von</text></g>
+  <g>    <rect x="330" y="30" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="395" y="51" text-anchor="middle" fill="#1f5f8b">Brecherliste.fuer</text></g>
+  <g>    <rect x="490" y="30" width="130" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="555" y="51" text-anchor="middle" fill="#9a6400">Brecher.schnell</text></g>
+  <line x1="150" y1="47" x2="178" y2="47" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="300" y1="47" x2="328" y2="47" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="460" y1="47" x2="488" y2="47" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <text x="180" y="80" fill="#5b6475" font-size="11">only “by guess”</text>
+  <text x="490" y="80" fill="#9a6400" font-size="11">fast breakers only</text>
+  <text x="330" y="96" fill="#9a6400" font-size="11">nothing left: message, no run</text>
+  <path d="M555 64 V112 H110 V158" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <text x="20" y="150" fill="#5b6475">background</text>
+  <g>    <rect x="20" y="160" width="180" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="110" y="181" text-anchor="middle" fill="#5b6475">BusyRunner.runCancellable</text></g>
+  <g>    <rect x="240" y="160" width="120" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="300" y="181" text-anchor="middle" fill="#1f5f8b">Brecher.brich</text></g>
+  <rect x="400" y="160" width="230" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="515" y="181" text-anchor="middle" fill="#1f5f8b">all candidates, by similarity</text>
+  <line x1="200" y1="177" x2="238" y2="177" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="360" y1="177" x2="398" y2="177" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <text x="240" y="212" fill="#5b6475" font-size="11">per target, one after another</text>
+  <text x="20" y="212" fill="#9a6400" font-size="11">cancel: flag and interrupt</text>
+  <text x="20" y="250" fill="#5b6475">back on the event dispatch thread</text>
+  <line x1="515" y1="194" x2="515" y2="258" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <rect x="400" y="260" width="230" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+  <text x="515" y="281" text-anchor="middle" fill="#5b6475">candidate list and status line</text>
+  <g>    <rect x="160" y="260" width="170" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="245" y="281" text-anchor="middle" fill="#5b6475">ChiffrePanel.uebernimm</text></g>
+  <line x1="400" y1="277" x2="332" y2="277" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <text x="160" y="306" fill="#5b6475" font-size="11">“Take over candidate” or double click</text>
+</svg>
+<figcaption>A breaking run in the app: selection on the event dispatch thread, the breakers in the background, the display back on the event dispatch thread. Taking over sets cipher, key and plaintext.</figcaption>
+</figure>
 
 <h2 id="vorgabe">What the breaker is given</h2>
 <ul>
@@ -286,7 +328,7 @@ math[display="block"]{margin:10px 0}
 </svg>
 <figcaption>Language similarity of a candidate. From 0.6 on the card calls the best candidate a good hit.</figcaption>
 </figure>
-<p>“Apply” or a double click on a candidate sets cipher, key and plaintext; the status line then names the breaking, no longer the last encryption.</p>
+<p>“Take over candidate” or a double click on a candidate sets cipher, key and plaintext; the status line then names the breaking, no longer the last encryption.</p>
 
 <h2 id="datei">Saving and opening again</h2>
 <p>Saving writes both texts with header lines: “== Plaintext ==”, the plaintext, an empty line, “== Ciphertext ==”, the ciphertext (in German “== Klartext ==” and “== Geheimtext ==”). Opening loads into the ciphertext. If the file starts with the plaintext header, in the German or English form, only the section after the last ciphertext header counts. A saved file thus comes back as ciphertext, whatever language it was saved in. Any other file is taken over unchanged, even if such a header happens to occur in it.</p>

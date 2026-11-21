@@ -287,6 +287,68 @@ math[display="block"]{margin:10px 0}
 <p class="quelle">Quelle: <code>envisionz-framework-core/src/envisionz/core/events/SimpleEventBus.java</code>. Eine <code>Error</code> (etwa Speichermangel) wird <b>nicht</b> gefangen, nur <code>RuntimeException</code>.</p>
 <p><code>SimpleServiceRegistry</code> ist eine <code>ConcurrentHashMap</code> von Schnittstellentyp auf Umsetzung: <code>register</code> ersetzt eine frühere Umsetzung desselben Typs, <code>get</code> liefert einen <code>Optional</code>, <code>unregister</code> entfernt. Es gibt je Typ genau einen Dienst und keine Rangfolge.</p>
 
+<h2 id="ablauf-sitzung">Der Weg einer Sitzung durch Wirt und Kern</h2>
+<p>Sichern und Laden einer Sitzung beginnen im Menü des Hauptfensters und laufen ohne Hintergrundfaden auf dem Ereignisfaden. Beim Sichern fragt der Wirt (<code>SwingHost</code> in framework-swing) jede offene App nach ihrem Zustand und reicht die gesammelte Liste an <code>PersistenceManager.save</code> weiter; erst dort beginnt framework-core: Pfade relativieren, über StAX in eine Zwischendatei schreiben, auf das Ziel verschieben.</p>
+<p>Beim Laden liest der Kern die Datei, prüft die Fassung und macht die Pfade wieder absolut. Danach schließt der Wirt alle offenen Tabs und baut je gesichertem Tab eine <b>frische</b> App aus dem App-Verzeichnis; <code>TabManager.openTab</code> erzeugt ihre Oberfläche und übergibt ihr den gesicherten Zustand. Scheitert ein einzelner Tab, wird das protokolliert, und die übrigen Tabs werden trotzdem geöffnet.</p>
+<figure>
+<svg viewBox="0 0 640 290" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-sitzung" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="10" y="30" fill="#1f5f8b" font-weight="bold">Sichern</text>
+  <text x="10" y="140" fill="#2e7d32" font-weight="bold">Laden</text>
+  <g>    <rect x="10" y="40" width="150" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="85" y="56" text-anchor="middle" fill="#5b6475">SaveWorkspaceAction</text>
+    <text x="85" y="71" text-anchor="middle" fill="#5b6475">.actionPerformed</text></g>
+  <g>    <rect x="180" y="40" width="140" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="250" y="56" text-anchor="middle" fill="#1f5f8b">SwingHost</text>
+    <text x="250" y="71" text-anchor="middle" fill="#1f5f8b">.saveWorkspace</text></g>
+  <g>    <rect x="340" y="40" width="140" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="410" y="56" text-anchor="middle" fill="#1f5f8b">PersistenceManager</text>
+    <text x="410" y="71" text-anchor="middle" fill="#1f5f8b">.save</text></g>
+  <g>    <rect x="500" y="40" width="130" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="565" y="56" text-anchor="middle" fill="#1f5f8b">StaxStateWriter</text>
+    <text x="565" y="71" text-anchor="middle" fill="#1f5f8b">.write</text></g>
+  <text x="180" y="96" font-size="11" fill="#5b6475">je Tab App.captureState()</text>
+  <rect x="500" y="100" width="130" height="30" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="565" y="119" text-anchor="middle" fill="#1f5f8b">Sitzungsdatei (XML)</text>
+  <g>    <rect x="10" y="150" width="150" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="85" y="166" text-anchor="middle" fill="#5b6475">OpenWorkspaceAction</text>
+    <text x="85" y="181" text-anchor="middle" fill="#5b6475">.actionPerformed</text></g>
+  <g>    <rect x="180" y="150" width="140" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="250" y="166" text-anchor="middle" fill="#2e7d32">SwingHost</text>
+    <text x="250" y="181" text-anchor="middle" fill="#2e7d32">.loadWorkspace</text></g>
+  <g>    <rect x="340" y="150" width="140" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="410" y="166" text-anchor="middle" fill="#2e7d32">PersistenceManager</text>
+    <text x="410" y="181" text-anchor="middle" fill="#2e7d32">.load</text></g>
+  <g>    <rect x="500" y="150" width="130" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="565" y="166" text-anchor="middle" fill="#2e7d32">StaxStateReader</text>
+    <text x="565" y="181" text-anchor="middle" fill="#2e7d32">.read</text></g>
+  <g>    <rect x="340" y="220" width="140" height="40" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="410" y="236" text-anchor="middle" fill="#9a6400">StateMigrator</text>
+    <text x="410" y="251" text-anchor="middle" fill="#9a6400">.migrate</text></g>
+  <g>    <rect x="180" y="220" width="140" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="250" y="236" text-anchor="middle" fill="#2e7d32">AppRegistry</text>
+    <text x="250" y="251" text-anchor="middle" fill="#2e7d32">.newInstance</text></g>
+  <g>    <rect x="10" y="220" width="150" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="85" y="236" text-anchor="middle" fill="#2e7d32">TabManager</text>
+    <text x="85" y="251" text-anchor="middle" fill="#2e7d32">.openTab</text></g>
+  <line x1="160" y1="60" x2="178" y2="60" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="320" y1="60" x2="338" y2="60" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="480" y1="60" x2="498" y2="60" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="565" y1="80" x2="565" y2="98" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="565" y1="130" x2="565" y2="148" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="160" y1="170" x2="178" y2="170" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="320" y1="170" x2="338" y2="170" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="480" y1="170" x2="498" y2="170" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="410" y1="190" x2="410" y2="218" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="250" y1="190" x2="250" y2="218" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <line x1="180" y1="240" x2="162" y2="240" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-sitzung)"/>
+  <text x="10" y="278" font-size="11" fill="#5b6475">createView, dann restoreState</text>
+  <text x="180" y="278" font-size="11" fill="#5b6475">je gesichertem Tab</text>
+  <text x="490" y="236" font-size="11" fill="#9a6400">nur Fassung 1.0</text>
+</svg>
+<figcaption>Sichern (oben) und Laden (unten) einer Sitzung. <code>SwingHost</code>, <code>TabManager</code> und die beiden Menüaktionen gehören zu framework-swing, <code>PersistenceManager</code>, die StAX-Klassen, <code>StateMigrator</code> und <code>AppRegistry</code> zu framework-core. Vor dem Öffnen der gesicherten Tabs schließt <code>loadWorkspace</code> alle offenen.</figcaption>
+</figure>
+
 <h2 id="persistenz">Arbeitsbereich sichern und laden</h2>
 <p>Eine gesicherte Sitzung ist eine XML-Datei mit den offenen Tabs (zum Modell siehe <a href="../api/vertrag.html#zustand">framework-api</a>). Drei Probleme müssen gelöst sein, damit sie im Alltag trägt: Pfade sollen auch auf einem anderen Rechner stimmen, ein Absturz beim Schreiben darf die alte Datei nicht zerstören, und eine Datei aus fremder Hand darf die Anwendung nicht in Schwierigkeiten bringen.</p>
 
@@ -298,18 +360,18 @@ math[display="block"]{margin:10px 0}
   <rect x="12" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
   <text x="66" y="40" text-anchor="middle" fill="#1f5f8b">Zustand</text>
   <text x="66" y="56" text-anchor="middle" font-size="11" fill="#5b6475">absolute Pfade</text>
-  <rect x="136" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <g>  <rect x="136" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
   <text x="190" y="40" text-anchor="middle" fill="#1f5f8b">relativieren</text>
-  <text x="190" y="56" text-anchor="middle" font-size="11" fill="#5b6475">nur „path:“-Werte</text>
-  <rect x="260" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="190" y="56" text-anchor="middle" font-size="11" fill="#5b6475">nur „path:“-Werte</text></g>
+  <g>  <rect x="260" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
   <text x="314" y="40" text-anchor="middle" fill="#1f5f8b">Zwischendatei</text>
-  <text x="314" y="56" text-anchor="middle" font-size="11" fill="#5b6475">neben dem Ziel</text>
-  <rect x="384" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="314" y="56" text-anchor="middle" font-size="11" fill="#5b6475">neben dem Ziel</text></g>
+  <g>  <rect x="384" y="20" width="108" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
   <text x="438" y="40" text-anchor="middle" fill="#1f5f8b">verschieben</text>
-  <text x="438" y="56" text-anchor="middle" font-size="11" fill="#5b6475">atomar, ersetzt</text>
-  <rect x="508" y="20" width="100" height="46" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="438" y="56" text-anchor="middle" font-size="11" fill="#5b6475">atomar, ersetzt</text></g>
+  <g>  <rect x="508" y="20" width="100" height="46" rx="4" fill="#ffffff" stroke="#9a6400"/>
   <text x="558" y="40" text-anchor="middle" fill="#9a6400">Original</text>
-  <text x="558" y="56" text-anchor="middle" font-size="11" fill="#5b6475">zurücksetzen</text>
+  <text x="558" y="56" text-anchor="middle" font-size="11" fill="#5b6475">zurücksetzen</text></g>
   <line x1="120" y1="43" x2="134" y2="43" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-kern)"/>
   <line x1="244" y1="43" x2="258" y2="43" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-kern)"/>
   <line x1="368" y1="43" x2="382" y2="43" stroke="#1f5f8b" stroke-width="2" marker-end="url(#pfeil-kern)"/>

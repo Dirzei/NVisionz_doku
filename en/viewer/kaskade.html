@@ -262,6 +262,62 @@ math[display="block"]{margin:10px 0}
 <p>Several rules can match one element and set the same property differently: one for all <code>p</code>, one for the class <code>.a</code>, one for the id <code>#x</code>, plus a <code>style</code> attribute on the element itself. Which one wins is not decided by order alone but by the <em>cascade</em> of CSS 2.1, section 6.4, in the form of Cascade 4. Pages that are meant to look the same in a browser and in the viewer need the same precedence, otherwise a colour or a font size silently shifts.</p>
 <p>The style of an element arises in three steps: first the declarations of all matching rules are put into a fixed order and applied (<em>cascade</em>), then missing inheritable properties are taken from the parent (<em>inheritance</em>), finally lengths are converted to pixels (<em>computed value</em>). The viewer does this once per node of the document tree, from the root downwards, so that a child finds the finished style of its parent.</p>
 
+<h2 id="ablauf-seite">The path of a page: HTML, cascade, layout, painting</h2>
+<p>The cascade is the second of four steps every page goes through. <code>DocView.renderHtml</code> hands the source to <code>DocRenderer</code>; there <code>HtmlParser</code> splits it into a node tree, <code>MathExtractor</code> replaces the TeX passages with formula nodes of its own, <code>StyleResolver</code> computes the style of every node, <code>Aufklappen</code> decides for every <code>details</code> block whether it is open or closed and adds the triangle to click, and <code>LayoutEngine</code> builds from all this a tree of boxes with position and size. Only this box tree reaches the drawing surface; painting computes nothing any more, it only walks the tree.</p>
+<p>The whole path runs synchronously on the calling thread – in the view this is the event dispatch thread. When the window width changes, it is walked again from the start.</p>
+<figure>
+<svg viewBox="0 0 640 270" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-seite" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <g>    <rect x="10" y="30" width="140" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="80" y="46" text-anchor="middle" fill="#5b6475">DocView</text>
+    <text x="80" y="61" text-anchor="middle" fill="#5b6475">.renderHtml</text></g>
+  <g>    <rect x="170" y="30" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="245" y="46" text-anchor="middle" fill="#1f5f8b">DocRenderer</text>
+    <text x="245" y="61" text-anchor="middle" fill="#1f5f8b">.renderInternal</text></g>
+  <g>    <rect x="340" y="30" width="130" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="405" y="46" text-anchor="middle" fill="#1f5f8b">HtmlParser</text>
+    <text x="405" y="61" text-anchor="middle" fill="#1f5f8b">.parse</text></g>
+  <g>    <rect x="490" y="30" width="140" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="560" y="46" text-anchor="middle" fill="#1f5f8b">MathExtractor</text>
+    <text x="560" y="61" text-anchor="middle" fill="#1f5f8b">.process</text></g>
+  <g>    <rect x="490" y="110" width="140" height="40" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="560" y="126" text-anchor="middle" fill="#1f5f8b">StyleResolver</text>
+    <text x="560" y="141" text-anchor="middle" fill="#1f5f8b">.resolve</text></g>
+  <g>    <rect x="340" y="110" width="130" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="405" y="126" text-anchor="middle" fill="#1f5f8b">Aufklappen</text>
+    <text x="405" y="141" text-anchor="middle" fill="#1f5f8b">.vorbereiten</text></g>
+  <g>    <rect x="170" y="110" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="245" y="126" text-anchor="middle" fill="#1f5f8b">LayoutEngine</text>
+    <text x="245" y="141" text-anchor="middle" fill="#1f5f8b">.layout</text></g>
+  <g>    <rect x="10" y="200" width="140" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="80" y="216" text-anchor="middle" fill="#2e7d32">DocViewerPanel</text>
+    <text x="80" y="231" text-anchor="middle" fill="#2e7d32">.setDocument</text></g>
+  <g>    <rect x="170" y="200" width="150" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="245" y="216" text-anchor="middle" fill="#2e7d32">DocViewerPanel</text>
+    <text x="245" y="231" text-anchor="middle" fill="#2e7d32">.paintComponent</text></g>
+  <g>    <rect x="340" y="200" width="130" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="405" y="216" text-anchor="middle" fill="#2e7d32">Box</text>
+    <text x="405" y="231" text-anchor="middle" fill="#2e7d32">.paintTree</text></g>
+  <line x1="150" y1="50" x2="168" y2="50" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-seite)"/>
+  <line x1="320" y1="50" x2="338" y2="50" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-seite)"/>
+  <line x1="470" y1="50" x2="488" y2="50" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-seite)"/>
+  <line x1="560" y1="70" x2="560" y2="108" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-seite)"/>
+  <line x1="490" y1="130" x2="472" y2="130" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-seite)"/>
+  <line x1="340" y1="130" x2="322" y2="130" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-seite)"/>
+  <line x1="200" y1="150" x2="110" y2="198" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-seite)"/>
+  <line x1="150" y1="220" x2="168" y2="220" stroke="#2e7d32" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#pfeil-seite)"/>
+  <line x1="320" y1="220" x2="338" y2="220" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-seite)"/>
+  <text x="566" y="92" font-size="11" fill="#5b6475">node tree</text>
+  <text x="474" y="168" font-size="11" fill="#5b6475">style per node</text>
+  <text x="10" y="168" font-size="11" fill="#5b6475">box tree back</text>
+  <text x="10" y="180" font-size="11" fill="#5b6475">to the view</text>
+  <text x="152" y="260" font-size="11" fill="#5b6475">at the next repaint</text>
+  <text x="490" y="226" font-size="11" fill="#5b6475">paint the boxes at</text>
+  <text x="490" y="238" font-size="11" fill="#5b6475">position and size</text>
+</svg>
+<figcaption>The path of a page through the viewer. At the top parsing, on the right the cascade (highlighted, the subject of this page), in the middle layout, at the bottom painting. The layout of blocks and lines is described on the page <a href="satz.html">Blocks, lines and floats</a>.</figcaption>
+</figure>
+
 <h2 id="spezifitaet">Specificity and precedence</h2>
 <p>Every selector gets a specificity from three counters: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math> ids (<code>#x</code>), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi></mrow><annotation encoding="application/x-tex">b</annotation></semantics></math> classes (<code>.a</code>), <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi></mrow><annotation encoding="application/x-tex">c</annotation></semantics></math> element names (<code>p</code>). The universal selector <code>*</code> does not count. The viewer folds them into a single number:</p>
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>s</mi><mo>=</mo><mn>100</mn><mspace width="0.1667em"/><mi>a</mi><mo>+</mo><mn>10</mn><mspace width="0.1667em"/><mi>b</mi><mo>+</mo><mi>c</mi><mo>,</mo><mspace width="2em"/><msub><mrow><mi>s</mi></mrow><mrow><mtext>pseudo-element</mtext></mrow></msub><mo>=</mo><mi>s</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">s = 100\,a + 10\,b + c, \qquad s_{\text{pseudo-element}} = s + 1</annotation></semantics></math></p>

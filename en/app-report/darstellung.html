@@ -280,6 +280,96 @@ math[display="block"]{margin:10px 0}
 <figcaption>The view as a grid of edges: each column a width in pixels, a merged range a rectangle across them, overflow to the right up to the next filled or merged cell.</figcaption>
 </figure>
 
+<h2 id="ablauf-blatt">From data state to view</h2>
+<p>Every change to template, data or cases leads to <code>aktualisiere</code>. Building runs in the background through the <code>BusyRunner</code>: for several cases <code>Blattmodell.baue</code> copies the case columns of the template (<code>Spaltenkopie.fuerFaelle</code>), opens the data source – an entry of the data tree or a CSV or Excel file – and lets <code>Blattfuellung.fuelle</code> fill the cells of the template. <code>Blattfuellung.befunde</code> collects what stayed empty; these gaps come first in the list of findings and turn red in the view. Back on the event dispatch thread, <code>zeige</code> hands the state to the view, which measures its edges anew and repaints – only the cells in the visible area, each merged range once.</p>
+<figure>
+<svg viewBox="0 0 640 300" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-ablauf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="624" y="24" text-anchor="end" fill="#5b6475">event thread</text>
+  <line x1="16" y1="84" x2="624" y2="84" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <text x="624" y="100" text-anchor="end" fill="#2e7d32">background</text>
+  <line x1="16" y1="160" x2="624" y2="160" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <text x="624" y="176" text-anchor="end" fill="#5b6475">event thread</text>
+  <g>    <rect x="16" y="32" width="200" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="116" y="53" text-anchor="middle" fill="#5b6475">BlattberichtPanel.aktualisiere</text></g>
+  <g>    <rect x="236" y="32" width="130" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="301" y="53" text-anchor="middle" fill="#9a6400">BusyRunner.run</text></g>
+  <g>    <rect x="16" y="108" width="124" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="78" y="129" text-anchor="middle" fill="#2e7d32">Blattmodell.baue</text></g>
+  <g>    <rect x="154" y="108" width="160" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="234" y="129" text-anchor="middle" fill="#2e7d32">Spaltenkopie.fuerFaelle</text></g>
+  <g>    <rect x="328" y="108" width="140" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="398" y="129" text-anchor="middle" fill="#2e7d32">Blattfuellung.fuelle</text></g>
+  <g>    <rect x="482" y="108" width="142" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="553" y="129" text-anchor="middle" fill="#9a6400">Blattfuellung.befunde</text></g>
+  <g>    <rect x="16" y="184" width="160" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="96" y="205" text-anchor="middle" fill="#5b6475">BlattberichtPanel.zeige</text></g>
+  <g>    <rect x="190" y="184" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="255" y="205" text-anchor="middle" fill="#1f5f8b">Blattansicht.zeige</text></g>
+  <g>    <rect x="334" y="184" width="90" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="379" y="205" text-anchor="middle" fill="#1f5f8b">vermesse</text></g>
+  <g>    <rect x="190" y="250" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="255" y="271" text-anchor="middle" fill="#1f5f8b">paintComponent</text></g>
+  <g>    <rect x="334" y="250" width="110" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="389" y="271" text-anchor="middle" fill="#1f5f8b">zeichneZelle</text></g>
+  <text x="458" y="263" fill="#5b6475">per visible cell:</text>
+  <text x="458" y="279" fill="#5b6475">overflow, rotation, errors</text>
+  <line x1="216" y1="49" x2="234" y2="49" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="301,66 301,92 78,92 78,106" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="140" y1="125" x2="152" y2="125" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="314" y1="125" x2="326" y2="125" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="468" y1="125" x2="480" y2="125" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="553,142 553,152 96,152 96,182" fill="none" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="176" y1="201" x2="188" y2="201" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="320" y1="201" x2="332" y2="201" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <polyline points="379,218 379,234 255,234 255,248" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="320" y1="267" x2="332" y2="267" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+</svg>
+<figcaption>The path from the data state to the picture of the sheet. Green runs in the background; amber are the hand-over to the background and the check for empty cells.</figcaption>
+</figure>
+
+<h2 id="ablauf-ausgabe">Two reports, two output paths</h2>
+<p>The report tree collects the values from its tables in <code>exportiereNach</code>; the operating-point report converts its grid into the same form with <code>GridToReport.umsetzen</code>. Both deliver a report with values per node, and only then do Word and PDF part. A difference between the two files can therefore only come from typesetting, not from interpreting the data.</p>
+<figure>
+<svg viewBox="0 0 640 250" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-ausgabe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <g>    <rect x="16" y="20" width="190" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="111" y="41" text-anchor="middle" fill="#5b6475">ReportTree.exportiereNach</text></g>
+  <g>    <rect x="16" y="80" width="190" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="111" y="101" text-anchor="middle" fill="#5b6475">BetriebspunktPanel.schreibe</text></g>
+  <g>    <rect x="226" y="80" width="160" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="306" y="101" text-anchor="middle" fill="#1f5f8b">GridToReport.umsetzen</text></g>
+  <rect x="406" y="50" width="218" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="515" y="71" text-anchor="middle" fill="#1f5f8b">report and values per node</text>
+  <g>    <rect x="16" y="150" width="180" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="106" y="171" text-anchor="middle" fill="#1f5f8b">ReportDocxExporter.export</text></g>
+  <g>    <rect x="216" y="150" width="110" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="271" y="171" text-anchor="middle" fill="#1f5f8b">buildTable</text></g>
+  <g>    <rect x="346" y="150" width="70" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="381" y="171" text-anchor="middle" fill="#1f5f8b">cell</text></g>
+  <g>    <rect x="436" y="150" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="501" y="171" text-anchor="middle" fill="#1f5f8b">DocxWriter.save</text></g>
+  <g>    <rect x="16" y="206" width="180" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="106" y="227" text-anchor="middle" fill="#2e7d32">ReportPdfExporter.export</text></g>
+  <g>    <rect x="216" y="206" width="110" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="271" y="227" text-anchor="middle" fill="#2e7d32">seite</text></g>
+  <g>    <rect x="346" y="206" width="150" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="421" y="227" text-anchor="middle" fill="#2e7d32">PdfWriter.table</text></g>
+  <text x="406" y="104" fill="#5b6475">same form from both sources</text>
+  <polyline points="206,37 300,37 300,58 404,58" fill="none" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <line x1="206" y1="97" x2="224" y2="97" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <polyline points="386,97 395,97 395,76 404,76" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <polyline points="515,84 515,120 106,120 106,148" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <polyline points="515,120 600,120 600,194 8,194 8,223 14,223" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <line x1="196" y1="167" x2="214" y2="167" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <line x1="326" y1="167" x2="344" y2="167" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <line x1="416" y1="167" x2="434" y2="167" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <line x1="196" y1="223" x2="214" y2="223" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+  <line x1="326" y1="223" x2="344" y2="223" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-ausgabe)"/>
+</svg>
+<figcaption>The output. Blue is the Word path with tables in Office Open XML, green the PDF path, in which the nodes stand one below the other.</figcaption>
+</figure>
+
 <h2 id="gitter">Widths, heights and the way from a click to a cell</h2>
 <p>Excel measures column widths in characters of the default font, row heights in points. The view converts as Excel does at 96 dpi with the default font:</p>
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>w</mi><mo>=</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>7</mn><mspace width="0.1667em"/><mi>b</mi><mo>+</mo><mn>5</mn><mo stretchy="false">)</mo><mspace width="0.3333em"/><mtext>px</mtext><mo>,</mo><mspace width="2em"/><mi>h</mi><mo>=</mo><mspace width="0.1667em"/><mi>round</mi><mo>⁡</mo><mspace width="0.1667em"/><mspace style="margin-left:-0.1667em"/><mrow><mo fence="true" stretchy="true">(</mo><mstyle displaystyle="false"><mfrac><mrow><mn>4</mn></mrow><mrow><mn>3</mn></mrow></mfrac></mstyle><mspace width="0.1667em"/><mi>p</mi><mo fence="true" stretchy="true">)</mo></mrow><mspace width="0.3333em"/><mtext>px</mtext><mspace width="0.3333em"/><mspace width="0.3333em"/><mo stretchy="false">(</mo><mtext>at least </mtext><mn>4</mn><mo stretchy="false">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">w = \operatorname{round}(7\,b + 5)\ \text{px},\qquad h = \operatorname{round}\!\left(\tfrac{4}{3}\,p\right)\ \text{px}\ \ (\text{at least } 4),</annotation></semantics></math></p>

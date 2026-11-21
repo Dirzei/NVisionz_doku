@@ -296,6 +296,53 @@ math[display="block"]{margin:10px 0}
 </ul>
 <p><code>Entpackgrenze</code> is the common answer of all decoders in the module: an upper limit <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi></mrow><annotation encoding="application/x-tex">G</annotation></semantics></math> on the output of <b>one call</b>, checked against what is announced and against what is actually produced.</p>
 
+<h2 id="ablauf-entpacken">The path through the limit: unpacking a gzip file</h2>
+<p>With gzip as the example, all three checkpoints lie on one path. <code>Gzip.entpacke</code> lets <code>glieder</code> read each member; <code>liesGlied</code> checks the header and hands the Deflate stream to <code>Inflate.entpackeMitEnde</code>. When it is created, the decoder allocates its output buffer through <code>vorab</code> (estimated at four times the input, at most 16 MiB); if the buffer becomes too small in <code>lauf</code>, <code>platz</code> asks <code>wachse</code> for the new length. Afterwards <code>glieder</code> counts the sum of all members against the limit, and <code>entpacke</code> does so once more before it allocates the combined array.</p>
+<p>All three paths end in <code>pruefe</code>, and <code>pruefe</code> asks <code>grenze</code>: first the limit of the thread from <code>mit</code>, then the system property <code>envisionz.entpacken.max</code>, then the user setting, and last the default of 1 GiB.</p>
+<figure>
+<svg viewBox="0 0 640 310" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-ablauf-grenze" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <g>    <rect x="20" y="40" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="85" y="61" text-anchor="middle" fill="#1f5f8b">Gzip.entpacke</text></g>
+  <g>    <rect x="170" y="40" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="235" y="61" text-anchor="middle" fill="#1f5f8b">Gzip.glieder</text></g>
+  <g>    <rect x="320" y="40" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="385" y="61" text-anchor="middle" fill="#1f5f8b">Gzip.liesGlied</text></g>
+  <g>    <rect x="470" y="40" width="150" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="545" y="61" text-anchor="middle" fill="#1f5f8b">Inflate.entpackeMitEnde</text></g>
+  <g>    <rect x="470" y="110" width="150" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="545" y="131" text-anchor="middle" fill="#1f5f8b">Inflate.lauf</text></g>
+  <g>    <rect x="320" y="110" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="385" y="131" text-anchor="middle" fill="#1f5f8b">Inflate.platz</text></g>
+  <g>    <rect x="470" y="200" width="150" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="545" y="221" text-anchor="middle" fill="#9a6400">Entpackgrenze.vorab</text></g>
+  <g>    <rect x="320" y="200" width="130" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="385" y="221" text-anchor="middle" fill="#9a6400">Entpackgrenze.wachse</text></g>
+  <g>    <rect x="170" y="200" width="130" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="235" y="221" text-anchor="middle" fill="#9a6400">Entpackgrenze.pruefe</text></g>
+  <g>    <rect x="170" y="266" width="130" height="34" rx="4" fill="#e8f0f6" stroke="#9a6400"/>
+    <text x="235" y="287" text-anchor="middle" fill="#9a6400">Entpackgrenze.grenze</text></g>
+  <line x1="150" y1="57" x2="168" y2="57" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <line x1="300" y1="57" x2="318" y2="57" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <line x1="450" y1="57" x2="468" y2="57" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <line x1="545" y1="74" x2="545" y2="108" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <line x1="470" y1="127" x2="452" y2="127" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <text x="400" y="164" fill="#5b6475">buffer too small</text>
+  <line x1="385" y1="144" x2="385" y2="198" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <path d="M620 57 L632 57 L632 217 L622 217" fill="none" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <text x="626" y="190" text-anchor="end" fill="#9a6400">allocate buffer</text>
+  <line x1="235" y1="74" x2="235" y2="198" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <text x="241" y="100" fill="#9a6400">sum of members</text>
+  <path d="M85 74 L85 217 L168 217" fill="none" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <text x="91" y="190" fill="#9a6400">combined array</text>
+  <line x1="320" y1="217" x2="302" y2="217" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <path d="M545 234 L545 250 L270 250 L270 236" fill="none" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <line x1="235" y1="234" x2="235" y2="264" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf-grenze)"/>
+  <text x="310" y="287" fill="#5b6475">thread · system property · setting · 1 GiB</text>
+</svg>
+<figcaption>Three checkpoints on the path of a gzip file: when the buffer is allocated (<code>vorab</code>), at every growth step (<code>wachse</code>) and over the sum of the members. All lead to <code>pruefe</code>, which determines the applicable limit by precedence; if it is exceeded, the call ends with <code>Grenzueberschreitung</code>.</figcaption>
+</figure>
+
 <h2 id="verhaeltnis">How far a format can grow at most</h2>
 <p>The <b>expansion ratio</b> is <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>=</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>out</mtext></mrow></msub><mo>/</mo><msub><mrow><mi>n</mi></mrow><mrow><mtext>in</mtext></mrow></msub></mrow><annotation encoding="application/x-tex">q = n_{\text{out}} / n_{\text{in}}</annotation></semantics></math>. For the defence its maximum counts: how many output bytes a single input byte produces in the most favourable case. It follows from the shortest command that produces the most bytes.</p>
 <p><b>Deflate.</b> The longest back-reference is 258 bytes (length code 285, no extra bits). If a dynamic block contains only two literal/length symbols and one distance symbol, length code 285 has one bit and distance code 0 (distance 1) has one as well. A back-reference then costs 2 bits:</p>

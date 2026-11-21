@@ -444,6 +444,66 @@ p ← g.programm(quelle, name → 64)                 <i>OpenCL C; Arbeitsgruppe
     k ← s.kern(p, "axpy").arg(0, n).arg(1, a).arg(2, x)…
     s.starte(k, n)                                <i>auf ein Vielfaches von 64 aufgerundet</i>
     s.lies(x, ergebnis)                           <i>wartet auf alle Starts davor</i></pre>
+<p>Hinter diesen sechs Zeilen gehen die beiden Rückenden verschiedene Wege. Unter Vulkan übersetzt das Framework den OpenCL-C-Quelltext selbst nach SPIR-V, <code>starte</code> zeichnet nur in den Befehlspuffer auf, und erst das Lesen schickt das Paket ab und wartet auf den Zaun. Unter OpenCL übersetzt der Treiber den Quelltext, <code>starte</code> reiht den Kern in die Warteschlange ein, und das Lesen wartet blockierend auf alles davor. Liefert keines der Rückenden ein Gerät, rechnet der Aufrufer auf der CPU und hat in der Wahl die Gründe beider.</p>
+<figure>
+<svg viewBox="0 0 680 255" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Die Wahl versucht erst Vulkan, dann OpenCL. Oben der Weg unter Vulkan: Gerät, eigener Übersetzer nach SPIR-V, Aufzeichnen, Lesen mit Abschicken und Warten. Unten der Weg unter OpenCL: Gerät, Übersetzen im Treiber, Einreihen, blockierendes Lesen. Ohne Gerät rechnet der Aufrufer auf der CPU.">
+  <defs><marker id="pfeil-weg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="170" y="28" font-size="11" fill="#1f5f8b" font-weight="bold">framework-vulkan</text>
+  <text x="170" y="158" font-size="11" fill="#2e7d32" font-weight="bold">framework-opencl</text>
+  <g>    <rect x="10" y="100" width="140" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="80" y="114" text-anchor="middle" fill="#1f5f8b">Grafik</text>
+    <text x="80" y="128" text-anchor="middle" fill="#1f5f8b">.oeffne</text>
+    <text x="80" y="140" font-size="10" text-anchor="middle" fill="#5b6475">Vulkan vor OpenCL</text></g>
+  <g>    <rect x="170" y="36" width="115" height="46" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="227" y="50" text-anchor="middle" fill="#1f5f8b">VulkanGpu</text>
+    <text x="227" y="64" text-anchor="middle" fill="#1f5f8b">.oeffne</text>
+    <text x="227" y="76" font-size="10" text-anchor="middle" fill="#5b6475">Gerät oder null</text></g>
+  <g>    <rect x="300" y="36" width="120" height="46" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="360" y="50" text-anchor="middle" fill="#1f5f8b">Uebersetzer</text>
+    <text x="360" y="64" text-anchor="middle" fill="#1f5f8b">.uebersetze</text>
+    <text x="360" y="76" font-size="10" text-anchor="middle" fill="#5b6475">OpenCL C → SPIR-V</text></g>
+  <g>    <rect x="435" y="36" width="110" height="46" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="490" y="50" text-anchor="middle" fill="#1f5f8b">Warteschlange</text>
+    <text x="490" y="64" text-anchor="middle" fill="#1f5f8b">.starte</text>
+    <text x="490" y="76" font-size="10" text-anchor="middle" fill="#5b6475">aufzeichnen</text></g>
+  <g>    <rect x="560" y="36" width="110" height="46" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="615" y="50" text-anchor="middle" fill="#1f5f8b">Warteschlange</text>
+    <text x="615" y="64" text-anchor="middle" fill="#1f5f8b">.lies</text>
+    <text x="615" y="76" font-size="10" text-anchor="middle" fill="#5b6475">abschicken, Zaun</text></g>
+  <g>    <rect x="170" y="166" width="115" height="46" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="227" y="180" text-anchor="middle" fill="#2e7d32">OpenClGpu</text>
+    <text x="227" y="194" text-anchor="middle" fill="#2e7d32">.oeffne</text>
+    <text x="227" y="206" font-size="10" text-anchor="middle" fill="#5b6475">Gerät oder null</text></g>
+  <g>    <rect x="300" y="166" width="120" height="46" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="360" y="180" text-anchor="middle" fill="#2e7d32">Geraet</text>
+    <text x="360" y="194" text-anchor="middle" fill="#2e7d32">.programm</text>
+    <text x="360" y="206" font-size="10" text-anchor="middle" fill="#5b6475">Treiber übersetzt</text></g>
+  <g>    <rect x="435" y="166" width="110" height="46" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="490" y="180" text-anchor="middle" fill="#2e7d32">Warteschlange</text>
+    <text x="490" y="194" text-anchor="middle" fill="#2e7d32">.starte</text>
+    <text x="490" y="206" font-size="10" text-anchor="middle" fill="#5b6475">einreihen</text></g>
+  <g>    <rect x="560" y="166" width="110" height="46" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="615" y="180" text-anchor="middle" fill="#2e7d32">Warteschlange</text>
+    <text x="615" y="194" text-anchor="middle" fill="#2e7d32">.lies</text>
+    <text x="615" y="206" font-size="10" text-anchor="middle" fill="#5b6475">blockierend</text></g>
+  <rect x="10" y="200" width="140" height="40" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="80" y="216" text-anchor="middle" fill="#9a6400">kein Gerät:</text>
+  <text x="80" y="232" font-size="11" text-anchor="middle" fill="#9a6400">CPU, Gründe beider</text>
+  <g stroke="#5b6475" stroke-width="1.5" fill="none">
+    <line x1="150" y1="115" x2="168" y2="62" marker-end="url(#pfeil-weg)"/>
+    <line x1="150" y1="131" x2="168" y2="186" marker-end="url(#pfeil-weg)"/>
+    <line x1="80" y1="146" x2="80" y2="198" stroke="#9a6400" stroke-dasharray="4 3" marker-end="url(#pfeil-weg)"/>
+    <line x1="285" y1="59" x2="298" y2="59" stroke="#1f5f8b" marker-end="url(#pfeil-weg)"/>
+    <line x1="420" y1="59" x2="433" y2="59" stroke="#1f5f8b" marker-end="url(#pfeil-weg)"/>
+    <line x1="545" y1="59" x2="558" y2="59" stroke="#1f5f8b" marker-end="url(#pfeil-weg)"/>
+    <line x1="285" y1="189" x2="298" y2="189" stroke="#2e7d32" marker-end="url(#pfeil-weg)"/>
+    <line x1="420" y1="189" x2="433" y2="189" stroke="#2e7d32" marker-end="url(#pfeil-weg)"/>
+    <line x1="545" y1="189" x2="558" y2="189" stroke="#2e7d32" marker-end="url(#pfeil-weg)"/>
+  </g>
+  <text x="166" y="140" font-size="10" fill="#5b6475">sonst</text>
+</svg>
+<figcaption>Ein Kern auf beiden Rückenden. Die Wahl nimmt das erste Rückende, das ein Gerät liefert; die Begriffe – Gerät, Programm, Sitzung, Kern, Start, Lesen – sind dieselben, nur was hinter ihnen geschieht, unterscheidet sich.</figcaption>
+</figure>
 <p>Die Schnittstelle ist die Schnittmenge: ein Kernargument ist <code>int</code>, <code>double</code> oder ein Puffer. Was nur ein Rückende
 kann – die Aufschlüsselung der Wartezeit unter Vulkan etwa –, bleibt in dessen eigenen Klassen. Ein fremder Puffer, ein fremder Kern
 oder ein Kern, den das Programm nicht hat, wird abgewiesen statt still falsch gerechnet. Derselbe Kern aus demselben Quelltext liefert

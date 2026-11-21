@@ -283,6 +283,81 @@ math[display="block"]{margin:10px 0}
 <figcaption>Kachelentstörung an einer Grenze zwischen zwei Blöcken: Eine Stufe von 10 Graustufen, die allein steht, wird bei Stärke 0,5 auf 5 halbiert, beide Seiten bewegen sich um 2,5 zur Mitte. Eine Stufe, die auch in ihrer Umgebung vorkommt, bliebe unangetastet.</figcaption>
 </figure>
 
+<h2 id="ablauf-kette">Die Kette im Code</h2>
+<p>Die adaptive Restaurierung entscheidet je Bild neu. <code>Adaptivfilter</code> misst Rauschen und Blockbildung gegen das Nachfolgebild, prüft, ob zwischen dem vorigen Bild und diesem ein Schnitt liegt (dann beginnt das Messfenster neu), und wählt nach dem Median eines Fensters von bis zu 24 Bildern zurück und 8 voraus. Die gewählte Kette entstört, wo Blockbildung gemessen ist, zuerst die Kacheln, dann wird entrauscht – mit dem zeitlichen Mittel, mit VBM3D oder bei bewegten Gegenständen mit dem Flussmittel. Erst am entrauschten Bild wird die Kantenschärfe gemessen, und erst danach fällt die Entscheidung über die Entfaltung. Jede Änderung der Wahl wird mit Bildnummer und Messwerten festgehalten.</p>
+<figure>
+<svg viewBox="0 0 660 260" width="660" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-kette" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <g>    <rect x="10" y="30" width="150" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="85" y="51" text-anchor="middle" fill="#1f5f8b">Adaptivfilter.messung</text></g>
+  <g>    <rect x="185" y="30" width="150" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="260" y="51" text-anchor="middle" fill="#9a6400">Adaptivfilter.schnitt</text></g>
+  <g>    <rect x="355" y="30" width="150" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="430" y="51" text-anchor="middle" fill="#1f5f8b">Adaptivfilter.waehle</text></g>
+  <g>    <rect x="525" y="30" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="590" y="51" text-anchor="middle" fill="#1f5f8b">Adaptivfilter.kette</text></g>
+  <rect x="525" y="100" width="130" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+  <text x="590" y="121" text-anchor="middle" fill="#1f5f8b">Kachelentstörung</text>
+  <text x="300" y="96" font-size="11" fill="#5b6475">Entrauschen, eines davon</text>
+  <g>    <rect x="290" y="104" width="170" height="28" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="375" y="122" text-anchor="middle" fill="#1f5f8b">Zeitmittel.anwenden</text></g>
+  <g>    <rect x="290" y="140" width="170" height="28" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="375" y="158" text-anchor="middle" fill="#1f5f8b">Vbm3dfilter.anwenden</text></g>
+  <g>    <rect x="290" y="176" width="170" height="28" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="375" y="194" text-anchor="middle" fill="#1f5f8b">Flussmittel.anwenden</text></g>
+  <g>    <rect x="100" y="140" width="160" height="28" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="180" y="158" text-anchor="middle" fill="#1f5f8b">Szenenmessung.schaerfe</text></g>
+  <g>    <rect x="100" y="214" width="160" height="28" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="180" y="232" text-anchor="middle" fill="#1f5f8b">Entfaltung.anwenden</text></g>
+  <rect x="290" y="214" width="170" height="28" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="375" y="232" text-anchor="middle" fill="#1f5f8b">behandeltes Bild</text>
+  <text x="525" y="150" font-size="11" fill="#5b6475">nur bei Blockbildung</text>
+  <text x="188" y="194" font-size="11" fill="#9a6400">zweite Wahl nach der Schärfe</text>
+  <line x1="160" y1="47" x2="183" y2="47" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="335" y1="47" x2="353" y2="47" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="505" y1="47" x2="523" y2="47" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="590" y1="64" x2="590" y2="98" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="525" y1="117" x2="463" y2="150" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="290" y1="154" x2="262" y2="154" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="180" y1="168" x2="180" y2="212" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+  <line x1="260" y1="228" x2="288" y2="228" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-kette)"/>
+</svg>
+<figcaption>Ein Bild durch <code>Adaptivfilter.anwenden</code>. Orange die Schnittprüfung, die das Messfenster neu beginnen lässt, und die zweite Wahl, die über die Entfaltung entscheidet. Ohne Entfaltung ist das entrauschte Bild schon das Ergebnis.</figcaption>
+</figure>
+<p>Die Ausgabe strömt: Der Dekoder reicht jedes Bild einzeln heraus, die Vorlaufkette hält nur so viele Bilder, wie der Filter an Zukunft braucht, behandelt das älteste, sobald genug da ist, und gibt Paare aus Original und Ergebnis zurück. Die Farbebenen laufen in einer eigenen Warteschlange mit und werden erst bei der Ausgabe behandelt. Am Ende behandelt die Kette die letzten Bilder mit der Zukunft, die es noch gibt.</p>
+<figure>
+<svg viewBox="0 0 660 235" width="660" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-strom" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <g>    <rect x="10" y="30" width="160" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="90" y="51" text-anchor="middle" fill="#1f5f8b">Videoausgabe.schreibe</text></g>
+  <g>    <rect x="200" y="30" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="270" y="51" text-anchor="middle" fill="#1f5f8b">Dekoder.dekodieren</text></g>
+  <g>    <rect x="370" y="30" width="160" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="450" y="51" text-anchor="middle" fill="#1f5f8b">Vorlaufkette.einspeisen</text></g>
+  <g>    <rect x="355" y="100" width="190" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="450" y="121" text-anchor="middle" fill="#1f5f8b">Vorlaufkette.behandleAeltestes</text></g>
+  <rect x="565" y="100" width="90" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="610" y="121" text-anchor="middle" fill="#1f5f8b">Bildfilter</text>
+  <g>    <rect x="370" y="170" width="160" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="450" y="191" text-anchor="middle" fill="#1f5f8b">Vorlaufkette.entnehmen</text></g>
+  <g>    <rect x="175" y="170" width="170" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="260" y="191" text-anchor="middle" fill="#1f5f8b">Farbbehandlung.anwenden</text></g>
+  <g>    <rect x="10" y="170" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="80" y="191" text-anchor="middle" fill="#1f5f8b">Y4mSchreiber.bild</text></g>
+  <text x="200" y="84" font-size="11" fill="#5b6475">je Bild ein Rückruf</text>
+  <text x="458" y="84" font-size="11" fill="#5b6475">bis genug Zukunft da ist</text>
+  <text x="10" y="226" font-size="11" fill="#5b6475">Y4M-Strom, wahlweise in eine MP4-Ausgabe</text>
+  <line x1="170" y1="47" x2="198" y2="47" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-strom)"/>
+  <line x1="340" y1="47" x2="368" y2="47" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-strom)"/>
+  <line x1="450" y1="64" x2="450" y2="98" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-strom)"/>
+  <line x1="545" y1="117" x2="563" y2="117" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-strom)"/>
+  <line x1="450" y1="134" x2="450" y2="168" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-strom)"/>
+  <line x1="370" y1="187" x2="347" y2="187" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-strom)"/>
+  <line x1="175" y1="187" x2="152" y2="187" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-strom)"/>
+</svg>
+<figcaption>Der Weg eines Bildes durch die Ausgabe. Der Bildfilter ist die gewählte Kette, etwa der adaptive Filter aus dem Bild darüber; die Helligkeit geht durch ihn, die Farbe erst danach durch die Farbbehandlung.</figcaption>
+</figure>
+
 <h2 id="entfaltung">Entfaltung nach Richardson und Lucy</h2>
 <p>Eine Aufnahme ist die Faltung des Motivs mit der <b>Punktbildfunktion</b> <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi></mrow><annotation encoding="application/x-tex">h</annotation></semantics></math> – dem Bild, das ein einzelner leuchtender Punkt hinterlässt, bei einem Bandgerät breit, weil die Bandbreite der Aufzeichnung begrenzt ist. Beobachtet wird <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mi>h</mi><mo>∗</mo><mi>u</mi></mrow><annotation encoding="application/x-tex">d = h \ast u</annotation></semantics></math>; gesucht ist das Motiv <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>u</mi></mrow><annotation encoding="application/x-tex">u</annotation></semantics></math>. Das Richardson-Lucy-Verfahren nähert sich schrittweise:</p>
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mrow><mi>u</mi></mrow><mrow><mo stretchy="false">(</mo><mi>k</mi><mo>+</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msup><mo>=</mo><msup><mrow><mi>u</mi></mrow><mrow><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow></msup><mo>⋅</mo><mrow><mo fence="true" stretchy="true">(</mo><mover accent="true"><mrow><mi>h</mi></mrow><mo stretchy="true">˜</mo></mover><mo>∗</mo><mfrac><mrow><mi>d</mi></mrow><mrow><mi>h</mi><mo>∗</mo><msup><mrow><mi>u</mi></mrow><mrow><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow></msup></mrow></mfrac><mo fence="true" stretchy="true">)</mo></mrow><mo>,</mo><mspace width="2em"/><msup><mrow><mi>u</mi></mrow><mrow><mo stretchy="false">(</mo><mn>0</mn><mo stretchy="false">)</mo></mrow></msup><mo>=</mo><mi>d</mi></mrow><annotation encoding="application/x-tex">u^{(k+1)} = u^{(k)} \cdot \left( \tilde h \ast \frac{d}{h \ast u^{(k)}} \right), \qquad u^{(0)} = d</annotation></semantics></math></p>

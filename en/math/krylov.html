@@ -458,6 +458,56 @@ r̂₀ ← r;  ρ ← α ← ω ← 1;  v ← p ← 0
 <p>For CG, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math> must be symmetric positive definite; the class checks this indirectly via <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mrow><mi>r</mi></mrow><mrow><mi>T</mi></mrow></msup><mi>z</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">r^T z &gt; 0</annotation></semantics></math>. Effect in the probe: on the two-sided scaled 1D Poisson matrix <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mi>A</mi><mi>D</mi></mrow><annotation encoding="application/x-tex">D A D</annotation></semantics></math>, <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mo>=</mo><mspace width="0.1667em"/><mi>diag</mi><mo>⁡</mo><mo stretchy="false">(</mo><msup><mn>10</mn><mrow><mn>3</mn><mi>i</mi><mo>/</mo><mn>99</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">D = \operatorname{diag}(10^{3i/99})</annotation></semantics></math>, CG needs 1502 steps without preconditioner, with Jacobi 100; GMRES(30) on the column-scaled convection problem uses up the allowed 3000 steps without preconditioner, with Jacobi from the right 571 suffice; BiCGStab needs 245 instead of the full 5000. On the 2D Poisson problem of the <code>Vorkonditioniererprobe</code>, CG with SSOR(1.7) needs 27 instead of 108 steps, GMRES(30) with ILU(0) 42 instead of 221. A problem with condition around <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.5</mn><mo>⋅</mo><msup><mn>10</mn><mrow><mn>12</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.5\cdot10^{12}</annotation></semantics></math> is not solved by GMRES(50) without preconditioner in 480 steps; with the frozen LU of the unperturbed matrix, 4 steps suffice at 1 % perturbation and 9 at 10 %.</p>
 <div class="hinweis"><b>Convention in the framework:</b> ILU(0) and SSOR work on the CSR matrix and copy it; the columns of a row may be unsorted. Besides these, any existing solver can be plugged in as a preconditioner. Jacobi from the <b>right</b> compensates column scaling, not row scaling; the first version of a probe problem was designed wrongly because of this (finding during construction).</div>
 
+<h3>The path through GMRES with a preconditioner</h3>
+<p>In GMRES the preconditioner acts from the right and at two places: in every Arnoldi step before the operator is applied, and once at the end of a restart cycle, when the correction is carried from the Krylov basis back into the unknowns. Convergence is decided each time by the true residual computed afresh afterwards, not by the recursive <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>|</mo><msub><mrow><mi>g</mi></mrow><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>|</mo></mrow><annotation encoding="application/x-tex">|g_{j+1}|</annotation></semantics></math>.</p>
+<figure>
+<svg viewBox="0 0 640 350" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-gmres" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <rect x="10" y="90" width="510" height="250" rx="6" fill="none" stroke="#c9d1dc" stroke-dasharray="5 4"/>
+  <text x="510" y="332" text-anchor="end" fill="#5b6475">restart cycle, j = 0 … k − 1</text>
+  <g>    <rect x="20" y="20" width="120" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="80" y="41" text-anchor="middle" fill="#1f5f8b">Gmres.loese</text></g>
+  <g>    <rect x="170" y="20" width="170" height="44" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="255" y="38" text-anchor="middle" fill="#1f5f8b">Ablauf.residuum</text>
+    <text x="255" y="55" text-anchor="middle" fill="#5b6475">r = b − A x</text></g>
+  <rect x="370" y="20" width="150" height="44" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="445" y="38" text-anchor="middle" fill="#9a6400">‖r‖ ≤ target</text>
+  <text x="445" y="55" text-anchor="middle" fill="#9a6400">or it ≥ maxIt ?</text>
+  <g>    <rect x="540" y="20" width="90" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="585" y="41" text-anchor="middle" fill="#1f5f8b">Ablauf.ende</text></g>
+  <rect x="540" y="80" width="90" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="585" y="101" text-anchor="middle" fill="#1f5f8b">Loesung</text>
+  <g>    <rect x="330" y="110" width="170" height="44" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="415" y="128" text-anchor="middle" fill="#2e7d32">Ilu0.anwenden</text>
+    <text x="415" y="145" text-anchor="middle" fill="#5b6475">t = M⁻¹ v_j</text></g>
+  <g>    <rect x="130" y="110" width="170" height="44" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="215" y="128" text-anchor="middle" fill="#1f5f8b">Ablauf.anwenden</text>
+    <text x="215" y="145" text-anchor="middle" fill="#5b6475">w = A t</text></g>
+  <g>    <rect x="130" y="184" width="250" height="44" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="255" y="202" text-anchor="middle" fill="#1f5f8b">Gram-Schmidt, Givens rotation</text>
+    <text x="255" y="219" text-anchor="middle" fill="#5b6475">|g_j+1| ≤ target ?</text></g>
+  <g>    <rect x="130" y="258" width="250" height="44" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="255" y="276" text-anchor="middle" fill="#1f5f8b">solve H y = g</text>
+    <text x="255" y="293" text-anchor="middle" fill="#2e7d32">x ← x + M⁻¹ V y</text></g>
+  <line x1="140" y1="37" x2="168" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <line x1="340" y1="42" x2="368" y2="42" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <line x1="520" y1="37" x2="538" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="522" y="31" fill="#5b6475">yes</text>
+  <line x1="585" y1="54" x2="585" y2="78" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <line x1="415" y1="64" x2="415" y2="108" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="421" y="84" fill="#5b6475">no</text>
+  <line x1="330" y1="132" x2="302" y2="132" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <line x1="215" y1="154" x2="215" y2="182" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <polyline points="380,206 415,206 415,156" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="421" y="196" fill="#5b6475">no, j &lt; k</text>
+  <line x1="255" y1="228" x2="255" y2="256" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="261" y="248" fill="#5b6475">yes or j = k</text>
+  <polyline points="130,280 30,280 30,76 255,76 255,66" fill="none" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-gmres)"/>
+  <text x="38" y="206" fill="#5b6475">restart</text>
+</svg>
+<figcaption>A run of <code>Gmres.loese</code> with a right preconditioner, here ILU(0) (green: where the preconditioner acts; every other implementation of <code>Vorkonditionierer</code> sits at the same place). If the Arnoldi sequence breaks down or the iterate becomes non-finite, the run ends at once through <code>Ablauf.ende</code> with a message.</figcaption>
+</figure>
+
 <h2 id="abbruch">Stopping and the true residual</h2>
 <p>All three methods carry the residual along by a recurrence, not via <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>−</mo><mi>A</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">b - A x</annotation></semantics></math>. In floating point the two drift apart; the recursive one may keep falling while the true one stagnates. Therefore:</p>
 <ul>

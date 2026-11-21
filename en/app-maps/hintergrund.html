@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading maps and fetching operating lines – background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+a{color:var(--ak)}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figure video{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../ocr/index.html">framework-ocr</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../diagramm/index.html">framework-diagramm</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../cfd-validierung/index.html">cfd-validierung</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
+<a class="eintrag" href="../vision/index.html">framework-vision</a>
+<a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<a class="eintrag" href="../imaging/index.html">framework-imaging</a>
+<a class="eintrag" href="../lupe/index.html">framework-lupe</a>
+<a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<a class="eintrag" href="../usb/index.html">framework-usb</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-cfd/index.html">app-cfd</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-doku/index.html">app-doku</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-deutschlearn/index.html">school-deutschlearn</a>
+<a class="eintrag" href="../app-langlearn/index.html">school-langlearn</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag" href="../app-machieve/index.html">app-machieve</a>
+<a class="eintrag aktiv" href="index.html">app-maps</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#zweck">What the app is for</a>
+<a class="rubrik" href="index.html#funktionen">What it can do</a>
+<a class="unterseite" href="bedienung.html">How to use</a>
+<a class="rubrik" href="index.html#daten">Data and formats</a>
+<a class="rubrik" href="index.html#hintergrund">How the app computes</a>
+<a class="unterseite aktiv" href="hintergrund.html">Reading and operating lines</a>
+<a class="rubrik" href="index.html#aufbau">What it is built on</a>
+<a class="rubrik" href="index.html#stand">Status and limits</a>
+</div>
+<a class="eintrag" href="../app-mathlearn/index.html">school-mathlearn</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-school/index.html">app-school</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-cfd/index.html">commandline-cfd</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../cmd-ocr/index.html">commandline-ocr</a>
+<a class="eintrag" href="../cmd-vision/index.html">commandline-vision</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+<div class="gruppe">Testing</div>
+<a class="eintrag" href="../pruefstand/index.html">pruefstand</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">app-maps</a> › Reading maps and fetching operating lines – background</span><a class="sprachwahl" href="../../de/app-maps/hintergrund.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-app-maps · Background</div>
+  <h1>Reading maps and fetching operating lines – background</h1>
+  <p class="unter">How the app recognises the format of a map file by its content and builds the tree of maps from it, and how the operating lines of a data source are fetched in the background while the map is already shown.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p class="einl">Map files of different origin often carry the same extension; the extension therefore does not say which reader is responsible. And the operating lines often come from a large database table whose query takes longer than drawing the map. This page shows both paths.</p>
+
+<h2 id="ablauf-lesen">From the file content to the tree</h2>
+<p><code>loadInto</code> first asks <code>Kennfeldweiche.erkenne</code>: the decision is made on the content of the file, the extension is only the last resort – and is then reported under the file as a guess. Depending on the finding, one of four readers reads the file into a <code>MapModel</code> of characteristics and constants. Each characteristic is attached to the tree by its path (component, part, plot); <code>addDerived</code> adds the derived plots. Reader notes appear as separate nodes under the file, and a file that could not be read gets its reason as a child instead of standing empty in the tree.</p>
+<figure>
+<svg viewBox="0 0 640 250" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-ablauf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <rect x="16" y="20" width="90" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="61" y="41" text-anchor="middle" fill="#1f5f8b">file</text>
+  <g>    <rect x="126" y="20" width="170" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="211" y="41" text-anchor="middle" fill="#5b6475">MapsRootPanel.loadInto</text></g>
+  <g>    <rect x="316" y="20" width="170" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="401" y="41" text-anchor="middle" fill="#9a6400">Kennfeldweiche.erkenne</text></g>
+  <text x="496" y="35" fill="#9a6400">by content;</text>
+  <text x="496" y="50" fill="#9a6400">extension only reported</text>
+  <g>    <rect x="16" y="100" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="86" y="121" text-anchor="middle" fill="#1f5f8b">MiDatReader.read</text></g>
+  <g>    <rect x="171" y="100" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="241" y="121" text-anchor="middle" fill="#1f5f8b">NpssReader.read</text></g>
+  <g>    <rect x="326" y="100" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="396" y="121" text-anchor="middle" fill="#1f5f8b">GasTurbReader.read</text></g>
+  <g>    <rect x="481" y="100" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="551" y="121" text-anchor="middle" fill="#1f5f8b">ChrReader.read</text></g>
+  <rect x="241" y="170" width="160" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="321" y="191" text-anchor="middle" fill="#1f5f8b">MapModel</text>
+  <text x="241" y="222" fill="#5b6475">characteristics, constants, notes</text>
+  <rect x="16" y="170" width="150" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+  <text x="91" y="191" text-anchor="middle" fill="#5b6475">tree: characteristics</text>
+  <g>    <rect x="471" y="170" width="150" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="546" y="191" text-anchor="middle" fill="#5b6475">addDerived</text></g>
+  <text x="471" y="222" fill="#5b6475">derived plots</text>
+  <line x1="106" y1="37" x2="124" y2="37" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="296" y1="37" x2="314" y2="37" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="401" y1="54" x2="401" y2="74" stroke="#9a6400" stroke-width="1.5"/>
+  <line x1="86" y1="74" x2="551" y2="74" stroke="#9a6400" stroke-width="1.5"/>
+  <line x1="86" y1="74" x2="86" y2="98" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="241" y1="74" x2="241" y2="98" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="396" y1="74" x2="396" y2="98" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="551" y1="74" x2="551" y2="98" stroke="#9a6400" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="86" y1="134" x2="86" y2="150" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="241" y1="134" x2="241" y2="150" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="396" y1="134" x2="396" y2="150" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="551" y1="134" x2="551" y2="150" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="86" y1="150" x2="551" y2="150" stroke="#1f5f8b" stroke-width="1.5"/>
+  <line x1="321" y1="150" x2="321" y2="168" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="241" y1="187" x2="168" y2="187" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+  <line x1="401" y1="187" x2="469" y2="187" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-ablauf)"/>
+</svg>
+<figcaption>The reading chain of a map file. The switch (amber) picks exactly one reader; all deliver the same model from which the tree is built.</figcaption>
+</figure>
+
+<h2 id="ablauf-arbeitslinien">Operating lines in the background</h2>
+<p>When a map is selected in the tree, its <code>rebuild</code> builds the map immediately on the event dispatch thread. The operating lines, however, are fetched by <code>addOperatingOverlays</code> via the <code>BusyRunner</code>: in the background, <code>OperatingManager.overlaysFor</code> evaluates the expressions for x and y, for an H2 source via <code>H2OperatingData.fetch</code> only the columns needed and with the constraint in the query; filtered and unfiltered columns are cached separately. Back on the event dispatch thread, a run number per map counts: if the same map has been rebuilt meanwhile, the old result is discarded. Otherwise <code>uebernehmeOverlays</code> enters the lines, and the map's follow-up refreshes only what they affect.</p>
+<figure>
+<svg viewBox="0 0 640 230" width="640" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-linien" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="16" y="24" fill="#5b6475">event thread</text>
+  <line x1="16" y1="84" x2="624" y2="84" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <text x="16" y="100" fill="#2e7d32">background</text>
+  <line x1="16" y1="160" x2="624" y2="160" stroke="#c9d1dc" stroke-dasharray="4 3"/>
+  <text x="16" y="176" fill="#5b6475">event thread</text>
+  <g>    <rect x="16" y="32" width="130" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="81" y="53" text-anchor="middle" fill="#5b6475">onSelect</text></g>
+  <g>    <rect x="162" y="32" width="130" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="227" y="53" text-anchor="middle" fill="#5b6475">Karte.rebuild</text></g>
+  <g>    <rect x="308" y="32" width="170" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="393" y="53" text-anchor="middle" fill="#5b6475">addOperatingOverlays</text></g>
+  <g>    <rect x="494" y="32" width="130" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="559" y="53" text-anchor="middle" fill="#9a6400">BusyRunner.run</text></g>
+  <g>    <rect x="260" y="108" width="200" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="360" y="129" text-anchor="middle" fill="#2e7d32">OperatingManager.overlaysFor</text></g>
+  <g>    <rect x="474" y="108" width="150" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="549" y="129" text-anchor="middle" fill="#2e7d32">H2OperatingData.fetch</text></g>
+  <rect x="494" y="184" width="130" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="559" y="205" text-anchor="middle" fill="#9a6400">run number of map?</text>
+  <g>    <rect x="308" y="184" width="170" height="34" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="393" y="205" text-anchor="middle" fill="#5b6475">uebernehmeOverlays</text></g>
+  <text x="162" y="205" fill="#5b6475">then the map's follow-up</text>
+  <text x="162" y="79" fill="#5b6475">map shown at once</text>
+  <line x1="146" y1="49" x2="160" y2="49" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-linien)"/>
+  <line x1="292" y1="49" x2="306" y2="49" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-linien)"/>
+  <line x1="478" y1="49" x2="492" y2="49" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-linien)"/>
+  <polyline points="559,66 559,92 360,92 360,106" fill="none" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-linien)"/>
+  <line x1="460" y1="125" x2="472" y2="125" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-linien)"/>
+  <line x1="549" y1="142" x2="549" y2="182" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-linien)"/>
+  <line x1="494" y1="201" x2="480" y2="201" stroke="#5b6475" stroke-width="1.5" marker-end="url(#pfeil-linien)"/>
+</svg>
+<figcaption>Fetching the operating lines. The map appears without waiting; the lines follow as soon as the query is back. <code>Karte.rebuild</code> stands for the rebuild of the respective map card (characteristic, derived plot).</figcaption>
+</figure>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // 2026-11-15: Rubriken mit zugeklappten Unterseiten (lange Module)
+  var listen = document.querySelectorAll('nav.leiste div.unterliste');
+  if (!listen.length) { return; }
+  function oeffne(anker) {
+    listen.forEach(function (l) { if (l.getAttribute('data-rubrik') === anker) { l.hidden = false; } });
+  }
+  listen.forEach(function (l) {
+    var kopf = l.previousElementSibling;
+    if (!kopf || !kopf.classList.contains('rubrik')) { return; }
+    kopf.addEventListener('click', function (e) {
+      l.hidden = !l.hidden;
+      if (kopf.getAttribute('href').charAt(0) !== '#') { e.preventDefault(); }
+    });
+  });
+  if (location.hash) { oeffne(location.hash.substring(1)); }
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+(function () {
+  // NEU 2026-11-12 (Eignerwunsch): die Leiste sprang nach jedem Klick auf
+  // einen Eintrag weiter unten an den Anfang, weil jede Seite eine neue
+  // Leiste laedt. Beim Klick merkt sich die Seite, wie weit der Eintrag
+  // vom oberen Rand der Leiste stand; die naechste Seite stellt ihren
+  // aktiven Eintrag wieder dorthin. Ohne Merkwert (Lesezeichen, Suche,
+  // erster Aufruf) wird der aktive Eintrag in die Mitte geholt.
+  var nav = document.querySelector('nav.leiste');
+  if (!nav) { return; }
+  var SCHLUESSEL = 'leistenlage';
+  var akt = nav.querySelector('a.unterseite.aktiv') || nav.querySelector('a.eintrag.aktiv');
+  var abstand = null;
+  try {
+    var w = sessionStorage.getItem(SCHLUESSEL);
+    sessionStorage.removeItem(SCHLUESSEL);
+    if (w !== null && w !== '' && isFinite(w)) { abstand = Number(w); }
+  } catch (e) { /* ohne Speicher: nur mittig holen */ }
+  if (akt) {
+    var oben = akt.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+    if (abstand !== null) {
+      nav.scrollTop = Math.max(0, oben - abstand);
+    } else {
+      nav.scrollTop = Math.max(0, oben - nav.clientHeight / 2);
+    }
+  }
+  nav.addEventListener('click', function (ev) {
+    var a = ev.target.closest ? ev.target.closest('a') : null;
+    if (!a || !nav.contains(a)) { return; }
+    try {
+      sessionStorage.setItem(SCHLUESSEL,
+          String(a.getBoundingClientRect().top - nav.getBoundingClientRect().top));
+    } catch (e) { /* ohne Speicher springt die Leiste nur in die Mitte */ }
+  });
+})();
+</script>
+</body>
+</html>

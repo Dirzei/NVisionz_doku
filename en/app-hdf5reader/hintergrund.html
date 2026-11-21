@@ -257,6 +257,55 @@ math[display="block"]{margin:10px 0}
 <h2 id="worum">What this is about</h2>
 <p class="einl">Reading is done with <a href="../fileformats/index.html">framework-fileformats</a>, read-only. The bridge to tables lives in <a href="../data/index.html">framework-data</a>. The viewer connects both with the user interface and makes the decisions described here.</p>
 
+<h2 id="ablauf-oeffnen">From opening to a table</h2>
+<p>When a file is opened, the viewer first checks the container type: an HDF4 file with the extension <code>.hdf</code> gets a notice instead of being treated as a broken HDF5 file. Otherwise <code>Hdf5File.open</code> opens the file, and the tree loads the children of a group only when it is expanded; a group that cannot be read stays empty without taking the tree with it.</p>
+<p>When a dataset is selected, the value table reads its values page by page, only for the rows currently shown. Only the “As table” button builds a whole table through the bridge in framework-data and passes it to the charts; “As CSV” writes exactly this table. Opening the file and the first pass over its datasets run in the background via <code>BusyRunner</code>, everything else on the event dispatch thread. If the file is closed or another one chosen before that, the callback discards its result and closes the file; while loading, its path counts as open, so that saving the workspace does not lose it.</p>
+<figure>
+<svg viewBox="0 0 660 310" width="660" font-family="sans-serif" font-size="12" role="img" aria-label="Open, check the container type, open the file, show the tree; selection, show the dataset, read values page by page; as table through the bridge to the charts, then CSV.">
+  <defs><marker id="pfeil-ablauf-h5r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <g>    <rect x="10" y="20" width="150" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="85" y="41" text-anchor="middle" fill="#1f5f8b">Hdf5RootPanel.oeffne</text></g>
+  <g>    <rect x="175" y="20" width="168" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="259" y="41" text-anchor="middle" fill="#9a6400">Containerformat.erkenne</text></g>
+  <g>    <rect x="358" y="20" width="105" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="410" y="41" text-anchor="middle" fill="#1f5f8b">Hdf5File.open</text></g>
+  <g>    <rect x="478" y="20" width="172" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="564" y="41" text-anchor="middle" fill="#1f5f8b">Hdf5RootPanel.zeigeDatei</text></g>
+  <g>    <rect x="478" y="100" width="172" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="564" y="121" text-anchor="middle" fill="#1f5f8b">Hdf5BaumModell.kinderVon</text></g>
+  <g>    <rect x="248" y="100" width="215" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="355" y="121" text-anchor="middle" fill="#1f5f8b">Hdf5RootPanel.auswahlGeaendert</text></g>
+  <g>    <rect x="33" y="100" width="200" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="133" y="121" text-anchor="middle" fill="#1f5f8b">Hdf5RootPanel.zeigeDatensatz</text></g>
+  <g>    <rect x="33" y="180" width="150" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="108" y="201" text-anchor="middle" fill="#1f5f8b">DatensatzModell.wert</text></g>
+  <g>    <rect x="203" y="180" width="160" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="283" y="201" text-anchor="middle" fill="#1f5f8b">Hdf5Dataset.readDouble</text></g>
+  <g>    <rect x="10" y="260" width="175" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="97" y="281" text-anchor="middle" fill="#2e7d32">Hdf5RootPanel.alsTabelle</text></g>
+  <g>    <rect x="200" y="260" width="135" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="267" y="281" text-anchor="middle" fill="#2e7d32">Hdf5Tables.toTable</text></g>
+  <rect x="350" y="260" width="125" height="34" rx="4" fill="#ffffff" stroke="#c9d1dc"/>
+  <text x="412" y="281" text-anchor="middle" fill="#5b6475">table to charts</text>
+  <g>    <rect x="490" y="260" width="165" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="572" y="281" text-anchor="middle" fill="#2e7d32">Hdf5RootPanel.alsCsvNach</text></g>
+  <g stroke="#1f5f8b" stroke-width="1.5" fill="none" marker-end="url(#pfeil-ablauf-h5r)">
+    <line x1="160" y1="37" x2="173" y2="37"/><line x1="343" y1="37" x2="356" y2="37"/><line x1="463" y1="37" x2="476" y2="37"/>
+    <line x1="564" y1="54" x2="564" y2="98"/><line x1="478" y1="117" x2="465" y2="117"/><line x1="248" y1="117" x2="235" y2="117"/>
+    <line x1="108" y1="134" x2="108" y2="178"/><line x1="183" y1="197" x2="201" y2="197"/>
+  </g>
+  <g stroke="#2e7d32" stroke-width="1.5" fill="none" marker-end="url(#pfeil-ablauf-h5r)">
+    <line x1="185" y1="277" x2="198" y2="277"/><line x1="335" y1="277" x2="348" y2="277"/><line x1="475" y1="277" x2="488" y2="277"/>
+  </g>
+  <text x="259" y="72" text-anchor="middle" fill="#9a6400">HDF4: notice, stop</text>
+  <text x="574" y="82" fill="#5b6475">expand</text>
+  <text x="400" y="160" fill="#5b6475">selection in the tree</text>
+  <text x="118" y="160" fill="#5b6475">visible rows only</text>
+  <text x="10" y="250" fill="#5b6475">“As table” button, then “As CSV”</text>
+</svg>
+<figcaption>The path through the viewer. Blue: opening and display, ochre: the switch for HDF4, green: passing on as a table. Opening the file and the first pass over its datasets run in the background via <code>BusyRunner</code>, everything else on the event dispatch thread. If the file is closed or another one chosen before that, the callback discards its result and closes the file; while loading, its path counts as open, so that saving the workspace does not lose it.</figcaption>
+</figure>
+
 <h2 id="eigenschaften">Types, shapes and filters</h2>
 <p>A data type is named from its class and size in bytes: integers as <code>int</code> or <code>uint</code> with the bit count <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><mo>⋅</mo><mtext>size</mtext></mrow><annotation encoding="application/x-tex">8 \cdot \text{size}</annotation></semantics></math>, floating-point numbers as <code>float</code> with the bit count, fixed strings with their length, variable ones as <code>string(var)</code>, compounds with the number of their members. An attribute with several values carries the count in square brackets after the type.</p>
 <p>A shape is written as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><msub><mrow><mi>n</mi></mrow><mrow><mn>0</mn></mrow></msub><mo>×</mo><msub><mrow><mi>n</mi></mrow><mrow><mn>1</mn></mrow></msub><mo>×</mo><mo>…</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(n_0 \times n_1 \times \dots)</annotation></semantics></math>, a scalar as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">()</annotation></semantics></math>, an unlimited maximum extent as <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>∞</mi></mrow><annotation encoding="application/x-tex">\infty</annotation></semantics></math>. The filter chain is listed in the order of application with arrows in between. A compression ratio</p>

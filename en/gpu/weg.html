@@ -441,6 +441,66 @@ p ← g.programm(source, name → 64)                 <i>OpenCL C; work-group si
     k ← s.kern(p, "axpy").arg(0, n).arg(1, a).arg(2, x)…
     s.starte(k, n)                                <i>rounded up to a multiple of 64</i>
     s.lies(x, result)                             <i>waits for all launches before it</i></pre>
+<p>Behind these six lines the two back ends take different paths. Under Vulkan the framework itself translates the OpenCL C source to SPIR-V, <code>starte</code> only records into the command buffer, and only reading submits the package and waits for the fence. Under OpenCL the driver translates the source, <code>starte</code> enqueues the kernel, and reading waits, blocking, for everything before it. If neither back end delivers a device, the caller computes on the CPU and finds the reasons of both in the choice.</p>
+<figure>
+<svg viewBox="0 0 680 255" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="The choice tries Vulkan first, then OpenCL. At the top the path under Vulkan: device, own translator to SPIR-V, recording, reading with submit and wait. At the bottom the path under OpenCL: device, translation in the driver, enqueueing, blocking read. Without a device the caller computes on the CPU.">
+  <defs><marker id="pfeil-weg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="170" y="28" font-size="11" fill="#1f5f8b" font-weight="bold">framework-vulkan</text>
+  <text x="170" y="158" font-size="11" fill="#2e7d32" font-weight="bold">framework-opencl</text>
+  <g>    <rect x="10" y="100" width="140" height="46" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="80" y="114" text-anchor="middle" fill="#1f5f8b">Grafik</text>
+    <text x="80" y="128" text-anchor="middle" fill="#1f5f8b">.oeffne</text>
+    <text x="80" y="140" font-size="10" text-anchor="middle" fill="#5b6475">Vulkan before OpenCL</text></g>
+  <g>    <rect x="170" y="36" width="115" height="46" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="227" y="50" text-anchor="middle" fill="#1f5f8b">VulkanGpu</text>
+    <text x="227" y="64" text-anchor="middle" fill="#1f5f8b">.oeffne</text>
+    <text x="227" y="76" font-size="10" text-anchor="middle" fill="#5b6475">device or null</text></g>
+  <g>    <rect x="300" y="36" width="120" height="46" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="360" y="50" text-anchor="middle" fill="#1f5f8b">Uebersetzer</text>
+    <text x="360" y="64" text-anchor="middle" fill="#1f5f8b">.uebersetze</text>
+    <text x="360" y="76" font-size="10" text-anchor="middle" fill="#5b6475">OpenCL C → SPIR-V</text></g>
+  <g>    <rect x="435" y="36" width="110" height="46" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="490" y="50" text-anchor="middle" fill="#1f5f8b">Warteschlange</text>
+    <text x="490" y="64" text-anchor="middle" fill="#1f5f8b">.starte</text>
+    <text x="490" y="76" font-size="10" text-anchor="middle" fill="#5b6475">record</text></g>
+  <g>    <rect x="560" y="36" width="110" height="46" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="615" y="50" text-anchor="middle" fill="#1f5f8b">Warteschlange</text>
+    <text x="615" y="64" text-anchor="middle" fill="#1f5f8b">.lies</text>
+    <text x="615" y="76" font-size="10" text-anchor="middle" fill="#5b6475">submit, fence</text></g>
+  <g>    <rect x="170" y="166" width="115" height="46" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="227" y="180" text-anchor="middle" fill="#2e7d32">OpenClGpu</text>
+    <text x="227" y="194" text-anchor="middle" fill="#2e7d32">.oeffne</text>
+    <text x="227" y="206" font-size="10" text-anchor="middle" fill="#5b6475">device or null</text></g>
+  <g>    <rect x="300" y="166" width="120" height="46" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="360" y="180" text-anchor="middle" fill="#2e7d32">Geraet</text>
+    <text x="360" y="194" text-anchor="middle" fill="#2e7d32">.programm</text>
+    <text x="360" y="206" font-size="10" text-anchor="middle" fill="#5b6475">driver translates</text></g>
+  <g>    <rect x="435" y="166" width="110" height="46" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="490" y="180" text-anchor="middle" fill="#2e7d32">Warteschlange</text>
+    <text x="490" y="194" text-anchor="middle" fill="#2e7d32">.starte</text>
+    <text x="490" y="206" font-size="10" text-anchor="middle" fill="#5b6475">enqueue</text></g>
+  <g>    <rect x="560" y="166" width="110" height="46" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="615" y="180" text-anchor="middle" fill="#2e7d32">Warteschlange</text>
+    <text x="615" y="194" text-anchor="middle" fill="#2e7d32">.lies</text>
+    <text x="615" y="206" font-size="10" text-anchor="middle" fill="#5b6475">blocking</text></g>
+  <rect x="10" y="200" width="140" height="40" rx="4" fill="#ffffff" stroke="#9a6400"/>
+  <text x="80" y="216" text-anchor="middle" fill="#9a6400">no device:</text>
+  <text x="80" y="232" font-size="11" text-anchor="middle" fill="#9a6400">CPU, reasons of both</text>
+  <g stroke="#5b6475" stroke-width="1.5" fill="none">
+    <line x1="150" y1="115" x2="168" y2="62" marker-end="url(#pfeil-weg)"/>
+    <line x1="150" y1="131" x2="168" y2="186" marker-end="url(#pfeil-weg)"/>
+    <line x1="80" y1="146" x2="80" y2="198" stroke="#9a6400" stroke-dasharray="4 3" marker-end="url(#pfeil-weg)"/>
+    <line x1="285" y1="59" x2="298" y2="59" stroke="#1f5f8b" marker-end="url(#pfeil-weg)"/>
+    <line x1="420" y1="59" x2="433" y2="59" stroke="#1f5f8b" marker-end="url(#pfeil-weg)"/>
+    <line x1="545" y1="59" x2="558" y2="59" stroke="#1f5f8b" marker-end="url(#pfeil-weg)"/>
+    <line x1="285" y1="189" x2="298" y2="189" stroke="#2e7d32" marker-end="url(#pfeil-weg)"/>
+    <line x1="420" y1="189" x2="433" y2="189" stroke="#2e7d32" marker-end="url(#pfeil-weg)"/>
+    <line x1="545" y1="189" x2="558" y2="189" stroke="#2e7d32" marker-end="url(#pfeil-weg)"/>
+  </g>
+  <text x="166" y="140" font-size="10" fill="#5b6475">else</text>
+</svg>
+<figcaption>One kernel on both back ends. The choice takes the first back end that delivers a device; the notions – device, program, session, kernel, launch, read – are the same, only what happens behind them differs.</figcaption>
+</figure>
 <p>The interface is the intersection: a kernel argument is an <code>int</code>, a <code>double</code> or a buffer. What only one back end
 can do – breaking down the waiting time under Vulkan, for instance – stays in its own classes. A foreign buffer, a foreign kernel or a
 kernel the program does not have is rejected instead of silently computing wrongly. The same kernel from the same source yields the same

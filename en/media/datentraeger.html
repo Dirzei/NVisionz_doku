@@ -423,6 +423,52 @@ run ← none
 <p>Example: <code>00 00 10 52</code> is 10 seconds and 12 frames at 25 pictures, i.e. 10.48 s. The video attribute (two bytes at 0x200) carries the coding (MPEG-1/2) in bits 15–14, the system (NTSC/PAL) in 13–12, the aspect ratio in 11–10 and the picture size in <b>bits 3–2</b> (720, 704, 352 columns; 352 at half height). The category byte of each cell carries the position in the block (single, first, middle, last) in bits 7–6, the block type (1 = angle block) in 5–4 and the seamless connection in bit 3.</p>
 <div class="hinweis"><b>Caveat:</b> The DVD-Video specification is not freely available. Offsets and bit fields follow the layout used by freely documented DVD readers; it is tested on generated management files, not against the specification. Until 2026-10-26 the module read the picture size from bits 5–3 (720 columns at constant bit rate appeared as 352) and subtracted a menu VOB from the picture data; both are corrected.</div>
 
+<h2 id="ablauf-dvd">From the title set to the picture stream</h2>
+<p>A <code>VIDEO_TS</code> directory becomes a picture stream in four steps: the IFO of the title set is read, the VOB files found are checked against their sector counts, the files are then passed through one by one in sector order, and the elementary-stream scanner cuts only the payload of the video stream out of each packet. Nothing holds the whole title in memory: reading goes through a window of 1 MiB, cuts are made only at packet boundaries, and a packet cut off at the end of the window waits for the next one.</p>
+<p>A disc image takes a second path: the sector source delivers the payload of the sectors, and UDF (ISO 9660 likewise) turns it into the list of entries with their findings.</p>
+<figure>
+<svg viewBox="0 0 660 300" width="660" font-family="sans-serif" font-size="12">
+  <defs><marker id="pfeil-dvd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="20" y="22" fill="#1f5f8b" font-weight="bold">VIDEO_TS</text>
+  <g>    <rect x="20" y="34" width="140" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="90" y="55" text-anchor="middle" fill="#1f5f8b">Ifo.leseTitelsatz</text></g>
+  <g>    <rect x="200" y="34" width="100" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="250" y="55" text-anchor="middle" fill="#1f5f8b">Vobs.gegen</text></g>
+  <g>    <rect x="340" y="34" width="120" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="400" y="55" text-anchor="middle" fill="#1f5f8b">Vobs.videoAusAb</text></g>
+  <g>    <rect x="490" y="34" width="160" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="570" y="55" text-anchor="middle" fill="#1f5f8b">Elementarstrom.videoAus</text></g>
+  <g>    <rect x="180" y="104" width="140" height="34" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="250" y="125" text-anchor="middle" fill="#9a6400">Ifo.vobPruefung</text></g>
+  <g>    <rect x="490" y="104" width="160" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="570" y="125" text-anchor="middle" fill="#1f5f8b">Elementarstrom.abschnitt</text></g>
+  <g>    <rect x="430" y="174" width="220" height="34" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="540" y="195" text-anchor="middle" fill="#1f5f8b">Elementarstrom.ueberspringeKopf</text></g>
+  <rect x="250" y="174" width="150" height="34" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+  <text x="325" y="195" text-anchor="middle" fill="#1f5f8b">MPEG picture stream</text>
+  <text x="325" y="226" text-anchor="middle" fill="#5b6475">to the decoder in framework-video</text>
+  <text x="180" y="158" fill="#9a6400">sizes against the IFO</text>
+  <text x="560" y="160" text-anchor="end" fill="#5b6475">window 1 MiB, cuts at packet boundaries</text>
+  <line x1="160" y1="51" x2="198" y2="51" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-dvd)"/>
+  <line x1="300" y1="51" x2="338" y2="51" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-dvd)"/>
+  <line x1="460" y1="51" x2="488" y2="51" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-dvd)"/>
+  <line x1="250" y1="68" x2="250" y2="102" stroke="#9a6400" stroke-dasharray="3 3"/>
+  <line x1="570" y1="68" x2="570" y2="102" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-dvd)"/>
+  <line x1="570" y1="138" x2="570" y2="172" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-dvd)"/>
+  <line x1="430" y1="191" x2="402" y2="191" stroke="#1f5f8b" stroke-width="1.5" marker-end="url(#pfeil-dvd)"/>
+  <text x="20" y="244" fill="#2e7d32" font-weight="bold">Disc image</text>
+  <g>    <rect x="20" y="254" width="150" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="95" y="275" text-anchor="middle" fill="#2e7d32">Sektorquelle.puffer</text></g>
+  <g>    <rect x="200" y="254" width="140" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="270" y="275" text-anchor="middle" fill="#2e7d32">Udf.alleEintraege</text></g>
+  <rect x="370" y="254" width="150" height="34" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+  <text x="445" y="275" text-anchor="middle" fill="#2e7d32">entries, findings</text>
+  <line x1="170" y1="271" x2="198" y2="271" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-dvd)"/>
+  <line x1="340" y1="271" x2="368" y2="271" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#pfeil-dvd)"/>
+</svg>
+<figcaption>The DVD reading chain. Blue is the path through the directory to the bare picture stream, orange the check of the files against the management file, green the path through a disc image. Every box with a method name carries a reference to that method.</figcaption>
+</figure>
+
 <h2 id="pruefung">How it is checked</h2>
 <p>The probe <code>Medienprobe</code> lays out sectors, ISO 9660 directories and descriptors byte by byte itself; no stored test files exist. <code>disc.Udfprobe</code> checks the UDF chain against ECMA-167/UDF 2.01 with generated test pieces. Every damage case has a case with intact material beside it, because a judge that deems everything broken is as wrong as one that notices nothing.</p>
 <ul>

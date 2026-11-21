@@ -271,7 +271,79 @@ math[display="block"]{margin:10px 0}
 <h2 id="problem">Worum es geht</h2>
 <p>Ein Gleichungssystem aus <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> Gleichungen für <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math> unbekannte Größen soll gelöst werden. In der Thermodynamik und Strömungsmechanik sind die Gleichungen nichtlinear (Zustandsgleichungen, Stoffwerte, Kennfelder), und niemand kann sie nach den Unbekannten auflösen. Man schreibt sie als Nullstellenproblem</p>
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">F</mi><mo stretchy="false">(</mo><mi mathvariant="normal">x</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="2em"/><mi mathvariant="normal">F</mi><mo>:</mo><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>n</mi></mrow></msup><mo>→</mo><msup><mrow><mi mathvariant="normal">R</mi></mrow><mrow><mi>n</mi></mrow></msup></mrow><annotation encoding="application/x-tex">\mathbf F(\mathbf x) = \mathbf 0, \qquad \mathbf F:\mathbb R^n\to\mathbb R^n</annotation></semantics></math></p>
-<p>und nähert sich der Lösung schrittweise. Das Framework hat dafür zwölf Löser hinter einer Schnittstelle; sie teilen sich eine gemeinsame Schleife in <code>AbstractSolver</code> und unterscheiden sich im <i>Schritt</i> (<code>computeStep</code>) und in der <i>Dämpfung</i> (<code>armijoStep</code>). Diese Seite beschreibt den Kern, an dem alle hängen: das Newton-Verfahren, die Jacobi-Matrix, die Dämpfung, die Skalierung und die Abbruchkriterien.</p>
+<p>und nähert sich der Lösung schrittweise. Das Framework hat dafür vierzehn Löser hinter einer Schnittstelle; sie teilen sich eine gemeinsame Schleife in <code>AbstractSolver</code> und unterscheiden sich im <i>Schritt</i> (<code>computeStep</code>) und in der <i>Dämpfung</i> (<code>armijoStep</code>). Diese Seite beschreibt den Kern, an dem alle hängen: das Newton-Verfahren, die Jacobi-Matrix, die Dämpfung, die Skalierung und die Abbruchkriterien.</p>
+
+<h2 id="ablauf-lauf">Der Weg eines Laufs</h2>
+<p>Bevor gerechnet wird, liest <code>SolverAPI.loadModel</code> das Modell. Die Endung entscheidet: Eine NFML-Datei wird erst um ihre Einbindungen ergänzt, deren Pfade relativ zur einbindenden Datei gelten, und dann zu einem Gleichungssystem gebunden; eine CAS-Datei geht durch den älteren Leser. Beide Wege enden im selben Systemdatensatz. <code>solve</code> rechnet nicht, wenn beim Lesen Fehler gemeldet wurden, sondern gibt sie als Fehlschlag zurück; sonst wählt <code>EqnSystem.run</code> über die Fabrik den eingestellten Löser. Homotopie, Bogenlänge und adaptives λ haben eigene Wege (siehe <a href="fortsetzung.html">Fortsetzung</a>); alle anderen Löser laufen durch die gemeinsame Schleife.</p>
+<p>In <code>AbstractSolver.solve</code> werden zuerst die Strukturschalter und die INITIALIZE-Werte gesetzt, die Skalierung gewählt und, falls eingeschaltet, die Startwerte blockweise vorgelöst (<a href="zerlegung.html">Zerlegung</a>). Dann prüft jede Iteration zuerst das Residuum gegen die absolute und die relative Schranke, baut die Jacobi-Matrix, berechnet den Schritt und dämpft ihn. Am Ende steht der Abschlusscode: HNSI 300 konvergiert, 1300 konvergiert mit verletzter Grenze, 9001 nicht konvergiert. Ist die Neustartleiter eingeschaltet und der Lauf nicht konvergiert, wiederholt <code>solve</code> ihn mit einer anderen Pivotwahl (nur bei Lösern mit dünnbesetztem Kern) und danach mit einem anderen Löser. Der Stapelläufer geht an der API vorbei direkt auf <code>EqnSystem.run</code>: je Betriebspunkt einmal, mit der letzten konvergierten Lösung als Start und, wenn das scheitert, noch einmal kalt ab INITIALIZE.</p>
+<figure>
+<svg viewBox="0 0 680 305" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Oben das Lesen des Modells über NFML oder CAS in einen Systemdatensatz; darunter Lösen über SolverAPI, EqnSystem und die gemeinsame Schleife mit optionalem Vorlösen; der Stapelläufer ruft EqnSystem direkt. Unten die Newton-Schleife aus Jacobi-Matrix, Schritt und Liniensuche, die mit dem Abschlusscode endet.">
+  <defs><marker id="pfeil-lauf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="10" y="32" font-size="11" fill="#1f5f8b" font-weight="bold">Modell lesen</text>
+  <text x="10" y="118" font-size="11" fill="#1f5f8b" font-weight="bold">Lösen</text>
+  <text x="275" y="234" font-size="11" fill="#1f5f8b" font-weight="bold">Newton-Schleife, je Iteration</text>
+  <g>    <rect x="10" y="43" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="85" y="59" text-anchor="middle" fill="#1f5f8b">SolverAPI</text>
+    <text x="85" y="75" text-anchor="middle" fill="#1f5f8b">.loadModel</text></g>
+  <g>    <rect x="185" y="20" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="260" y="36" text-anchor="middle" fill="#1f5f8b">NfmlFlowsheet</text>
+    <text x="260" y="52" text-anchor="middle" fill="#1f5f8b">.bind</text></g>
+  <g>    <rect x="185" y="66" width="150" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="260" y="82" text-anchor="middle" fill="#2e7d32">EqnSysReader</text>
+    <text x="260" y="98" font-size="11" text-anchor="middle" fill="#2e7d32">.parseEquationSystemFile</text></g>
+  <rect x="360" y="43" width="120" height="40" rx="4" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <text x="420" y="68" text-anchor="middle" fill="#1f5f8b">SystemData</text>
+  <g>    <rect x="10" y="126" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="85" y="142" text-anchor="middle" fill="#1f5f8b">SolverAPI.solve</text>
+    <text x="85" y="158" font-size="10" text-anchor="middle" fill="#5b6475">Neustartleiter</text></g>
+  <g>    <rect x="185" y="126" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="260" y="142" text-anchor="middle" fill="#1f5f8b">EqnSystem.run</text>
+    <text x="260" y="158" font-size="10" text-anchor="middle" fill="#5b6475">SolverFactory.create</text></g>
+  <g>    <rect x="360" y="126" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="435" y="142" text-anchor="middle" fill="#1f5f8b">AbstractSolver</text>
+    <text x="435" y="158" text-anchor="middle" fill="#1f5f8b">.solve</text></g>
+  <g>    <rect x="535" y="126" width="135" height="40" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="602" y="142" text-anchor="middle" fill="#5b6475">AutoInitSweep</text>
+    <text x="602" y="158" text-anchor="middle" fill="#5b6475">.ausfuehren</text></g>
+  <g>    <rect x="10" y="180" width="150" height="40" rx="4" fill="#ffffff" stroke="#2e7d32"/>
+    <text x="85" y="196" text-anchor="middle" fill="#2e7d32">BatchRunner</text>
+    <text x="85" y="212" text-anchor="middle" fill="#2e7d32">.executeRun</text></g>
+  <g>    <rect x="185" y="240" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="260" y="256" text-anchor="middle" fill="#1f5f8b">AbstractSolver</text>
+    <text x="260" y="272" text-anchor="middle" fill="#1f5f8b">.buildJacobian</text></g>
+  <g>    <rect x="360" y="240" width="150" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="435" y="256" text-anchor="middle" fill="#1f5f8b">NewtonArmijoSolver</text>
+    <text x="435" y="272" text-anchor="middle" fill="#1f5f8b">.computeStep</text></g>
+  <g>    <rect x="535" y="240" width="135" height="40" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="602" y="256" text-anchor="middle" fill="#1f5f8b">NewtonArmijoSolver</text>
+    <text x="602" y="272" text-anchor="middle" fill="#1f5f8b">.armijoStep</text></g>
+  <g>    <rect x="10" y="240" width="150" height="40" rx="4" fill="#e8f0f6" stroke="#9a6400"/>
+    <text x="85" y="256" text-anchor="middle" fill="#9a6400">AbstractSolver</text>
+    <text x="85" y="272" text-anchor="middle" fill="#9a6400">.buildResult</text></g>
+  <g stroke="#5b6475" stroke-width="1.5" fill="none">
+    <line x1="160" y1="56" x2="183" y2="44" marker-end="url(#pfeil-lauf)"/>
+    <line x1="160" y1="70" x2="183" y2="84" marker-end="url(#pfeil-lauf)"/>
+    <line x1="335" y1="44" x2="358" y2="58" marker-end="url(#pfeil-lauf)"/>
+    <line x1="335" y1="84" x2="358" y2="70" marker-end="url(#pfeil-lauf)"/>
+    <line x1="420" y1="83" x2="420" y2="124" stroke-dasharray="4 3" marker-end="url(#pfeil-lauf)"/>
+    <line x1="160" y1="146" x2="183" y2="146" marker-end="url(#pfeil-lauf)"/>
+    <line x1="335" y1="146" x2="358" y2="146" marker-end="url(#pfeil-lauf)"/>
+    <line x1="510" y1="146" x2="533" y2="146" marker-end="url(#pfeil-lauf)"/>
+    <line x1="160" y1="200" x2="215" y2="168" stroke="#2e7d32" marker-end="url(#pfeil-lauf)"/>
+    <path d="M602 166 L602 216 L260 216 L260 238" marker-end="url(#pfeil-lauf)"/>
+    <line x1="335" y1="260" x2="358" y2="260" stroke="#1f5f8b" marker-end="url(#pfeil-lauf)"/>
+    <line x1="510" y1="260" x2="533" y2="260" stroke="#1f5f8b" marker-end="url(#pfeil-lauf)"/>
+    <path d="M602 280 L602 294 L260 294 L260 282" stroke="#1f5f8b" marker-end="url(#pfeil-lauf)"/>
+    <line x1="185" y1="260" x2="162" y2="260" stroke="#9a6400" stroke-dasharray="4 3" marker-end="url(#pfeil-lauf)"/>
+  </g>
+  <text x="365" y="22" font-size="10" fill="#5b6475">.nfml</text>
+  <text x="365" y="100" font-size="10" fill="#5b6475">sonst CAS</text>
+  <text x="168" y="192" font-size="10" fill="#2e7d32">Stapel</text>
+  <text x="380" y="304" font-size="10" fill="#1f5f8b">nächste Iteration</text>
+  <text x="163" y="236" font-size="10" fill="#9a6400">Residuum klein</text>
+</svg>
+<figcaption>Vom Modelltext zum Abschlusscode. Die drei Kästen unten zeigen die Schleife am Beispiel des Newton-Lösers mit Armijo-Dämpfung; die anderen Löser tauschen <code>computeStep</code> und <code>armijoStep</code> aus. Die Prüfung des Residuums steht am Anfang jeder Iteration: Ist es klein genug oder die Höchstzahl der Iterationen erreicht, endet die Schleife mit dem Ergebnis.</figcaption>
+</figure>
 
 <h2 id="newton">Das Newton-Verfahren</h2>
 <p>Ist <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\mathbf x_k</annotation></semantics></math> eine Näherung, ersetzt man <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">F</mi></mrow><annotation encoding="application/x-tex">\mathbf F</annotation></semantics></math> in ihrer Umgebung durch die Tangentialebene (Taylor-Entwicklung erster Ordnung):</p>
@@ -382,7 +454,7 @@ math[display="block"]{margin:10px 0}
 <p class="quelle">Quelle: <code>eqnparser/src/apps/eqnParser/solver/AbstractSolver.java</code> (<code>solve</code>, <code>buildJacobian</code>), <code>NewtonArmijoSolver.java</code> (<code>computeStep</code>, <code>armijoStep</code>), <code>BroydenSolver.java</code> (<code>applyBroydenUpdate</code>), <code>LevenbergMarquardtSolver.java</code> (<code>solveLMSystem</code>, <code>adaptMu</code>, <code>initializeMu</code>), <code>SolverConfig.java</code>; <code>eqnparser/src/apps/eqnParser/nfml/Dual.java</code>, <code>DualEvaluator.java</code></p>
 
 <h2 id="varianten">Wie sich die Löser unterscheiden</h2>
-<p>Die Schleife bleibt, der Schritt wechselt: <code>NEWTON_SPARSE</code> löst dasselbe System mit dünn besetzter LU (aus framework-math), <code>NEWTON_GMRES</code> iterativ mit GMRES, <code>BROYDEN</code> ersetzt die Jacobi-Matrix durch Rang-1-Aufdatierungen und baut sie nur selten neu auf, <code>LEVENBERG_MARQUARDT</code> dämpft den Schritt über einen Parameter statt über eine Liniensuche. Die Übersicht der Rubrik <a href="index.html#loeser">Zwölf Löser hinter einer Schnittstelle</a> führt alle auf. Schwierige Starts behandelt die Fortsetzung, siehe <a href="fortsetzung.html">Fortsetzungsverfahren</a>.</p>
+<p>Die Schleife bleibt, der Schritt wechselt: <code>NEWTON_SPARSE</code> löst dasselbe System mit dünn besetzter LU (aus framework-math), <code>NEWTON_GMRES</code> iterativ mit GMRES, <code>BROYDEN</code> ersetzt die Jacobi-Matrix durch Rang-1-Aufdatierungen und baut sie nur selten neu auf, <code>LEVENBERG_MARQUARDT</code> dämpft den Schritt über einen Parameter statt über eine Liniensuche. Die Übersicht der Rubrik <a href="index.html#loeser">Vierzehn Löser hinter einer Schnittstelle</a> führt alle auf. Schwierige Starts behandelt die Fortsetzung, siehe <a href="fortsetzung.html">Fortsetzungsverfahren</a>.</p>
 
 <h3>Broyden: Sekante statt Jacobi-Matrix</h3>
 <p>Nach einem Schritt <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">s</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\mathbf s_k=\mathbf x_{k+1}-\mathbf x_k</annotation></semantics></math> kennt man die Änderung des Residuums <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">y</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><mi mathvariant="normal">F</mi><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo stretchy="false">)</mo><mo>−</mo><mi mathvariant="normal">F</mi><mo stretchy="false">(</mo><msub><mrow><mi mathvariant="normal">x</mi></mrow><mrow><mi>k</mi></mrow></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf y_k=\mathbf F(\mathbf x_{k+1})-\mathbf F(\mathbf x_k)</annotation></semantics></math>. Eine Näherung <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">J</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub></mrow><annotation encoding="application/x-tex">\mathbf J_{k+1}</annotation></semantics></math> soll diese eine Richtung richtig abbilden (<b>Sekantenbedingung</b>) und sich sonst so wenig wie möglich ändern. Die kleinste Änderung in der Frobenius-Norm, die <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi mathvariant="normal">J</mi></mrow><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><msub><mrow><mi mathvariant="normal">s</mi></mrow><mrow><mi>k</mi></mrow></msub><mo>=</mo><msub><mrow><mi mathvariant="normal">y</mi></mrow><mrow><mi>k</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\mathbf J_{k+1}\mathbf s_k=\mathbf y_k</annotation></semantics></math> erfüllt, ist die Rang-1-Aufdatierung</p>
