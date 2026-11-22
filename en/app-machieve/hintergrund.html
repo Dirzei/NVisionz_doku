@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run, Solver Loop and Results – Background – envisionz</title>
+<style>
+:root{
+  --bg:#fbfaf7; --fl:#ffffff; --tx:#1d2330; --mu:#5b6475; --li:#e4e1d8; --ak:#1f5f8b; --ak2:#e8f0f6;
+  --ok:#2e7d4f; --wa:#9a6400; --code:#f3f1ea; --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15181e; --fl:#1c2028; --tx:#e6e8ec; --mu:#a1a8b5; --li:#2c323d; --ak:#7fb6de; --ak2:#1e2c38;
+        --ok:#7cc79a; --wa:#e0b060; --code:#232833;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+a{color:var(--ak)}
+.seite{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header.titel{border-bottom:3px solid var(--ak);padding-bottom:18px;margin-bottom:22px}
+.modul{font:600 13px/1 var(--mono);color:var(--ak);letter-spacing:.04em}
+h1{font-size:32px;margin:8px 0 6px}
+.unter{color:var(--mu);margin:0}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:22px 0}
+.zahl{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.zahl b{display:block;font-size:24px;color:var(--ak)}
+.zahl span{color:var(--mu);font-size:13px}
+h2{font-size:23px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--li)}
+h2 .paket{font:500 13px var(--mono);color:var(--mu);margin-left:10px}
+.einl{color:var(--mu);max-width:880px}
+.karte{background:var(--fl);border:1px solid var(--li);border-radius:10px;padding:16px 18px;margin:14px 0;break-inside:avoid}
+.karte h3{margin:0 0 4px;font-size:17px}
+.karte h3 code{font-size:16px}
+.zweck{margin:4px 0 10px}
+.gitter{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.gitter{grid-template-columns:1fr}}
+.feld h4{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+ul.meth{margin:0;padding-left:18px}
+ul.meth li{margin:2px 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--code);padding:1px 4px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--code);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:6px 0 0;line-height:1.45}
+pre code{background:none;padding:0}
+.bsp{margin-top:12px}
+.bsp h4{margin:10px 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.bsp p{margin:2px 0}
+.einsatz{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;border:1px solid var(--li);border-radius:12px;padding:1px 8px;background:var(--bg)}
+.chip.frei{color:var(--wa);border-color:var(--wa)}
+.hinweis{border-left:3px solid var(--wa);padding:6px 12px;background:var(--fl);margin:12px 0;font-size:14px}
+/* TD2 2026-10-18: Belege, nur in der internen Fassung (Seitenbau -belege) */
+.beleg{border-left:3px solid var(--ak);padding:4px 10px;margin:4px 0 14px;font-size:12px;color:var(--mu);overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--li);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--ak2)}
+td.x{text-align:center;color:var(--ok);font-weight:700}
+.grundsatz{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.grundsatz div{background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+.grundsatz b{color:var(--ak)}
+footer{margin-top:50px;color:var(--mu);font-size:13px;border-top:1px solid var(--li);padding-top:12px}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .seite{max-width:none;padding:0}
+    .karte,.zahl,.grundsatz div{border-color:#bbb}
+  h2{break-before:page;border-top:none}
+  h2#grundsaetze{break-before:auto}
+  pre{white-space:pre-wrap}
+}
+@media print{.sprache{display:none}}
+
+/* ---- Rahmen der Website (Seitenbau, 2026-09-28) ---------------------- */
+nav.leiste{position:fixed;top:0;left:0;width:264px;height:100%;overflow-y:auto;background:var(--fl);
+  border-right:1px solid var(--li);padding:18px 0 40px;font-size:13.5px}
+nav.leiste a{display:block;color:var(--tx);text-decoration:none;padding:3px 18px}
+nav.leiste a.marke{font:700 17px/1.2 var(--mono);color:var(--ak);padding:0 18px 12px}
+/* WB12 2026-10-04: Suche ueber alle Seiten */
+nav.leiste .suche{padding:0 18px 10px}
+nav.leiste .suche input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--li);border-radius:4px;background:var(--bg);color:var(--tx)}
+nav.leiste .treffer{font-size:12px;color:var(--mu)}
+nav.leiste .treffer a{padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--li)}
+nav.leiste .treffer a span{display:block;color:var(--mu);font-size:11px}
+/* WB10 2026-10-04: Gleichungsnummern */
+span.gleichung{display:flex;align-items:center;gap:12px}
+span.glformel{flex:1 1 auto;min-width:0}
+span.glnr{flex:none;color:var(--mu)}
+a.glverweis{white-space:nowrap}
+/* WB11 2026-10-04: Rechendemos (Skript nur im Netz, sonst GIF) */
+div.demo{margin:0 auto;max-width:480px}
+div.demo img{display:block;max-width:100%;height:auto}
+label.regler{display:block;margin-top:6px;font-size:13px;color:var(--mu)}
+label.regler input{vertical-align:middle;width:260px;max-width:60%}
+nav.leiste .gruppe{margin:14px 18px 3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mu)}
+nav.leiste a.eintrag.aktiv{color:var(--ak);font-weight:600;background:var(--ak2)}
+nav.leiste .rubriken{border-left:2px solid var(--ak2);margin:2px 0 6px 26px}
+nav.leiste a.rubrik{padding:2px 10px;color:var(--mu)}
+nav.leiste a.rubrik.jetzt{color:var(--ak);font-weight:600}
+nav.leiste a.unterseite{padding:2px 10px 2px 22px;font-size:12.5px;color:var(--mu)}
+nav.leiste a.unterseite.aktiv{color:var(--ak);font-weight:600}
+main.haupt{margin-left:264px}
+body.hilfe main.haupt{margin-left:0} /* WB20 2026-10-04: Hilfe ohne Leiste, die Doku-App hat den Baum */
+.pfad{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:14px 20px 0;font-size:13px;color:var(--mu)}
+.pfad a{color:var(--ak);text-decoration:none}
+a.sprachwahl{border:1px solid var(--ak);border-radius:12px;padding:1px 10px}
+main.haupt .seite{padding-top:14px}
+@media (max-width:900px){
+  nav.leiste{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--li);padding:12px 0}
+  nav.leiste .gruppe, nav.leiste a.eintrag:not(.aktiv){display:none}
+  main.haupt{margin-left:0}
+}
+@media (max-width:600px){
+  h1{font-size:24px;hyphens:auto;overflow-wrap:break-word}
+  h2{font-size:20px}
+  table{display:block;overflow-x:auto}
+  .gitter{grid-template-columns:1fr}
+}
+@media print{nav.leiste,.pfad{display:none} main.haupt{margin-left:0}}
+
+/* ---- Vertiefungsseiten ------------------------------------------------- */
+a.vertiefung{display:inline-block;margin-top:10px;font-size:13px;color:var(--ak);text-decoration:none;border:1px solid var(--ak);border-radius:14px;padding:2px 12px}
+.theorie p,.theorie li{max-width:860px}
+pre.pseudo{background:var(--fl);border:1px solid var(--li);font-size:13px}
+pre.pseudo b{color:var(--ak)}
+pre.pseudo i{color:var(--mu)}
+figure{margin:16px 0;background:var(--fl);border:1px solid var(--li);border-radius:8px;padding:12px 14px}
+figcaption{font-size:13px;color:var(--mu);margin-top:6px}
+/* Bilder (2026-09-29): Schemata und erzeugte Bilder haben helle Farben; im dunklen Modus liegen sie auf Papier */
+figure img,figure>svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figure video{max-width:100%;height:auto;display:block;margin:0 auto}
+@media (prefers-color-scheme: dark){figure img,figure>svg{background:#f7f6f2;border-radius:6px;padding:6px}}
+figure.kopfbild{float:right;width:360px;max-width:42%;margin:4px 0 14px 24px}
+@media (max-width:760px){figure.kopfbild{float:none;width:auto;max-width:100%;margin:14px 0}}
+h2{clear:both}
+.quelle{font-size:12.5px;color:var(--mu)}
+.ampel{font-size:13px}
+.deckung{white-space:nowrap}
+.abgleiche{font-size:13px;margin:8px 0 0;line-height:1.7}
+.ampel.gruen{color:var(--ok)} .ampel.gelb{color:var(--wa)} .ampel.rot{color:#c0392b}
+math[display="block"]{margin:10px 0}
+
+</style>
+</head>
+<body>
+<nav class="leiste">
+<a class="marke" href="../index.html">envisionz</a>
+<div class="suche"><input type="search" placeholder="Search …" aria-label="Search" data-index="../../suche_en.js" data-wurzel="../../" data-leer="Nothing found."><div class="treffer"></div></div>
+<div class="gruppe">Application framework</div>
+<a class="eintrag" href="../api/index.html">framework-api</a>
+<a class="eintrag" href="../core/index.html">framework-core</a>
+<a class="eintrag" href="../swing/index.html">framework-swing</a>
+<a class="eintrag" href="../viewer/index.html">framework-viewer</a>
+<div class="gruppe">Data and files</div>
+<a class="eintrag" href="../data/index.html">framework-data</a>
+<a class="eintrag" href="../compress/index.html">framework-compress</a>
+<a class="eintrag" href="../fileformats/index.html">framework-fileformats</a>
+<a class="eintrag" href="../pdf/index.html">framework-pdf</a>
+<a class="eintrag" href="../ocr/index.html">framework-ocr</a>
+<a class="eintrag" href="../reporttable/index.html">framework-reporttable</a>
+<div class="gruppe">Visualisation</div>
+<a class="eintrag" href="../chart/index.html">framework-chart</a>
+<a class="eintrag" href="../chart3d/index.html">framework-chart3d</a>
+<a class="eintrag" href="../diagramm/index.html">framework-diagramm</a>
+<a class="eintrag" href="../flowsheet/index.html">framework-flowsheet</a>
+<a class="eintrag" href="../image/index.html">framework-image</a>
+<div class="gruppe">Computation and modelling</div>
+<a class="eintrag" href="../math/index.html">framework-math</a>
+<a class="eintrag" href="../stats/index.html">framework-stats</a>
+<a class="eintrag" href="../thermo/index.html">framework-thermo</a>
+<a class="eintrag" href="../turbo/index.html">framework-turbo</a>
+<a class="eintrag" href="../struktur/index.html">framework-struktur</a>
+<a class="eintrag" href="../regelung/index.html">framework-regelung</a>
+<a class="eintrag" href="../cfd/index.html">framework-cfd</a>
+<a class="eintrag" href="../cfd-validierung/index.html">cfd-validierung</a>
+<a class="eintrag" href="../eqnparser/index.html">commandline-eqnparser</a>
+<a class="eintrag" href="../gpu/index.html">framework-opencl/vulkan</a>
+<div class="gruppe">Learning and search</div>
+<a class="eintrag" href="../autograd/index.html">framework-autograd</a>
+<a class="eintrag" href="../neural/index.html">framework-neural</a>
+<a class="eintrag" href="../evolve/index.html">framework-evolve</a>
+<div class="gruppe">Sound, image, video</div>
+<a class="eintrag" href="../audio/index.html">framework-audio</a>
+<a class="eintrag" href="../audiocodec/index.html">framework-audiocodec</a>
+<a class="eintrag" href="../audiometrik/index.html">framework-audiometrik</a>
+<a class="eintrag" href="../voice/index.html">framework-voice</a>
+<a class="eintrag" href="../media/index.html">framework-media</a>
+<a class="eintrag" href="../video/index.html">framework-video</a>
+<a class="eintrag" href="../restore/index.html">framework-restore</a>
+<a class="eintrag" href="../echtheit/index.html">framework-echtheit</a>
+<a class="eintrag" href="../vision/index.html">framework-vision</a>
+<a class="eintrag" href="../tonmessung/index.html">framework-tonmessung</a>
+<a class="eintrag" href="../imaging/index.html">framework-imaging</a>
+<a class="eintrag" href="../lupe/index.html">framework-lupe</a>
+<a class="eintrag" href="../kamera/index.html">framework-kamera-desktop</a>
+<div class="gruppe">Further</div>
+<a class="eintrag" href="../chiffre/index.html">framework-chiffre</a>
+<a class="eintrag" href="../usb/index.html">framework-usb</a>
+<div class="gruppe">Applications</div>
+<a class="eintrag" href="../app-acft/index.html">app-acft</a>
+<a class="eintrag" href="../app-audio/index.html">app-audio</a>
+<a class="eintrag" href="../app-cfd/index.html">app-cfd</a>
+<a class="eintrag" href="../app-charts/index.html">app-charts</a>
+<a class="eintrag" href="../app-chiffre/index.html">app-chiffre</a>
+<a class="eintrag" href="../app-digitizer/index.html">app-digitizer</a>
+<a class="eintrag" href="../app-doku/index.html">app-doku</a>
+<a class="eintrag" href="../app-prelimdesign/index.html">app-prelimdesign</a>
+<a class="eintrag" href="../app-eqnparser/index.html">app-eqnparser</a>
+<a class="eintrag" href="../app-fileanalysis/index.html">app-fileanalysis</a>
+<a class="eintrag" href="../app-forensik/index.html">app-forensik</a>
+<a class="eintrag" href="../app-hdf5reader/index.html">app-hdf5reader</a>
+<a class="eintrag" href="../app-hello/index.html">app-hello</a>
+<a class="eintrag" href="../app-deutschlearn/index.html">school-deutschlearn</a>
+<a class="eintrag" href="../app-langlearn/index.html">school-langlearn</a>
+<a class="eintrag" href="../app-learn/index.html">app-learn</a>
+<a class="eintrag" href="../app-lupe/index.html">app-lupe</a>
+<a class="eintrag aktiv" href="index.html">app-machieve</a>
+<div class="rubriken">
+<a class="rubrik" href="index.html#zweck">What the app is for</a>
+<a class="rubrik" href="index.html#funktionen">What it can do</a>
+<a class="unterseite" href="bedienung.html">Bedienung</a>
+<a class="rubrik" href="index.html#daten">Data and formats</a>
+<a class="rubrik" href="index.html#aufbau">What it builds on</a>
+<a class="rubrik" href="index.html#hintergrund">How the app works</a>
+<a class="unterseite aktiv" href="hintergrund.html">Run, loop, results</a>
+<a class="rubrik" href="index.html#stand">Status and limits</a>
+</div>
+<a class="eintrag" href="../app-maps/index.html">app-maps</a>
+<a class="eintrag" href="../app-mathlearn/index.html">school-mathlearn</a>
+<a class="eintrag" href="../app-matrix/index.html">app-matrix</a>
+<a class="eintrag" href="../app-neural/index.html">app-neural</a>
+<a class="eintrag" href="../app-pdfdigitizer/index.html">app-pdfdigitizer</a>
+<a class="eintrag" href="../app-relief/index.html">app-relief</a>
+<a class="eintrag" href="../app-report/index.html">app-report</a>
+<a class="eintrag" href="../app-school/index.html">app-school</a>
+<a class="eintrag" href="../app-settings/index.html">app-settings</a>
+<a class="eintrag" href="../app-stats/index.html">app-stats</a>
+<a class="eintrag" href="../app-thermo/index.html">app-thermo</a>
+<div class="gruppe">Command line and launchers</div>
+<a class="eintrag" href="../cmd-audiocodec/index.html">commandline-audiocodec</a>
+<a class="eintrag" href="../cmd-audiometrik/index.html">commandline-audiometrik</a>
+<a class="eintrag" href="../cmd-cfd/index.html">commandline-cfd</a>
+<a class="eintrag" href="../cmd-chiffre/index.html">commandline-chiffre</a>
+<a class="eintrag" href="../cmd-lupe/index.html">commandline-lupe</a>
+<a class="eintrag" href="../cmd-ocr/index.html">commandline-ocr</a>
+<a class="eintrag" href="../cmd-vision/index.html">commandline-vision</a>
+<a class="eintrag" href="../starter/index.html">launcher</a>
+<div class="gruppe">Testing</div>
+<a class="eintrag" href="../pruefstand/index.html">pruefstand</a>
+</nav>
+<main class="haupt">
+<div class="pfad"><span><a href="../index.html">Overview</a> › <a href="index.html">app-machieve</a> › Run, Solver Loop and Results – Background</span><a class="sprachwahl" href="../../de/app-machieve/hintergrund.html">Deutsch</a></div>
+<div class="seite theorie">
+
+<header class="titel">
+  <div class="modul">envisionz-app-machieve · Background</div>
+  <h1>Run, Solver Loop and Results – Background</h1>
+  <p class="unter">Which method runs when and on which thread: from loading a case through the start on the worker thread and the loop of the dimensionless pipeline to the results view, which reloads newly written solutions during the run.</p>
+</header>
+
+<h2 id="worum">What this is about</h2>
+<p class="einl">m-ACHIEVE computes for a long time – minutes to hours. The interface has to stay usable meanwhile, show the progress and be able to stop a run. This page shows the three paths that carry this: the run from the interface into the worker thread and back, the loop in which one step is computed, and the reloading of results. What the methods themselves compute is described in the solver manual; operation on the page <a href="bedienung.html">Operation</a>.</p>
+
+<h2 id="lauf">From the case to the run and back</h2>
+<p>A case is loaded on the event thread: the button in the <i>Test cases</i> tab hands the path to the main window, which informs the mesh, setup and run tabs in turn. The run tab reads <code>achieve.inp</code> for its defaults and takes the run settings <code>run.*</code> from <code>testcase.properties</code>. On start it assembles the settings of one run – switches of the interface, defaults of the case, advanced settings of the user, which win last – and writes the combustion and additional entries as <code>achieve.jconfig</code> only if they carry at least one entry.</p>
+<p>The computation runs in a <code>SwingWorker</code>. It reads the case a second time, now completely with mesh and gas composition, and calls the solver. Every step reports through a listener that collects the values with <code>publish</code>; <code>process</code> hands them on the event thread to the log and the convergence chart. Log lines of the solver loggers and the mass flow line go through <code>invokeLater</code>. The final result is fetched by <code>done</code>, also on the event thread.</p>
+<figure>
+<svg viewBox="0 0 680 270" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Three rows. Top, on the event thread: load button, main window loads the case, run tab takes the defaults, start assembles the settings and creates a SolverWorker. Middle, on the worker thread: doInBackground, read the case completely, solve, branch into the dimensionless pipeline. Bottom, again on the event thread: the listener collects every step, process shows it, done fetches the result and onComplete passes it on.">
+  <defs><marker id="pfeil-lauf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="10" y="24" font-size="11" fill="#1f5f8b" font-weight="bold">Event thread: load and start</text>
+  <text x="10" y="109" font-size="11" fill="#1f5f8b" font-weight="bold">Worker thread</text>
+  <text x="10" y="199" font-size="11" fill="#1f5f8b" font-weight="bold">Event thread</text>
+  <g>    <rect x="10" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="69" y="45" text-anchor="middle" fill="#5b6475">TestcaseTab</text>
+    <text x="69" y="59" text-anchor="middle" fill="#5b6475">.showDetail</text>
+    <text x="69" y="73" font-size="10" text-anchor="middle" fill="#5b6475">Load button</text></g>
+  <g>    <rect x="145" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="204" y="45" text-anchor="middle" fill="#5b6475">MachievePanel</text>
+    <text x="204" y="59" text-anchor="middle" fill="#5b6475">.loadTestcase</text>
+    <text x="204" y="73" font-size="10" text-anchor="middle" fill="#5b6475">mesh, setup, run</text></g>
+  <g>    <rect x="280" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="339" y="45" text-anchor="middle" fill="#5b6475">RunTab</text>
+    <text x="339" y="59" text-anchor="middle" fill="#5b6475">.loadTestcase</text>
+    <text x="339" y="73" font-size="10" text-anchor="middle" fill="#5b6475">achieve.inp, run.*</text></g>
+  <g>    <rect x="415" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="474" y="45" text-anchor="middle" fill="#9a6400">RunTab</text>
+    <text x="474" y="59" text-anchor="middle" fill="#9a6400">.startSolverRun</text>
+    <text x="474" y="73" font-size="10" text-anchor="middle" fill="#5b6475">settings, jconfig</text></g>
+  <rect x="550" y="30" width="118" height="50" rx="4" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <text x="609" y="51" text-anchor="middle" fill="#1f5f8b">new SolverWorker,</text>
+  <text x="609" y="67" text-anchor="middle" fill="#1f5f8b">execute</text>
+  <g>    <rect x="10" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="69" y="130" text-anchor="middle" fill="#1f5f8b">SolverWorker</text>
+    <text x="69" y="144" text-anchor="middle" fill="#1f5f8b">.doInBackground</text>
+    <text x="69" y="158" font-size="10" text-anchor="middle" fill="#5b6475">attach loggers</text></g>
+  <g>    <rect x="145" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="204" y="130" text-anchor="middle" fill="#1f5f8b">MachieveSolverAPI</text>
+    <text x="204" y="144" text-anchor="middle" fill="#1f5f8b">.loadTestcase</text>
+    <text x="204" y="158" font-size="10" text-anchor="middle" fill="#5b6475">inp, blk, grd, gascomp</text></g>
+  <g>    <rect x="280" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="339" y="130" text-anchor="middle" fill="#1f5f8b">MachieveSolverAPI</text>
+    <text x="339" y="144" text-anchor="middle" fill="#1f5f8b">.solve</text>
+    <text x="339" y="158" font-size="10" text-anchor="middle" fill="#5b6475">SI path or branch</text></g>
+  <g>    <rect x="415" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="474" y="130" text-anchor="middle" fill="#1f5f8b">MachieveSolverAPI</text>
+    <text x="474" y="144" text-anchor="middle" fill="#1f5f8b">.runNondimPipeline</text>
+    <text x="474" y="158" font-size="10" text-anchor="middle" fill="#5b6475">status from the run</text></g>
+  <g>    <rect x="550" y="115" width="118" height="50" rx="4" fill="#e8f0f6" stroke="#1f5f8b"/>
+    <text x="609" y="130" text-anchor="middle" fill="#1f5f8b">NondimMachie-</text>
+    <text x="609" y="144" text-anchor="middle" fill="#1f5f8b">vePipeline.run</text>
+    <text x="609" y="158" font-size="10" text-anchor="middle" fill="#5b6475">loop, figure 2</text></g>
+  <g>    <rect x="10" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="69" y="220" text-anchor="middle" fill="#1f5f8b">Listener</text>
+    <text x="69" y="234" text-anchor="middle" fill="#1f5f8b">.onIteration</text>
+    <text x="69" y="248" font-size="10" text-anchor="middle" fill="#5b6475">publish, worker thread</text></g>
+  <g>    <rect x="145" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="204" y="220" text-anchor="middle" fill="#5b6475">SolverWorker</text>
+    <text x="204" y="234" text-anchor="middle" fill="#5b6475">.process</text>
+    <text x="204" y="248" font-size="10" text-anchor="middle" fill="#5b6475">collected steps</text></g>
+  <g>    <rect x="280" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="339" y="220" text-anchor="middle" fill="#5b6475">RunTab</text>
+    <text x="339" y="234" text-anchor="middle" fill="#5b6475">.onIteration</text>
+    <text x="339" y="248" font-size="10" text-anchor="middle" fill="#5b6475">log, convergence</text></g>
+  <g>    <rect x="415" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="474" y="220" text-anchor="middle" fill="#5b6475">SolverWorker</text>
+    <text x="474" y="234" text-anchor="middle" fill="#5b6475">.done</text>
+    <text x="474" y="248" font-size="10" text-anchor="middle" fill="#5b6475">result or error</text></g>
+  <g>    <rect x="550" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="609" y="220" text-anchor="middle" fill="#9a6400">RunTab</text>
+    <text x="609" y="234" text-anchor="middle" fill="#9a6400">.onComplete</text>
+    <text x="609" y="248" font-size="10" text-anchor="middle" fill="#5b6475">status, results tab</text></g>
+  <g stroke="#5b6475" stroke-width="1.5" fill="none">
+    <line x1="128" y1="55" x2="143" y2="55" marker-end="url(#pfeil-lauf)"/>
+    <line x1="263" y1="55" x2="278" y2="55" marker-end="url(#pfeil-lauf)"/>
+    <line x1="398" y1="55" x2="413" y2="55" marker-end="url(#pfeil-lauf)"/>
+    <line x1="533" y1="55" x2="548" y2="55" marker-end="url(#pfeil-lauf)"/>
+    <path d="M609 80 L609 92 L110 92 L110 113" stroke-dasharray="4 3" marker-end="url(#pfeil-lauf)"/>
+    <line x1="128" y1="140" x2="143" y2="140" marker-end="url(#pfeil-lauf)"/>
+    <line x1="263" y1="140" x2="278" y2="140" marker-end="url(#pfeil-lauf)"/>
+    <line x1="398" y1="140" x2="413" y2="140" marker-end="url(#pfeil-lauf)"/>
+    <line x1="533" y1="140" x2="548" y2="140" marker-end="url(#pfeil-lauf)"/>
+    <path d="M640 165 L640 186 L110 186 L110 203" stroke-dasharray="4 3" marker-end="url(#pfeil-lauf)"/>
+    <path d="M370 165 L370 176 L474 176 L474 203" stroke-dasharray="4 3" marker-end="url(#pfeil-lauf)"/>
+    <line x1="128" y1="230" x2="143" y2="230" marker-end="url(#pfeil-lauf)"/>
+    <line x1="263" y1="230" x2="278" y2="230" marker-end="url(#pfeil-lauf)"/>
+    <line x1="533" y1="230" x2="548" y2="230" marker-end="url(#pfeil-lauf)"/>
+  </g>
+  <text x="150" y="106" font-size="10" fill="#5b6475">worker thread of the SwingWorker</text>
+  <text x="150" y="200" font-size="10" fill="#5b6475">every step</text>
+  <text x="482" y="200" font-size="10" fill="#5b6475">return from solve</text>
+</svg>
+<figcaption>The run across the threads. Grey is what runs on the event thread, blue what runs on the worker thread. The command line <code>cmd.machieve.CfvnSolver</code> calls the same interface with a listener that writes to the console. The listener is an inner class of <code>SolverWorker</code>; the same listener answers the question whether to stop with <code>shouldStop</code> (figure 2).</figcaption>
+</figure>
+
+<h2 id="schleife">The loop of the dimensionless pipeline</h2>
+<p>The dimensionless pipeline is the path that follows the Fortran code in its scales. Before the loop it reads the case, builds the equation of state and the reference state, chooses limiter, corner treatment and initial field from deck and settings, and creates residual, time-step calculator and stepping method per block. Each step of the loop first asks whether to stop, then computes the smallest time step over all blocks and advances every block by this step. When the blocks are computed in parallel, they first freeze their border strip: each block then reads its neighbour as at the start of the step, as in the halo exchange of the Fortran code.</p>
+<p>The residual is the root mean square change of density over all interior cells:</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><msqrt><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>b</mi></mrow></munder><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></munder><mo stretchy="false">(</mo><msubsup><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>b</mi><mo>,</mo><mi>i</mi><mi>j</mi></mrow><mrow><mspace width="0.1667em"/><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msubsup><mo>−</mo><msubsup><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>b</mi><mo>,</mo><mi>i</mi><mi>j</mi></mrow><mrow><mspace width="0.1667em"/><mi>n</mi></mrow></msubsup><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></msqrt><mspace width="0.1667em"/><mo>.</mo></mrow><annotation encoding="application/x-tex">r_2 = \sqrt{\frac{1}{N}\sum_{b}\sum_{i,j}\big(\rho^{\,n+1}_{b,ij}-\rho^{\,n}_{b,ij}\big)^2}\,.</annotation></semantics></math></p>
+<p>The loop has no convergence criterion: it ends after the maximum number of steps or on request. A residual that is no longer finite does not stop it either; only afterwards does <code>nondimStatus</code> determine whether the run was stopped, reached the maximum, or carries a residual that is not finite.</p>
+<figure>
+<svg viewBox="0 0 680 280" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Top the preparation: read the case, equation of state and reference, initial field, corner cells, limiter. Below the loop per step: ask for stop, compute the smallest time step, freeze the border strip when parallel, advance all blocks with an explicit or implicit method. Bottom: residual from the density change, report to the listener, write the solution at the output interval, then the next step; after a stop or the last step the status of the run.">
+  <defs><marker id="pfeil-schleife" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="10" y="24" font-size="11" fill="#1f5f8b" font-weight="bold">Before the loop</text>
+  <text x="10" y="109" font-size="11" fill="#1f5f8b" font-weight="bold">Every step</text>
+  <rect x="10" y="30" width="118" height="50" rx="4" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <text x="69" y="51" text-anchor="middle" fill="#1f5f8b">read achieve.inp,</text>
+  <text x="69" y="67" text-anchor="middle" fill="#1f5f8b">.blk, .grd</text>
+  <g>    <rect x="145" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="204" y="45" text-anchor="middle" fill="#1f5f8b">Pipeline.build</text>
+    <text x="204" y="59" text-anchor="middle" fill="#1f5f8b">EosAndReference</text>
+    <text x="204" y="73" font-size="10" text-anchor="middle" fill="#5b6475">gas and reference</text></g>
+  <g>    <rect x="280" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="339" y="45" text-anchor="middle" fill="#1f5f8b">Pipeline</text>
+    <text x="339" y="59" text-anchor="middle" fill="#1f5f8b">.selectInitFlag</text>
+    <text x="339" y="73" font-size="10" text-anchor="middle" fill="#5b6475">initial field</text></g>
+  <g>    <rect x="415" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="474" y="45" text-anchor="middle" fill="#1f5f8b">Pipeline.select</text>
+    <text x="474" y="59" text-anchor="middle" fill="#1f5f8b">CornerStrategy</text>
+    <text x="474" y="73" font-size="10" text-anchor="middle" fill="#5b6475">corner cells</text></g>
+  <g>    <rect x="550" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="609" y="45" text-anchor="middle" fill="#1f5f8b">Pipeline</text>
+    <text x="609" y="59" text-anchor="middle" fill="#1f5f8b">.selectLimiter</text>
+    <text x="609" y="73" font-size="10" text-anchor="middle" fill="#5b6475">limiter from deck</text></g>
+  <g>    <rect x="10" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="69" y="130" text-anchor="middle" fill="#9a6400">Listener</text>
+    <text x="69" y="144" text-anchor="middle" fill="#9a6400">.shouldStop</text>
+    <text x="69" y="158" font-size="10" text-anchor="middle" fill="#5b6475">yes: leave the loop</text></g>
+  <g>    <rect x="145" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="204" y="130" text-anchor="middle" fill="#1f5f8b">TimeStepCalculator</text>
+    <text x="204" y="144" text-anchor="middle" fill="#1f5f8b">.computeGlobal…</text>
+    <text x="204" y="158" font-size="10" text-anchor="middle" fill="#5b6475">smallest dt</text></g>
+  <g>    <rect x="280" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="339" y="130" text-anchor="middle" fill="#1f5f8b">BlockMesh</text>
+    <text x="339" y="144" text-anchor="middle" fill="#1f5f8b">.publishHalo</text>
+    <text x="339" y="158" font-size="10" text-anchor="middle" fill="#5b6475">only when parallel</text></g>
+  <g>    <rect x="415" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="474" y="130" text-anchor="middle" fill="#1f5f8b">Pipeline</text>
+    <text x="474" y="144" text-anchor="middle" fill="#1f5f8b">.runBlocks</text>
+    <text x="474" y="158" font-size="10" text-anchor="middle" fill="#5b6475">all blocks</text></g>
+  <g>    <rect x="550" y="115" width="118" height="23" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="609" y="131" text-anchor="middle" font-size="11" fill="#1f5f8b">ExplicitRK….step</text></g>
+  <g>    <rect x="550" y="142" width="118" height="23" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="609" y="158" text-anchor="middle" font-size="11" fill="#1f5f8b">ImplicitLiu….step</text></g>
+  <g>    <rect x="10" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="69" y="220" text-anchor="middle" fill="#9a6400">MachieveSolverAPI</text>
+    <text x="69" y="234" text-anchor="middle" fill="#9a6400">.nondimStatus</text>
+    <text x="69" y="248" font-size="10" text-anchor="middle" fill="#5b6475">after the loop</text></g>
+  <rect x="145" y="205" width="118" height="50" rx="4" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <text x="204" y="226" text-anchor="middle" fill="#1f5f8b">residual r₂ from</text>
+  <text x="204" y="242" text-anchor="middle" fill="#1f5f8b">the density change</text>
+  <g>    <rect x="280" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="339" y="220" text-anchor="middle" fill="#1f5f8b">Listener</text>
+    <text x="339" y="234" text-anchor="middle" fill="#1f5f8b">.onIteration</text>
+    <text x="339" y="248" font-size="10" text-anchor="middle" fill="#5b6475">step, dt, r₂</text></g>
+  <g>    <rect x="415" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="474" y="220" text-anchor="middle" fill="#1f5f8b">Pipeline</text>
+    <text x="474" y="234" text-anchor="middle" fill="#1f5f8b">.writeSnapshot</text>
+    <text x="474" y="248" font-size="10" text-anchor="middle" fill="#5b6475">VTK and restart</text></g>
+  <g stroke="#5b6475" stroke-width="1.5" fill="none">
+    <line x1="128" y1="55" x2="143" y2="55" marker-end="url(#pfeil-schleife)"/>
+    <line x1="263" y1="55" x2="278" y2="55" marker-end="url(#pfeil-schleife)"/>
+    <line x1="398" y1="55" x2="413" y2="55" marker-end="url(#pfeil-schleife)"/>
+    <line x1="533" y1="55" x2="548" y2="55" marker-end="url(#pfeil-schleife)"/>
+    <path d="M609 80 L609 94 L110 94 L110 113" marker-end="url(#pfeil-schleife)"/>
+    <line x1="128" y1="140" x2="143" y2="140" marker-end="url(#pfeil-schleife)"/>
+    <line x1="263" y1="140" x2="278" y2="140" marker-end="url(#pfeil-schleife)"/>
+    <line x1="398" y1="140" x2="413" y2="140" marker-end="url(#pfeil-schleife)"/>
+    <line x1="533" y1="140" x2="548" y2="128" marker-end="url(#pfeil-schleife)"/>
+    <line x1="533" y1="140" x2="548" y2="152" marker-end="url(#pfeil-schleife)"/>
+    <path d="M609 165 L609 182 L204 182 L204 203" marker-end="url(#pfeil-schleife)"/>
+    <line x1="263" y1="230" x2="278" y2="230" marker-end="url(#pfeil-schleife)"/>
+    <line x1="398" y1="230" x2="413" y2="230" marker-end="url(#pfeil-schleife)"/>
+    <path d="M474 255 L474 268 L4 268 L4 140 L8 140" marker-end="url(#pfeil-schleife)"/>
+    <line x1="69" y1="165" x2="69" y2="203" stroke="#9a6400" stroke-dasharray="4 3" marker-end="url(#pfeil-schleife)"/>
+  </g>
+  <text x="560" y="110" font-size="10" fill="#5b6475">explicit / implicit</text>
+  <text x="150" y="264" font-size="10" fill="#5b6475">next step, up to the maximum</text>
+  <text x="76" y="190" font-size="10" fill="#9a6400">stop</text>
+</svg>
+<figcaption>One step of the dimensionless pipeline. The loop runs entirely on the worker thread; only the listener leads to the interface. It ends on request or after the maximum number of steps; afterwards <code>nondimStatus</code> determines the status. Besides the two stepping methods shown there are the implicit Roe solver, dual time stepping and the coupled implicit chemistry step; turbulence, transition and species transport advance in the same block step after the flow. Solutions are written at the output interval and at the last requested step.</figcaption>
+</figure>
+
+<h2 id="ergebnis">Results during the run</h2>
+<p>On start the results tab learns the output folder. When automatic reloading is switched on, a timer checks every two seconds whether a solution with a higher step number lies there, and loads it when the distance to the displayed one reaches at least the set step width. A multi-block case consists of files <code>block&lt;N&gt;_…vtk</code>; all siblings of the same output are loaded, ordered by block number. When drawing, the node values at block borders are averaged so that the contour does not jump there. After the run the tab loads the latest written solution from the result.</p>
+<figure>
+<svg viewBox="0 0 680 190" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Top: the start reports the output folder, reloading starts a timer, the timer looks for the newest solution and loads it. Bottom: the end of the run also loads the latest solution; loading all blocks, drawing, averaging at block borders, picture in the tab.">
+  <defs><marker id="pfeil-ergebnis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
+  <text x="10" y="24" font-size="11" fill="#1f5f8b" font-weight="bold">During the run</text>
+  <text x="10" y="109" font-size="11" fill="#1f5f8b" font-weight="bold">Loading</text>
+  <g>    <rect x="10" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="69" y="45" text-anchor="middle" fill="#5b6475">Results2dTab</text>
+    <text x="69" y="59" text-anchor="middle" fill="#5b6475">.onRunStarted</text>
+    <text x="69" y="73" font-size="10" text-anchor="middle" fill="#5b6475">output folder</text></g>
+  <g>    <rect x="145" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="204" y="45" text-anchor="middle" fill="#5b6475">Results2dTab</text>
+    <text x="204" y="59" text-anchor="middle" fill="#5b6475">.applyAutoUpdate</text>
+    <text x="204" y="73" font-size="10" text-anchor="middle" fill="#5b6475">timer 2 s</text></g>
+  <g>    <rect x="280" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="339" y="45" text-anchor="middle" fill="#5b6475">Results2dTab</text>
+    <text x="339" y="59" text-anchor="middle" fill="#5b6475">.pollForNewVtk</text>
+    <text x="339" y="73" font-size="10" text-anchor="middle" fill="#5b6475">higher step number?</text></g>
+  <g>    <rect x="550" y="30" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="609" y="45" text-anchor="middle" fill="#5b6475">Results2dTab</text>
+    <text x="609" y="59" text-anchor="middle" fill="#5b6475">.onRunFinished</text>
+    <text x="609" y="73" font-size="10" text-anchor="middle" fill="#5b6475">latest solution</text></g>
+  <g>    <rect x="10" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
+    <text x="69" y="130" text-anchor="middle" fill="#9a6400">Results2dTab</text>
+    <text x="69" y="144" text-anchor="middle" fill="#9a6400">.doLoad</text>
+    <text x="69" y="158" font-size="10" text-anchor="middle" fill="#5b6475">on the event thread</text></g>
+  <g>    <rect x="145" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="204" y="130" text-anchor="middle" fill="#5b6475">Results2dTab</text>
+    <text x="204" y="144" text-anchor="middle" fill="#5b6475">.loadAllBlocks</text>
+    <text x="204" y="158" font-size="10" text-anchor="middle" fill="#5b6475">block*_…vtk</text></g>
+  <g>    <rect x="280" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="339" y="130" text-anchor="middle" fill="#5b6475">Results2dTab</text>
+    <text x="339" y="144" text-anchor="middle" fill="#5b6475">.doPlot</text>
+    <text x="339" y="158" font-size="10" text-anchor="middle" fill="#5b6475">contour, vectors</text></g>
+  <g>    <rect x="415" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
+    <text x="474" y="130" text-anchor="middle" fill="#5b6475">Results2dTab</text>
+    <text x="474" y="144" text-anchor="middle" fill="#5b6475">.stitchSharedNodes</text>
+    <text x="474" y="158" font-size="10" text-anchor="middle" fill="#5b6475">average block borders</text></g>
+  <rect x="550" y="115" width="118" height="50" rx="4" fill="#e8f0f6" stroke="#c9d1dc"/>
+  <text x="609" y="136" text-anchor="middle" fill="#1f5f8b">picture in the</text>
+  <text x="609" y="152" text-anchor="middle" fill="#1f5f8b">results tab</text>
+  <g stroke="#5b6475" stroke-width="1.5" fill="none">
+    <line x1="128" y1="55" x2="143" y2="55" marker-end="url(#pfeil-ergebnis)"/>
+    <line x1="263" y1="55" x2="278" y2="55" marker-end="url(#pfeil-ergebnis)"/>
+    <path d="M339 80 L339 94 L69 94 L69 113" marker-end="url(#pfeil-ergebnis)"/>
+    <path d="M609 80 L609 100 L100 100 L100 113" stroke-dasharray="4 3" marker-end="url(#pfeil-ergebnis)"/>
+    <line x1="128" y1="140" x2="143" y2="140" marker-end="url(#pfeil-ergebnis)"/>
+    <line x1="263" y1="140" x2="278" y2="140" marker-end="url(#pfeil-ergebnis)"/>
+    <line x1="398" y1="140" x2="413" y2="140" marker-end="url(#pfeil-ergebnis)"/>
+    <line x1="533" y1="140" x2="548" y2="140" marker-end="url(#pfeil-ergebnis)"/>
+  </g>
+  <text x="544" y="50" font-size="10" text-anchor="end" fill="#5b6475">after the run,</text>
+  <text x="544" y="63" font-size="10" text-anchor="end" fill="#5b6475">from RunTab.onComplete</text>
+</svg>
+<figcaption>Reloading of results. Timer and loading both run on the event thread: the solution is read there while the run keeps computing on the worker thread. With large meshes the interface therefore stalls for the duration of reading.</figcaption>
+</figure>
+
+<h2 id="grenzen">Limits</h2>
+<ul>
+  <li>Mesh and results are read on the event thread: the mesh when a case is loaded in the mesh tab, the solution when reloading and after the run. With large cases the interface then stalls briefly; the run itself is not affected.</li>
+  <li>Some older classes of the solver still read their settings from the system properties. The worker thread therefore mirrors the settings of a run there before the start; two runs at the same time in the same JVM would overwrite each other there.</li>
+  <li>The dimensionless pipeline has no convergence criterion and does not stop on a residual that is not finite either: a run that diverges keeps computing up to the maximum number of steps. The path in SI units stops at once in this case.</li>
+</ul>
+
+</div>
+</main>
+<script>
+(function () {
+  var links = {};
+  document.querySelectorAll('nav.leiste a.rubrik').forEach(function (a) {
+    var h = a.getAttribute('href');
+    if (h.charAt(0) === '#') { links[h.substring(1)] = a; }
+  });
+  var ziele = Object.keys(links).map(function (k) { return document.getElementById(k); })
+                                .filter(Boolean);
+  if (!ziele.length || !('IntersectionObserver' in window)) { return; }
+  var sichtbar = {};
+  var beob = new IntersectionObserver(function (eintraege) {
+    eintraege.forEach(function (x) { sichtbar[x.target.id] = x.isIntersecting; });
+    var erstes = ziele.find(function (z) { return sichtbar[z.id]; });
+    if (!erstes) { return; }
+    Object.keys(links).forEach(function (k) { links[k].classList.remove('jetzt'); });
+    links[erstes.id].classList.add('jetzt');
+  }, {rootMargin: '0px 0px -70% 0px'});
+  ziele.forEach(function (z) { beob.observe(z); });
+})();
+(function () {
+  // 2026-11-15: Rubriken mit zugeklappten Unterseiten (lange Module)
+  var listen = document.querySelectorAll('nav.leiste div.unterliste');
+  if (!listen.length) { return; }
+  function oeffne(anker) {
+    listen.forEach(function (l) { if (l.getAttribute('data-rubrik') === anker) { l.hidden = false; } });
+  }
+  listen.forEach(function (l) {
+    var kopf = l.previousElementSibling;
+    if (!kopf || !kopf.classList.contains('rubrik')) { return; }
+    kopf.addEventListener('click', function (e) {
+      l.hidden = !l.hidden;
+      if (kopf.getAttribute('href').charAt(0) !== '#') { e.preventDefault(); }
+    });
+  });
+  if (location.hash) { oeffne(location.hash.substring(1)); }
+})();
+(function () {
+  // WB12 (2026-10-04): Suche ueber alle Seiten
+  var feld = document.querySelector('nav.leiste .suche input');
+  if (!feld) { return; }
+  var aus = document.querySelector('nav.leiste .suche .treffer');
+  var basis = feld.getAttribute('data-wurzel');
+  var angefordert = false;
+  function lade(weiter) {
+    if (window.SUCHE) { weiter(); return; }
+    if (angefordert) { return; }
+    angefordert = true;
+    var s = document.createElement('script');
+    s.src = feld.getAttribute('data-index');
+    s.onload = weiter;
+    document.head.appendChild(s);
+  }
+  function suche() {
+    var q = feld.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u)
+                      .filter(function (w) { return w.length >= 2; });
+    aus.textContent = '';
+    if (!q.length || !window.SUCHE) { return; }
+    var liste = [];
+    window.SUCHE.forEach(function (e) {
+      var t = e[1].toLowerCase(), w = ' ' + e[3], punkte = 0;
+      for (var i = 0; i < q.length; i++) {
+        var imTitel = t.indexOf(q[i]) >= 0, imText = w.indexOf(' ' + q[i]) >= 0;
+        if (!imTitel && !imText) { return; }
+        punkte += imTitel ? 10 : 1;
+      }
+      liste.push([punkte, e]);
+    });
+    liste.sort(function (a, b) { return b[0] - a[0]; });
+    liste.slice(0, 30).forEach(function (x) {
+      var a = document.createElement('a');
+      a.href = basis + x[1][0];
+      a.textContent = x[1][1];
+      var m = document.createElement('span');
+      m.textContent = x[1][2];
+      a.appendChild(m);
+      aus.appendChild(a);
+    });
+    if (!liste.length) { aus.textContent = feld.getAttribute('data-leer'); }
+  }
+  feld.addEventListener('input', function () { lade(suche); });
+})();
+(function () {
+  // NEU 2026-11-12 (Eignerwunsch): die Leiste sprang nach jedem Klick auf
+  // einen Eintrag weiter unten an den Anfang, weil jede Seite eine neue
+  // Leiste laedt. Beim Klick merkt sich die Seite, wie weit der Eintrag
+  // vom oberen Rand der Leiste stand; die naechste Seite stellt ihren
+  // aktiven Eintrag wieder dorthin. Ohne Merkwert (Lesezeichen, Suche,
+  // erster Aufruf) wird der aktive Eintrag in die Mitte geholt.
+  var nav = document.querySelector('nav.leiste');
+  if (!nav) { return; }
+  var SCHLUESSEL = 'leistenlage';
+  var akt = nav.querySelector('a.unterseite.aktiv') || nav.querySelector('a.eintrag.aktiv');
+  var abstand = null;
+  try {
+    var w = sessionStorage.getItem(SCHLUESSEL);
+    sessionStorage.removeItem(SCHLUESSEL);
+    if (w !== null && w !== '' && isFinite(w)) { abstand = Number(w); }
+  } catch (e) { /* ohne Speicher: nur mittig holen */ }
+  if (akt) {
+    var oben = akt.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+    if (abstand !== null) {
+      nav.scrollTop = Math.max(0, oben - abstand);
+    } else {
+      nav.scrollTop = Math.max(0, oben - nav.clientHeight / 2);
+    }
+  }
+  nav.addEventListener('click', function (ev) {
+    var a = ev.target.closest ? ev.target.closest('a') : null;
+    if (!a || !nav.contains(a)) { return; }
+    try {
+      sessionStorage.setItem(SCHLUESSEL,
+          String(a.getBoundingClientRect().top - nav.getBoundingClientRect().top));
+    } catch (e) { /* ohne Speicher springt die Leiste nur in die Mitte */ }
+  });
+})();
+</script>
+</body>
+</html>
