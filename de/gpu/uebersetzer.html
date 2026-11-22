@@ -411,8 +411,16 @@ und still eine Endlosschleife bilden. Diese Reihenfolge sichert eine Gegenprobe.
 <ul>
   <li><b>Variablen im ersten Block:</b> SPIR-V verlangt alle <code>OpVariable</code> einer Funktion am Anfang ihres ersten Blocks. Der
   Erzeuger sammelt sie in einer eigenen Liste und setzt sie beim Zusammenfügen vor den Code; deklariert werden darf in C trotzdem überall.</li>
-  <li><b>Rest wie in C:</b> <code>%</code> wird <code>OpSRem</code> (Vorzeichen des Dividenden, wie Java), nicht <code>OpSMod</code>
-  (Vorzeichen des Divisors). Gegenprobe vorhanden.</li>
+  <li><b>Teilen und Rest wie in C:</b> <code>/</code> schneidet zur Null ab, <code>%</code> hat das Vorzeichen des Dividenden (wie Java).
+  Seit 2026-11-22 (VU10) nicht mehr über <code>OpSDiv</code>/<code>OpSRem</code>: Vulkan erklärt <code>OpSRem</code> ohne
+  <code>maintenance8</code> mit einem negativen Operanden zu „poison“, und eine eigenständige Karte rechnete dort tatsächlich den Rest der
+  Bitmuster ohne Vorzeichen. Der Übersetzer teilt die Beträge mit <code>OpUDiv</code>/<code>OpUMod</code> und setzt das Vorzeichen
+  danach; <code>INT_MIN / -1</code> ergibt <code>INT_MIN</code>, Teilen durch 0 ergibt −1 (beides wie bisher auf der integrierten Grafikeinheit gemessen). Den
+  einfachen Befehl behält er, wo der Dividend sicher nicht negativ (Festwert, <code>get_global_id</code> und Verwandte, lokale Variablen,
+  die nur so zugewiesen werden) und der Teiler sicher positiv ist. Die Schiebeweite wird mit <code>&amp; 31</code> begrenzt. Gegenproben vorhanden.</li>
+  <li><b><code>pack_half2x16</code></b> rundet seit 2026-11-22 selbst aus der Bitfolge zur nächsten geraden Zahl, wie
+  <code>Float.floatToFloat16</code> – <code>PackHalf2x16</code> aus GLSL.std.450 überlässt die Rundungsrichtung dem Treiber (jene Karte
+  schneidet ab).</li>
   <li><b>Umwandlung:</b> int nach double mit Vorzeichen (<code>OpConvertSToF</code>), double nach int abschneidend; Mischrechnungen nach
   den Regeln von C.</li>
   <li><b><code>signbit</code></b> liest das Vorzeichenbit aus dem oberen 32-Bit-Wort des double – eine Gegenprobe nimmt das untere.</li>

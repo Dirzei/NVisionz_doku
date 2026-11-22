@@ -408,8 +408,16 @@ loop. A counter-probe guards this order.</p>
 <ul>
   <li><b>Variables in the first block:</b> SPIR-V requires all <code>OpVariable</code>s of a function at the start of its first block. The
   generator collects them in a list of their own and puts them before the code when joining; in C they may still be declared anywhere.</li>
-  <li><b>Remainder as in C:</b> <code>%</code> becomes <code>OpSRem</code> (sign of the dividend, as in Java), not <code>OpSMod</code> (sign of
-  the divisor). Counter-probe present.</li>
+  <li><b>Division and remainder as in C:</b> <code>/</code> truncates toward zero, <code>%</code> carries the sign of the dividend (as in
+  Java). Since 2026-11-22 (VU10) no longer via <code>OpSDiv</code>/<code>OpSRem</code>: without <code>maintenance8</code> Vulkan declares
+  <code>OpSRem</code> with a negative operand “poison”, and a discrete card indeed computed the unsigned remainder of the bit patterns
+  there. The translator divides the magnitudes with <code>OpUDiv</code>/<code>OpUMod</code> and fixes the sign afterwards;
+  <code>INT_MIN / -1</code> gives <code>INT_MIN</code>, division by 0 gives −1 (both as measured before on the integrated GPU). It keeps the simple
+  instruction where the dividend is surely non-negative (constant, <code>get_global_id</code> and relatives, local variables assigned only
+  that way) and the divisor surely positive. Shift counts are limited with <code>&amp; 31</code>. Counter-probes present.</li>
+  <li><b><code>pack_half2x16</code></b> rounds by itself from the bit pattern to nearest even since 2026-11-22, like
+  <code>Float.floatToFloat16</code> – <code>PackHalf2x16</code> from GLSL.std.450 leaves the rounding direction to the driver (that card
+  truncates).</li>
   <li><b>Conversion:</b> int to double signed (<code>OpConvertSToF</code>), double to int truncating; mixed arithmetic per the rules of C.</li>
   <li><b><code>signbit</code></b> reads the sign bit from the upper 32-bit word of the double – a counter-probe takes the lower one.</li>
   <li><b>Ids:</b> <code>get_global_id(0)</code> is the built-in <code>GlobalInvocationId</code>, <code>get_local_id</code>
