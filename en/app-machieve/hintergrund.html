@@ -258,7 +258,7 @@ math[display="block"]{margin:10px 0}
 <p class="einl">m-ACHIEVE computes for a long time – minutes to hours. The interface has to stay usable meanwhile, show the progress and be able to stop a run. This page shows the three paths that carry this: the run from the interface into the worker thread and back, the loop in which one step is computed, and the reloading of results. What the methods themselves compute is described in the solver manual; operation on the page <a href="bedienung.html">Operation</a>.</p>
 
 <h2 id="lauf">From the case to the run and back</h2>
-<p>A case is loaded on the event thread: the button in the <i>Test cases</i> tab hands the path to the main window, which informs the mesh, setup and run tabs in turn. The run tab reads <code>achieve.inp</code> for its defaults and takes the run settings <code>run.*</code> from <code>testcase.properties</code>. On start it assembles the settings of one run – switches of the interface, defaults of the case, advanced settings of the user, which win last – and writes the combustion and additional entries as <code>achieve.jconfig</code> only if they carry at least one entry.</p>
+<p>A case is loaded on the event thread: the button in the <i>Test cases</i> tab hands the path to the main window, which informs the mesh, setup and run tabs in turn. The mesh tab reads block layout, mesh and deck on a thread of its own and then takes them over on the event thread. The run tab reads <code>achieve.inp</code> for its defaults and takes the run settings <code>run.*</code> from <code>testcase.properties</code>. On start it assembles the settings of one run – switches of the interface, defaults of the case, advanced settings of the user, which win last – and writes the combustion and additional entries as <code>achieve.jconfig</code> only if they carry at least one entry.</p>
 <p>The computation runs in a <code>SwingWorker</code>. It reads the case a second time, now completely with mesh and gas composition, and calls the solver. Every step reports through a listener that collects the values with <code>publish</code>; <code>process</code> hands them on the event thread to the log and the convergence chart. Log lines of the solver loggers and the mass flow line go through <code>invokeLater</code>. The final result is fetched by <code>done</code>, also on the event thread.</p>
 <figure>
 <svg viewBox="0 0 680 270" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Three rows. Top, on the event thread: load button, main window loads the case, run tab takes the defaults, start assembles the settings and creates a SolverWorker. Middle, on the worker thread: doInBackground, read the case completely, solve, branch into the dimensionless pipeline. Bottom, again on the event thread: the listener collects every step, process shows it, done fetches the result and onComplete passes it on.">
@@ -352,7 +352,7 @@ math[display="block"]{margin:10px 0}
 <p>The dimensionless pipeline is the path that follows the Fortran code in its scales. Before the loop it reads the case, builds the equation of state and the reference state, chooses limiter, corner treatment and initial field from deck and settings, and creates residual, time-step calculator and stepping method per block. Each step of the loop first asks whether to stop, then computes the smallest time step over all blocks and advances every block by this step. When the blocks are computed in parallel, they first freeze their border strip: each block then reads its neighbour as at the start of the step, as in the halo exchange of the Fortran code.</p>
 <p>The residual is the root mean square change of density over all interior cells:</p>
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><msqrt><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>b</mi></mrow></munder><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></munder><mo stretchy="false">(</mo><msubsup><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>b</mi><mo>,</mo><mi>i</mi><mi>j</mi></mrow><mrow><mspace width="0.1667em"/><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msubsup><mo>−</mo><msubsup><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>b</mi><mo>,</mo><mi>i</mi><mi>j</mi></mrow><mrow><mspace width="0.1667em"/><mi>n</mi></mrow></msubsup><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></msqrt><mspace width="0.1667em"/><mo>.</mo></mrow><annotation encoding="application/x-tex">r_2 = \sqrt{\frac{1}{N}\sum_{b}\sum_{i,j}\big(\rho^{\,n+1}_{b,ij}-\rho^{\,n}_{b,ij}\big)^2}\,.</annotation></semantics></math></p>
-<p>The loop has no convergence criterion: it ends after the maximum number of steps or on request. A residual that is no longer finite does not stop it either; only afterwards does <code>nondimStatus</code> determine whether the run was stopped, reached the maximum, or carries a residual that is not finite.</p>
+<p>The loop has no convergence criterion: it ends after the maximum number of steps, on request, or as soon as the residual is no longer finite – like the path in SI units. Afterwards <code>nondimStatus</code> determines whether the run was stopped, reached the maximum, or carries a residual that is not finite.</p>
 <figure>
 <svg viewBox="0 0 680 280" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Top the preparation: read the case, equation of state and reference, initial field, corner cells, limiter. Below the loop per step: ask for stop, compute the smallest time step, freeze the border strip when parallel, advance all blocks with an explicit or implicit method. Bottom: residual from the density change, report to the listener, write the solution at the output interval, then the next step; after a stop or the last step the status of the run.">
   <defs><marker id="pfeil-schleife" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
@@ -402,8 +402,9 @@ math[display="block"]{margin:10px 0}
     <text x="69" y="234" text-anchor="middle" fill="#9a6400">.nondimStatus</text>
     <text x="69" y="248" font-size="10" text-anchor="middle" fill="#5b6475">after the loop</text></g>
   <rect x="145" y="205" width="118" height="50" rx="4" fill="#e8f0f6" stroke="#c9d1dc"/>
-  <text x="204" y="226" text-anchor="middle" fill="#1f5f8b">residual r₂ from</text>
-  <text x="204" y="242" text-anchor="middle" fill="#1f5f8b">the density change</text>
+  <text x="204" y="220" text-anchor="middle" fill="#1f5f8b">residual r₂ from</text>
+  <text x="204" y="234" text-anchor="middle" fill="#1f5f8b">the density change</text>
+  <text x="204" y="248" font-size="10" text-anchor="middle" fill="#9a6400">not finite: end</text>
   <g>    <rect x="280" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
     <text x="339" y="220" text-anchor="middle" fill="#1f5f8b">Listener</text>
     <text x="339" y="234" text-anchor="middle" fill="#1f5f8b">.onIteration</text>
@@ -428,16 +429,17 @@ math[display="block"]{margin:10px 0}
     <line x1="398" y1="230" x2="413" y2="230" marker-end="url(#pfeil-schleife)"/>
     <path d="M474 255 L474 268 L4 268 L4 140 L8 140" marker-end="url(#pfeil-schleife)"/>
     <line x1="69" y1="165" x2="69" y2="203" stroke="#9a6400" stroke-dasharray="4 3" marker-end="url(#pfeil-schleife)"/>
+    <line x1="145" y1="230" x2="130" y2="230" stroke="#9a6400" stroke-dasharray="4 3" marker-end="url(#pfeil-schleife)"/>
   </g>
   <text x="560" y="110" font-size="10" fill="#5b6475">explicit / implicit</text>
   <text x="150" y="264" font-size="10" fill="#5b6475">next step, up to the maximum</text>
   <text x="76" y="190" font-size="10" fill="#9a6400">stop</text>
 </svg>
-<figcaption>One step of the dimensionless pipeline. The loop runs entirely on the worker thread; only the listener leads to the interface. It ends on request or after the maximum number of steps; afterwards <code>nondimStatus</code> determines the status. Besides the two stepping methods shown there are the implicit Roe solver, dual time stepping and the coupled implicit chemistry step; turbulence, transition and species transport advance in the same block step after the flow. Solutions are written at the output interval and at the last requested step.</figcaption>
+<figcaption>One step of the dimensionless pipeline. The loop runs entirely on the worker thread; only the listener leads to the interface. It ends on request, after the maximum number of steps or on a residual that is not finite; afterwards <code>nondimStatus</code> determines the status. Besides the two stepping methods shown there are the implicit Roe solver, dual time stepping and the coupled implicit chemistry step; turbulence, transition and species transport advance in the same block step after the flow. Solutions are written at the output interval and at the last requested step.</figcaption>
 </figure>
 
 <h2 id="ergebnis">Results during the run</h2>
-<p>On start the results tab learns the output folder. When automatic reloading is switched on, a timer checks every two seconds whether a solution with a higher step number lies there, and loads it when the distance to the displayed one reaches at least the set step width. A multi-block case consists of files <code>block&lt;N&gt;_…vtk</code>; all siblings of the same output are loaded, ordered by block number. When drawing, the node values at block borders are averaged so that the contour does not jump there. After the run the tab loads the latest written solution from the result.</p>
+<p>On start the results tab learns the output folder. When automatic reloading is switched on, a timer checks every two seconds whether a solution with a higher step number lies there, and loads it when the distance to the displayed one reaches at least the set step width. A multi-block case consists of files <code>block&lt;N&gt;_…vtk</code>; all siblings of the same output are loaded, ordered by block number. When drawing, the node values at block borders are averaged so that the contour does not jump there. After the run the tab loads the latest written solution from the result. Reading happens on a thread of its own: timer, loading and the scan of the folder hand their result to the event thread, which only takes it over and draws. While a load is pending the timer skips instead of piling up requests; whatever finishes after a change of case is discarded.</p>
 <figure>
 <svg viewBox="0 0 680 190" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Top: the start reports the output folder, reloading starts a timer, the timer looks for the newest solution and loads it. Bottom: the end of the run also loads the latest solution; loading all blocks, drawing, averaging at block borders, picture in the tab.">
   <defs><marker id="pfeil-ergebnis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
@@ -459,13 +461,13 @@ math[display="block"]{margin:10px 0}
     <text x="609" y="45" text-anchor="middle" fill="#5b6475">Results2dTab</text>
     <text x="609" y="59" text-anchor="middle" fill="#5b6475">.onRunFinished</text>
     <text x="609" y="73" font-size="10" text-anchor="middle" fill="#5b6475">latest solution</text></g>
-  <g>    <rect x="10" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
-    <text x="69" y="130" text-anchor="middle" fill="#9a6400">Results2dTab</text>
-    <text x="69" y="144" text-anchor="middle" fill="#9a6400">.doLoad</text>
-    <text x="69" y="158" font-size="10" text-anchor="middle" fill="#5b6475">on the event thread</text></g>
-  <g>    <rect x="145" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
-    <text x="204" y="130" text-anchor="middle" fill="#5b6475">Results2dTab</text>
-    <text x="204" y="144" text-anchor="middle" fill="#5b6475">.loadAllBlocks</text>
+  <g>    <rect x="10" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="69" y="130" text-anchor="middle" fill="#1f5f8b">Results2dTab</text>
+    <text x="69" y="144" text-anchor="middle" fill="#1f5f8b">.doLoad</text>
+    <text x="69" y="158" font-size="10" text-anchor="middle" fill="#5b6475">reads on its thread</text></g>
+  <g>    <rect x="145" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="204" y="130" text-anchor="middle" fill="#1f5f8b">Results2dTab</text>
+    <text x="204" y="144" text-anchor="middle" fill="#1f5f8b">.loadAllBlocks</text>
     <text x="204" y="158" font-size="10" text-anchor="middle" fill="#5b6475">block*_…vtk</text></g>
   <g>    <rect x="280" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
     <text x="339" y="130" text-anchor="middle" fill="#5b6475">Results2dTab</text>
@@ -491,14 +493,12 @@ math[display="block"]{margin:10px 0}
   <text x="544" y="50" font-size="10" text-anchor="end" fill="#5b6475">after the run,</text>
   <text x="544" y="63" font-size="10" text-anchor="end" fill="#5b6475">from RunTab.onComplete</text>
 </svg>
-<figcaption>Reloading of results. Timer and loading both run on the event thread: the solution is read there while the run keeps computing on the worker thread. With large meshes the interface therefore stalls for the duration of reading.</figcaption>
+<figcaption>Reloading of results. Blue is what runs on the reading thread of the tab, grey what runs on the event thread: reading happens away from the interface, taking over and drawing on it. The timer's search for the newest solution reads on the reading thread as well.</figcaption>
 </figure>
 
 <h2 id="grenzen">Limits</h2>
 <ul>
-  <li>Mesh and results are read on the event thread: the mesh when a case is loaded in the mesh tab, the solution when reloading and after the run. With large cases the interface then stalls briefly; the run itself is not affected.</li>
   <li>Some older classes of the solver still read their settings from the system properties. The worker thread therefore mirrors the settings of a run there before the start; two runs at the same time in the same JVM would overwrite each other there.</li>
-  <li>The dimensionless pipeline has no convergence criterion and does not stop on a residual that is not finite either: a run that diverges keeps computing up to the maximum number of steps. The path in SI units stops at once in this case.</li>
 </ul>
 
 </div>

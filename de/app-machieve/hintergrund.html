@@ -258,7 +258,7 @@ math[display="block"]{margin:10px 0}
 <p class="einl">m-ACHIEVE rechnet lange – Minuten bis Stunden. Die Oberfläche muss dabei bedienbar bleiben, den Verlauf zeigen und einen Lauf anhalten können. Die Seite zeigt die drei Wege, die das tragen: den Lauf von der Oberfläche in den Rechenfaden und zurück, die Schleife, in der ein Schritt gerechnet wird, und das Nachladen der Ergebnisse. Was die Verfahren selbst rechnen, steht im Handbuch des Lösers; die Bedienung auf der Seite <a href="bedienung.html">Bedienung</a>.</p>
 
 <h2 id="lauf">Vom Fall zum Lauf und zurück</h2>
-<p>Ein Fall wird auf dem Ereignisfaden geladen: Der Knopf im Reiter <i>Testfälle</i> reicht den Pfad an das Hauptfenster, das Netz-, Einstellungs- und Laufreiter nacheinander unterrichtet. Der Laufreiter liest <code>achieve.inp</code> für seine Vorgaben und übernimmt die Laufeinstellungen <code>run.*</code> aus <code>testcase.properties</code>. Beim Start setzt er die Einstellungen eines Laufs zusammen – Schalter der Oberfläche, Vorgaben des Falls, erweiterte Einstellungen des Nutzers, die zuletzt gewinnen – und schreibt die Verbrennungs- und Zusatzangaben nur dann als <code>achieve.jconfig</code>, wenn sie mindestens einen Eintrag tragen.</p>
+<p>Ein Fall wird auf dem Ereignisfaden geladen: Der Knopf im Reiter <i>Testfälle</i> reicht den Pfad an das Hauptfenster, das Netz-, Einstellungs- und Laufreiter nacheinander unterrichtet. Der Netzreiter liest Blockaufbau, Netz und Deck dabei auf einem eigenen Faden und übernimmt sie danach auf dem Ereignisfaden. Der Laufreiter liest <code>achieve.inp</code> für seine Vorgaben und übernimmt die Laufeinstellungen <code>run.*</code> aus <code>testcase.properties</code>. Beim Start setzt er die Einstellungen eines Laufs zusammen – Schalter der Oberfläche, Vorgaben des Falls, erweiterte Einstellungen des Nutzers, die zuletzt gewinnen – und schreibt die Verbrennungs- und Zusatzangaben nur dann als <code>achieve.jconfig</code>, wenn sie mindestens einen Eintrag tragen.</p>
 <p>Gerechnet wird in einem <code>SwingWorker</code>. Er liest den Fall ein zweites Mal, diesmal vollständig mit Netz und Gaszusammensetzung, und ruft den Löser. Jeder Schritt meldet sich über einen Zuhörer, der die Werte mit <code>publish</code> sammelt; <code>process</code> reicht sie auf dem Ereignisfaden an Protokoll und Konvergenzbild. Protokollzeilen der Löser-Logger und die Massenstromzeile gehen über <code>invokeLater</code>. Das Endergebnis holt <code>done</code> ab, ebenfalls auf dem Ereignisfaden.</p>
 <figure>
 <svg viewBox="0 0 680 270" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Drei Reihen. Oben auf dem Ereignisfaden: Laden-Knopf, Hauptfenster lädt den Fall, Laufreiter übernimmt Vorgaben, Start setzt die Einstellungen zusammen und legt einen SolverWorker an. In der Mitte im Rechenfaden: doInBackground, Fall vollständig lesen, solve, Zweig in die dimensionslose Pipeline. Unten wieder auf dem Ereignisfaden: der Zuhörer sammelt jeden Schritt, process zeigt ihn an, done holt das Ergebnis und onComplete meldet es weiter.">
@@ -352,7 +352,7 @@ math[display="block"]{margin:10px 0}
 <p>Die dimensionslose Pipeline ist der Weg, der dem Fortran-Code in seinen Skalen folgt. Vor der Schleife liest sie den Fall, baut Zustandsgleichung und Bezugszustand, wählt Begrenzer, Eckbehandlung und Anfangsfeld aus Deck und Einstellungen und legt je Block Residuum, Zeitschrittrechner und Schrittverfahren an. Jeder Schritt der Schleife fragt zuerst, ob angehalten werden soll, rechnet dann den kleinsten Zeitschritt über alle Blöcke und rückt jeden Block um diesen Schritt vor. Werden die Blöcke parallel gerechnet, frieren sie vorher ihren Randstreifen ein: Jeder Block liest dann den Nachbarn vom Anfang des Schritts, wie beim Halo-Austausch des Fortran-Codes.</p>
 <p>Als Residuum gilt die mittlere quadratische Änderung der Dichte über alle inneren Zellen:</p>
 <p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi>r</mi></mrow><mrow><mn>2</mn></mrow></msub><mo>=</mo><msqrt><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>b</mi></mrow></munder><munder><mo largeop="true" movablelimits="true">∑</mo><mrow><mi>i</mi><mo>,</mo><mi>j</mi></mrow></munder><mo stretchy="false">(</mo><msubsup><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>b</mi><mo>,</mo><mi>i</mi><mi>j</mi></mrow><mrow><mspace width="0.1667em"/><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msubsup><mo>−</mo><msubsup><mrow><mi mathvariant="normal">ρ</mi></mrow><mrow><mi>b</mi><mo>,</mo><mi>i</mi><mi>j</mi></mrow><mrow><mspace width="0.1667em"/><mi>n</mi></mrow></msubsup><msup><mrow><mo stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></msup></msqrt><mspace width="0.1667em"/><mo>.</mo></mrow><annotation encoding="application/x-tex">r_2 = \sqrt{\frac{1}{N}\sum_{b}\sum_{i,j}\big(\rho^{\,n+1}_{b,ij}-\rho^{\,n}_{b,ij}\big)^2}\,.</annotation></semantics></math></p>
-<p>Die Schleife hat kein Abbruchkriterium: Sie endet nach der Höchstzahl der Schritte oder auf Anforderung. Auch ein Residuum, das nicht mehr endlich ist, hält sie nicht an; erst danach stellt <code>nondimStatus</code> fest, ob der Lauf angehalten wurde, die Höchstzahl erreicht hat oder ein nicht endliches Residuum trägt.</p>
+<p>Die Schleife hat kein Konvergenzkriterium: Sie endet nach der Höchstzahl der Schritte, auf Anforderung oder sobald das Residuum nicht mehr endlich ist – wie der Weg über SI-Einheiten. Danach stellt <code>nondimStatus</code> fest, ob der Lauf angehalten wurde, die Höchstzahl erreicht hat oder ein nicht endliches Residuum trägt.</p>
 <figure>
 <svg viewBox="0 0 680 280" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Oben die Vorbereitung: Fall lesen, Zustandsgleichung und Bezug, Anfangsfeld, Eckzellen, Begrenzer. Darunter die Schleife je Schritt: Anhalten abfragen, kleinsten Zeitschritt rechnen, Randstreifen einfrieren falls parallel, alle Blöcke vorrücken mit explizitem oder implizitem Verfahren. Unten Residuum aus der Dichteänderung, Meldung an den Zuhörer, Lösung schreiben im Ausgabeintervall, dann der nächste Schritt; nach dem Anhalten oder dem letzten Schritt der Status des Laufs.">
   <defs><marker id="pfeil-schleife" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
@@ -402,8 +402,9 @@ math[display="block"]{margin:10px 0}
     <text x="69" y="234" text-anchor="middle" fill="#9a6400">.nondimStatus</text>
     <text x="69" y="248" font-size="10" text-anchor="middle" fill="#5b6475">nach der Schleife</text></g>
   <rect x="145" y="205" width="118" height="50" rx="4" fill="#e8f0f6" stroke="#c9d1dc"/>
-  <text x="204" y="226" text-anchor="middle" fill="#1f5f8b">Residuum r₂ aus</text>
-  <text x="204" y="242" text-anchor="middle" fill="#1f5f8b">der Dichteänderung</text>
+  <text x="204" y="220" text-anchor="middle" fill="#1f5f8b">Residuum r₂ aus</text>
+  <text x="204" y="234" text-anchor="middle" fill="#1f5f8b">der Dichteänderung</text>
+  <text x="204" y="248" font-size="10" text-anchor="middle" fill="#9a6400">nicht endlich: Ende</text>
   <g>    <rect x="280" y="205" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
     <text x="339" y="220" text-anchor="middle" fill="#1f5f8b">Zuhörer</text>
     <text x="339" y="234" text-anchor="middle" fill="#1f5f8b">.onIteration</text>
@@ -428,16 +429,17 @@ math[display="block"]{margin:10px 0}
     <line x1="398" y1="230" x2="413" y2="230" marker-end="url(#pfeil-schleife)"/>
     <path d="M474 255 L474 268 L4 268 L4 140 L8 140" marker-end="url(#pfeil-schleife)"/>
     <line x1="69" y1="165" x2="69" y2="203" stroke="#9a6400" stroke-dasharray="4 3" marker-end="url(#pfeil-schleife)"/>
+    <line x1="145" y1="230" x2="130" y2="230" stroke="#9a6400" stroke-dasharray="4 3" marker-end="url(#pfeil-schleife)"/>
   </g>
   <text x="560" y="110" font-size="10" fill="#5b6475">explizit / implizit</text>
   <text x="150" y="264" font-size="10" fill="#5b6475">nächster Schritt, bis zur Höchstzahl</text>
   <text x="76" y="190" font-size="10" fill="#9a6400">Anhalten</text>
 </svg>
-<figcaption>Ein Schritt der dimensionslosen Pipeline. Die Schleife läuft vollständig im Rechenfaden; zur Oberfläche führt nur der Zuhörer. Sie endet auf Anforderung oder nach der Höchstzahl der Schritte; danach bestimmt <code>nondimStatus</code> den Status. Neben den beiden gezeigten Schrittverfahren gibt es den impliziten Roe-Löser, die Doppelzeitschritte und den gekoppelten impliziten Chemieschritt; Turbulenz-, Transitions- und Spezies-Transport rücken im selben Blockschritt nach der Strömung vor. Lösungen werden im Ausgabeintervall und beim letzten verlangten Schritt geschrieben.</figcaption>
+<figcaption>Ein Schritt der dimensionslosen Pipeline. Die Schleife läuft vollständig im Rechenfaden; zur Oberfläche führt nur der Zuhörer. Sie endet auf Anforderung, nach der Höchstzahl der Schritte oder bei einem nicht endlichen Residuum; danach bestimmt <code>nondimStatus</code> den Status. Neben den beiden gezeigten Schrittverfahren gibt es den impliziten Roe-Löser, die Doppelzeitschritte und den gekoppelten impliziten Chemieschritt; Turbulenz-, Transitions- und Spezies-Transport rücken im selben Blockschritt nach der Strömung vor. Lösungen werden im Ausgabeintervall und beim letzten verlangten Schritt geschrieben.</figcaption>
 </figure>
 
 <h2 id="ergebnis">Ergebnisse während des Laufs</h2>
-<p>Beim Start erfährt der Ergebnisreiter den Ausgabeordner. Ist das automatische Nachladen eingeschaltet, sieht ein Takt alle zwei Sekunden nach, ob dort eine Lösung mit höherer Schrittnummer liegt, und lädt sie, wenn der Abstand zur angezeigten mindestens die eingestellte Schrittweite erreicht. Ein Mehrblockfall besteht aus Dateien <code>block&lt;N&gt;_…vtk</code>; geladen werden alle Geschwister derselben Ausgabe, nach Blocknummer geordnet. Beim Zeichnen werden die Knotenwerte an den Blockgrenzen gemittelt, damit die Kontur dort nicht springt. Nach dem Lauf lädt der Reiter die jüngste geschriebene Lösung aus dem Ergebnis.</p>
+<p>Beim Start erfährt der Ergebnisreiter den Ausgabeordner. Ist das automatische Nachladen eingeschaltet, sieht ein Takt alle zwei Sekunden nach, ob dort eine Lösung mit höherer Schrittnummer liegt, und lädt sie, wenn der Abstand zur angezeigten mindestens die eingestellte Schrittweite erreicht. Ein Mehrblockfall besteht aus Dateien <code>block&lt;N&gt;_…vtk</code>; geladen werden alle Geschwister derselben Ausgabe, nach Blocknummer geordnet. Beim Zeichnen werden die Knotenwerte an den Blockgrenzen gemittelt, damit die Kontur dort nicht springt. Nach dem Lauf lädt der Reiter die jüngste geschriebene Lösung aus dem Ergebnis. Gelesen wird auf einem eigenen Faden: Takt, Laden und die Durchsicht des Ordners geben ihr Ergebnis an den Ereignisfaden, der nur noch übernimmt und zeichnet. Solange ein Laden offen ist, lässt der Takt aus, statt Aufträge zu stapeln; was nach einem Fallwechsel fertig wird, wird verworfen.</p>
 <figure>
 <svg viewBox="0 0 680 190" width="680" font-family="sans-serif" font-size="12" role="img" aria-label="Oben: Start meldet den Ausgabeordner, das Nachladen startet einen Takt, der Takt sucht die neueste Lösung und lädt sie. Unten: auch das Laufende lädt die jüngste Lösung; Laden aller Blöcke, Zeichnen, Mitteln an den Blockgrenzen, Bild im Reiter.">
   <defs><marker id="pfeil-ergebnis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#5b6475"/></marker></defs>
@@ -459,13 +461,13 @@ math[display="block"]{margin:10px 0}
     <text x="609" y="45" text-anchor="middle" fill="#5b6475">Results2dTab</text>
     <text x="609" y="59" text-anchor="middle" fill="#5b6475">.onRunFinished</text>
     <text x="609" y="73" font-size="10" text-anchor="middle" fill="#5b6475">jüngste Lösung</text></g>
-  <g>    <rect x="10" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#9a6400"/>
-    <text x="69" y="130" text-anchor="middle" fill="#9a6400">Results2dTab</text>
-    <text x="69" y="144" text-anchor="middle" fill="#9a6400">.doLoad</text>
-    <text x="69" y="158" font-size="10" text-anchor="middle" fill="#5b6475">auf dem Ereignisfaden</text></g>
-  <g>    <rect x="145" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
-    <text x="204" y="130" text-anchor="middle" fill="#5b6475">Results2dTab</text>
-    <text x="204" y="144" text-anchor="middle" fill="#5b6475">.loadAllBlocks</text>
+  <g>    <rect x="10" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="69" y="130" text-anchor="middle" fill="#1f5f8b">Results2dTab</text>
+    <text x="69" y="144" text-anchor="middle" fill="#1f5f8b">.doLoad</text>
+    <text x="69" y="158" font-size="10" text-anchor="middle" fill="#5b6475">liest im Lesefaden</text></g>
+  <g>    <rect x="145" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#1f5f8b"/>
+    <text x="204" y="130" text-anchor="middle" fill="#1f5f8b">Results2dTab</text>
+    <text x="204" y="144" text-anchor="middle" fill="#1f5f8b">.loadAllBlocks</text>
     <text x="204" y="158" font-size="10" text-anchor="middle" fill="#5b6475">block*_…vtk</text></g>
   <g>    <rect x="280" y="115" width="118" height="50" rx="4" fill="#ffffff" stroke="#5b6475"/>
     <text x="339" y="130" text-anchor="middle" fill="#5b6475">Results2dTab</text>
@@ -491,14 +493,12 @@ math[display="block"]{margin:10px 0}
   <text x="544" y="50" font-size="10" text-anchor="end" fill="#5b6475">nach dem Lauf,</text>
   <text x="544" y="63" font-size="10" text-anchor="end" fill="#5b6475">von RunTab.onComplete</text>
 </svg>
-<figcaption>Nachladen der Ergebnisse. Takt und Laden laufen beide auf dem Ereignisfaden: Die Lösung wird dort gelesen, während der Lauf im Rechenfaden weiterrechnet. Bei großen Netzen stockt die Oberfläche deshalb für die Dauer des Lesens.</figcaption>
+<figcaption>Nachladen der Ergebnisse. Blau steht, was auf dem Lesefaden des Reiters läuft, grau, was auf dem Ereignisfaden läuft: Gelesen wird abseits der Oberfläche, übernommen und gezeichnet auf ihr. Auch die Suche des Takts nach der neuesten Lösung liest auf dem Lesefaden.</figcaption>
 </figure>
 
 <h2 id="grenzen">Grenzen</h2>
 <ul>
-  <li>Netz und Ergebnisse werden auf dem Ereignisfaden gelesen: das Netz beim Laden eines Falls im Netzreiter, die Lösung beim Nachladen und nach dem Lauf. Bei großen Fällen stockt die Oberfläche dann kurz; der Lauf selbst bleibt davon unberührt.</li>
   <li>Einige ältere Klassen des Lösers lesen ihre Einstellungen noch aus den Systemeigenschaften. Der Rechenfaden spiegelt die Einstellungen eines Laufs deshalb vor dem Start dorthin; zwei Läufe zugleich in derselben JVM würden sich dort gegenseitig überschreiben.</li>
-  <li>Die dimensionslose Pipeline hat kein Konvergenzkriterium und bricht auch bei einem nicht endlichen Residuum nicht ab: Ein Lauf, der zerfällt, rechnet bis zur Höchstzahl der Schritte weiter. Der Weg über SI-Einheiten bricht in diesem Fall sofort ab.</li>
 </ul>
 
 </div>
