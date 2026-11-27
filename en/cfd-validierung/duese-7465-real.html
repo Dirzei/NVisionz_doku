@@ -447,6 +447,21 @@ math[display="block"]{margin:10px 0}
   <tr><td>mass flow at the outlet in kg/s (half nozzle, per metre of depth)</td><td>2463.27054</td><td>2465</td><td>−0.09 %</td></tr>
 </table>
 
+<h2 id="erprobung">Methods tried</h2>
+<table>
+  <tr><th>Method</th><th>Result</th><th>Verdict</th></tr>
+  <tr><td>Roe second order, Glaister means without bound (until 2026-11-16)</td><td>abort, even from the converged HLLC solution</td><td>was faulty, fixed</td></tr>
+  <tr><td>Roe second order, projected means between the two sides</td><td>from first order 43 steps, from HLLC 55, without restart 91; exit Mach number 1.5886 against 1.5885 with HLLC</td><td>suitable</td></tr>
+  <tr><td>HLLC second order</td><td>from first order 155 steps; directly from the start abort</td><td>suitable with a first-order run</td></tr>
+  <tr><td>LU-SGS or Newton with the SER rule for the CFL</td><td>CFL stays at 5, 4000 steps to 1.2e-3</td><td>unsuitable</td></tr>
+  <tr><td>the same with <code>-cflstillstand:2</code></td><td>first order 38 steps to 3.6e-9</td><td>suitable</td></tr>
+  <tr><td colspan="3"><b>Gradient in the hot wall cell before the sharp edge</b></td></tr>
+  <tr><td>least squares over the face neighbours</td><td>wall cell 7.8 K above T<sub>0</sub>, wall cells 20 to 39 m/s next to 88 m/s</td><td>unsuitable</td></tr>
+  <tr><td>least squares over the node neighbours</td><td>+0.35 K, wall cells 55 to 73 m/s</td><td>suitable</td></tr>
+  <tr><td>Green-Gauss</td><td>at most +0.02 K</td><td>suitable</td></tr>
+</table>
+<p><b>Why.</b> With the real gas, each side of a face computes its internal energy with the substitute gas of its cell. In second order the pressure and density jumps are small, but the energy jump is not – it is not tied to them by the equation of state. The Glaister projection fulfilled it anyway and drove Γ towards zero; bounded to the range between both sides, Roe computes like HLLC. The hot wall cell comes from least squares over the face neighbours: behind the edge the downstream neighbour lies five cell widths offset sideways, the fit extends the wall-normal gradient up to there and explains the rest with a streamwise gradient of the wrong sign. The cell gives off too little enthalpy and heats up. The SER rule only lets the CFL grow while the residual falls; at Mach 0.011 at the inlet it stays flat for a long time, and only <code>-cflstillstand:</code> lets it rise anyway.</p>
+
 <h2 id="quellen">Sources</h2>
 <p><a href="../cfd/referenzen.html#R96">R96</a>.</p>
 
